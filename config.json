@@ -1,42 +1,266 @@
 {
   "system_metadata": {
-    "os_version": "50.2.3-PATCH-2.1",
+    "os_version": "50.1.3-GA-HARDENED",
     "codename": "Integrity-Guardian",
-    "last_patch_date": "2026-02-01"
+    "last_patch_date": "2026-01-31",
+    "build_tag": "GA_HARDENED_FINAL"
   },
+
   "security_layer": {
     "anti_leak_policy": true,
     "fail_closed_mode": true,
     "encryption_algorithm": "SHA-256",
     "safety_trigger_enabled": true,
-    "restricted_keywords": ["internal_logic", "private_key", "bypass_filter"]
+    "restricted_keywords": ["internal_logic", "private_key", "bypass_filter"],
+    "anti_leak_protected_resources": ["GEMINI_KEY", "DRF_OC_ID", "API_CREDENTIALS", "INTERNAL_SECRETS"],
+    "safety": {
+      "trigger_keywords": ["suicide", "harm", "violence", "kill", "자해", "자살", "살인", "폭력", "죽고싶"],
+      "confirmation_question": "지금 본인이나 다른 사람의 안전이 즉시 위험한 상황인가요? (예/아니오)",
+      "confirmation_timeout_sec": 30,
+      "crisis_resources": {
+        "suicide_prevention": "1393 (생명의 전화)",
+        "mental_health": "1577-0199 (정신건강상담전화)",
+        "emergency": "112 (경찰), 119 (소방/응급)"
+      }
+    }
   },
+
+  "constitution": {
+    "hard_fail_conditions": {
+      "LMD-CONST-001": { "event": "LLM_LAW_PRECEDENT_SEARCH_ATTEMPT", "action": "HARD_STOP" },
+      "LMD-CONST-002": { "event": "LAW_OR_PRECEDENT_CREATION_DETECTED", "action": "HARD_STOP" },
+      "LMD-CONST-004": { "event": "TEMPORAL_MISMATCH", "action": "SOFT_STOP" },
+      "LMD-CONST-004S": { "event": "SUNSET_CLAUSE_DETECTED", "action": "WARN_ONLY" },
+      "LMD-CONST-005": { "event": "CACHE_INTEGRITY_VIOLATION", "action": "HARD_STOP" },
+      "LMD-CONST-006": { "event": "PRECEDENT_VERIFICATION_FAILURE", "action": "REQUIRE_USER_INPUT" },
+      "LMD-CONST-007A": { "event": "API_UNAVAILABLE_WITH_VERIFIED_CACHE", "action": "REQUIRE_USER_CONSENT" },
+      "LMD-CONST-007B": { "event": "API_UNAVAILABLE_NO_CACHE", "action": "GRACEFUL_DEGRADATION" }
+    },
+    "forbidden_operations": [
+      "LLM_SEARCH_LAW_PRECEDENT",
+      "ALT_SOURCE_SUBSTITUTION",
+      "MEMORY_BASED_CITATION",
+      "GENERATING_FICTIONAL_PRECEDENTS",
+      "HALLUCINATED_CASE_NUMBERS",
+      "UNVERIFIED_STATUTE_CITATIONS"
+    ],
+    "precedent_verification_steps": [
+      "SEARCH_PRECEDENT_LIST_BY_CASE_NUMBER",
+      "EXTRACT_DRF_PREC_ID_FROM_LIST",
+      "FETCH_PRECEDENT_BODY_BY_DRF_PREC_ID",
+      "NORMALIZE_DECISION_DATE",
+      "VALIDATE_CASE_NUMBER_EXACT_MATCH",
+      "CROSS_CHECK_KEYWORDS_WITH_SUMMARY",
+      "ON_MISMATCH_FAIL_CLOSED"
+    ]
+  },
+
+  "network_security": {
+    "tls_min_version": "1.2",
+    "enforce_https": true,
+    "default_timeout_ms": 8000,
+    "circuit_breaker": {
+      "global": {
+        "failure_threshold": 5,
+        "reset_timeout_ms": 30000,
+        "half_open_max_calls": 3
+      },
+      "per_provider": {
+        "LAW_GO_KR_DRF": {
+          "failure_threshold": 5,
+          "reset_timeout_ms": 30000,
+          "half_open_max_calls": 3
+        },
+        "NOMINATIM": {
+          "failure_threshold": 10,
+          "reset_timeout_ms": 5000,
+          "half_open_max_calls": 1
+        }
+      }
+    }
+  },
+
   "swarm_engine_config": {
     "total_leader_nodes": 60,
     "min_active_leaders": 1,
-    "max_active_leaders": 5,
+    "max_active_leaders": 4,
     "collaboration_mode": "weighted_voting",
-    "specialized_domains": ["civil", "criminal", "it_security", "labor", "administrative"]
+    "core_leaders": ["L22", "L35", "L60"],
+    "leader_registry": {
+      "L01": { "name": "휘율", "specialty": "민사법" },
+      "L02": { "name": "보늬", "specialty": "부동산법" },
+      "L03": { "name": "담슬", "specialty": "건설법" },
+      "L04": { "name": "아키", "specialty": "재개발·재건축" },
+      "L05": { "name": "연우", "specialty": "의료법" },
+      "L06": { "name": "벼리", "specialty": "손해배상" },
+      "L07": { "name": "하늬", "specialty": "교통사고" },
+      "L08": { "name": "온유", "specialty": "임대차" },
+      "L09": { "name": "한울", "specialty": "국가계약" },
+      "L10": { "name": "결휘", "specialty": "민사집행" },
+      "L11": { "name": "오름", "specialty": "채권추심" },
+      "L12": { "name": "아슬", "specialty": "등기·경매" },
+      "L13": { "name": "누리", "specialty": "상사법" },
+      "L14": { "name": "다솜", "specialty": "회사법·M&A" },
+      "L15": { "name": "별하", "specialty": "스타트업" },
+      "L16": { "name": "슬아", "specialty": "보험" },
+      "L17": { "name": "미르", "specialty": "국제거래" },
+      "L18": { "name": "다온", "specialty": "에너지·자원" },
+      "L19": { "name": "슬옹", "specialty": "해상·항공" },
+      "L20": { "name": "찬솔", "specialty": "조세·금융" },
+      "L21": { "name": "휘윤", "specialty": "IT·보안" },
+      "L22": { "name": "무결", "specialty": "형사법", "priority": "CORE" },
+      "L23": { "name": "가비", "specialty": "엔터테인먼트" },
+      "L24": { "name": "도울", "specialty": "조세불복" },
+      "L25": { "name": "강무", "specialty": "군형법" },
+      "L26": { "name": "루다", "specialty": "지식재산권" },
+      "L27": { "name": "수림", "specialty": "환경법" },
+      "L28": { "name": "해슬", "specialty": "무역·관세" },
+      "L29": { "name": "라온", "specialty": "게임·콘텐츠" },
+      "L30": { "name": "담우", "specialty": "노동법" },
+      "L31": { "name": "로운", "specialty": "행정법" },
+      "L32": { "name": "바름", "specialty": "공정거래" },
+      "L33": { "name": "별이", "specialty": "우주항공" },
+      "L34": { "name": "지누", "specialty": "개인정보" },
+      "L35": { "name": "마루", "specialty": "헌법", "priority": "CORE" },
+      "L36": { "name": "단아", "specialty": "문화·종교" },
+      "L37": { "name": "예솔", "specialty": "소년법" },
+      "L38": { "name": "슬비", "specialty": "소비자" },
+      "L39": { "name": "가온", "specialty": "정보통신" },
+      "L40": { "name": "한결", "specialty": "인권" },
+      "L41": { "name": "산들", "specialty": "이혼·가족" },
+      "L42": { "name": "하람", "specialty": "저작권" },
+      "L43": { "name": "해나", "specialty": "산업재해" },
+      "L44": { "name": "보람", "specialty": "사회복지" },
+      "L45": { "name": "이룸", "specialty": "교육·청소년" },
+      "L46": { "name": "다올", "specialty": "보험·연금" },
+      "L47": { "name": "새론", "specialty": "벤처·신산업" },
+      "L48": { "name": "나래", "specialty": "문화예술" },
+      "L49": { "name": "가람", "specialty": "식품·보건" },
+      "L50": { "name": "빛나", "specialty": "다문화·이주" },
+      "L51": { "name": "소울", "specialty": "종교·전통" },
+      "L52": { "name": "미소", "specialty": "광고·언론" },
+      "L53": { "name": "늘솔", "specialty": "농림·축산" },
+      "L54": { "name": "이서", "specialty": "해양·수산" },
+      "L55": { "name": "윤빛", "specialty": "과학기술" },
+      "L56": { "name": "다인", "specialty": "장애인·복지" },
+      "L57": { "name": "세움", "specialty": "상속·신탁" },
+      "L58": { "name": "예온", "specialty": "스포츠·레저" },
+      "L59": { "name": "한빛", "specialty": "데이터·AI윤리" },
+      "L60": { "name": "마디", "specialty": "시스템 총괄", "priority": "CORE" }
+    },
+    "composite_recipes": [
+      {
+        "id": "LEASE_DEPOSIT_AUCTION",
+        "priority": 100,
+        "conditions": {
+          "all_of": [
+            { "any": ["임대차", "전세", "월세", "보증금"] },
+            { "any": ["경매", "매각", "등기", "압류", "가압류"] }
+          ]
+        },
+        "leaders": [
+          { "id": "L08", "weight": 1.2 },
+          { "id": "L12", "weight": 1.1 },
+          { "id": "L10", "weight": 1.0 }
+        ]
+      },
+      {
+        "id": "TRAFFIC_ACCIDENT_INJURY",
+        "priority": 80,
+        "conditions": {
+          "all_of": [
+            { "any": ["교통사고", "사고"] },
+            { "any": ["부상", "치료", "진단", "병원", "합의", "보험"] }
+          ]
+        },
+        "leaders": [
+          { "id": "L07", "weight": 1.2 },
+          { "id": "L06", "weight": 1.0 },
+          { "id": "L16", "weight": 0.6 }
+        ]
+      },
+      {
+        "id": "FRAUD_AND_RECOVERY",
+        "priority": 70,
+        "conditions": {
+          "all_of": [
+            { "any": ["사기", "속였", "기망"] },
+            { "any": ["돈", "대금", "미지급", "변제", "추심"] }
+          ]
+        },
+        "leaders": [
+          { "id": "L22", "weight": 1.2 },
+          { "id": "L01", "weight": 0.9 },
+          { "id": "L11", "weight": 0.7 }
+        ]
+      }
+    ]
   },
+
   "data_sync_connectors": {
-    "drf_api_endpoint": "https://www.law.go.kr/DRF/lawSearch.do",
-    "request_timeout_ms": 2100,
-    "cache_expiry_hours": 24,
-    "verification_steps": 2
+    "drf_endpoints": {
+      "law_search": "https://www.law.go.kr/DRF/lawSearch.do",
+      "law_service": "https://www.law.go.kr/DRF/lawService.do"
+    },
+    "request_timeout_ms": 8000,
+    "cache_ttl_days": 30,
+    "cache_max_size_mb": 512,
+    "rate_limits": {
+      "LAW_GO_KR_DRF": {
+        "requests_per_minute": 120,
+        "concurrent_max": 7
+      },
+      "NOMINATIM": {
+        "requests_per_second": 1,
+        "burst_allowance": 0
+      }
+    },
+    "api_failure_policy": {
+      "on_down": "FAIL_CLOSED",
+      "fallback_mode": "VERIFIED_CACHE_ONLY",
+      "max_consecutive_failures": 5,
+      "retry_interval_sec": 60,
+      "max_retries": 5
+    }
   },
+
   "temporal_engine_settings": {
     "default_timezone": "Asia/Seoul",
     "strict_addenda_parsing": true,
-    "historical_data_limit_year": 1948
+    "historical_data_limit_year": 1948,
+    "date_internal_standard": "YYYYMMDD",
+    "date_accepted_inputs": ["STRING_YYYYMMDD", "INT_YYYYMMDD", "STRING_WITH_DOTS"],
+    "temporal_modes": {
+      "SUBSTANTIVE_RIGHTS": "ACT_TIME",
+      "PROCEDURE_EXECUTION": "JUDGMENT_TIME",
+      "UNKNOWN": "ASK_USER_CONFIRMATION"
+    },
+    "sunset_clause_detection": {
+      "enabled": true,
+      "sources": ["DRF_METADATA_EXPIRY_DATE", "DRF_METADATA_VALID_TO"]
+    }
   },
+
   "performance_budget": {
     "hard_latency_limit_ms": 8000,
+    "soft_latency_target_ms": 3000,
     "memory_usage_warning_threshold": 75.0,
     "max_concurrency_limit": 100
   },
+
   "logging_strategy": {
     "log_level": "INFO",
     "save_to_file": true,
-    "anonymize_user_data": true
+    "anonymize_user_data": true,
+    "pii_sensitive_fields": [
+      "user_name", "phone_number", "resident_registration_number",
+      "address", "email", "ip_address", "legal_case_details"
+    ]
+  },
+
+  "required_env_vars": ["LAWGO_DRF_OC", "GEMINI_API_KEY", "REDIS_HOST"],
+  "optional_env_vars": {
+    "REDIS_PORT": "6379",
+    "REDIS_PASSWORD": ""
   }
 }
