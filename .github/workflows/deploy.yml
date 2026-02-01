@@ -10,8 +10,6 @@ env:
   SERVICE: lawmadi-os
   REPO: lawmadi-images
   IMAGE: lawmadi-os
-  TAG: latest
-  IMAGE_URI: asia-northeast3-docker.pkg.dev/lawmadi-db/lawmadi-images/lawmadi-os:latest
 
 jobs:
   deploy:
@@ -24,17 +22,28 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: \${{ secrets.GCP_SA_KEY }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
-          project_id: ${{ env.PROJECT_ID }}
+          project_id: \${{ env.PROJECT_ID }}
 
-      - name: Deploy to Cloud Run (image only)
+      - name: Deploy to Cloud Run (latest digest)
         run: |
-          gcloud run deploy ${SERVICE} \
-            --image ${IMAGE_URI} \
-            --region ${REGION} \
-            --project ${PROJECT_ID} \
+          REPO_PATH="\${REGION}-docker.pkg.dev/\${PROJECT_ID}/\${REPO}/\${IMAGE}"
+
+          echo "Looking up latest digest from: \${REPO_PATH}"
+          DIGEST=$(gcloud artifacts docker images list \${REPO_PATH} --format="value(DIGEST)" --limit=1)
+
+          if [ -z "\${DIGEST}" ]; then
+            echo "No digest found for \${REPO_PATH}"
+            exit 1
+          fi
+
+          echo "Using digest: \${DIGEST}"
+          gcloud run deploy \${SERVICE} \
+            --image \${REPO_PATH}@\${DIGEST} \
+            --region \${REGION} \
+            --project \${PROJECT_ID} \
             --allow-unauthenticated
