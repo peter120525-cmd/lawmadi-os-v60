@@ -8,6 +8,9 @@ env:
   PROJECT_ID: lawmadi-db
   REGION: asia-northeast3
   SERVICE: lawmadi-os
+  REPO: lawmadi-images
+  IMAGE: lawmadi-os
+  TAG: latest
 
 jobs:
   deploy:
@@ -27,23 +30,17 @@ jobs:
         with:
           project_id: ${{ env.PROJECT_ID }}
 
-      - name: Ensure Artifact Registry repo exists (cloud-run-source-deploy)
+      - name: Build & Push Image (Cloud Build)
         run: |
-          gcloud config set project $PROJECT_ID
-          if gcloud artifacts repositories describe cloud-run-source-deploy --location=$REGION >/dev/null 2>&1; then
-            echo "Artifact Registry repo already exists: cloud-run-source-deploy"
-          else
-            echo "Creating Artifact Registry repo: cloud-run-source-deploy"
-            gcloud artifacts repositories create cloud-run-source-deploy \
-              --repository-format=docker \
-              --location=$REGION \
-              --description="Cloud Run source deploy images"
-          fi
+          IMAGE_URI=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/${IMAGE}:${TAG}
+          echo "IMAGE_URI=${IMAGE_URI}"
+          gcloud builds submit --tag ${IMAGE_URI} --project ${PROJECT_ID}
 
-      - name: Deploy to Cloud Run
+      - name: Deploy to Cloud Run (Image)
         run: |
-          gcloud run deploy $SERVICE \
-            --source . \
-            --region $REGION \
-            --project $PROJECT_ID \
+          IMAGE_URI=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/${IMAGE}:${TAG}
+          gcloud run deploy ${SERVICE} \
+            --image ${IMAGE_URI} \
+            --region ${REGION} \
+            --project ${PROJECT_ID} \
             --allow-unauthenticated
