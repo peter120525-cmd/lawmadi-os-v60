@@ -1,8 +1,8 @@
-anthropic
+cloud-sql-python-connector[pg8000]
+pg8000
 requests
-psutil
-pyyaml
-cloud-sql-python-connector
-psycopg2-binary
 fastapi
 uvicorn
+psutil
+pyyaml
+anthropic
