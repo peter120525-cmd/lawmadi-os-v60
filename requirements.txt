@@ -1,0 +1,8 @@
+anthropic
+requests
+psutil
+pyyaml
+cloud-sql-python-connector
+psycopg2-binary
+fastapi
+uvicorn
