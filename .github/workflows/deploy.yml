@@ -11,6 +11,7 @@ env:
   REPO: lawmadi-images
   IMAGE: lawmadi-os
   TAG: latest
+  IMAGE_URI: asia-northeast3-docker.pkg.dev/lawmadi-db/lawmadi-images/lawmadi-os:latest
 
 jobs:
   deploy:
@@ -30,15 +31,8 @@ jobs:
         with:
           project_id: ${{ env.PROJECT_ID }}
 
-      - name: Build & Push Image (Cloud Build)
+      - name: Deploy to Cloud Run (image only)
         run: |
-          IMAGE_URI=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/${IMAGE}:${TAG}
-          echo "IMAGE_URI=${IMAGE_URI}"
-          gcloud builds submit --tag ${IMAGE_URI} --project ${PROJECT_ID}
-
-      - name: Deploy to Cloud Run (Image)
-        run: |
-          IMAGE_URI=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/${IMAGE}:${TAG}
           gcloud run deploy ${SERVICE} \
             --image ${IMAGE_URI} \
             --region ${REGION} \
