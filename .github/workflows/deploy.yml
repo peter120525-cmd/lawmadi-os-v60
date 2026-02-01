@@ -2,7 +2,7 @@ name: Deploy Lawmadi OS to Cloud Run
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   PROJECT_ID: lawmadi-db
@@ -14,28 +14,17 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Decode base64 key to JSON (runner temp)
-        id: key
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "${{ secrets.GCP_SA_KEY_B64 }}" | base64 -d > "${{ runner.temp }}/gcp-sa.json"
-          # Export JSON content as a single line for auth@v2
-          echo "CRED_JSON<<EOF" >> $GITHUB_ENV
-          cat "${{ runner.temp }}/gcp-sa.json" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
-          # sanity check
-          head -n 1 "${{ runner.temp }}/gcp-sa.json" | cat
-
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ env.CRED_JSON }}
+          credentials_json: ${{ secrets.GCP_SA_KEY_JSON }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
@@ -43,20 +32,26 @@ jobs:
           project_id: ${{ env.PROJECT_ID }}
 
       - name: Deploy to Cloud Run (latest digest)
+        shell: bash
         run: |
-          REPO_PATH="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/${IMAGE}"
+          set -euo pipefail
+
+          REPO_PATH="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}"
 
           echo "Looking up latest digest from: ${REPO_PATH}"
-          DIGEST=$(gcloud artifacts docker images list ${REPO_PATH} --format="value(DIGEST)" --limit=1)
+          DIGEST="$(gcloud artifacts docker images list "${REPO_PATH}" \
+            --sort-by=~UPDATE_TIME \
+            --limit=1 \
+            --format='get(digest)')"
 
-          if [ -z "${DIGEST}" ]; then
+          if [[ -z "${DIGEST}" ]]; then
             echo "No digest found for ${REPO_PATH}"
             exit 1
           fi
 
           echo "Using digest: ${DIGEST}"
-          gcloud run deploy ${SERVICE} \
-            --image ${REPO_PATH}@${DIGEST} \
-            --region ${REGION} \
-            --project ${PROJECT_ID} \
+          gcloud run deploy "${{ env.SERVICE }}" \
+            --image "${REPO_PATH}@${DIGEST}" \
+            --region "${{ env.REGION }}" \
+            --project "${{ env.PROJECT_ID }}" \
             --allow-unauthenticated
