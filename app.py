@@ -37,10 +37,16 @@ async def startup():
     for var in config.get("required_env_vars", []):
         if not os.getenv(var):
             raise SystemExit(f"[HALT_BOOTSTRAP] {var} missing")
+
+    # DB init (GA 운영형: DB는 OPTIONAL / FAIL-SOFT)
+    try:
+        db_client.init_tables()
+        print("✅ [DB] init_tables OK")
+    except Exception as e:
+        print(f"⚠️ [DB] init_tables FAILED (FAIL-SOFT). continuing without DB. err={e}")
+
     
-    # DB init
-    db_client.init_tables()
-    
+        # DB 장애/미설정이어도 Cloud Run 부팅을 막지 않는다.
     # Security
     sec = config["security_layer"]
     guard = SafetyGuard(
@@ -70,7 +76,9 @@ async def startup():
 
 @app.on_event("shutdown")
 async def shutdown():
-    db_client.close_all()
+    except Exception:
+        pass
+        print(f"⚠️ [DB] close_all FAILED (ignored). err={e}")
 
 @app.get("/health")
 async def health():
