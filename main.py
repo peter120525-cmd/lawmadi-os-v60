@@ -1,57 +1,128 @@
 import json
 import os
+import psutil
 from core.security import CircuitBreaker, SafetyGuard
 from agents.swarm_manager import SwarmManager
 from connectors.drf_client import DRFConnector
 
+
+def _validate_env(config: dict):
+    """
+    [HALT_BOOTSTRAP] 필수 환경변수 검증
+    config.required_env_vars 참조 — 누락 시 즉시 종료
+    """
+    required = config.get("required_env_vars", [])
+    for var in required:
+        value = os.getenv(var)
+        if not value or value.strip() == "":
+            raise SystemExit(
+                f"[HALT_BOOTSTRAP] 필수 환경변수 '{var}'이 누락되거나 비어있습니다. "
+                f"부팅을 중단합니다."
+            )
+    print(f"✅ [ENV] 필수 환경변수 {len(required)}개 검증 완료")
+
+
+def _get_health_status() -> dict:
+    """실시간 시스템 리소스 상태 측정"""
+    mem = psutil.virtual_memory()
+    cpu = psutil.cpu_percent(interval=0.5)
+    return {
+        "memory_percent": mem.percent,
+        "cpu_percent": cpu,
+        "status": "Healthy" if mem.percent < 75 and cpu < 90 else "Warning"
+    }
+
+
 def bootstrap_system():
     """
-    [L0-L1] 시스템 부팅 및 레이어 초기화 로직
+    [L0-L1] 시스템 부팅 및 레이어 초기화
+    순서: ENV 검증 → config 로드 → 보안 초기화 → 커넥터 → 스웜
     """
-    print("--- Lawmadi OS v50.2.3-PATCH-2.1 Booting ---")
-    
-    # 1. 환경 설정 로드 (config.json)
+    # 0. config 로드 (가장 먼저)
     with open('config.json', 'r') as f:
         config = json.load(f)
-    
-    # 2. 보안 가드레일 및 회로 차단기 활성화
-    guard = SafetyGuard(policy=config['security']['anti_leak_policy'])
-    cb = CircuitBreaker(latency_limit=config['performance']['latency_budget'])
-    
-    # 3. DRF 실시간 커넥터 준비
-    drf = DRFConnector(api_key=os.getenv("LAW_GO_KR_API_KEY"))
-    
-    # 4. 스웜 엔진(60-Leader Cluster) 초기화
-    swarm = SwarmManager(cluster_size=60)
-    
-    return config, guard, cb, drf, swarm
+
+    version = config["system_metadata"]["os_version"]
+    print(f"--- Lawmadi OS {version} Booting ---")
+
+    # 1. 환경변수 검증 (HALT_BOOTSTRAP)
+    _validate_env(config)
+
+    # 2. 보안 가드레일 초기화
+    security_cfg = config["security_layer"]
+    guard = SafetyGuard(
+        policy=security_cfg["anti_leak_policy"],
+        restricted_keywords=security_cfg["restricted_keywords"],
+        safety_config=security_cfg["safety"]
+    )
+
+    # 3. Per-provider Circuit Breaker 초기화
+    cb_configs = config["network_security"]["circuit_breaker"]["per_provider"]
+    circuit_breakers = {
+        provider: CircuitBreaker(provider_name=provider, config=cb_configs[provider])
+        for provider in cb_configs
+    }
+
+    # 4. DRF 커넥터 초기화
+    drf_cfg = config["data_sync_connectors"]
+    drf = DRFConnector(
+        api_key=os.getenv("LAWGO_DRF_OC"),
+        timeout_ms=drf_cfg["request_timeout_ms"],
+        endpoints=drf_cfg["drf_endpoints"],
+        cb=circuit_breakers.get("LAW_GO_KR_DRF"),
+        api_failure_policy=drf_cfg["api_failure_policy"]
+    )
+
+    # 5. 스웜 엔진 초기화
+    swarm = SwarmManager(config=config["swarm_engine_config"])
+
+    return config, guard, circuit_breakers, drf, swarm
+
 
 def main():
     # 시스템 부팅
-    config, guard, cb, drf, swarm = bootstrap_system()
-    
-    print("✅ System Health Check: Healthy (Memory: 42%)")
-    print("💡 Lawmadi OS is ready to analyze legal data.")
+    config, guard, circuit_breakers, drf, swarm = bootstrap_system()
+
+    # 실시간 health check
+    health = _get_health_status()
+    print(f"✅ System Health: {health['status']} "
+          f"(Memory: {health['memory_percent']}%, CPU: {health['cpu_percent']}%)")
+    print("💡 Lawmadi OS is ready to analyze legal data.\n")
 
     while True:
-        user_input = input("\n[User Query] > ")
-        
-        # [Step 1] 보안 필터링
-        if not guard.check(user_input):
-            print("🛡️ Safety Trigger: 악성 요청 또는 보안 위반이 감지되었습니다.")
+        user_input = input("[User Query] > ").strip()
+        if not user_input:
             continue
 
-        # [Step 2] 스웜 엔진 - 전문가 선출 및 분석 (L2)
-        print("🔍 Swarm Engine: 전문가 노드를 선별 중입니다...")
-        leaders = swarm.select_leaders(user_input)
-        
-        # [Step 3] 실시간 데이터 검증 (L3-L5)
-        with cb:  # Latency Budget 준수 확인
-            context = drf.fetch_verified_law(user_input)
-            
-            # [Step 4] 최종 답변 생성
-            response = swarm.generate_legal_advice(user_input, context, leaders)
-            print(f"\n[Lawmadi Response]\n{response}")
+        # [Step 1] 보안 필터링 + Crisis 감지
+        check_result = guard.check(user_input)
+
+        if check_result is False:
+            # 보안 위반 — 차단
+            continue
+
+        if check_result == "CRISIS":
+            # 위급 상황 플로 진입 — 모든 프로토콜 중단
+            guard.handle_crisis()
+            continue
+
+        # [Step 2] Swarm Engine — 레시피 매칭 및 리더 선출
+        print("\n🔍 Swarm Engine: 전문가 노드를 선별 중입니다...")
+        leaders, recipe_id = swarm.select_leaders(user_input)
+        print(f"   → 선출된 리더: {leaders} (레시피: {recipe_id})")
+
+        # [Step 3] DRF 실시간 검증 (Circuit Breaker 내부적으로 관리)
+        print("📡 DRF: 법률 근거를 검증 중이에요…")
+        context = drf.fetch_verified_law(user_input)
+
+        if context.get("status") == "FAIL_CLOSED":
+            print(f"\n🛡️ {context.get('message', 'DRF 검증 실패. 답변을 생성할 수 없습니다.')}")
+            continue
+
+        # [Step 4] 최종 답변 생성
+        response = swarm.generate_legal_advice(user_input, context, leaders)
+        print(f"\n[Lawmadi Response]\n{response}")
+
 
 if __name__ == "__main__":
     main()
