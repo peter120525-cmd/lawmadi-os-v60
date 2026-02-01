@@ -1,15 +1,17 @@
 import json
 import os
+import signal
 import psutil
 from core.security import CircuitBreaker, SafetyGuard
 from agents.swarm_manager import SwarmManager
 from connectors.drf_client import DRFConnector
+from connectors import db_client
 
 
 def _validate_env(config: dict):
     """
     [HALT_BOOTSTRAP] 필수 환경변수 검증
-    config.required_env_vars 참조 — 누락 시 즉시 종료
+    누락 시 즉시 종료
     """
     required = config.get("required_env_vars", [])
     for var in required:
@@ -33,22 +35,38 @@ def _get_health_status() -> dict:
     }
 
 
+def _shutdown_handler(signum, frame):
+    """종료 시그널 수신 시 DB 연결 정리"""
+    print("\n🔄 [Shutdown] 연결 정리 중...")
+    db_client.close_all()
+    print("✅ [Shutdown] 완료")
+    exit(0)
+
+
 def bootstrap_system():
     """
     [L0-L1] 시스템 부팅 및 레이어 초기화
-    순서: ENV 검증 → config 로드 → 보안 초기화 → 커넥터 → 스웜
+    순서: ENV 검증 → config → DB 초기화 → 보안 → 커넥터 → 스웜
     """
-    # 0. config 로드 (가장 먼저)
+    # 종료 시그널 핸들러 등록
+    signal.signal(signal.SIGINT, _shutdown_handler)
+    signal.signal(signal.SIGTERM, _shutdown_handler)
+
+    # 0. config 로드
     with open('config.json', 'r') as f:
         config = json.load(f)
 
     version = config["system_metadata"]["os_version"]
     print(f"--- Lawmadi OS {version} Booting ---")
 
-    # 1. 환경변수 검증 (HALT_BOOTSTRAP)
+    # 1. ENV 검증 (HALT_BOOTSTRAP)
     _validate_env(config)
 
-    # 2. 보안 가드레일 초기화
+    # 2. Cloud SQL 초기화
+    print("🔄 [DB] Cloud SQL 연결 및 테이블 초기화...")
+    db_client.init_tables()
+
+    # 3. 보안 가드레일
     security_cfg = config["security_layer"]
     guard = SafetyGuard(
         policy=security_cfg["anti_leak_policy"],
@@ -56,14 +74,14 @@ def bootstrap_system():
         safety_config=security_cfg["safety"]
     )
 
-    # 3. Per-provider Circuit Breaker 초기화
+    # 4. Per-provider Circuit Breaker
     cb_configs = config["network_security"]["circuit_breaker"]["per_provider"]
     circuit_breakers = {
         provider: CircuitBreaker(provider_name=provider, config=cb_configs[provider])
         for provider in cb_configs
     }
 
-    # 4. DRF 커넥터 초기화
+    # 5. DRF 커넥터
     drf_cfg = config["data_sync_connectors"]
     drf = DRFConnector(
         api_key=os.getenv("LAWGO_DRF_OC"),
@@ -73,14 +91,13 @@ def bootstrap_system():
         api_failure_policy=drf_cfg["api_failure_policy"]
     )
 
-    # 5. 스웜 엔진 초기화
+    # 6. 스웜 엔진
     swarm = SwarmManager(config=config["swarm_engine_config"])
 
     return config, guard, circuit_breakers, drf, swarm
 
 
 def main():
-    # 시스템 부팅
     config, guard, circuit_breakers, drf, swarm = bootstrap_system()
 
     # 실시간 health check
@@ -94,32 +111,30 @@ def main():
         if not user_input:
             continue
 
-        # [Step 1] 보안 필터링 + Crisis 감지
+        # [Step 1] 보안 필터링 + Crisis
         check_result = guard.check(user_input)
 
         if check_result is False:
-            # 보안 위반 — 차단
             continue
 
         if check_result == "CRISIS":
-            # 위급 상황 플로 진입 — 모든 프로토콜 중단
             guard.handle_crisis()
             continue
 
-        # [Step 2] Swarm Engine — 레시피 매칭 및 리더 선출
+        # [Step 2] Swarm — 레시피 매칭 및 리더 선출
         print("\n🔍 Swarm Engine: 전문가 노드를 선별 중입니다...")
         leaders, recipe_id = swarm.select_leaders(user_input)
         print(f"   → 선출된 리더: {leaders} (레시피: {recipe_id})")
 
-        # [Step 3] DRF 실시간 검증 (Circuit Breaker 내부적으로 관리)
+        # [Step 3] DRF 검증 (캐시 → API 순차)
         print("📡 DRF: 법률 근거를 검증 중이에요…")
         context = drf.fetch_verified_law(user_input)
 
         if context.get("status") == "FAIL_CLOSED":
-            print(f"\n🛡️ {context.get('message', 'DRF 검증 실패. 답변을 생성할 수 없습니다.')}")
+            print(f"\n🛡️ {context.get('message', 'DRF 검증 실패.')}")
             continue
 
-        # [Step 4] 최종 답변 생성
+        # [Step 4] 답변 생성
         response = swarm.generate_legal_advice(user_input, context, leaders)
         print(f"\n[Lawmadi Response]\n{response}")
 
