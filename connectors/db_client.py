@@ -11,17 +11,21 @@ import os
 import json
 import time
 import hashlib
+import queue
+import threading
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 
 from google.cloud.sql.connector import Connector
 import psycopg2
-import psycopg2.pool
 
 
 # ─── 싱글턴 커넥터 및 커넥션 풀 ─────────────────────────────────────────────
 _connector: Optional[Connector] = None
-_pool: Optional[psycopg2.pool.ThreadedConnectionPool] = None
+_pool: Optional[queue.Queue] = None
+_pool_lock = threading.Lock()
+_MIN_CONN = 2
+_MAX_CONN = 10
 
 
 def _get_connector() -> Connector:
@@ -31,47 +35,68 @@ def _get_connector() -> Connector:
     return _connector
 
 
-def _get_pool() -> psycopg2.pool.ThreadedConnectionPool:
+def _create_connection():
+    """Cloud SQL Connector를 사용하여 새 커넥션 생성"""
+    connector = _get_connector()
+    return connector.connect(
+        os.environ["CLOUD_SQL_INSTANCE"],
+        "psycopg2",
+        user=os.environ["DB_USER"],
+        password=os.environ["DB_PASS"],
+        dbname=os.environ["DB_NAME"],
+    )
+
+
+def _get_pool() -> queue.Queue:
     """커넥션 풀 초기화 (한 번만)"""
     global _pool
     if _pool is not None:
         return _pool
 
-    connector = _get_connector()
-
-    def _creator():
-        return connector.connect(
-            os.environ["CLOUD_SQL_INSTANCE"],
-            "psycopg2",
-            user=os.environ["DB_USER"],
-            password=os.environ["DB_PASS"],
-            dbname=os.environ["DB_NAME"],
-        )
-
-    _pool = psycopg2.pool.ThreadedConnectionPool(
-        minconn=2,
-        maxconn=10,
-        creator=_creator
-    )
-    print("✅ [DB] Cloud SQL 커넥션 풀 초기화 완료")
+    with _pool_lock:
+        if _pool is not None:
+            return _pool
+        _pool = queue.Queue(maxsize=_MAX_CONN)
+        for _ in range(_MIN_CONN):
+            _pool.put(_create_connection())
+        print("✅ [DB] Cloud SQL 커넥션 풀 초기화 완료")
     return _pool
 
 
 def get_connection():
     """풀에서 커넥션 하나를 빌린다"""
-    return _get_pool().getconn()
+    pool = _get_pool()
+    try:
+        conn = pool.get_nowait()
+    except queue.Empty:
+        conn = _create_connection()
+    if conn.closed:
+        conn = _create_connection()
+    return conn
 
 
 def release_connection(conn):
     """빌린 커넥션을 풀에 반환"""
-    _get_pool().putconn(conn)
+    pool = _get_pool()
+    try:
+        if not conn.closed:
+            conn.rollback()
+            pool.put_nowait(conn)
+    except queue.Full:
+        conn.close()
 
 
 def close_all():
     """앱 종료 시 호출 — 풀과 커넥터 정리"""
     global _pool, _connector
     if _pool:
-        _pool.closeall()
+        while not _pool.empty():
+            try:
+                conn = _pool.get_nowait()
+                if not conn.closed:
+                    conn.close()
+            except queue.Empty:
+                break
         _pool = None
     if _connector:
         _connector.close()
@@ -84,9 +109,7 @@ def init_tables():
     conn = get_connection()
     try:
         cur = conn.cursor()
-        cur.executescript = None  # psycopg2는 execute로 여러 문 가능하지 않음
 
-        # drf_cache 테이블
         cur.execute("""
             CREATE TABLE IF NOT EXISTS drf_cache (
                 cache_key       VARCHAR(255) PRIMARY KEY,
@@ -98,7 +121,6 @@ def init_tables():
             );
         """)
 
-        # rate_limit_tracker 테이블
         cur.execute("""
             CREATE TABLE IF NOT EXISTS rate_limit_tracker (
                 provider        VARCHAR(100) PRIMARY KEY,
@@ -122,10 +144,7 @@ def init_tables():
 
 # ─── drf_cache CRUD ──────────────────────────────────────────────────────────
 def cache_get(cache_key: str) -> Optional[Dict[str, Any]]:
-    """
-    캐시 조회 — 만료된 것은 자동 제외
-    반환: {"content": ..., "signature": ..., "created_at": ...} 또는 None
-    """
+    """캐시 조회 — 만료된 것은 자동 제외"""
     conn = get_connection()
     try:
         cur = conn.cursor()
@@ -138,7 +157,7 @@ def cache_get(cache_key: str) -> Optional[Dict[str, Any]]:
         if row is None:
             return None
         return {
-            "content": row[0],       # JSONB → dict 자동 변환
+            "content": row[0],
             "signature": row[1],
             "created_at": row[2]
         }
@@ -177,11 +196,7 @@ def cache_set(cache_key: str, content: Any, signature: str, ttl_days: int = 30):
 
 
 def cache_verify_signature(cache_key: str) -> bool:
-    """
-    캐시 무결성 검증 (LMD-CONST-005)
-    저장된 content를 다시 해싱하여 signature와 비교
-    불일치 시 해당 캐시 삭제
-    """
+    """캐시 무결성 검증 (LMD-CONST-005)"""
     row = cache_get(cache_key)
     if row is None:
         return False
@@ -213,10 +228,7 @@ def cache_delete(cache_key: str):
 
 # ─── rate_limit_tracker ──────────────────────────────────────────────────────
 def rate_limit_check(provider: str, rpm_limit: int) -> bool:
-    """
-    현재 1분 윈도우 내 호출 횟수가 rpm_limit 미만이면 True (호출 가능)
-    윈도우가 만료되면 카운트 리셋
-    """
+    """현재 1분 윈도우 내 호출 횟수가 rpm_limit 미만이면 True (호출 가능)"""
     conn = get_connection()
     now = datetime.now(timezone.utc)
     try:
@@ -229,7 +241,6 @@ def rate_limit_check(provider: str, rpm_limit: int) -> bool:
         row = cur.fetchone()
 
         if row is None:
-            # 초기화: 새 윈도우 생성
             cur.execute("""
                 INSERT INTO rate_limit_tracker (provider, call_count, window_start, window_end)
                 VALUES (%s, 1, %s, %s);
@@ -240,7 +251,6 @@ def rate_limit_check(provider: str, rpm_limit: int) -> bool:
         call_count, window_start, window_end = row
 
         if now > window_end:
-            # 윈도우 만료 → 리셋
             cur.execute("""
                 UPDATE rate_limit_tracker
                 SET call_count = 1, window_start = %s, window_end = %s
@@ -250,7 +260,6 @@ def rate_limit_check(provider: str, rpm_limit: int) -> bool:
             return True
 
         if call_count < rpm_limit:
-            # 카운트 증가
             cur.execute("""
                 UPDATE rate_limit_tracker
                 SET call_count = call_count + 1
@@ -259,12 +268,11 @@ def rate_limit_check(provider: str, rpm_limit: int) -> bool:
             conn.commit()
             return True
 
-        # rpm_limit 초과
         return False
 
     except Exception as e:
         print(f"❌ [DB] rate_limit_check 실패: {e}")
-        return False  # fail-closed
+        return False
     finally:
         cur.close()
         release_connection(conn)
