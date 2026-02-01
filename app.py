@@ -76,8 +76,9 @@ async def startup():
 
 @app.on_event("shutdown")
 async def shutdown():
-    except Exception:
-        pass
+    try:
+        db_client.close_all()
+    except Exception as e:
         print(f"⚠️ [DB] close_all FAILED (ignored). err={e}")
 
 @app.get("/health")
