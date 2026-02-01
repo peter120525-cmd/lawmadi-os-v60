@@ -2,32 +2,46 @@ import json
 import os
 import signal
 import psutil
+from typing import Optional, Tuple
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
 from core.security import CircuitBreaker, SafetyGuard
 from agents.swarm_manager import SwarmManager
 from connectors.drf_client import DRFConnector
-from connectors import db_client
+
+# ⚠️ db_client는 import 자체가 깨질 수 있으므로 지연 import
+db_client = None  # type: ignore
+
+app = FastAPI()
+
+# 전역 런타임 핸들(부팅 성공 시 채워짐)
+RUNTIME = {
+    "config": None,
+    "guard": None,
+    "circuit_breakers": None,
+    "drf": None,
+    "swarm": None,
+    "boot_error": None,
+}
 
 
 def _validate_env(config: dict):
-    """
-    [HALT_BOOTSTRAP] 필수 환경변수 검증
-    누락 시 즉시 종료
-    """
     required = config.get("required_env_vars", [])
     for var in required:
         value = os.getenv(var)
         if not value or value.strip() == "":
-            raise SystemExit(
-                f"[HALT_BOOTSTRAP] 필수 환경변수 '{var}'이 누락되거나 비어있습니다. "
-                f"부팅을 중단합니다."
+            # Cloud Run에서는 "즉시 종료" 대신 부팅 오류로만 기록하고 서버는 살아있게
+            raise RuntimeError(
+                f"[HALT_BOOTSTRAP] 필수 환경변수 '{var}' 누락/비어있음"
             )
     print(f"✅ [ENV] 필수 환경변수 {len(required)}개 검증 완료")
 
 
 def _get_health_status() -> dict:
-    """실시간 시스템 리소스 상태 측정"""
     mem = psutil.virtual_memory()
-    cpu = psutil.cpu_percent(interval=0.5)
+    cpu = psutil.cpu_percent(interval=0.1)
     return {
         "memory_percent": mem.percent,
         "cpu_percent": cpu,
@@ -36,37 +50,43 @@ def _get_health_status() -> dict:
 
 
 def _shutdown_handler(signum, frame):
-    """종료 시그널 수신 시 DB 연결 정리"""
     print("\n🔄 [Shutdown] 연결 정리 중...")
-    db_client.close_all()
+    try:
+        if db_client is not None:
+            db_client.close_all()
+    except Exception as e:
+        print(f"⚠️ [Shutdown] DB 정리 중 오류: {e}")
     print("✅ [Shutdown] 완료")
-    exit(0)
 
 
-def bootstrap_system():
-    """
-    [L0-L1] 시스템 부팅 및 레이어 초기화
-    순서: ENV 검증 → config → DB 초기화 → 보안 → 커넥터 → 스웜
-    """
-    # 종료 시그널 핸들러 등록
+def bootstrap_system() -> Tuple[dict, SafetyGuard, dict, DRFConnector, SwarmManager]:
+    global db_client
+
     signal.signal(signal.SIGINT, _shutdown_handler)
     signal.signal(signal.SIGTERM, _shutdown_handler)
 
-    # 0. config 로드
-    with open('config.json', 'r') as f:
+    # 0) config 로드 (파일 경로 안전)
+    with open("config.json", "r", encoding="utf-8") as f:
         config = json.load(f)
 
     version = config["system_metadata"]["os_version"]
     print(f"--- Lawmadi OS {version} Booting ---")
 
-    # 1. ENV 검증 (HALT_BOOTSTRAP)
+    # 1) ENV 검증
     _validate_env(config)
 
-    # 2. Cloud SQL 초기화
-    print("🔄 [DB] Cloud SQL 연결 및 테이블 초기화...")
-    db_client.init_tables()
+    # 2) DB 초기화 (FAIL-SOFT: 실패해도 서버는 떠야 함)
+    try:
+        from connectors import db_client as _db_client
+        db_client = _db_client
+        print("🔄 [DB] Cloud SQL 연결 및 테이블 초기화...")
+        db_client.init_tables()
+        print("✅ [DB] init_tables 완료")
+    except Exception as e:
+        print(f"⚠️ [DB] 초기화 실패(Fail-soft): {e}")
+        db_client = None
 
-    # 3. 보안 가드레일
+    # 3) 보안 가드레일
     security_cfg = config["security_layer"]
     guard = SafetyGuard(
         policy=security_cfg["anti_leak_policy"],
@@ -74,14 +94,14 @@ def bootstrap_system():
         safety_config=security_cfg["safety"]
     )
 
-    # 4. Per-provider Circuit Breaker
+    # 4) Circuit Breaker
     cb_configs = config["network_security"]["circuit_breaker"]["per_provider"]
     circuit_breakers = {
         provider: CircuitBreaker(provider_name=provider, config=cb_configs[provider])
         for provider in cb_configs
     }
 
-    # 5. DRF 커넥터
+    # 5) DRF 커넥터
     drf_cfg = config["data_sync_connectors"]
     drf = DRFConnector(
         api_key=os.getenv("LAWGO_DRF_OC"),
@@ -91,53 +111,86 @@ def bootstrap_system():
         api_failure_policy=drf_cfg["api_failure_policy"]
     )
 
-    # 6. 스웜 엔진
+    # 6) 스웜 엔진
     swarm = SwarmManager(config=config["swarm_engine_config"])
 
     return config, guard, circuit_breakers, drf, swarm
 
 
-def main():
-    config, guard, circuit_breakers, drf, swarm = bootstrap_system()
+@app.on_event("startup")
+def on_startup():
+    """
+    Cloud Run 부팅 시:
+    - 서버는 반드시 떠야 하므로, 부팅 실패는 RUNTIME.boot_error로만 기록
+    """
+    try:
+        config, guard, cbs, drf, swarm = bootstrap_system()
+        RUNTIME["config"] = config
+        RUNTIME["guard"] = guard
+        RUNTIME["circuit_breakers"] = cbs
+        RUNTIME["drf"] = drf
+        RUNTIME["swarm"] = swarm
+        RUNTIME["boot_error"] = None
 
-    # 실시간 health check
-    health = _get_health_status()
-    print(f"✅ System Health: {health['status']} "
-          f"(Memory: {health['memory_percent']}%, CPU: {health['cpu_percent']}%)")
-    print("💡 Lawmadi OS is ready to analyze legal data.\n")
-
-    while True:
-        user_input = input("[User Query] > ").strip()
-        if not user_input:
-            continue
-
-        # [Step 1] 보안 필터링 + Crisis
-        check_result = guard.check(user_input)
-
-        if check_result is False:
-            continue
-
-        if check_result == "CRISIS":
-            guard.handle_crisis()
-            continue
-
-        # [Step 2] Swarm — 레시피 매칭 및 리더 선출
-        print("\n🔍 Swarm Engine: 전문가 노드를 선별 중입니다...")
-        leaders, recipe_id = swarm.select_leaders(user_input)
-        print(f"   → 선출된 리더: {leaders} (레시피: {recipe_id})")
-
-        # [Step 3] DRF 검증 (캐시 → API 순차)
-        print("📡 DRF: 법률 근거를 검증 중이에요…")
-        context = drf.fetch_verified_law(user_input)
-
-        if context.get("status") == "FAIL_CLOSED":
-            print(f"\n🛡️ {context.get('message', 'DRF 검증 실패.')}")
-            continue
-
-        # [Step 4] 답변 생성
-        response = swarm.generate_legal_advice(user_input, context, leaders)
-        print(f"\n[Lawmadi Response]\n{response}")
+        health = _get_health_status()
+        print(f"✅ System Health: {health['status']} "
+              f"(Memory: {health['memory_percent']}%, CPU: {health['cpu_percent']}%)")
+    except Exception as e:
+        RUNTIME["boot_error"] = str(e)
+        print(f"❌ [BOOT] 부팅 실패(서버는 유지): {e}")
 
 
-if __name__ == "__main__":
-    main()
+@app.get("/health")
+def health():
+    """
+    Cloud Run 헬스체크용.
+    부팅 실패 여부도 같이 반환.
+    """
+    return {
+        "ok": True,
+        "boot_ok": RUNTIME["boot_error"] is None,
+        "boot_error": RUNTIME["boot_error"],
+        "resource": _get_health_status()
+    }
+
+
+@app.post("/ask")
+async def ask(req: Request):
+    """
+    간단 HTTP API: {"query": "..."} → 법마디 응답
+    (카카오 스킬이면 /kakao로 별도 맞추면 됩니다)
+    """
+    body = await req.json()
+    user_input = (body.get("query") or "").strip()
+    if not user_input:
+        return JSONResponse({"error": "empty query"}, status_code=400)
+
+    if RUNTIME["boot_error"] is not None:
+        return JSONResponse(
+            {"error": "boot_failed", "detail": RUNTIME["boot_error"]},
+            status_code=503
+        )
+
+    guard: SafetyGuard = RUNTIME["guard"]
+    drf: DRFConnector = RUNTIME["drf"]
+    swarm: SwarmManager = RUNTIME["swarm"]
+
+    check_result = guard.check(user_input)
+    if check_result is False:
+        return {"blocked": True}
+    if check_result == "CRISIS":
+        # Cloud Run에서는 인터랙티브 핸들러 대신 메시지 반환
+        return {"crisis": True, "message": "위기 신호가 감지되어 안전 안내가 필요합니다."}
+
+    leaders, recipe_id = swarm.select_leaders(user_input)
+    context = drf.fetch_verified_law(user_input)
+
+    if context.get("status") == "FAIL_CLOSED":
+        return {"fail_closed": True, "message": context.get("message", "DRF 검증 실패")}
+
+    response = swarm.generate_legal_advice(user_input, context, leaders)
+    return {
+        "leaders": leaders,
+        "recipe_id": recipe_id,
+        "response": response
+    }
