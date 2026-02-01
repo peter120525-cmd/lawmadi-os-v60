@@ -1,0 +1,42 @@
+{
+  "system_metadata": {
+    "os_version": "50.2.3-PATCH-2.1",
+    "codename": "Integrity-Guardian",
+    "last_patch_date": "2026-02-01"
+  },
+  "security_layer": {
+    "anti_leak_policy": true,
+    "fail_closed_mode": true,
+    "encryption_algorithm": "SHA-256",
+    "safety_trigger_enabled": true,
+    "restricted_keywords": ["internal_logic", "private_key", "bypass_filter"]
+  },
+  "swarm_engine_config": {
+    "total_leader_nodes": 60,
+    "min_active_leaders": 1,
+    "max_active_leaders": 5,
+    "collaboration_mode": "weighted_voting",
+    "specialized_domains": ["civil", "criminal", "it_security", "labor", "administrative"]
+  },
+  "data_sync_connectors": {
+    "drf_api_endpoint": "https://www.law.go.kr/DRF/lawSearch.do",
+    "request_timeout_ms": 2100,
+    "cache_expiry_hours": 24,
+    "verification_steps": 2
+  },
+  "temporal_engine_settings": {
+    "default_timezone": "Asia/Seoul",
+    "strict_addenda_parsing": true,
+    "historical_data_limit_year": 1948
+  },
+  "performance_budget": {
+    "hard_latency_limit_ms": 8000,
+    "memory_usage_warning_threshold": 75.0,
+    "max_concurrency_limit": 100
+  },
+  "logging_strategy": {
+    "log_level": "INFO",
+    "save_to_file": true,
+    "anonymize_user_data": true
+  }
+}
