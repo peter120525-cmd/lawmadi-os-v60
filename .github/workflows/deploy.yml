@@ -30,7 +30,6 @@ jobs:
       - name: Ensure Artifact Registry repo exists (cloud-run-source-deploy)
         run: |
           gcloud config set project $PROJECT_ID
-          gcloud services enable artifactregistry.googleapis.com
           if gcloud artifacts repositories describe cloud-run-source-deploy --location=$REGION >/dev/null 2>&1; then
             echo "Artifact Registry repo already exists: cloud-run-source-deploy"
           else
