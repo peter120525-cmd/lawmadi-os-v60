@@ -19,16 +19,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Write GCP credentials file (base64)
+      - name: Decode base64 key to JSON (runner temp)
+        id: key
+        shell: bash
         run: |
+          set -euo pipefail
           echo "${{ secrets.GCP_SA_KEY_B64 }}" | base64 -d > "${{ runner.temp }}/gcp-sa.json"
-          # sanity check: file should start with {
-          head -c 1 "${{ runner.temp }}/gcp-sa.json" | cat
+          # Export JSON content as a single line for auth@v2
+          echo "CRED_JSON<<EOF" >> $GITHUB_ENV
+          cat "${{ runner.temp }}/gcp-sa.json" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          # sanity check
+          head -n 1 "${{ runner.temp }}/gcp-sa.json" | cat
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_file_path: ${{ runner.temp }}/gcp-sa.json
+          credentials_json: ${{ env.CRED_JSON }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
