@@ -57,7 +57,7 @@ jobs:
           echo "REPO_PATH=${REPO_PATH}" >> "$GITHUB_ENV"
           echo "DIGEST=${DIGEST}" >> "$GITHUB_ENV"
 
-      - name: Deploy to Cloud Run (pushed digest)
+            - name: Deploy to Cloud Run (pushed digest)
         shell: bash
         run: |
           set -euo pipefail
@@ -65,11 +65,6 @@ jobs:
             --image "${REPO_PATH}@${DIGEST}" \
             --region "${{ env.REGION }}" \
             --project "${{ env.PROJECT_ID }}" \
-            --set-env-vars \
-LAWGO_DRF_OC=${{ secrets.LAWGO_DRF_OC }},\
-DB_USER=${{ secrets.DB_USER }},\
-DB_PASS=${{ secrets.DB_PASS }},\
-DB_NAME=${{ secrets.DB_NAME }},\
-CLOUD_SQL_INSTANCE=${{ secrets.CLOUD_SQL_INSTANCE }},\
-ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }} \
+            --set-env-vars "LAWGO_DRF_OC=${{ secrets.LAWGO_DRF_OC }},DB_USER=${{ secrets.DB_USER }},DB_PASS=${{ secrets.DB_PASS }},DB_NAME=${{ secrets.DB_NAME }},CLOUD_SQL_INSTANCE=${{ secrets.CLOUD_SQL_INSTANCE }},ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" \
             --allow-unauthenticated
+
