@@ -16,11 +16,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write   # ✅ 추가
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ✅ 기존 키 방식 유지
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -32,41 +34,28 @@ jobs:
           project_id: ${{ env.PROJECT_ID }}
 
       - name: Configure Docker for Artifact Registry
-        shell: bash
-        run: |
-          set -euo pipefail
-          gcloud auth configure-docker "${{ env.REGION }}-docker.pkg.dev" --quiet
+        run: gcloud auth configure-docker "${{ env.REGION }}-docker.pkg.dev" --quiet
 
       - name: Build & Push image
-        shell: bash
         run: |
           set -euo pipefail
-
           REPO_PATH="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}"
           TAG="${GITHUB_SHA}"
-
-          echo "Building: ${REPO_PATH}:${TAG}"
           docker build -t "${REPO_PATH}:${TAG}" .
-
-          echo "Pushing: ${REPO_PATH}:${TAG}"
           docker push "${REPO_PATH}:${TAG}"
-
           DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "${REPO_PATH}:${TAG}" | awk -F@ '{print $2}')"
-          if [[ -z "${DIGEST}" ]]; then
-            echo "Failed to read digest after push"
-            exit 1
-          fi
-
+          if [[ -z "${DIGEST}" ]]; then exit 1; fi
           echo "REPO_PATH=${REPO_PATH}" >> "$GITHUB_ENV"
           echo "DIGEST=${DIGEST}" >> "$GITHUB_ENV"
-          echo "Using digest: ${DIGEST}"
 
       - name: Deploy to Cloud Run (pushed digest)
-        shell: bash
         run: |
-          set -euo pipefail
           gcloud run deploy "${{ env.SERVICE }}" \
             --image "${REPO_PATH}@${DIGEST}" \
             --region "${{ env.REGION }}" \
             --project "${{ env.PROJECT_ID }}" \
-            --allow-unauthenticated
+            --allow-unauthenticated \
+            --port 8080 \
+            --memory 1Gi \
+            --cpu 1 \
+            --set-env-vars DB_DISABLED=1
