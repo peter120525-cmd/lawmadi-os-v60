@@ -43,7 +43,10 @@
 
   "data_sync_connectors": {
     "request_timeout_ms": 4000,
-    "api_failure_policy": "FAIL_CLOSED",
+    "api_failure_policy": {
+      "mode": "FAIL_CLOSED",
+      "fallback": "NONE"
+    },
     "drf_endpoints": {
       "lawSearch": "https://www.law.go.kr/DRF/lawSearch.do",
       "lawService": "https://www.law.go.kr/DRF/lawService.do"
