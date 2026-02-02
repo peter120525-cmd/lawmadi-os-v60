@@ -1,6 +1,7 @@
 import json
 import os
 import signal
+import asyncio
 import psutil
 from typing import Optional, Tuple
 
@@ -69,7 +70,7 @@ def bootstrap_system() -> Tuple[dict, SafetyGuard, dict, DRFConnector, SwarmMana
     with open("config.json", "r", encoding="utf-8") as f:
         config = json.load(f)
 
-    version = config["system_metadata"]["os_version"]
+    version = config.get("system_metadata", {}).get("os_version", "unknown")
     print(f"--- Lawmadi OS {version} Booting ---")
 
     # 1) ENV 검증
@@ -117,8 +118,29 @@ def bootstrap_system() -> Tuple[dict, SafetyGuard, dict, DRFConnector, SwarmMana
     return config, guard, circuit_breakers, drf, swarm
 
 
+
+
+async def _init_db_background(timeout_sec: float = 3.0):
+    """
+    Cloud Run: 포트 리슨을 먼저 보장하고
+    DB init은 백그라운드에서 Fail-soft로 실행
+    """
+    global db_client
+    try:
+        from connectors import db_client as _db_client
+        db_client = _db_client
+        print("🔄 [DB] init_tables(background)...")
+        await asyncio.wait_for(
+            asyncio.to_thread(db_client.init_tables),
+            timeout=timeout_sec
+        )
+        print("✅ [DB] init_tables 완료")
+    except Exception as e:
+        print(f"⚠️ [DB] background init 실패(Fail-soft): {e}")
+        db_client = None
+
 @app.on_event("startup")
-def on_startup():
+async def on_startup():
     """
     Cloud Run 부팅 시:
     - 서버는 반드시 떠야 하므로, 부팅 실패는 RUNTIME.boot_error로만 기록
@@ -131,6 +153,8 @@ def on_startup():
         RUNTIME["drf"] = drf
         RUNTIME["swarm"] = swarm
         RUNTIME["boot_error"] = None
+
+        asyncio.create_task(_init_db_background())
 
         health = _get_health_status()
         print(f"✅ System Health: {health['status']} "
