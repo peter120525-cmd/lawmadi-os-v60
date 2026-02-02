@@ -16,7 +16,11 @@
   },
 
   "security_layer": {
-    "anti_leak_policy": "STRICT",
+    "anti_leak_policy": {
+      "mode": "STRICT",
+      "log_violation": true,
+      "block_on_violation": true
+    },
     "restricted_keywords": [],
     "safety": {
       "self_harm": true,
