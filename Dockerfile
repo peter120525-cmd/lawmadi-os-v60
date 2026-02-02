@@ -10,4 +10,5 @@ COPY . .
 ENV PORT=8080
 ENV PYTHONUNBUFFERED=1
 
-CMD ["bash", "-lc", "uvicorn app:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+EXPOSE 8080
