@@ -29,6 +29,7 @@
     "circuit_breaker": {
       "per_provider": {
         "LAW_GO_KR_DRF": {
+          "enabled": true,
           "failure_threshold": 3,
           "recovery_timeout_sec": 30
         }
