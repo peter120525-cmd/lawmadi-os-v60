@@ -1,10 +1,58 @@
 {
-  "required_env_vars": ["LAWGO_DRF_OC"],
+  "system_metadata": {
+    "os_version": "v50.0.0"
+  },
+
+  "required_env_vars": [
+    "LAWGO_DRF_OC"
+  ],
+
   "optional_env_vars": {
     "ANTHROPIC_API_KEY": "Optional",
     "DB_USER": "Optional",
     "DB_PASS": "Optional",
     "DB_NAME": "Optional",
     "CLOUD_SQL_INSTANCE": "Optional"
+  },
+
+  "security_layer": {
+    "anti_leak_policy": "STRICT",
+    "restricted_keywords": [],
+    "safety": {
+      "self_harm": true,
+      "violence": true,
+      "hate": true
+    }
+  },
+
+  "network_security": {
+    "circuit_breaker": {
+      "per_provider": {
+        "LAW_GO_KR_DRF": {
+          "failure_threshold": 3,
+          "recovery_timeout_sec": 30
+        }
+      }
+    }
+  },
+
+  "data_sync_connectors": {
+    "request_timeout_ms": 4000,
+    "api_failure_policy": "FAIL_CLOSED",
+    "drf_endpoints": {
+      "lawSearch": "https://www.law.go.kr/DRF/lawSearch.do",
+      "lawService": "https://www.law.go.kr/DRF/lawService.do"
+    }
+  },
+
+  "swarm_engine_config": {
+    "mode": "SINGLE",
+    "default_leaders": ["L01"],
+    "leader_registry": {
+      "L01": {
+        "name": "휘율",
+        "role": "민사법 기본 분석"
+      }
+    }
   }
 }
