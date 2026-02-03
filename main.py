@@ -215,12 +215,66 @@ async def ask(req: Request):
     # ① LLM 사건 요약 (법 판단 없음)
     summary = summarize(user_input)
 
-    # 🧭 A/B/C 재진입 처리
+    # 🧭 A/B/C 재진입 처리 (Soft Mode Fallback 추가 + Exception Safety)
     if user_input.strip().upper()[:1] in ["A", "B", "C"]:
         drf = RUNTIME["drf"]
-        routed = route_action(user_input, summary, drf)
-        if routed:
+        routed = None
+        
+        # 1. 정석대로 Action Router 시도 (안전망 확보)
+        try:
+            routed = route_action(user_input, summary, drf)
+        except Exception as e:
+            print(f"⚠️ [Routing Error] route_action 실패: {e}")
+            routed = None
+            
+        # 2. Router가 성공적이고, fail_closed가 아니면 반환
+        if routed and not routed.get("fail_closed", False):
             return routed
+            
+        # 3. ⚠️ Router 실패/에러 시 Soft Mode 강제 진입 (Fail-Over)
+        # DRF가 죽어도 A/B/C에 대한 응답은 나가야 함
+        import uuid
+        choice = user_input.strip().upper()[:1]
+        
+        fallback_responses = {
+            "A": (
+                "## [A. 내용증명 발송 가이드]\n\n"
+                "법적 효력을 위해 우체국을 통해 '내용증명'을 발송해야 합니다.\n\n"
+                "**1. 필수 포함 내용**\n"
+                "- 수신인/발신인 주소 및 성명\n"
+                "- 임대차 계약 사실 (계약일, 만기일, 보증금액)\n"
+                "- 계약 해지 의사 표시 ('만기에 맞춰 이사하겠다')\n"
+                "- 보증금 반환 계좌번호\n\n"
+                "**2. 작성 팁**\n"
+                "총 3부를 작성하여 우체국 창구에 가져가시면 됩니다. (본인/우체국/수신인 보관용)"
+            ),
+            "B": (
+                "## [B. 경찰 신고/고소 가이드]\n\n"
+                "전세사기가 의심될 경우 관할 경찰서 경제팀을 방문하세요.\n\n"
+                "**준비물:**\n"
+                "- 신분증, 임대차계약서 원본\n"
+                "- 이체 내역서 (은행 발급)\n"
+                "- 집주인과 나눈 문자/통화 녹음 등 증거\n\n"
+                "※ 단순 미반환은 민사 문제일 수 있으나, '기망 행위'가 있었다면 사기죄 성립이 가능합니다."
+            ),
+            "C": (
+                "## [C. 보증금 반환 소송 가이드]\n\n"
+                "법원을 통해 강제 집행 권한을 얻는 절차입니다.\n\n"
+                "1. **임차권등기명령:** 이사 가기 전 필수 신청 (대항력 유지)\n"
+                "2. **지급명령:** 집주인이 이의 제기 안 하면 1~2달 내 확정 (빠름)\n"
+                "3. **본안소송:** 다툼이 있을 경우 진행 (6개월 이상 소요)\n\n"
+                "※ 소송 비용은 승소 시 상대방에게 청구 가능합니다."
+            )
+        }
+
+        request_id = str(uuid.uuid4())
+        return {
+            "request_id": request_id,
+            "case_summary": summary,
+            "law_domains": summary.get("law_domains", []),
+            "recipe_id": f"SOFT_MODE_FALLBACK_{choice}",
+            "response": fallback_responses.get(choice, "해당 선택지에 대한 정보를 불러올 수 없습니다.")
+        }
 
     # ② DRF 커넥터
     drf: DRFConnector = RUNTIME["drf"]
