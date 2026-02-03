@@ -22,6 +22,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 🔐 GCP 인증
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -32,11 +33,13 @@ jobs:
         with:
           project_id: ${{ env.PROJECT_ID }}
 
+      # 🐳 Artifact Registry 인증
       - name: Configure Docker for Artifact Registry
         shell: bash
         run: |
           gcloud auth configure-docker "${{ env.REGION }}-docker.pkg.dev" --quiet
 
+      # 🏗️ Docker Build & Push
       - name: Build & Push image
         shell: bash
         run: |
@@ -50,20 +53,28 @@ jobs:
 
           DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "${REPO_PATH}:${TAG}" | awk -F@ '{print $2}')"
           if [[ -z "${DIGEST}" ]]; then
-            echo "Failed to read digest"
+            echo "❌ Failed to read image digest"
             exit 1
           fi
 
           echo "REPO_PATH=${REPO_PATH}" >> "$GITHUB_ENV"
           echo "DIGEST=${DIGEST}" >> "$GITHUB_ENV"
 
-      - name: Deploy to Cloud Run (pushed digest)
+      # 🚀 Cloud Run Deploy
+      - name: Deploy to Cloud Run (digest-based)
         shell: bash
         run: |
           set -euo pipefail
+
           gcloud run deploy "${{ env.SERVICE }}" \
             --image "${REPO_PATH}@${DIGEST}" \
             --region "${{ env.REGION }}" \
             --project "${{ env.PROJECT_ID }}" \
-            --set-env-vars "LAWGO_DRF_OC=${{ secrets.LAWGO_DRF_OC }},DB_USER=${{ secrets.DB_USER }},DB_PASS=${{ secrets.DB_PASS }},DB_NAME=${{ secrets.DB_NAME }},CLOUD_SQL_INSTANCE=${{ secrets.CLOUD_SQL_INSTANCE }},ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" \
-            --allow-unauthenticated
+            --allow-unauthenticated \
+            --set-env-vars "\
+DB_USER=${{ secrets.DB_USER }},\
+DB_PASS=${{ secrets.DB_PASS }},\
+DB_NAME=${{ secrets.DB_NAME }},\
+CLOUD_SQL_INSTANCE=${{ secrets.CLOUD_SQL_INSTANCE }},\
+ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}"
+
