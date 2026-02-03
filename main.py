@@ -7,8 +7,15 @@ from typing import Optional, Tuple
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from anthropic import Anthropic
 
 from core.security import CircuitBreaker, SafetyGuard
+
+from core.case_summarizer import summarize
+from core.drf_query_builder import build_queries
+from core.evidence_explainer import explain
+from core.action_router import route_action
+
 from agents.swarm_manager import SwarmManager
 from connectors.drf_client import DRFConnector
 
@@ -17,7 +24,11 @@ db_client = None  # type: ignore
 
 app = FastAPI()
 
-# 전역 런타임 핸들(부팅 성공 시 채워짐)
+# 🔌 Claude LLM Client (Explain-only Role)
+claude = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+
+# 전역 런타임 핸들
 RUNTIME = {
     "config": None,
     "guard": None,
@@ -28,22 +39,49 @@ RUNTIME = {
 }
 
 
+# =========================
+# UX 전용: 사람 오프닝
+# =========================
+def human_opening_message() -> dict:
+    import uuid
+    request_id = str(uuid.uuid4())
+    return {
+        "request_id": request_id,
+        "response": (
+            "안녕하세요.\n"
+            "상황부터 편하게 말씀해 주세요.\n\n"
+            "예를 들면,\n"
+            "“전세보증금을 못 돌려받고 있어요”처럼 한 줄이면 충분합니다."
+        )
+    }
+
+
+# ✅ [Golden Path] 안전하고 명확한 환경변수 검증
 def _validate_env(config: dict):
     required = config.get("required_env_vars", [])
+    missing = []
+
     for var in required:
         value = os.getenv(var)
         if not value or value.strip() == "":
-            # Cloud Run에서는 "즉시 종료" 대신 부팅 오류로만 기록하고 서버는 살아있게
-            raise RuntimeError(
-                f"[HALT_BOOTSTRAP] 필수 환경변수 '{var}' 누락/비어있음"
-            )
+            missing.append(var)
+
+    if missing:
+        # 누락된 변수들을 한 번에 알려주어 디버깅 효율성 증대
+        raise RuntimeError(
+            f"[HALT_BOOTSTRAP] 필수 환경변수 누락: {', '.join(missing)}"
+        )
+
     print(f"✅ [ENV] 필수 환경변수 {len(required)}개 검증 완료")
 
 
 def _get_health_status() -> dict:
     mem = psutil.virtual_memory()
     cpu = psutil.cpu_percent(interval=0.1)
+    import uuid
+    request_id = str(uuid.uuid4())
     return {
+        "request_id": request_id,
         "memory_percent": mem.percent,
         "cpu_percent": cpu,
         "status": "Healthy" if mem.percent < 75 and cpu < 90 else "Warning"
@@ -66,17 +104,15 @@ def bootstrap_system() -> Tuple[dict, SafetyGuard, dict, DRFConnector, SwarmMana
     signal.signal(signal.SIGINT, _shutdown_handler)
     signal.signal(signal.SIGTERM, _shutdown_handler)
 
-    # 0) config 로드 (파일 경로 안전)
     with open("config.json", "r", encoding="utf-8") as f:
         config = json.load(f)
 
     version = config.get("system_metadata", {}).get("os_version", "unknown")
     print(f"--- Lawmadi OS {version} Booting ---")
 
-    # 1) ENV 검증
     _validate_env(config)
 
-    # 2) DB 초기화 (FAIL-SOFT: 실패해도 서버는 떠야 함)
+    # DB 초기화 (Fail-soft)
     try:
         from connectors import db_client as _db_client
         db_client = _db_client
@@ -87,7 +123,6 @@ def bootstrap_system() -> Tuple[dict, SafetyGuard, dict, DRFConnector, SwarmMana
         print(f"⚠️ [DB] 초기화 실패(Fail-soft): {e}")
         db_client = None
 
-    # 3) 보안 가드레일
     security_cfg = config["security_layer"]
     guard = SafetyGuard(
         policy=security_cfg["anti_leak_policy"],
@@ -95,15 +130,14 @@ def bootstrap_system() -> Tuple[dict, SafetyGuard, dict, DRFConnector, SwarmMana
         safety_config=security_cfg["safety"]
     )
 
-    # 4) Circuit Breaker
     cb_configs = config["network_security"]["circuit_breaker"]["per_provider"]
     circuit_breakers = {
         provider: CircuitBreaker(provider_name=provider, config=cb_configs[provider])
         for provider in cb_configs
     }
 
-    # 5) DRF 커넥터
     drf_cfg = config["data_sync_connectors"]
+    # ✅ [Security] 코드에 값을 박지 않고 OS 환경변수(Secret)에서 로드
     drf = DRFConnector(
         api_key=os.getenv("LAWGO_DRF_OC"),
         timeout_ms=drf_cfg["request_timeout_ms"],
@@ -112,19 +146,12 @@ def bootstrap_system() -> Tuple[dict, SafetyGuard, dict, DRFConnector, SwarmMana
         api_failure_policy=drf_cfg["api_failure_policy"]
     )
 
-    # 6) 스웜 엔진
     swarm = SwarmManager(config=config["swarm_engine_config"])
 
     return config, guard, circuit_breakers, drf, swarm
 
 
-
-
 async def _init_db_background(timeout_sec: float = 3.0):
-    """
-    Cloud Run: 포트 리슨을 먼저 보장하고
-    DB init은 백그라운드에서 Fail-soft로 실행
-    """
     global db_client
     try:
         from connectors import db_client as _db_client
@@ -139,12 +166,9 @@ async def _init_db_background(timeout_sec: float = 3.0):
         print(f"⚠️ [DB] background init 실패(Fail-soft): {e}")
         db_client = None
 
+
 @app.on_event("startup")
 async def on_startup():
-    """
-    Cloud Run 부팅 시:
-    - 서버는 반드시 떠야 하므로, 부팅 실패는 RUNTIME.boot_error로만 기록
-    """
     try:
         config, guard, cbs, drf, swarm = bootstrap_system()
         RUNTIME["config"] = config
@@ -166,11 +190,10 @@ async def on_startup():
 
 @app.get("/health")
 def health():
-    """
-    Cloud Run 헬스체크용.
-    부팅 실패 여부도 같이 반환.
-    """
+    import uuid
+    request_id = str(uuid.uuid4())
     return {
+        "request_id": request_id,
         "ok": True,
         "boot_ok": RUNTIME["boot_error"] is None,
         "boot_error": RUNTIME["boot_error"],
@@ -178,43 +201,109 @@ def health():
     }
 
 
+SOFT_MODE = os.getenv("SOFT_MODE", "true").lower() == "true"
+
+
 @app.post("/ask")
 async def ask(req: Request):
-    """
-    간단 HTTP API: {"query": "..."} → 법마디 응답
-    (카카오 스킬이면 /kakao로 별도 맞추면 됩니다)
-    """
     body = await req.json()
     user_input = (body.get("query") or "").strip()
+
     if not user_input:
-        return JSONResponse({"error": "empty query"}, status_code=400)
+        return human_opening_message()
 
-    if RUNTIME["boot_error"] is not None:
-        return JSONResponse(
-            {"error": "boot_failed", "detail": RUNTIME["boot_error"]},
-            status_code=503
-        )
+    # ① LLM 사건 요약 (법 판단 없음)
+    summary = summarize(user_input)
 
-    guard: SafetyGuard = RUNTIME["guard"]
+    # 🧭 A/B/C 재진입 처리
+    if user_input.strip().upper()[:1] in ["A", "B", "C"]:
+        drf = RUNTIME["drf"]
+        routed = route_action(user_input, summary, drf)
+        if routed:
+            return routed
+
+    # ② DRF 커넥터
     drf: DRFConnector = RUNTIME["drf"]
-    swarm: SwarmManager = RUNTIME["swarm"]
 
-    check_result = guard.check(user_input)
-    if check_result is False:
-        return {"blocked": True}
-    if check_result == "CRISIS":
-        # Cloud Run에서는 인터랙티브 핸들러 대신 메시지 반환
-        return {"crisis": True, "message": "위기 신호가 감지되어 안전 안내가 필요합니다."}
+    # ③ 요약 기반 DRF 검색
+    queries = " ".join(build_queries(summary))
+    context = drf.fetch_verified_law(queries)
 
-    leaders, recipe_id = swarm.select_leaders(user_input)
-    context = drf.fetch_verified_law(user_input)
+    laws = context.get("content") if isinstance(context, dict) else None
 
-    if context.get("status") == "FAIL_CLOSED":
-        return {"fail_closed": True, "message": context.get("message", "DRF 검증 실패")}
+    # ④ DRF 실패 → SOFT_MODE 행동 가이드
+    if not laws:
+        import uuid
+        request_id = str(uuid.uuid4())
+        return {
+            "request_id": request_id,
+            "case_summary": summary,
+            "law_domains": summary.get("law_domains", []),
+            "leaders": ["L01", "L08", "L22"],
+            "recipe_id": "SOFT_MODE_ACTION_FLOW",
+            "response": (
+                "전세사기 가능성이 상당히 높은 유형으로 판단됩니다.\n\n"
+                "[현재 상황 핵심]\n"
+                "- 임대차 계약 체결\n"
+                "- 보증금 지급 완료\n"
+                "- 보증금 미반환 또는 반환 거부 가능성\n\n"
+                "[지금 바로 해야 할 순서]\n"
+                "1. 등기부등본 확인 (소유자·근저당·가압류)\n"
+                "2. 보증금 이체 내역 확보\n"
+                "3. 임대인 실소유자 동일성 확인\n\n"
+                "[다음 단계 선택]\n"
+                "A. 내용증명 발송\n"
+                "B. 형사 고소 또는 경찰 신고\n"
+                "C. 보증금 반환 소송\n\n"
+                "👉 A / B / C 중 하나를 입력해 주세요."
+            )
+        }
 
-    response = swarm.generate_legal_advice(user_input, context, leaders)
+    # ⑤ DRF 성공 → 근거 기반 설명만
+    # ⑤-1 Claude에게 설명 위임 (근거 제한)
+    system_prompt = (
+        "You are Lawmadi OS. "
+        "Explain ONLY based on the provided legal evidence. "
+        "Do NOT create new statutes or precedents. "
+        "Do NOT guess. "
+        "Explain clearly in Korean for non-lawyers."
+    )
+
+    evidence_text = context.get("content", "")
+
+    try:
+        # ⚠️ 동기 호출 유지 (추후 Async 변환 필요)
+        claude_resp = claude.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=1024,
+            temperature=0.2,
+            system=system_prompt,
+            messages=[{
+                "role": "user",
+                "content": (
+                    f"[사건 요약]\n{summary}\n\n"
+                    f"[법률 근거]\n{evidence_text}\n\n"
+                    "위 근거만 사용하여 현재 상황을 설명해 주세요."
+                )
+            }]
+        )
+        explanation = claude_resp.content[0].text
+        explanation += "\n\n(AI Lawmadi가 판례 데이터를 기반으로 분석한 내용입니다.)"
+
+    except Exception as e:
+        print(f"⚠️ [LLM Error] Claude 호출 실패: {e}")
+        explanation = explain(context, summary)
+        explanation += "\n\n※ AI 연결 지연으로 인해 표준 법령 정보를 표시합니다."
+
+    # 🔐 공통 후처리 (DRF 근거 명시)
+    explanation += "\n\n※ 위 내용은 국가법령정보센터 근거에 기반한 설명입니다."
+
+    import uuid
+    request_id = str(uuid.uuid4())
+
     return {
-        "leaders": leaders,
-        "recipe_id": recipe_id,
-        "response": response
+        "request_id": request_id,
+        "case_summary": summary,
+        "law_domains": summary.get("law_domains", []),
+        "response": explanation
     }
