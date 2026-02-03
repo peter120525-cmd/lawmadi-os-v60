@@ -175,3 +175,189 @@ def init_tables():
             except Exception:
                 pass
         release_connection(conn)
+# =====================================================
+# DRF Cache Interface (REQUIRED BY drf_client.py)
+# =====================================================
+
+def cache_get(cache_key: str) -> Optional[Dict[str, Any]]:
+    """
+    DRF 캐시 조회 (Fail-soft)
+    """
+    if not _db_enabled():
+        return None
+
+    conn = get_connection()
+    cur = None
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT content
+            FROM drf_cache
+            WHERE cache_key = %s
+              AND expires_at > NOW()
+            """,
+            (cache_key,)
+        )
+        row = cur.fetchone()
+        return row[0] if row else None
+
+    except Exception as e:
+        print(f"⚠️ [DB] cache_get skipped (fail-soft): {e}")
+        return None
+
+    finally:
+        if cur:
+            try:
+                cur.close()
+            except Exception:
+                pass
+        release_connection(conn)
+
+
+def cache_set(
+    cache_key: str,
+    content: Dict[str, Any],
+    ttl_seconds: int = 3600
+):
+    """
+    DRF 캐시 저장 (Fail-soft)
+    """
+    if not _db_enabled():
+        return
+
+    conn = get_connection()
+    cur = None
+    try:
+        signature = hashlib.sha256(
+            json.dumps(content, sort_keys=True).encode("utf-8")
+        ).hexdigest()
+
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds)
+
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO drf_cache (
+                cache_key, content, signature, expires_at
+            )
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (cache_key)
+            DO NOTHING
+            """,
+            (cache_key, json.dumps(content), signature, expires_at)
+        )
+        conn.commit()
+
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        print(f"⚠️ [DB] cache_set skipped (fail-soft): {e}")
+
+    finally:
+        if cur:
+            try:
+                cur.close()
+            except Exception:
+                pass
+        release_connection(conn)
+# =====================================================
+# Rate Limit Interface (REQUIRED BY drf_client.py)
+# =====================================================
+
+def rate_limit_check(provider: str, limit: int) -> bool:
+    """
+    호출 가능 여부 확인
+    True  = 호출 가능
+    False = 차단
+    (Fail-soft: DB 비활성 시 항상 True)
+    """
+    if not _db_enabled():
+        return True
+
+    conn = get_connection()
+    cur = None
+    try:
+        now = datetime.now(timezone.utc)
+
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT call_count, window_end
+            FROM rate_limit_tracker
+            WHERE provider = %s
+            """,
+            (provider,)
+        )
+        row = cur.fetchone()
+
+        if not row:
+            return True
+
+        call_count, window_end = row
+
+        # 윈도우 만료 → 초기화 허용
+        if window_end <= now:
+            return True
+
+        # 제한 초과
+        return call_count < limit
+
+    except Exception as e:
+        print(f"⚠️ [DB] rate_limit_check skipped (fail-soft): {e}")
+        return True
+
+    finally:
+        if cur:
+            try:
+                cur.close()
+            except Exception:
+                pass
+        release_connection(conn)
+
+
+def rate_limit_hit(provider: str, window_seconds: int = 60):
+    """
+    호출 횟수 증가 (Fail-soft)
+    """
+    if not _db_enabled():
+        return
+
+    conn = get_connection()
+    cur = None
+    try:
+        now = datetime.now(timezone.utc)
+        window_end = now + timedelta(seconds=window_seconds)
+
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO rate_limit_tracker (
+                provider, call_count, window_start, window_end
+            )
+            VALUES (%s, 1, %s, %s)
+            ON CONFLICT (provider)
+            DO UPDATE SET
+                call_count = rate_limit_tracker.call_count + 1,
+                window_end = EXCLUDED.window_end
+            """,
+            (provider, now, window_end)
+        )
+        conn.commit()
+
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        print(f"⚠️ [DB] rate_limit_hit skipped (fail-soft): {e}")
+
+    finally:
+        if cur:
+            try:
+                cur.close()
+            except Exception:
+                pass
+        release_connection(conn)

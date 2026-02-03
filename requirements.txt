@@ -7,3 +7,4 @@ uvicorn[standard]
 psutil
 pyyaml
 anthropic
+pg8000
