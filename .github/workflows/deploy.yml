@@ -71,10 +71,4 @@ jobs:
             --region "${{ env.REGION }}" \
             --project "${{ env.PROJECT_ID }}" \
             --allow-unauthenticated \
-            --set-env-vars "\
-DB_USER=${{ secrets.DB_USER }},\
-DB_PASS=${{ secrets.DB_PASS }},\
-DB_NAME=${{ secrets.DB_NAME }},\
-CLOUD_SQL_INSTANCE=${{ secrets.CLOUD_SQL_INSTANCE }},\
-ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}"
-
+            --set-env-vars "DB_USER=${{ secrets.DB_USER }},DB_PASS=${{ secrets.DB_PASS }},DB_NAME=${{ secrets.DB_NAME }},CLOUD_SQL_INSTANCE=${{ secrets.CLOUD_SQL_INSTANCE }},ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}"
