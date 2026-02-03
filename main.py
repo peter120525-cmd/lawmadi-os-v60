@@ -106,6 +106,8 @@ def bootstrap_system() -> Tuple[dict, SafetyGuard, dict, DRFConnector, SwarmMana
 
     with open("config.json", "r", encoding="utf-8") as f:
         config = json.load(f)
+    if "data_sync_connectors" not in config:
+        raise RuntimeError("[HALT_BOOTSTRAP] missing key: data_sync_connectors")
 
     version = config.get("system_metadata", {}).get("os_version", "unknown")
     print(f"--- Lawmadi OS {version} Booting ---")
