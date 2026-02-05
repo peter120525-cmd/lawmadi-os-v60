@@ -1,0 +1,20 @@
+# 용량의 주범인 SDK 및 실행 폴더 제외
+exec -l /
+exec -l /bin/bash/
+
+# 파이썬 캐시 제외
+**/__pycache__/
+*.py[cod]
+
+# 백업 파일들 제외 (보안 및 용량)
+*.bak
+*.bak.*
+config_backup_*.json
+main_backup_*.py
+core_security_backup_*.py
+main_old.py
+
+# 기타 불필요한 설정
+.git/
+.firebase/
+firebase.json

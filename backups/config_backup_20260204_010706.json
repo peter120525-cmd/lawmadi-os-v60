@@ -10,7 +10,7 @@
     "L1_VISION": { "name": "Legal document OCR & Layout Analysis", "components": ["Document Parser", "OCR Engine", "Layout Detector", "Table Extractor"] },
     "L2_SWARM": { "name": "Multi-Agent Parallel Processing", "components": ["Leader Selector", "Task Distributor", "Result Aggregator", "Consensus Builder"] },
     "L3_SHORT_SYNC": { "name": "Real-time Legal Data Integration", "components": ["DRF Client", "Cache Manager", "API Gateway", "Data Validator"] },
-    "L4_PERSONA": { "name": "Adaptive Interaction UI", "components": ["Tone Adapter", "Empathy Detector", "Safety Monitor", "Crisis Interceptor"] },
+    "L4_PERSONA": { "name": "Adaptive Interaction UI", "components": ["Tone Adapter", "Tone Detector", "Safety Monitor", "Crisis Interceptor"] },
     "L5_JURISPRUDENCE": { "name": "Fact-Anchored Matching", "components": ["Precedent Searcher", "Similarity Ranker", "Temporal Validator", "Cross-Referencer"] },
     "L6_SCENARIO": { "name": "Rule-based Enumeration", "components": ["Route Generator", "Risk Assessor", "Deadline Calculator", "Option Enumerator"] },
     "L7_RENDERER": { "name": "Legal vs Reference Output Segregation", "components": ["Section Divider", "Disclaimer Injector", "Format Validator", "User Tip Generator"] }
@@ -27,7 +27,6 @@
       "required": false,
       "header": "🔍 참고 정보",
       "disclaimer": "> ※ [참고] 아래 정보는 외부 공개 API(Open Data)를 참조한 내용으로, 법적 근거로 직접 활용할 수 없습니다.",
-      "segregation_enforced": true,
       "visual_separator": "---",
       "timeline_v2_placement": { "enabled": true, "header": "🕐 시간축 분석 (Timeline Analysis)" }
     }
@@ -37,7 +36,6 @@
     "leader_registry": {
       "L01": { "name": "휘율", "specialty": "민사법", "profile": "대법원 재판연구관 출신 부장판사급" },
       "L08": { "name": "온유", "specialty": "임대차", "profile": "주택임대차분쟁조정위원급" },
-      "L12": { "name": "아슬", "specialty": "등기·경매", "profile": "법원 경매계장 출신급" },
       "L22": { "name": "무결", "specialty": "형사법", "profile": "특수부 부장검사 출신급" },
       "L60": { "name": "마디", "specialty": "시스템 총괄", "profile": "법원행정처 전산정보국장 출신급" }
     }

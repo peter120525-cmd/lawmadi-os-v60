@@ -3,38 +3,32 @@ import json
 import hashlib
 import queue
 import threading
-import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 
 from google.cloud.sql.connector import Connector
-# L5 무결성 검증기 도입 (서명 규격 동기화 목적)
-from connectors.validator import LawmadiValidator
 
-
-
-# [IT 기술: 시스템 표준 로깅 설정]
-logger = logging.getLogger("LawmadiOS.DBClient")
-validator = LawmadiValidator()
-
-# ─── [L0] 싱글턴 커넥터 및 커넥션 풀 아키텍처 ──────────────────────────────────
+# ─── 싱글턴 커넥터 및 커넥션 풀 ─────────────────────────────────────────────
 _connector: Optional[Connector] = None
 _pool: Optional[queue.Queue] = None
 _pool_lock = threading.Lock()
 _MIN_CONN = 2
 _MAX_CONN = 10
-_ENV_VERSION = 'v50.2.3-HARDENED'
+
 
 def _env(name: str) -> Optional[str]:
     v = os.getenv(name)
     return v.strip() if v else None
 
+
 def _db_enabled() -> bool:
-    """[IT 기술: Fail-Soft] 필수 환경 변수 부재 시 시스템 중단 없이 DB 기능만 비활성화"""
+    # DB를 끄고 싶으면 DB_DISABLED=1 같은 플래그로 제어 가능
     if _env("DB_DISABLED") == "1":
         return False
+    # 필수 4종이 있어야 DB를 켬 (없으면 fail-soft로 DB disabled)
     required = ["CLOUD_SQL_INSTANCE", "DB_USER", "DB_PASS", "DB_NAME"]
     return all(_env(k) for k in required)
+
 
 def _get_connector() -> Connector:
     global _connector
@@ -42,10 +36,13 @@ def _get_connector() -> Connector:
         _connector = Connector()
     return _connector
 
+
 def _create_connection():
-    """Cloud SQL Connector를 사용한 보안 커넥션 생성 (pg8000 드라이버)"""
+    """
+    Cloud SQL Connector로 새 커넥션 생성 (pg8000 사용)
+    """
     if not _db_enabled():
-        raise RuntimeError("Cloud SQL 인프라 설정이 누락되었습니다.")
+        raise RuntimeError("DB disabled (missing env vars or DB_DISABLED=1)")
 
     connector = _get_connector()
     return connector.connect(
@@ -55,6 +52,7 @@ def _create_connection():
         password=_env("DB_PASS"),
         dbname=_env("DB_NAME"),
     )
+
 
 def _get_pool() -> queue.Queue:
     global _pool
@@ -66,84 +64,114 @@ def _get_pool() -> queue.Queue:
             return _pool
         _pool = queue.Queue(maxsize=_MAX_CONN)
 
+        # DB가 비활성화면 풀을 만들되 커넥션은 생성하지 않음 (fail-soft)
         if not _db_enabled():
-            logger.warning("⚠️ [DB] 인프라 설정 미비로 커넥션 풀 초기화를 스킵합니다.")
+            print("⚠️ [DB] init_tables skipped (DB disabled)")
             return _pool
 
-        try:
-            for _ in range(_MIN_CONN):
-                _pool.put(_create_connection())
-            logger.info(f"✅ [DB] Cloud SQL 커넥션 풀 초기화 완료 (Version: {_ENV_VERSION})")
-        except Exception as e:
-            logger.error(f"🚨 [DB] 커넥션 풀 생성 중 치명적 오류: {e}")
+        for _ in range(_MIN_CONN):
+            _pool.put(_create_connection())
+        print("✅ [DB] Cloud SQL 커넥션 풀 초기화 완료")
 
     return _pool
 
+
 def get_connection():
     pool = _get_pool()
+
     if not _db_enabled():
-        raise RuntimeError("DB 인프라가 비활성 상태입니다.")
+        raise RuntimeError("DB disabled")
 
     try:
-        # 풀에서 커넥션을 획득하되, 비어있으면 즉시 새로 생성
         conn = pool.get_nowait()
     except queue.Empty:
         conn = _create_connection()
+
+    # pg8000 connection has .close() but not always .closed like psycopg2
     return conn
+
 
 def release_connection(conn):
     pool = _get_pool()
     try:
         try:
             conn.rollback()
-        except:
+        except Exception:
             pass
         pool.put_nowait(conn)
     except queue.Full:
         try:
             conn.close()
-        except:
+        except Exception:
             pass
 
+
+def close_all():
+    global _pool, _connector
+    if _pool:
+        while not _pool.empty():
+            try:
+                conn = _pool.get_nowait()
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+            except queue.Empty:
+                break
+        _pool = None
+    if _connector:
+        _connector.close()
+        _connector = None
+
+
 def init_tables():
-    """[IT 기술: Schema Migration] 앱 부팅 시 테이블 무결성 확인 및 생성"""
+    """
+    앱 부팅 시 테이블 생성.
+    DB 비활성화면 조용히 skip.
+    """
     if not _db_enabled():
+        print("⚠️ [DB] init_tables skipped (DB disabled)")
         return
 
     conn = get_connection()
     cur = None
     try:
         cur = conn.cursor()
-        # LMD-CONST-005 준수를 위한 캐시 테이블 정의
-        cur.execute(f"""
+
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS drf_cache (
                 cache_key       VARCHAR(255) PRIMARY KEY,
                 content         JSONB        NOT NULL,
                 signature       VARCHAR(64)  NOT NULL,
                 created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
                 expires_at      TIMESTAMP WITH TIME ZONE NOT NULL,
-                env_version     VARCHAR(50)  NOT NULL DEFAULT '{_ENV_VERSION}'
+                env_version     VARCHAR(50)  NOT NULL DEFAULT 'v50.2.3'
             );
         """)
 
-        # API 트래픽 제어를 위한 레이트 리밋 테이블 정의
-        cur.execute(f"""
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS rate_limit_tracker (
                 provider        VARCHAR(100) PRIMARY KEY,
                 call_count      INTEGER      NOT NULL DEFAULT 0,
                 window_start    TIMESTAMP WITH TIME ZONE NOT NULL,
                 window_end      TIMESTAMP WITH TIME ZONE NOT NULL,
-                env_version     VARCHAR(50)  NOT NULL DEFAULT '{_ENV_VERSION}'
+                env_version     VARCHAR(50)  NOT NULL DEFAULT 'v50.2.3'
             );
         """)
 
         conn.commit()
-        logger.info("✅ [DB] 핵심 데이터 테이블 초기화 성공")
+        print("✅ [DB] 테이블 초기화 완료 (drf_cache, rate_limit_tracker)")
     except Exception as e:
-        logger.error(f"❌ [DB] 테이블 초기화 실패: {e}")
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        print(f"❌ [DB] 테이블 초기화 실패: {e}")
         raise
     finally:
-        if cur: cur.close()
+        if cur:
+            try:
+                cur.close()
+            except Exception:
+                pass
         release_connection(conn)
-
-from .db_client_v2 import add_audit_log

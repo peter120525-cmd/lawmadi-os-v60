@@ -10,6 +10,8 @@ env:
   SERVICE: lawmadi-os
   REPO: lawmadi-images
   IMAGE: lawmadi-os
+  # IT 기술: Cloud SQL 인스턴스 연결 이름 정의
+  CLOUD_SQL_INSTANCE: lawmadi-db:asia-northeast3:lawmadi-db-v1
 
 jobs:
   deploy:
@@ -22,7 +24,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 🔐 GCP 인증
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -33,42 +34,42 @@ jobs:
         with:
           project_id: ${{ env.PROJECT_ID }}
 
-      # 🐳 Artifact Registry 인증
       - name: Configure Docker for Artifact Registry
-        shell: bash
         run: |
           gcloud auth configure-docker "${{ env.REGION }}-docker.pkg.dev" --quiet
 
-      # 🏗️ Docker Build & Push
       - name: Build & Push image
-        shell: bash
         run: |
           set -euo pipefail
 
           REPO_PATH="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}"
           TAG="${GITHUB_SHA}"
 
+          # IT 기술: Docker 레이어 캐싱 및 멀티 스테이지 빌드 최적화 권장
           docker build -t "${REPO_PATH}:${TAG}" .
           docker push "${REPO_PATH}:${TAG}"
 
           DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "${REPO_PATH}:${TAG}" | awk -F@ '{print $2}')"
-          if [[ -z "${DIGEST}" ]]; then
-            echo "❌ Failed to read image digest"
-            exit 1
-          fi
-
           echo "REPO_PATH=${REPO_PATH}" >> "$GITHUB_ENV"
           echo "DIGEST=${DIGEST}" >> "$GITHUB_ENV"
 
-      # 🚀 Cloud Run Deploy
-      - name: Deploy to Cloud Run (digest-based)
-        shell: bash
+      - name: Deploy to Cloud Run (Hardened Configuration)
         run: |
           set -euo pipefail
 
+          # [IT 기술: Secure Environment Injection & Instance Tunneling]
+          # --set-env-vars를 통해 GitHub Secrets에 저장된 기밀 데이터를 안전하게 커널로 전달합니다.
+          # --add-cloudsql-instances를 통해 백엔드와 DB 간의 보안 터널을 생성합니다.
           gcloud run deploy "${{ env.SERVICE }}" \
-            --image "${REPO_PATH}@${DIGEST}" \
+            --image "${{ env.REPO_PATH }}@${{ env.DIGEST }}" \
             --region "${{ env.REGION }}" \
             --project "${{ env.PROJECT_ID }}" \
-            --allow-unauthenticated \
-            --set-env-vars "DB_USER=${{ secrets.DB_USER }},DB_PASS=${{ secrets.DB_PASS }},DB_NAME=${{ secrets.DB_NAME }},CLOUD_SQL_INSTANCE=${{ secrets.CLOUD_SQL_INSTANCE }},ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}"
+            --set-env-vars "GEMINI_KEY=${{ secrets.GEMINI_KEY }}" \
+            --set-env-vars "LAWGO_DRF_OC=${{ secrets.LAWGO_DRF_OC }}" \
+            --set-env-vars "DB_USER=${{ secrets.DB_USER }}" \
+            --set-env-vars "DB_PASS=${{ secrets.DB_PASS }}" \
+            --set-env-vars "DB_NAME=${{ secrets.DB_NAME }}" \
+            --set-env-vars "CLOUD_SQL_INSTANCE=${{ env.CLOUD_SQL_INSTANCE }}" \
+            --set-env-vars "DB_DISABLED=0" \
+            --add-cloudsql-instances "${{ env.CLOUD_SQL_INSTANCE }}" \
+            --allow-unauthenticated

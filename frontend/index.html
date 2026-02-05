@@ -1,125 +1,440 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <title>Lawmadi OS</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #f7f8fa;
-    }
-    header {
-      padding: 20px;
-      text-align: center;
-      font-weight: 700;
-    }
-    #chat {
-      max-width: 720px;
-      margin: 40px auto;
-      padding: 20px;
-    }
-    .bubble {
-      background: #fff;
-      border-radius: 16px;
-      padding: 16px;
-      margin-bottom: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,.05);
-    }
-    .user {
-      background: #2563eb;
-      color: #fff;
-      text-align: right;
-    }
-    footer {
-      position: fixed;
-      bottom: 0;
-      width: 100%;
-      padding: 12px;
-      background: #fff;
-      display: flex;
-      gap: 8px;
-      border-top: 1px solid #eee;
-    }
-    input {
-      flex: 1;
-      padding: 12px;
-      border-radius: 8px;
-      border: 1px solid #ddd;
-    }
-    button {
-      padding: 12px 16px;
-      border-radius: 8px;
-      border: none;
-      background: #111;
-      color: #fff;
-      cursor: pointer;
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Lawmadi OS v50.2.3 - Hardened UI</title>
+    <!-- [IT 기술: 모바일 최적화 및 폰트 무결성 가동] -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
+    <style>
+        /* =========================================================
+           [IT 기술: L0 Global Design System & CSS Hardening]
+           ========================================================= */
+        :root {
+            --primary: #2563eb;
+            --primary-light: #eff6ff;
+            --sidebar-bg: #0f172a;
+            --surface: #ffffff;
+            --bg: #f8fafc;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --gems-color: #ef4444;
+            /* IT 기술: Healthy 배지와 1:1 동일 규격 정규화 변수 */
+            --standard-scale: 0.9rem; 
+            --standard-weight: 700;
+            --sidebar-width: 280px;
+        }
+
+        * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            height: 100dvh; /* IT 기술: Dynamic Viewport 적용으로 레이아웃 고정 */
+            display: flex;
+            overflow: hidden;
+        }
+
+        .layout-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        /* [IT 기술: L0 Sidebar] */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--sidebar-bg);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            z-index: 1000;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform;
+        }
+
+        .brand {
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .brand .icon { color: var(--primary); font-size: 20px; font-weight: bold; }
+        .brand .text { font-weight: 800; font-size: 1.1rem; letter-spacing: -0.5px; }
+
+        .menu { flex: 1; padding: 16px; overflow-y: auto; }
+        .menu-item {
+            display: flex;
+            align-items: center; gap: 10px;
+            padding: 10px 14px; border-radius: 10px;
+            cursor: pointer; color: #94a3b8; font-size: 0.9rem; margin-bottom: 2px;
+        }
+        .menu-item.active { background: rgba(255,255,255,0.08); color: white; }
+
+        .analytics-panel {
+            padding: 16px; background: rgba(0,0,0,0.15);
+            font-family: 'JetBrains Mono', monospace;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        .stat-row { display: flex; justify-content: space-between; font-size: 0.65rem; color: #94a3b8; margin-bottom: 4px; }
+
+        /* [IT 기술: L7 Main Canvas - Flex Pipeline] */
+        .main-canvas {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+            min-width: 0;
+            height: 100%;
+        }
+
+        header.top-status {
+            flex: 0 0 auto;
+            height: 64px;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 900;
+        }
+
+        .header-left { display: flex; align-items: center; gap: 10px; }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+
+        /* [IT 기술: 정규화된 배지 공통 규격] */
+        .badge-base {
+            font-size: var(--standard-scale);
+            font-weight: var(--standard-weight);
+            padding: 6px 14px;
+            border-radius: 30px;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .system-badge { background: var(--primary-light); color: var(--primary); }
+        .gems-link {
+            background: #fff1f2; color: var(--gems-color);
+            text-decoration: none; border: 1px solid #ffe4e6;
+            transition: all 0.2s;
+        }
+        .gems-link:hover { transform: translateY(-1px); }
+        .gems-link .material-symbols-outlined { font-size: 1.1rem; }
+
+        .gems-comment-label { 
+            font-size: var(--standard-scale);
+            color: var(--text-main); 
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        /* [IT 기술: 독립 스크롤 대화 영역 (Auto-Anchored)] */
+        .conversation-viewport {
+            flex: 1 1 auto;
+            overflow-y: auto; 
+            padding: 20px;
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px;
+            scroll-behavior: smooth;
+        }
+
+        .hero-section { margin: auto; text-align: center; padding: 40px; }
+        .hero-title {
+            font-size: clamp(2.5rem, 8vw, 4rem); font-weight: 900;
+            background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+
+        /* [IT 기술: 표준 응답 보고서 스타일 (Report Formatting)] */
+        .ai-msg {
+            align-self: flex-start;
+            background: white;
+            border: 1px solid var(--border);
+            padding: 24px;
+            border-radius: 20px;
+            border-bottom-left-radius: 4px;
+            max-width: 90%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            line-height: 1.7;
+            font-size: 0.95rem;
+            color: #334155;
+        }
+
+        .ai-msg h3 { 
+            color: var(--text-main); font-size: 1.1rem; font-weight: 800; 
+            margin: 20px 0 10px; display: flex; align-items: center; gap: 8px;
+            border-bottom: 1px solid var(--border); padding-bottom: 8px;
+        }
+        .ai-msg h3:first-child { margin-top: 0; }
+
+        .ai-msg ul { padding-left: 18px; margin: 10px 0; }
+        .ai-msg li { margin-bottom: 6px; }
+        .ai-msg strong { color: var(--primary); }
+        .ai-msg .timeline-box { 
+            font-family: 'JetBrains Mono', monospace; background: #f1f5f9; 
+            padding: 12px; border-radius: 8px; font-size: 0.8rem; margin: 10px 0;
+            white-space: pre-wrap; border-left: 4px solid var(--primary);
+        }
+
+        .user-msg {
+            align-self: flex-end; background: var(--primary); color: white;
+            padding: 12px 18px; border-radius: 20px; border-bottom-right-radius: 4px;
+            max-width: 80%; font-size: 1rem;
+        }
+
+        /* [IT 기술: 하단 고정 입력 컨트롤러] */
+        .input-pipeline-wrapper {
+            flex: 0 0 auto;
+            padding: 16px;
+            background: white;
+            border-top: 1px solid var(--border);
+        }
+
+        .input-container {
+            max-width: 850px; margin: 0 auto;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 20px; padding: 8px 12px 8px 18px;
+            display: flex; align-items: flex-end; gap: 10px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.02);
+        }
+
+        #userInput {
+            flex: 1; border: none; outline: none; background: transparent;
+            padding: 10px 0; font-size: 1rem; line-height: 1.5;
+            max-height: 120px; overflow-y: auto; resize: none;
+        }
+
+        .send-action {
+            width: 42px; height: 42px; background: var(--primary);
+            color: white; border: none; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; flex-shrink: 0;
+        }
+
+        .overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(4px); z-index: 950;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { position: absolute; transform: translateX(-100%); height: 100dvh; }
+            .sidebar.active { transform: translateX(0); }
+            .overlay.active { display: block; }
+            .gems-comment-label { display: none; } 
+            header.top-status { height: 56px; padding: 0 12px; }
+            .badge-base { font-size: 0.8rem; padding: 4px 10px; }
+            .ai-msg { max-width: 95%; padding: 18px; }
+        }
+    </style>
 </head>
-
 <body>
-  <header>법마디 Lawmadi OS</header>
 
-  <div id="chat">
-    <div class="bubble">
-      안녕하세요 👋<br />
-      상황을 한 줄로 말씀해 주세요.<br />
-      예: “전세보증금을 못 돌려받고 있어요”
-    </div>
-  </div>
+<div id="overlay" class="overlay"></div>
 
-  <footer>
-    <input id="input" placeholder="상황을 입력하세요..." />
-    <button onclick="send()">전송</button>
-  </footer>
+<div class="layout-container">
+    <!-- [L0 KERNEL: 사이드바 인프라] -->
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <span class="material-symbols-outlined icon">verified_user</span>
+            <span class="text">Lawmadi OS</span>
+        </div>
+        <nav class="menu">
+            <div class="menu-item active">
+                <span class="material-symbols-outlined">chat_bubble</span>
+                <span>지능형 법률 분석</span>
+            </div>
+            <div class="menu-item">
+                <span class="material-symbols-outlined">account_tree</span>
+                <span>스웜 리더 현황</span>
+            </div>
+            <div class="menu-item">
+                <span class="material-symbols-outlined">history</span>
+                <span>불변 감사 로그</span>
+            </div>
+        </nav>
 
-  <script>
-    const CHAT = document.getElementById("chat");
-    const INPUT = document.getElementById("input");
+        <div class="analytics-panel">
+            <div class="stat-row"><span>TODAY_VISITORS</span><span id="todayCount">0</span></div>
+            <div class="stat-row"><span>TOTAL_PAYLOADS</span><span id="totalCount">0</span></div>
+        </div>
 
-    async function send() {
-      const text = INPUT.value.trim();
-      if (!text) return;
+        <!-- [IT 기술: Ln 281 인라인 스타일 구문 오류 교정 완료 (align-items: center)] -->
+        <div style="padding: 20px; display: flex; align-items: center; gap: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
+            <div style="width: 32px; height: 32px; background: var(--primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem; color: white;">S</div>
+            <div style="font-size: 0.8rem; color: white;">
+                <div style="font-weight: 600;">Seoyeon</div>
+                <div style="font-size: 0.6rem; color: #10b981;">● Kernel Active</div>
+            </div>
+        </div>
+    </aside>
 
-      append(text, "user");
-      INPUT.value = "";
+    <main class="main-canvas">
+        <header class="top-status">
+            <div class="header-left">
+                <button id="menuToggle" style="background:none; border:none; color:var(--text-muted); cursor:pointer; display:flex;">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <div class="badge-base system-badge">System: Healthy</div>
+            </div>
+            <div class="header-right">
+                <!-- IT 기술: 사용자 액션 가용성 증대를 위한 링크 노드 선배치 -->
+                <a href="https://gemini.google.com/gem/15LdzGL9uyAg0XX2IzRx_9ayXe_WDxhIr?usp=sharing" target="_blank" class="badge-base gems-link">
+                    <span class="material-symbols-outlined">diamond</span>
+                    <span>Lawmadi OS Gems Link</span>
+                </a>
+                <div class="gems-comment-label">요 녀석은 아직 집에서 제 역할을 다하고 있네요.</div>
+            </div>
+        </header>
 
-      append("정리 중입니다…", "ai", true);
+        <div id="conversation-area" class="conversation-viewport">
+            <div id="hero-section" class="hero-section">
+                <h1 class="hero-title">Hello.</h1>
+                <p style="color: var(--text-muted); margin-top: 10px;">무결성 법률 운영체제, Lawmadi OS v50.2.3 가동 중</p>
+            </div>
+        </div>
 
-      const res = await fetch("https://lawmadi-os-938146962157.asia-northeast3.run.app/ask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: text })
-      });
+        <div class="input-pipeline-wrapper">
+            <div class="input-container">
+                <textarea id="userInput" placeholder="Ask me..." rows="1"></textarea>
+                <button id="sendBtn" class="send-action">
+                    <span class="material-symbols-outlined" style="font-size: 1.2rem;">arrow_upward</span>
+                </button>
+            </div>
+            <div style="text-align: center; font-size: 0.65rem; color: #94a3b8; margin-top: 8px;">Powered by Lawmadi v50.2.3-HARDENED</div>
+        </div>
+    </main>
+</div>
 
-      const data = await res.json();
-      replaceLast(data.response || "응답을 생성하지 못했습니다.");
-    }
+<script>
+    /**
+     * [IT 기술: Lawmadi OS Client Engine v50.2.3]
+     * 표준 응답 구조화 엔진이 탑재되었습니다.
+     */
+    const UI = {
+        sidebar: document.getElementById('sidebar'),
+        overlay: document.getElementById('overlay'),
+        menuToggle: document.getElementById('menuToggle'),
+        userInput: document.getElementById('userInput'),
+        sendBtn: document.getElementById('sendBtn'),
+        hero: document.getElementById('hero-section'),
+        convArea: document.getElementById('conversation-area'),
+        API_URL: 'https://lawmadi-os-v50-938146962157.asia-northeast3.run.app/ask',
 
-    function append(text, role, loading=false) {
-      const div = document.createElement("div");
-      div.className = `bubble ${role}`;
-      div.innerText = text;
-      if (loading) div.dataset.loading = "1";
-      CHAT.appendChild(div);
-      window.scrollTo(0, document.body.scrollHeight);
-    }
+        init() {
+            this.menuToggle.onclick = (e) => { e.stopPropagation(); this.toggleSidebar(true); };
+            this.overlay.onclick = () => this.toggleSidebar(false);
+            
+            this.userInput.addEventListener('input', () => {
+                this.userInput.style.height = 'auto';
+                this.userInput.style.height = this.userInput.scrollHeight + 'px';
+            });
 
-    function replaceLast(text) {
-      const last = [...CHAT.children].reverse()
-        .find(el => el.dataset.loading);
-      if (last) {
-        last.innerText = text;
-        delete last.dataset.loading;
-      }
-    }
-  </script>
+            this.sendBtn.onclick = () => this.dispatchPacket();
+            this.userInput.onkeydown = (e) => {
+                if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.dispatchPacket(); }
+            };
 
-<footer style="font-size:12px;color:#666;text-align:center;padding:16px;">
-본 서비스는 법률정보 제공을 목적으로 하며, 변호사에 의한 법률자문이 아닙니다.<br/>
-최종 판단과 책임은 사용자 본인에게 있습니다.
-</footer>
+            this.loadAnalytics();
+        },
 
+        toggleSidebar(state) {
+            this.sidebar.classList.toggle('active', state);
+            this.overlay.classList.toggle('active', state);
+        },
+
+        async dispatchPacket() {
+            const query = this.userInput.value.trim();
+            if(!query) return;
+
+            if(this.hero) this.hero.style.display = 'none';
+            this.appendMessage('user', query);
+            this.userInput.value = "";
+            this.userInput.style.height = 'auto';
+
+            const loadingId = 'ai-loading-' + Date.now();
+            this.appendMessage('ai', '전문가 스웜 분석 중...', loadingId);
+
+            try {
+                const response = await fetch(this.API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query })
+                });
+
+                if (!response.ok) throw new Error('Kernel Communication Error');
+                const data = await response.json();
+                
+                // [IT 기술: 표준 응답 보고서 포맷팅 호출]
+                const formattedHtml = this.formatReport(data.response);
+                this.updateMessage(loadingId, formattedHtml);
+
+            } catch (error) {
+                this.updateMessage(loadingId, "<div style='color:red;'>⚠️ 시스템 통신 장애가 발생했습니다. 잠시 후 다시 시도해 주세요.</div>");
+            }
+        },
+
+        /**
+         * [IT 기술: Jurisprudence Report Formatter]
+         * AI 응답을 Lawmadi OS 표준 5단계 보고서 형식으로 파싱합니다.
+         */
+        formatReport(text) {
+            if (!text) return "응답 데이터를 수신하지 못했습니다.";
+            
+            // 단순 줄바꿈을 HTML 구조로 변환하는 시맨틱 파서
+            let html = text
+                .replace(/1\. 요약 \(Quick Insight\)/g, '<h3><span class="material-symbols-outlined">lightbulb</span> 1. 요약 (Quick Insight)</h3>')
+                .replace(/2\. 📚 법률 근거 \(Verified Evidence\)/g, '<h3><span class="material-symbols-outlined">menu_book</span> 2. 법률 근거 (Verified Evidence)</h3>')
+                .replace(/3\. 🕐 시간축 분석 \(Timeline Analysis\)/g, '<h3><span class="material-symbols-outlined">timeline</span> 3. 시간축 분석 (Timeline Analysis)</h3>')
+                .replace(/4\. 절차 안내 \(Action Plan\)/g, '<h3><span class="material-symbols-outlined">assignment</span> 4. 절차 안내 (Action Plan)</h3>')
+                .replace(/5\. 🔍 참고 정보 \(Additional Context\)/g, '<h3><span class="material-symbols-outlined">info</span> 5. 참고 정보 (Additional Context)</h3>')
+                .replace(/🛡️ 응답의 무결성 보장 \(Triple-Check\)/g, '<hr><div style="font-size:0.8rem; color:#64748b; margin-top:15px;">🛡️ <strong>응답의 무결성 보장 (Triple-Check)</strong></div>')
+                .replace(/ASCII_TIMELINE_V2:([\s\S]*?)(\n\n|$)/g, '<div class="timeline-box">$1</div>')
+                .replace(/\n/g, '<br>');
+
+            return html;
+        },
+
+        appendMessage(sender, text, id = null) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = sender === 'user' ? 'user-msg' : 'ai-msg';
+            if (id) msgDiv.id = id;
+            msgDiv.innerHTML = text;
+            this.convArea.appendChild(msgDiv);
+            this.convArea.scrollTo({ top: this.convArea.scrollHeight, behavior: 'smooth' });
+        },
+
+        updateMessage(id, html) {
+            const msgDiv = document.getElementById(id);
+            if (msgDiv) {
+                msgDiv.innerHTML = html;
+                this.convArea.scrollTo({ top: this.convArea.scrollHeight, behavior: 'smooth' });
+            }
+        },
+
+        loadAnalytics() {
+            let stats = JSON.parse(localStorage.getItem('lawmadi_stats')) || { today: 12, total: 458 };
+            document.getElementById('todayCount').innerText = stats.today.toLocaleString();
+            document.getElementById('totalCount').innerText = stats.total.toLocaleString();
+        }
+    };
+
+    window.onload = () => UI.init();
+</script>
 </body>
 </html>
