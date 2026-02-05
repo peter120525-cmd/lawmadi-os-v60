@@ -43,11 +43,6 @@ def _get_connector() -> Connector:
         _connector = Connector()
     return _connector
 
-def create_connection():
-    """Cloud SQL Connector를 사용한 보안 커넥션 생성 (pg8000 드라이버)"""
-    if not _db_enabled():
-        raise RuntimeError("Cloud SQL 인프라 설정이 누락되었습니다.")
-
     connector = _get_connector()
     return connector.connect(
         _env("CLOUD_SQL_INSTANCE"),
