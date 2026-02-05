@@ -1,0 +1,10 @@
+{
+  "required_env_vars": ["LAWGO_DRF_OC"],
+  "optional_env_vars": {
+    "ANTHROPIC_API_KEY": "Optional",
+    "DB_USER": "Optional",
+    "DB_PASS": "Optional",
+    "DB_NAME": "Optional",
+    "CLOUD_SQL_INSTANCE": "Optional"
+  }
+}

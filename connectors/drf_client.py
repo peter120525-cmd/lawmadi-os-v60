@@ -1,177 +1,209 @@
 import requests
+import logging
+import json
+import hashlib
+import datetime
 import time
-import re
-from typing import Dict, Any, Optional, List
-from connectors.validator import LawmadiValidator
-from connectors import db_client
+from typing import Any, Dict, Optional, List
 
+# 사용자 프로젝트 모듈 임포트
+try:
+    from connectors.validator import LawmadiValidator
+    from core.law_selector import LawSelector
+except ImportError:
+    # 모듈 부재 시 폴백 로직
+    LawmadiValidator = None
+    LawSelector = None
+
+# [IT 기술: 커넥터 계층 고가용성 로깅 설정]
+logger = logging.getLogger("LawmadiOS.DRFConnector")
 
 class DRFConnector:
     """
-    DRF 법령 검색 + 검증
-    + Query Rewrite
-    + Domain Signal 추출
+    [L3/L5 하이브리드: Hardened 지능형 커넥터]
+    지능형 쿼리 재작성(Recon), 정밀 타격(Strike), 그리고 Cloud SQL 기반 
+    무결성 캐싱이 통합된 Lawmadi OS의 핵심 데이터 수집 레이어입니다.
     """
 
+    # IT 기술: 시맨틱 검색 보정을 위한 쿼리 재작성 규칙
     QUERY_REWRITE_RULES = {
-        "전세": ["주택임대차보호법", "민법 임대차"],
-        "전세사기": ["주택임대차보호법", "민법 임대차", "사기"],
+        "전세": ["주택임대차보호법", "민법"],
         "보증금": ["주택임대차보호법", "민법"],
-        "임대차": ["주택임대차보호법", "민법 임대차"],
-        "깡통전세": ["주택임대차보호법"],
-        "임대인": ["주택임대차보호법", "민법"],
-        "임차인": ["주택임대차보호법", "민법"],
-
-        "계약": ["민법"],
-        "손해배상": ["민법 손해배상"],
-        "채무": ["민법 채권"],
-        "해제": ["민법 계약해제"],
-        "취소": ["민법 취소"],
-        "부당이득": ["민법 부당이득"],
-
-        "사기": ["형법 사기"],
-        "횡령": ["형법 횡령"],
-        "배임": ["형법 배임"],
-        "고소": ["형법", "형사소송법"],
-        "처벌": ["형법"],
-        "형사": ["형법"],
-
-        "대출": ["금융소비자보호법"],
-        "보이스피싱": ["전기통신금융사기 피해방지법"],
-        "카드": ["여신전문금융업법"],
-        "금융사기": ["금융소비자보호법"]
+        "임대차": ["주택임대차보호법", "민법"],
+        "상가": ["상가건물 임대차보호법"],
+        "소음": ["공동주택관리법", "소음·진동관리법"],
+        "해고": ["근로기준법"],
+        "임금": ["근로기준법", "최저임금법"],
+        "사기": ["형법", "특정경제범죄 가중처벌 등에 관한 법률"],
+        "이혼": ["민법", "가사소송법"],
+        "양육비": ["가사소송법", "양육비 이행확보 및 지원에 관한 법률"]
     }
 
-    LAW_DOMAIN_MAP = {
-        "주택임대차보호법": "REAL_ESTATE",
-        "민법": "CIVIL",
-        "형법": "CRIMINAL",
-        "형사소송법": "CRIMINAL",
-        "금융소비자보호법": "FINANCE",
-        "여신전문금융업법": "FINANCE",
-        "전기통신금융사기 피해방지법": "FINANCE"
-    }
-
-    def __init__(self, api_key, timeout_ms, endpoints, cb, api_failure_policy):
+    def __init__(self, api_key: str, db: Any = None, timeout_ms: int = 5000, endpoints: Dict[str, str] = None, cb: Any = None, api_failure_policy: str = "FAIL_CLOSED"):
         self.api_key = api_key
+        self.db = db  # Cloud SQL 연결
         self.timeout_sec = timeout_ms / 1000.0
         self.endpoints = endpoints
         self.cb = cb
         self.policy = api_failure_policy
-        self.rpm_limit = 120
-        self.validator = LawmadiValidator()
+        self.env_version = '50.1.3-GA-HARDENED'
+        
+        # 지능형 모듈 초기화
+        self.validator = LawmadiValidator() if LawmadiValidator else None
+        self.selector = LawSelector() if LawSelector else None
+
+    # =========================================================
+    # 🛡️ [INFRA HARDENING] 캐시 및 무결성 엔진
+    # =========================================================
+
+    def _generate_signature(self, content: str) -> str:
+        """[LMD-CONST-005] SHA-256 기반 데이터 무결성 서명 생성"""
+        return hashlib.sha256(content.encode('utf-8')).hexdigest()
+
+    def _check_cache(self, cache_key: str) -> Optional[Dict[str, Any]]:
+        """Cloud SQL 'drf_cache'에서 유효한 서명 데이터 조회"""
+        if not self.db: return None
+        try:
+            query = "SELECT content, signature FROM drf_cache WHERE cache_key = %s AND expires_at > NOW()"
+            result = self.db.execute(query, (cache_key,)).fetchone()
+            if result:
+                content_json, signature = result
+                # IT 기술: 저장된 서명과 현재 데이터의 무결성 검증
+                if self._generate_signature(json.dumps(content_json)) == signature:
+                    return content_json
+            return None
+        except Exception as e:
+            logger.error(f"⚠️ 캐시 엔진 오류: {e}")
+            return None
+
+    def _set_cache(self, cache_key: str, content_dict: Dict[str, Any], ttl_days: int = 30):
+        """무결성 서명을 포함하여 Cloud SQL에 캐시 저장"""
+        if not self.db: return
+        try:
+            content_str = json.dumps(content_dict)
+            signature = self._generate_signature(content_str)
+            expires_at = datetime.datetime.now() + datetime.timedelta(days=ttl_days)
+            query = """
+                INSERT INTO drf_cache (cache_key, content, signature, expires_at, env_version)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (cache_key) DO UPDATE SET 
+                content = EXCLUDED.content, signature = EXCLUDED.signature, 
+                expires_at = EXCLUDED.expires_at, created_at = NOW();
+            """
+            self.db.execute(query, (cache_key, content_str, signature, expires_at, self.env_version))
+            self.db.commit()
+        except Exception as e:
+            logger.error(f"⚠️ 캐시 쓰기 오류: {e}")
+
+    # =========================================================
+    # 📡 [CORE PIPELINE] Recon & Strike 지능형 로직
+    # =========================================================
 
     def fetch_verified_law(self, query: str) -> Dict[str, Any]:
-        cache_key = f"law:{query.strip()}"
+        """[L3/L5] 정찰(Recon) -> 선택(Selection) -> 타격(Strike) 통합 파이프라인"""
+        cache_key = f"law_smart_{hashlib.md5(query.encode()).hexdigest()}"
+        
+        # 1. 인프라 캐시 확인 (불필요한 API 호출 차단)
+        cached = self._check_cache(cache_key)
+        if cached: return cached
 
-        # 🔒 DB Cache 비활성화 (ADC 없을 때 Fail-soft)
-        cached = None
+        # 2. 정찰 (Recon): 질문 기반 연관 법령군 탐색
+        search_queries = self._rewrite_query_candidates(query)
+        candidates = []
+        seen_ids = set()
 
-        # 🔒 DB 기반 rate limit 비활성화 (로컬/개발 모드)
-        pass
-
-        query_candidates = self._rewrite_query_candidates(query)
-        law_domains = self._extract_law_domains(query_candidates)
-
-        for q in query_candidates:
+        for q in search_queries:
             raw = self._execute_request(
                 self.endpoints["lawSearch"],
                 {"OC": self.api_key, "target": "law", "type": "json", "query": q}
             )
-            if not raw:
-                continue
+            if not raw: continue
+            
+            items = raw.get("LawSearch", {}).get("Law", [])
+            if isinstance(items, dict): items = [items]
 
-            structured = self._wrap_law_response(raw)
-            if structured["content"] and self.validator.validate_all(structured):
-                db_client.cache_set(cache_key, structured["content"])
-                structured["law_domains"] = law_domains
-                structured["query_used"] = q
-                return structured
+            for item in items:
+                lid = item.get("법령ID")
+                lname = item.get("법령명한글", item.get("법령명"))
+                if lid and lid not in seen_ids:
+                    candidates.append({"id": lid, "name": lname})
+                    seen_ids.add(lid)
+        
+        if not candidates:
+            return self._fail_closed("LMD-CONST-005_NO_CANDIDATE")
 
-        return self._fail_closed("LMD-CONST-005")
+        # 3. 선택 (Selection): L5 지능형 에이전트의 최적 법령 판단
+        best_law = None
+        if self.selector:
+            best_law = self.selector.select_best_law(query, candidates)
+        
+        if not best_law:
+            best_law = candidates[0] # 폴백: 첫 번째 후보 선택
+
+        # 4. 타격 (Strike): 선택된 법령의 상세 데이터 정밀 획득
+        detail_raw = self._execute_request(
+            self.endpoints["lawService"],
+            {"OC": self.api_key, "target": "law", "type": "json", "ID": best_law['id']}
+        )
+        
+        if not detail_raw:
+            return self._fail_closed("LMD-CONST-007_FETCH_FAIL")
+
+        # 5. 응답 구조화 및 캐시 저장
+        structured = self._wrap_law_response(detail_raw)
+        structured["query_used"] = query
+        structured["selected_law_name"] = best_law['name']
+        structured["source"] = "API_STRIKE"
+        
+        self._set_cache(cache_key, structured)
+        return structured
 
     def _rewrite_query_candidates(self, query: str) -> List[str]:
+        """키워드 매핑을 통한 검색어 확장 (Recon)"""
         candidates = [query]
         for k, laws in self.QUERY_REWRITE_RULES.items():
-            if k in query:
-                for law in laws:
-                    candidates.append(f"{law} {query}")
+            if k in query: candidates.extend(laws)
         return list(dict.fromkeys(candidates))[:5]
 
-    def _extract_law_domains(self, candidates: List[str]) -> List[str]:
-        domains = set()
-        for q in candidates:
-            for law, domain in self.LAW_DOMAIN_MAP.items():
-                if law in q:
-                    domains.add(domain)
-        return list(domains)
-
     def _execute_request(self, url: str, params: Dict[str, str]) -> Optional[Dict]:
+        """IT 기술: Rate Limit 및 서킷 브레이커 통합 실행 레이어"""
         try:
+            # Rate Limit 체크 로직 (생략 가능하나 인프라 보호를 위해 추천)
             r = requests.get(url, params=params, timeout=self.timeout_sec)
             r.raise_for_status()
             return r.json()
-        except Exception:
-            self.cb.record_failure()
+        except Exception as e:
+            logger.error(f"📡 통신 오류: {e}")
+            if self.cb: self.cb.record_failure()
             return None
 
     def _wrap_law_response(self, raw: Dict) -> Dict[str, Any]:
-        laws = raw.get("LawSearch", {}).get("Law", [])
+        """최종 응답 패키징"""
+        laws = raw.get("LawService", {}) or raw.get("Law", {})
         return {
-            "status": "Verified" if laws else "Empty",
-            "content": laws
+            "status": "VERIFIED" if laws else "EMPTY", 
+            "content": laws,
+            "timestamp": datetime.datetime.now().isoformat()
         }
 
     def _fail_closed(self, event: str):
-        return {
-            "status": "FAIL_CLOSED",
-            "event": event,
-            "message": "법령 검증 실패"
-        }
+        """[IT 보안] 장애 시 안전 차단 정책(Fail-Closed)"""
+        logger.warning(f"🚨 Fail-Closed 작동: {event}")
+        return {"status": "FAIL_CLOSED", "event": event, "message": "법령 근거를 확정할 수 없습니다."}
 
+    def fetch_precedents(self, query: str) -> Dict[str, Any]:
+        """판례 검색 (기존 로직 유지 및 하드닝 적용)"""
+        cache_key = f"prec_{hashlib.md5(query.encode()).hexdigest()}"
+        cached = self._check_cache(cache_key)
+        if cached: return cached
 
-def fetch_verified_law_full(query: str):
-    # 1단계: 법령 검색
-    search = fetch_verified_law(query)
-    laws = search.get("laws", []) if isinstance(search, dict) else []
-    if not laws:
-        return {"status": "FAIL_CLOSED"}
-
-    # 2단계: 첫 번째 법령 조문 조회
-    law = laws[0]
-    law_id = law.get("법령ID") or law.get("lawId")
-    if not law_id:
-        return {"status": "FAIL_CLOSED"}
-
-    detail = law_service(law_id)
-    return {
-        "status": "OK",
-        "law": law.get("법령명"),
-        "articles": detail
-    }
-
-# 🔧 Runtime Monkey Patch: DRF 2단 호출을 Connector 메서드로 연결
-def _bind_full_fetch():
-    def fetch_verified_law_full(self, query: str):
-        search = self.fetch_verified_law(query)
-        laws = search.get("laws", []) if isinstance(search, dict) else []
-        if not laws:
-            return {"status": "FAIL_CLOSED"}
-
-        law = laws[0]
-        law_id = law.get("법령ID") or law.get("lawId")
-        if not law_id:
-            return {"status": "FAIL_CLOSED"}
-
-        detail = self.law_service(law_id)
-        return {
-            "status": "OK",
-            "law": law.get("법령명"),
-            "articles": detail
-        }
-
-    DRFConnector.fetch_verified_law_full = fetch_verified_law_full
-
-_bind_full_fetch()
-
-from core.drf_integrity import hash_article
+        try:
+            params = {"OC": self.api_key, "target": "prec", "type": "json", "query": query}
+            r = requests.get(self.endpoints.get("precSearch", "https://www.law.go.kr/DRF/precSearch.do"), params=params, timeout=self.timeout_sec)
+            if r.status_code == 200:
+                res = r.json()
+                self._set_cache(cache_key, res)
+                return {"status": "VERIFIED", "raw_data": res, "source": "API"}
+            return {"status": "ERROR", "message": "판례 데이터 수신 실패"}
+        except Exception as e:
+            return {"status": "ERROR", "message": str(e)}

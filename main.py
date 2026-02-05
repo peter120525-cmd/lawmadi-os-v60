@@ -1,365 +1,310 @@
-import json
 import os
-import signal
-import asyncio
-import psutil
-from typing import Optional, Tuple
-
+import json
+import logging
+import datetime
+import re
+import hashlib
+from typing import Any, List, Dict, Optional
+import google.generativeai as genai
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
-from anthropic import Anthropic
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 
-from core.security import CircuitBreaker, SafetyGuard
-
-from core.case_summarizer import summarize
-from core.drf_query_builder import build_queries
-from core.evidence_explainer import explain
-from core.action_router import route_action
-
-from agents.swarm_manager import SwarmManager
+# [IT 기술: 프로젝트 내부 계층형 모듈 임포트]
+from core.security import SafetyGuard, CircuitBreaker
 from connectors.drf_client import DRFConnector
+from core.law_selector import LawSelector 
+from connectors import db_client # [L6] 불변 감사 로그 및 영속성 레이어
 
-# ⚠️ db_client는 import 자체가 깨질 수 있으므로 지연 import
-db_client = None  # type: ignore
+# [IT 기술: 환경 설정 및 고가용성 로깅 계층]
+load_dotenv()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("LawmadiOS.Kernel")
 
-app = FastAPI()
+app = FastAPI(title="Lawmadi OS", version="v50.2.3-HARDENED")
 
-# 🔌 Claude LLM Client (Explain-only Role)
-claude = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+app.add_middleware(
+    CORSMiddleware, 
+    allow_origins=["*"], 
+    allow_credentials=True, 
+    allow_methods=["*"], 
+    allow_headers=["*"]
+)
 
+RUNTIME = {}
 
-# 전역 런타임 핸들
-RUNTIME = {
-    "config": None,
-    "guard": None,
-    "circuit_breakers": None,
-    "drf": None,
-    "swarm": None,
-    "boot_error": None,
+# =========================================================
+# 🐝 [L2 SWARM DATA] 63인의 전문가 리더 및 임원 명부 (Hot-Swap 규격)
+# =========================================================
+DEFAULT_LEADER_REGISTRY = {
+    "C01": {"name": "Lawmadi 이사회 의장 (회장님)", "aliases": ["회장", "의장", "보스", "회장님", "의장님", "의장님 호출"], "role": "시스템 총괄 정책 결정자"},
+    "L08": {"name": "부동산 전문 리더", "aliases": ["부동산", "집주인", "보증금", "임대차", "부동산리더"], "role": "임대차 및 물권법 권위자"},
+    "L22": {"name": "형사 특별 수사 리더", "aliases": ["형사", "검사", "고소", "형사리더", "사기"], "role": "형법 및 특경법 전문가"},
+    "L15": {"name": "인사노무 전략 리더", "aliases": ["노무", "노동", "해고", "노무사", "인사"], "role": "근로기준법 및 노사관계 전문가"},
+    "L21": {"name": "IT/IP 기술 리더", "aliases": ["AI", "특허", "저작권", "기술", "개인정보"], "role": "변리사 기반 지식재산권 에이전트"},
+    "L33": {"name": "우주항공 법무 임원", "aliases": ["우주", "위성", "궤도", "항공"], "role": "미래 우주법 전략가"},
+    "L60": {"name": "마디 통합 리더", "aliases": ["마디", "리더", "분석기"], "role": "시스템 기본 법리 분석 노드"}
 }
 
+# =========================================================
+# 🛠️ [ROBUST HELPERS] 데이터 정밀 추출 및 정규화 계층
+# =========================================================
 
-# =========================
-# UX 전용: 사람 오프닝
-# =========================
-def human_opening_message() -> dict:
-    import uuid
-    request_id = str(uuid.uuid4())
-    return {
-        "request_id": request_id,
-        "response": (
-            "안녕하세요.\n"
-            "상황부터 편하게 말씀해 주세요.\n\n"
-            "예를 들면,\n"
-            "“전세보증금을 못 돌려받고 있어요”처럼 한 줄이면 충분합니다."
-        )
+def _extract_best_dict_list(obj: Any) -> List[Dict[str, Any]]:
+    """[IT 기술: Data Normalization] API 응답 객체에서 점수 기반으로 가장 유효한 데이터 리스트를 추출합니다."""
+    candidates = []
+    def walk(o: Any):
+        if isinstance(o, dict):
+            for v in o.values(): walk(v)
+        elif isinstance(o, list):
+            if o and all(isinstance(x, dict) for x in o): candidates.append(o)
+            for v in o: walk(v)
+    walk(obj)
+    if not candidates: return []
+    
+    best_list, max_score = [], -1
+    score_keys = ["판례일련번호", "법령ID", "사건번호", "caseNo", "lawId", "MST", "법령명", "조문내용"]
+    
+    for cand in candidates:
+        current_score = 0
+        sample = cand[0] if cand else {}
+        for k in sample.keys():
+            if any(sk in k for sk in score_keys): current_score += 1
+        if current_score > max_score:
+            max_score = current_score
+            best_list = cand
+    return best_list if best_list else (candidates[0] if candidates else [])
+
+def _collect_texts_by_keys(obj: Any, wanted_keys: List[str]) -> List[str]:
+    out: List[str] = []
+    def walk(o: Any):
+        if isinstance(o, dict):
+            for k, v in o.items():
+                if k in wanted_keys and isinstance(v, str) and v.strip():
+                    out.append(v.strip())
+                walk(v)
+        elif isinstance(o, list):
+            for v in o: walk(v)
+    walk(obj)
+    return out
+
+def _dedup_keep_order(texts: List[str]) -> List[str]:
+    seen, out = set(), []
+    for t in texts:
+        key = t.strip()
+        if key and key not in seen:
+            seen.add(key)
+            out.append(key)
+    return out
+
+# =========================================================
+# 🛡️ [L6 GOVERNANCE] 헌법 준수 루프 (Constitutional Loop)
+# =========================================================
+
+def validate_constitutional_compliance(response_text: str) -> bool:
+    """[IT 기술: Output Guardrail] 답변 송출 직전, 헌법(LMD-CONST) 원칙 준수 여부를 최종 검증합니다."""
+    if len(response_text) < 10: return False
+    # 페르소나 무결성: 변호사 사칭 금지 및 리더 정체성 고수
+    if "변호사입니다" in response_text or "변호사로서" in response_text:
+        return False
+    return True
+
+# =========================================================
+# 🛠️ [L3 SHORT_SYNC] Gemini 전용 지능형 도구 (Law & Precedent)
+# =========================================================
+
+def search_law_drf(query: str):
+    """[SSOT] 실시간 법령 정보를 검색합니다."""
+    logger.info(f"🛠️ [L3 Strike] 법령 검색 호출: '{query}'")
+    try:
+        drf_inst = RUNTIME.get("drf")
+        selector = RUNTIME.get("selector")
+        if not drf_inst: return {"result": "ERROR", "message": "DRF 커넥터 미초기화."}
+        
+        raw_result = drf_inst.fetch_verified_law(query)
+        if raw_result.get("status") != "VERIFIED":
+            return {"result": "NO_DATA", "message": "관련 법령을 찾을 수 없습니다."}
+
+        candidates = _extract_best_dict_list(raw_result)
+        if selector and len(candidates) > 1:
+            best_law = selector.select_best_law(query, candidates)
+            if best_law:
+                return {"result": "FOUND", "content": best_law.get("content", ""), "source": "국가법령정보센터"}
+
+        return {"result": "FOUND", "content": raw_result.get("content", ""), "source": "국가법령정보센터"}
+    except Exception as e:
+        return {"result": "ERROR", "message": str(e)}
+
+def search_precedents_drf(query: str):
+    """[SSOT_PRECEDENT] 국가법령정보센터의 실시간 판례 데이터를 검색합니다."""
+    logger.info(f"🛠️ [L3 Strike] 판례 검색 호출: '{query}'")
+    try:
+        drf_inst = RUNTIME.get("drf")
+        if not drf_inst: return {"result": "ERROR", "message": "DRF 커넥터 미초기화."}
+
+        raw_result = drf_inst.fetch_precedents(query)
+        items = _extract_best_dict_list(raw_result)
+        if not items:
+            return {"result": "NO_DATA", "message": "해당 키워드와 일치하는 판례가 없습니다."}
+
+        summary_list = []
+        for it in items[:3]:
+            title = it.get("사건명", "제목 없음")
+            case_no = it.get("사건번호", "번호 없음")
+            content_keys = ["판시사항", "판결요지", "이유"]
+            texts = _collect_texts_by_keys(it, content_keys)
+            summary = "\n".join(_dedup_keep_order(texts))[:1000]
+            summary_list.append(f"【사건명: {title} ({case_no})】\n{summary}")
+
+        combined_content = "\n\n".join(summary_list)
+        return {"result": "FOUND", "content": combined_content, "source": "국가법령정보센터(판례)"}
+    except Exception as e:
+        logger.error(f"🛠️ 판례 검색 실패: {e}")
+        return {"result": "ERROR", "message": str(e)}
+
+law_tools = [search_law_drf, search_precedents_drf]
+
+# =========================================================
+# 📜 [L0 CONSTITUTION] 표준 응답 규격 및 절대 원칙
+# =========================================================
+SYSTEM_INSTRUCTION_BASE = f"""
+당신은 대한민국 법률 AI 'Lawmadi OS v50.2.3-HARDENED'의 [L2 Swarm Intelligence Cluster]입니다.
+할당된 전문가 리더 페르소나를 완벽히 연기하며, 반드시 아래 **5단계 표준 응답 구조**로 답변하십시오.
+
+--- [표준 응답 5단계 구조] ---
+1. 요약 (Quick Insight): 친절한 비서 톤으로 사안의 핵심 법적 성격 규정 및 가장 시급한 조치 안내.
+2. 📚 법률 근거 (Verified Evidence): `search_law_drf` 또는 `search_precedents_drf` 도구를 통해 실시간 검증된 데이터(조문 원문, 사건번호)만 표시.
+3. 🕐 시간축 분석 (Timeline Analysis): 사건 발생 시점과 법령 시행 시점을 대조하여 ASCII_TIMELINE_V2 형식으로 시각화.
+4. 절차 안내 (Action Plan): 사용자가 지금 당장 해야 할 1~3단계 로드맵 제시.
+5. 🔍 참고 정보 (Additional Context): 전문가 상담 임계점 안내 및 법적 효력 보장 불가 표준 면책 공고.
+
+--- [6대 절대 원칙] ---
+1. SSOT_FACT_ONLY: 모든 답변은 실시간 검색된 데이터 내에서만 생성하세요.
+2. ZERO_INFERENCE: 데이터에 없는 내용을 지어내지 마세요.
+3. FAIL_CLOSED: 도구 오류나 데이터 부재 시 "확인 불가"를 보고하세요.
+4. IDENTITY: 당신은 '리더'이며 결코 '변호사'가 아닙니다.
+"""
+
+# =========================================================
+# 🐝 [L2 SWARM] 지능형 전문가 리더 라우팅 (Semantic & Alias Dispatch)
+# =========================================================
+
+def select_swarm_leader(query: str, leaders: Dict) -> Dict:
+    """[IT 기술: Semantic Leader Hot-Swap] 이름 호출 또는 도메인을 분석하여 최적의 리더 노드를 선출합니다."""
+    registry = leaders if leaders else DEFAULT_LEADER_REGISTRY
+    
+    # 1. [이름/직함 호출 감지] - 최우선 순위
+    for leader_id, info in registry.items():
+        if any(alias in query for alias in info.get("aliases", [])):
+            logger.info(f"🎯 [L2 Hot-Swap] '{info['name']}' 노드 명시적 호출 감지")
+            return info
+
+    # 2. [도메인 자동 분류] - 차순위
+    domain_map = {
+        "REAL_ESTATE": (["전세", "월세", "임대", "보증금", "매매", "등기"], "L08"),
+        "CRIMINAL": (["고소", "처벌", "사기", "횡령", "판례", "형사"], "L22"),
+        "LABOR": (["해고", "임금", "퇴직금", "근로", "수당"], "L15"),
+        "TECH": (["AI", "데이터", "개인정보", "해킹", "저작권"], "L21"),
+        "SPACE": (["위성", "발사체", "궤도", "우주항공"], "L33")
     }
 
+    for domain, (keywords, leader_id) in domain_map.items():
+        if any(k in query for k in keywords):
+            logger.info(f"🎯 [L2] {domain} 도메인 감지 -> {leader_id} 리더 자동 배정")
+            return registry.get(leader_id, registry["L60"])
+    
+    return registry["L60"]
 
-# ✅ [Golden Path] 안전하고 명확한 환경변수 검증
-def _validate_env(config: dict):
-    required = config.get("required_env_vars", [])
-    missing = []
-
-    for var in required:
-        value = os.getenv(var)
-        if not value or value.strip() == "":
-            missing.append(var)
-
-    if missing:
-        # 누락된 변수들을 한 번에 알려주어 디버깅 효율성 증대
-        raise RuntimeError(
-            f"[HALT_BOOTSTRAP] 필수 환경변수 누락: {', '.join(missing)}"
-        )
-
-    print(f"✅ [ENV] 필수 환경변수 {len(required)}개 검증 완료")
-
-
-def _get_health_status() -> dict:
-    mem = psutil.virtual_memory()
-    cpu = psutil.cpu_percent(interval=0.1)
-    import uuid
-    request_id = str(uuid.uuid4())
-    return {
-        "request_id": request_id,
-        "memory_percent": mem.percent,
-        "cpu_percent": cpu,
-        "status": "Healthy" if mem.percent < 75 and cpu < 90 else "Warning"
-    }
-
-
-def _shutdown_handler(signum, frame):
-    print("\n🔄 [Shutdown] 연결 정리 중...")
-    try:
-        if db_client is not None:
-            db_client.close_all()
-    except Exception as e:
-        print(f"⚠️ [Shutdown] DB 정리 중 오류: {e}")
-    print("✅ [Shutdown] 완료")
-
-
-def bootstrap_system() -> Tuple[dict, SafetyGuard, dict, DRFConnector, SwarmManager]:
-    global db_client
-
-    signal.signal(signal.SIGINT, _shutdown_handler)
-    signal.signal(signal.SIGTERM, _shutdown_handler)
-
-    with open("config.json", "r", encoding="utf-8") as f:
-        config = json.load(f)
-    if "data_sync_connectors" not in config:
-        raise RuntimeError("[HALT_BOOTSTRAP] missing key: data_sync_connectors")
-
-    version = config.get("system_metadata", {}).get("os_version", "unknown")
-    print(f"--- Lawmadi OS {version} Booting ---")
-
-    _validate_env(config)
-
-    # DB 초기화 (Fail-soft)
-    try:
-        from connectors import db_client as _db_client
-        db_client = _db_client
-        print("🔄 [DB] Cloud SQL 연결 및 테이블 초기화...")
-        db_client.init_tables()
-        print("✅ [DB] init_tables 완료")
-    except Exception as e:
-        print(f"⚠️ [DB] 초기화 실패(Fail-soft): {e}")
-        db_client = None
-
-    security_cfg = config["security_layer"]
-    guard = SafetyGuard(
-        policy=security_cfg["anti_leak_policy"],
-        restricted_keywords=security_cfg["restricted_keywords"],
-        safety_config=security_cfg["safety"]
-    )
-
-    cb_configs = config["network_security"]["circuit_breaker"]["per_provider"]
-    circuit_breakers = {
-        provider: CircuitBreaker(provider_name=provider, config=cb_configs[provider])
-        for provider in cb_configs
-    }
-
-    drf_cfg = config["data_sync_connectors"]
-    # ✅ [Security] 코드에 값을 박지 않고 OS 환경변수(Secret)에서 로드
-    drf = DRFConnector(
-        api_key=os.getenv("LAWGO_DRF_OC"),
-        timeout_ms=drf_cfg["request_timeout_ms"],
-        endpoints=drf_cfg["drf_endpoints"],
-        cb=circuit_breakers.get("LAW_GO_KR_DRF"),
-        api_failure_policy=drf_cfg["api_failure_policy"]
-    )
-
-    swarm = SwarmManager(config=config["swarm_engine_config"])
-
-    return config, guard, circuit_breakers, drf, swarm
-
-
-async def _init_db_background(timeout_sec: float = 3.0):
-    global db_client
-    try:
-        from connectors import db_client as _db_client
-        db_client = _db_client
-        print("🔄 [DB] init_tables(background)...")
-        await asyncio.wait_for(
-            asyncio.to_thread(db_client.init_tables),
-            timeout=timeout_sec
-        )
-        print("✅ [DB] init_tables 완료")
-    except Exception as e:
-        print(f"⚠️ [DB] background init 실패(Fail-soft): {e}")
-        db_client = None
-
+# =========================================================
+# ⚙️ [INFRA] 시스템 부팅 및 초기화 파이프라인
+# =========================================================
 
 @app.on_event("startup")
-async def on_startup():
-    try:
-        config, guard, cbs, drf, swarm = bootstrap_system()
-        RUNTIME["config"] = config
-        RUNTIME["guard"] = guard
-        RUNTIME["circuit_breakers"] = cbs
-        RUNTIME["drf"] = drf
-        RUNTIME["swarm"] = swarm
-        RUNTIME["boot_error"] = None
-
-        asyncio.create_task(_init_db_background())
-
-        health = _get_health_status()
-        print(f"✅ System Health: {health['status']} "
-              f"(Memory: {health['memory_percent']}%, CPU: {health['cpu_percent']}%)")
-    except Exception as e:
-        RUNTIME["boot_error"] = str(e)
-        print(f"❌ [BOOT] 부팅 실패(서버는 유지): {e}")
-
+async def startup():
+    db_client.init_tables()
+    config = load_integrated_config()
+    if os.getenv("GEMINI_KEY"):
+        genai.configure(api_key=os.getenv("GEMINI_KEY"))
+    
+    drf_conn = DRFConnector(
+        api_key=os.getenv("LAWGO_DRF_OC", "choepeter"),
+        endpoints={
+            "lawSearch": "https://www.law.go.kr/DRF/lawSearch.do",
+            "lawService": "https://www.law.go.kr/DRF/lawService.do",
+            "precSearch": "https://www.law.go.kr/DRF/precSearch.do"
+        }
+    )
+    
+    RUNTIME.update({
+        "config": config,
+        "drf": drf_conn,
+        "selector": LawSelector(),
+        "guard": SafetyGuard(policy=True, restricted_keywords=[], safety_config={})
+    })
+    logger.info("✅ Lawmadi Swarm Kernel v50.2.3-HARDENED Online")
 
 @app.get("/health")
-def health():
-    import uuid
-    request_id = str(uuid.uuid4())
+async def health():
     return {
-        "request_id": request_id,
-        "ok": True,
-        "boot_ok": RUNTIME["boot_error"] is None,
-        "boot_error": RUNTIME["boot_error"],
-        "resource": _get_health_status()
+        "status": "online", "os_version": "v50.2.3",
+        "diagnostics": {"l5_ready": bool(RUNTIME.get("selector")), "drf_node": bool(RUNTIME.get("drf"))}
     }
-
-
-SOFT_MODE = os.getenv("SOFT_MODE", "true").lower() == "true"
-
 
 @app.post("/ask")
 async def ask(req: Request):
-    body = await req.json()
-    user_input = (body.get("query") or "").strip()
-
-    if not user_input:
-        return human_opening_message()
-
-    # ① LLM 사건 요약 (법 판단 없음)
-    summary = summarize(user_input)
-
-    # 🧭 A/B/C 재진입 처리 (Soft Mode Fallback 추가 + Exception Safety)
-    if user_input.strip().upper()[:1] in ["A", "B", "C"]:
-        drf = RUNTIME["drf"]
-        routed = None
-        
-        # 1. 정석대로 Action Router 시도 (안전망 확보)
-        try:
-            routed = route_action(user_input, summary, drf)
-        except Exception as e:
-            print(f"⚠️ [Routing Error] route_action 실패: {e}")
-            routed = None
-            
-        # 2. Router가 성공적이고, fail_closed가 아니면 반환
-        if routed and not routed.get("fail_closed", False):
-            return routed
-            
-        # 3. ⚠️ Router 실패/에러 시 Soft Mode 강제 진입 (Fail-Over)
-        # DRF가 죽어도 A/B/C에 대한 응답은 나가야 함
-        import uuid
-        choice = user_input.strip().upper()[:1]
-        
-        fallback_responses = {
-            "A": (
-                "## [A. 내용증명 발송 가이드]\n\n"
-                "법적 효력을 위해 우체국을 통해 '내용증명'을 발송해야 합니다.\n\n"
-                "**1. 필수 포함 내용**\n"
-                "- 수신인/발신인 주소 및 성명\n"
-                "- 임대차 계약 사실 (계약일, 만기일, 보증금액)\n"
-                "- 계약 해지 의사 표시 ('만기에 맞춰 이사하겠다')\n"
-                "- 보증금 반환 계좌번호\n\n"
-                "**2. 작성 팁**\n"
-                "총 3부를 작성하여 우체국 창구에 가져가시면 됩니다. (본인/우체국/수신인 보관용)"
-            ),
-            "B": (
-                "## [B. 경찰 신고/고소 가이드]\n\n"
-                "전세사기가 의심될 경우 관할 경찰서 경제팀을 방문하세요.\n\n"
-                "**준비물:**\n"
-                "- 신분증, 임대차계약서 원본\n"
-                "- 이체 내역서 (은행 발급)\n"
-                "- 집주인과 나눈 문자/통화 녹음 등 증거\n\n"
-                "※ 단순 미반환은 민사 문제일 수 있으나, '기망 행위'가 있었다면 사기죄 성립이 가능합니다."
-            ),
-            "C": (
-                "## [C. 보증금 반환 소송 가이드]\n\n"
-                "법원을 통해 강제 집행 권한을 얻는 절차입니다.\n\n"
-                "1. **임차권등기명령:** 이사 가기 전 필수 신청 (대항력 유지)\n"
-                "2. **지급명령:** 집주인이 이의 제기 안 하면 1~2달 내 확정 (빠름)\n"
-                "3. **본안소송:** 다툼이 있을 경우 진행 (6개월 이상 소요)\n\n"
-                "※ 소송 비용은 승소 시 상대방에게 청구 가능합니다."
-            )
-        }
-
-        request_id = str(uuid.uuid4())
-        return {
-            "request_id": request_id,
-            "case_summary": summary,
-            "law_domains": summary.get("law_domains", []),
-            "recipe_id": f"SOFT_MODE_FALLBACK_{choice}",
-            "response": fallback_responses.get(choice, "해당 선택지에 대한 정보를 불러올 수 없습니다.")
-        }
-
-    # ② DRF 커넥터
-    drf: DRFConnector = RUNTIME["drf"]
-
-    # ③ 요약 기반 DRF 검색
-    queries = " ".join(build_queries(summary))
-    context = drf.fetch_verified_law(queries)
-
-    laws = context.get("content") if isinstance(context, dict) else None
-
-    # ④ DRF 실패 → SOFT_MODE 행동 가이드
-    if not laws:
-        import uuid
-        request_id = str(uuid.uuid4())
-        return {
-            "request_id": request_id,
-            "case_summary": summary,
-            "law_domains": summary.get("law_domains", []),
-            "leaders": ["L01", "L08", "L22"],
-            "recipe_id": "SOFT_MODE_ACTION_FLOW",
-            "response": (
-                "전세사기 가능성이 상당히 높은 유형으로 판단됩니다.\n\n"
-                "[현재 상황 핵심]\n"
-                "- 임대차 계약 체결\n"
-                "- 보증금 지급 완료\n"
-                "- 보증금 미반환 또는 반환 거부 가능성\n\n"
-                "[지금 바로 해야 할 순서]\n"
-                "1. 등기부등본 확인 (소유자·근저당·가압류)\n"
-                "2. 보증금 이체 내역 확보\n"
-                "3. 임대인 실소유자 동일성 확인\n\n"
-                "[다음 단계 선택]\n"
-                "A. 내용증명 발송\n"
-                "B. 형사 고소 또는 경찰 신고\n"
-                "C. 보증금 반환 소송\n\n"
-                "👉 A / B / C 중 하나를 입력해 주세요."
-            )
-        }
-
-    # ⑤ DRF 성공 → 근거 기반 설명만
-    # ⑤-1 Claude에게 설명 위임 (근거 제한)
-    system_prompt = (
-        "You are Lawmadi OS. "
-        "Explain ONLY based on the provided legal evidence. "
-        "Do NOT create new statutes or precedents. "
-        "Do NOT guess. "
-        "Explain clearly in Korean for non-lawyers."
-    )
-
-    evidence_text = context.get("content", "")
-
+    start_time = datetime.datetime.now()
     try:
-        # ⚠️ 동기 호출 유지 (추후 Async 변환 필요)
-        claude_resp = claude.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=1024,
-            temperature=0.2,
-            system=system_prompt,
-            messages=[{
-                "role": "user",
-                "content": (
-                    f"[사건 요약]\n{summary}\n\n"
-                    f"[법률 근거]\n{evidence_text}\n\n"
-                    "위 근거만 사용하여 현재 상황을 설명해 주세요."
-                )
-            }]
+        data = await req.json()
+        query = data.get("query", "")
+        config = RUNTIME.get("config", {})
+        
+        # 1. [L5 Security] 패킷 검사
+        if not RUNTIME["guard"].check(query):
+            return {"response": "🚫 보안 정책에 의해 차단되었습니다.", "status": "BLOCKED"}
+
+        # 2. [L2 Swarm] 지능형 리더 핫스왑 선출
+        leader_registry = config.get("leader_registry", DEFAULT_LEADER_REGISTRY)
+        leader = select_swarm_leader(query, leader_registry)
+        
+        # 3. [L3/L5 Inference] 리더 페르소나 주입 및 엔진 가동
+        # IT 기술: gemini-2.5-flash-preview-09-2025 모델의 자동 함수 호출 활용
+        model = genai.GenerativeModel(
+            model_name="gemini-2.5-flash-preview-09-2025",
+            tools=law_tools,
+            system_instruction=f"{SYSTEM_INSTRUCTION_BASE}\n현재 당신은 '{leader['name']}({leader['role']})' 노드입니다. 반드시 [{leader['name']} 답변]으로 시작하세요."
         )
-        explanation = claude_resp.content[0].text
-        explanation += "\n\n(AI Lawmadi가 판례 데이터를 기반으로 분석한 내용입니다.)"
+        
+        chat = model.start_chat(enable_automatic_function_calling=True)
+        resp = chat.send_message(f"사용자 질문: {query}")
+        final_text = resp.text
 
+        # 4. [L6 Governance] 헌법 준수 최종 확인
+        if not validate_constitutional_compliance(final_text):
+            logger.warning("🚨 [L6] 헌법 준수 루프 위반 감지")
+            return {"response": "⚠️ 시스템 무결성 정책에 의해 답변이 제한되었습니다.", "status": "FAIL_CLOSED"}
+
+        # 5. [L6 Audit] 불변 감사 로그 기록
+        db_client.add_audit_log(
+            query=query,
+            response=final_text,
+            leader=leader.get('name'),
+            status="SUCCESS",
+            latency_ms=(datetime.datetime.now() - start_time).total_seconds() * 1000
+        )
+        
+        return {"response": final_text, "leader": leader.get("name"), "status": "SUCCESS"}
+        
     except Exception as e:
-        print(f"⚠️ [LLM Error] Claude 호출 실패: {e}")
-        explanation = explain(context, summary)
-        explanation += "\n\n※ AI 연결 지연으로 인해 표준 법령 정보를 표시합니다."
+        logger.error(f"💥 커널 에러: {e}")
+        return {"response": f"⚠️ 시스템 장애가 발생했습니다. (Ref: {datetime.datetime.now().strftime('%H%M%S')})", "status": "ERROR"}
 
-    # 🔐 공통 후처리 (DRF 근거 명시)
-    explanation += "\n\n※ 위 내용은 국가법령정보센터 근거에 기반한 설명입니다."
+def load_integrated_config():
+    if os.path.exists("config.json"):
+        with open("config.json", "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
 
-    import uuid
-    request_id = str(uuid.uuid4())
-
-    return {
-        "request_id": request_id,
-        "case_summary": summary,
-        "law_domains": summary.get("law_domains", []),
-        "response": explanation
-    }
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8080))
+    uvicorn.run(app, host="0.0.0.0", port=port)

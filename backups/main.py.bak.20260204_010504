@@ -1,0 +1,67 @@
+import os
+import json
+import logging
+import datetime
+import google.generativeai as genai
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+from core.security import SafetyGuard, CircuitBreaker
+from connectors.drf_client import DRFConnector
+
+load_dotenv()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("LawmadiOS")
+
+app = FastAPI(title="Lawmadi OS v50", version="50.6.0-ULTIMATE")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+
+RUNTIME = {}
+
+@app.on_event("startup")
+async def startup():
+    with open("config.json", "r", encoding="utf-8") as f:
+        config = json.load(f)
+    
+    # L0: Security & L3: DRF Init
+    sec_cfg = config.get("security_layer", {})
+    guard = SafetyGuard(True, [], sec_cfg.get("safety", {}))
+    
+    cb_cfg = config.get("network_security", {}).get("circuit_breaker", {}).get("per_provider", {}).get("LAW_GO_KR_DRF", {})
+    drf_conn = DRFConnector(api_key=os.getenv("LAWGO_DRF_OC"), cb=CircuitBreaker("DRF", cb_cfg))
+
+    # Gemini Init
+    genai.configure(api_key=os.getenv("GEMINI_KEY"))
+    
+    RUNTIME.update({"guard": guard, "drf": drf_conn, "config": config})
+    logger.info("✅ Lawmadi OS v50 Ultimate Booted")
+
+@app.post("/ask")
+async def ask(req: Request):
+    data = await req.json()
+    query = data.get("query", "")
+    
+    # 6대 원칙 (L7 Renderer 정책 반영)
+    fmt = RUNTIME["config"]["OUTPUT_FORMAT_POLICY"]["LEGAL_SECTION"]
+    
+    # [L0] Security Check
+    check = RUNTIME["guard"].check(query)
+    if check == "CRISIS": return {"response": "🚨 긴급 상황 안내가 필요한 상황으로 판단됩니다."}
+    if not check: return {"response": "🚫 보안 정책 위반입니다."}
+
+    # [L3] DRF Fact Fetching
+    law_res = RUNTIME["drf"].fetch_verified_law(query)
+    context = f"[DRF]: {law_res.get('content')}" if law_res.get("status") == "VERIFIED" else fmt["on_unavailable"]
+
+    # [L2] Gemini Swarm Logic
+    try:
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        inst = f"너는 Lawmadi OS다. 다음 원칙을 지켜라: 1. SSOT 2. ZERO_INFERENCE 3. TEMPORAL. \n\n{fmt['header']}\n{context}\n{fmt['disclaimer']}"
+        resp = model.generate_content(f"{inst}\n\n질문: {query}")
+        return {"response": resp.text}
+    except Exception as e:
+        return {"response": f"오류 발생: {str(e)}"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8080)

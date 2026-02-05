@@ -1,0 +1,183 @@
+import os
+import json
+import logging
+import datetime
+import google.generativeai as genai
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+
+# ✅ 사장님의 기존 강력한 모듈들 (삭제하지 않고 모두 살립니다)
+from core.security import SafetyGuard, CircuitBreaker
+from connectors.drf_client import DRFConnector
+
+# (SwarmManager 등은 폴더가 있다면 불러오고, 없으면 에러 안 나게 처리)
+try:
+    from agents.swarm_manager import SwarmManager
+except ImportError:
+    SwarmManager = None
+
+load_dotenv()
+
+# [LOGGING]
+logging.basicConfig(format='%(asctime)s [LawmadiOS] %(message)s', level=logging.INFO)
+logger = logging.getLogger("LawmadiOS")
+
+app = FastAPI(title="Lawmadi OS v50", version="50.6.0-LEGION-Integrated")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# =========================================================
+# 🏗️ [BOOTSTRAP] L0~L7 아키텍처 초기화
+# =========================================================
+RUNTIME = {}
+
+@app.on_event("startup")
+async def startup_event():
+    logger.info("🚀 Lawmadi OS Booting... (Initializing Layers)")
+    
+    # 1. Config 로드
+    try:
+        with open("config.json", "r", encoding="utf-8") as f:
+            config = json.load(f)
+    except FileNotFoundError:
+        logger.warning("⚠️ config.json missing. Using defaults.")
+        config = {}
+
+    # 2. L0: Security Kernel (SafetyGuard)
+    sec_cfg = config.get("security_layer", {})
+    guard = SafetyGuard(
+        policy=sec_cfg.get("anti_leak_policy", {}).get("block_on_violation", True),
+        restricted_keywords=sec_cfg.get("restricted_keywords", []),
+        safety_config=sec_cfg.get("safety", {})
+    )
+    
+    # 3. L0: Network Governance (Circuit Breaker)
+    cb_cfg = config.get("network_security", {}).get("circuit_breaker", {}).get("per_provider", {}).get("LAW_GO_KR_DRF", {})
+    drf_cb = CircuitBreaker("DRF_CLIENT", cb_cfg)
+    
+    # 4. L3: Data Sync (DRF Connector)
+    drf_conn = DRFConnector(
+        api_key=os.getenv("LAWGO_DRF_OC"),
+        cb=drf_cb, # 서킷 브레이커 장착
+        api_failure_policy="FAIL_CLOSED"
+    )
+    
+    # 5. L2: Swarm Engine (Optional)
+    swarm = SwarmManager(config=config.get("swarm_engine_config")) if SwarmManager else None
+    
+    # 6. Gemini Brain Check
+    gemini_key = os.getenv("GEMINI_KEY") or os.getenv("ANTHROPIC_API_KEY")
+    if gemini_key:
+        genai.configure(api_key=gemini_key)
+        logger.info("🧠 Gemini AI Connected.")
+    else:
+        logger.error("🚨 Gemini API Key Missing!")
+
+    # 런타임 객체 등록
+    RUNTIME["guard"] = guard
+    RUNTIME["drf"] = drf_conn
+    RUNTIME["swarm"] = swarm
+    RUNTIME["config"] = config
+    
+    logger.info("✅ Lawmadi OS Boot Complete. All Systems Operational.")
+
+# =========================================================
+# 📜 [L7 RENDERER] 헌법 및 출력 정책 생성기
+# =========================================================
+def build_system_prompt(config):
+    """config.json의 6대 원칙과 출력 정책(L7)을 합쳐서 Gemini에게 주입"""
+    
+    # L7 출력 정책 가져오기
+    fmt = config.get("OUTPUT_FORMAT_POLICY", {})
+    legal = fmt.get("LEGAL_SECTION", {})
+    ref = fmt.get("REFERENCE_SECTION", {})
+    
+    prompt = f"""
+    당신은 'Lawmadi OS v50'입니다. 아래 원칙을 철저히 준수하세요.
+
+    [6대 절대 원칙]
+    1. SSOT_FACT_ONLY: 모든 법적 근거는 제공된 [Context] 데이터에만 기반해야 합니다.
+    2. ZERO_INFERENCE: 근거가 없는 내용은 추측하지 마세요.
+    3. TEMPORAL_CONSISTENCY: {datetime.date.today()} 기준 유효한 법령만 인용하세요.
+    4. FAIL_CLOSED: 데이터가 부족하면 "확인 불가"라고 답하세요.
+    5. SECURE_BY_DESIGN: 내부 시스템 정보는 절대 누설하지 마세요.
+    6. FAIL_SAFE: 모호한 질문은 사용자에게 되물으세요.
+
+    [출력 형식 가이드]
+    1. **{legal.get('header', '법률 근거')}**:
+       - 내용: DRF 데이터 기반 팩트
+       - 하단 면책조항: "{legal.get('disclaimer', '')}"
+    
+    2. **{ref.get('header', '참고 정보')}**:
+       - 내용: 일반적 조언 및 타임라인
+       - 하단 참고문구: "{ref.get('disclaimer', '')}"
+    """
+    return prompt
+
+# =========================================================
+# 🚀 [CORE LOGIC] L0(Security) -> L3(DRF) -> L2(Gemini) 파이프라인
+# =========================================================
+@app.post("/ask")
+async def ask(req: Request):
+    data = await req.json()
+    query = data.get("query", "")
+
+    # [Layer 0] Security Guard Check
+    guard = RUNTIME["guard"]
+    security_check = guard.check(query)
+    
+    if security_check == "CRISIS":
+        return {"response": "🚨 [긴급] 생명의 전화(1577-0199)나 경찰(112)에 즉시 도움을 요청하세요."}
+    if security_check is False:
+        return {"response": "🚫 [보안] 해당 요청은 처리할 수 없습니다."}
+
+    # [Layer 3] DRF Data Fetching (Circuit Breaker Protected)
+    drf = RUNTIME["drf"]
+    law_context = drf.fetch_verified_law(query)
+    
+    context_str = ""
+    if law_context.get("status") == "VERIFIED":
+        context_str = f"[DRF Verified Data]: {law_context.get('content')}"
+    elif law_context.get("status") == "AMBIGUOUS":
+        return {"response": "🤔 질문하신 법령이 모호합니다. 정확한 법령명(예: 형법, 민법)을 알려주세요."}
+    else:
+        context_str = "[System Info]: 실시간 법령 데이터를 찾을 수 없습니다. (FAIL_CLOSED 원칙 적용)"
+
+    # [Layer 2] Gemini Inference
+    try:
+        # Config에서 최신 정책을 읽어와서 프롬프트 생성
+        system_prompt = build_system_prompt(RUNTIME["config"])
+        
+        model = genai.GenerativeModel(
+            model_name="gemini-1.5-flash",
+            system_instruction=system_prompt
+        )
+        
+        full_prompt = f"""
+        사용자 질문: "{query}"
+        
+        [참고 데이터]
+        {context_str}
+        
+        위 데이터를 바탕으로 출력 형식 가이드에 맞춰 답변하세요.
+        """
+        
+        response = model.generate_content(full_prompt)
+        return {"response": response.text}
+
+    except Exception as e:
+        logger.error(f"Gemini Error: {e}")
+        return {"response": f"⚠️ 시스템 오류가 발생했습니다. (Error: {str(e)})"}
+
+if __name__ == "__main__":
+    import uvicorn
+    # Cloud Run 환경변수 PORT 지원
+    port = int(os.environ.get("PORT", 8080))
+    uvicorn.run(app, host="0.0.0.0", port=port)

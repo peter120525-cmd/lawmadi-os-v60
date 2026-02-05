@@ -1,62 +1,71 @@
 import hashlib
 import re
 import json
-from typing import Dict, List, Any
+import logging
+from typing import Dict, List, Any, Optional
 
+# [IT 기술: 시스템 표준 로깅 계층 설정]
+logger = logging.getLogger("LawmadiOS.Validator")
 
 class LawmadiValidator:
     """
-    [L5] 데이터 무결성 및 검증 엔진
-    - 구조적 필드 검사
-    - 전체 항목의 식별자 검증 (샘플링 아님)
-    - SHA-256 서명 생성/검증 (캐시 무결성에 연결)
+    [L5: DATA_INTEGRITY_ENGINE]
+    Lawmadi OS의 데이터 무결성 및 보안 검증을 수행하는 하드닝 엔진입니다.
+    - LMD-CONST-005: 캐시 무결성 서명 검증
+    - LMD-CONST-007: 구조적 패킷 검증
+    - LMD-CONST-009: 식별자 규격 검증
     """
     def __init__(self):
-        # 사건번호: 4자리 연도 + 법원 구분자(1-2글자) + 번호
-        # 실제 법원 구분자: 가, 나, 다, 라, 마, 바, 사, 아, 자, 차, 카, 타, 파, 하 등
-        self.case_format = re.compile(r"^\d{4}[가-힣]{1,2}\d+$")
-        # 법령 일련번호: 숫자열 (길이 제한 없음, DRF 기준)
+        # 사건번호: 4자리 연도 + 법원 구분자 + 번호 (공백 허용 유연성 확보)
+        self.case_format = re.compile(r"^\d{4}\s*[가-힣]{1,2}\s*\d+$")
+        # 법령 식별자: 숫자형 문자열 규격 강제
         self.law_id_format = re.compile(r"^\d+$")
 
-    # ── 통합 검증 엔트리포인트 ───────────────────────────────────────────
+    # ── [L5] 통합 검증 파이프라인 ──────────────────────────────────────────
     def validate_all(self, structured_data: Dict[str, Any]) -> bool:
         """
-        구조적 무결성 → 식별자 검증 (전체 항목) → 통과/실패 반환
+        [IT 기술: Multi-Stage Validation]
+        구조 검사 -> 콘텐츠 유효성 -> 식별자 무결성을 단계별로 검증합니다.
+        하나라도 실패 시 'Fail-Closed' 원칙에 따라 즉시 차단합니다.
         """
-        # 1. 필수 필드 구조 검사
+        # 1. 구조적 무결성 검사 (Required Fields)
         if not self._check_structure(structured_data):
-            print("❌ [Validator] 구조 검증 실패: 필수 필드 누락")
+            logger.error("❌ [LMD-CONST-007] 구조 검증 실패: 필수 메타데이터 누락")
             return False
 
-        # 2. 콘텐츠가 비어있으면 실패
-        content = structured_data.get("content", [])
+        # 2. 페이로드 존재 확인
+        content = structured_data.get("content")
         if not content:
-            print("❌ [Validator] 콘텐츠가 비어있습니다.")
+            logger.warning("⚠️ [LMD-CONST-007] 유효 페이로드 부재: 빈 데이터 수신")
             return False
 
-        # 3. 전체 항목의 식별자 검증
+        # 3. 데이터 식별자 전수 검증 (Sampling 아님)
         if not self._verify_all_identifiers(content):
             return False
 
         return True
 
-    # ── 구조 검사 ─────────────────────────────────────────────────────────
+    # ── [L5] 구조적 무결성 검사 ───────────────────────────────────────────
     def _check_structure(self, data: Dict) -> bool:
-        """내부 표준 구조의 필수 필드가 존재하는지 확인"""
+        """내부 통신 규격(Packet Standard) 준수 여부 확인"""
         required_fields = ["status", "content", "source"]
         missing = [f for f in required_fields if f not in data]
         if missing:
-            print(f"❌ [Validator] 누락된 필드: {missing}")
+            logger.error(f"❌ 필수 필드 누락: {missing}")
             return False
         return True
 
-    # ── 식별자 검증 (전체 항목) ────────────────────────────────────────────
-    def _verify_all_identifiers(self, content: List[Any]) -> bool:
+    # ── [L5] 식별자 무결성 전수 검증 ────────────────────────────────────────
+    def _verify_all_identifiers(self, content: Any) -> bool:
         """
-        리스트의 모든 항목을 순회하며 법령ID 형식을 검증
-        하나라도 실패하면 전체 실패 (FAIL_CLOSED)
+        수신된 모든 항목의 ID 규격을 검증하여 데이터 오염을 방지합니다.
+        (LMD-CONST-009 식별자 보안 정책 준수)
         """
         items = content if isinstance(content, list) else [content]
+        
+        # IT 기술: DRF API의 다양한 키 명칭을 수용하도록 매핑 테이블 구성
+        id_keys = ["법령일련번호", "법령ID", "ID", "id"]
+        
         failed_indices = []
 
         for idx, item in enumerate(items):
@@ -64,44 +73,54 @@ class LawmadiValidator:
                 failed_indices.append(idx)
                 continue
 
-            law_id = str(item.get("법령일련번호", "")).strip()
-            if not law_id or not self.law_id_format.match(law_id):
+            # 유효한 키를 찾아서 검증
+            found_id = None
+            for key in id_keys:
+                if key in item:
+                    found_id = str(item[key]).strip()
+                    break
+            
+            if not found_id or not self.law_id_format.match(found_id):
                 failed_indices.append(idx)
 
         if failed_indices:
-            print(f"❌ [Validator] 식별자 검증 실패 항목 인덱스: {failed_indices}")
+            logger.error(f"❌ [LMD-CONST-009] 식별자 무결성 위반 발견 (Index: {failed_indices})")
             return False
 
         return True
 
-    # ── 사건번호 형식 검증 ─────────────────────────────────────────────────
+    # ── [L5] 판례 사건번호 형식 검증 ────────────────────────────────────────
     def validate_case_number(self, case_number: str) -> bool:
-        """사건번호가 국가 표준 형식인지 검증"""
+        """사건번호가 국가 표준 사법 형식인지 검증합니다."""
+        if not case_number: return False
+        
         cleaned = case_number.strip()
         if not self.case_format.match(cleaned):
-            print(f"❌ [Validator] 사건번호 형식 오류: '{cleaned}' "
-                  f"(예: 2016다234043)")
+            logger.error(f"❌ [L5] 사건번호 규격 오류: '{cleaned}' (정상 예: 2023다123456)")
             return False
         return True
 
-    # ── SHA-256 서명 생성 ──────────────────────────────────────────────────
+    # ── [LMD-CONST-005] SHA-256 무결성 서명 엔진 ───────────────────────────
     def generate_signature(self, data: Any) -> str:
         """
-        데이터의 SHA-256 서명을 생성
-        캐시 저장 시 함께 저장되어, 후속 무결성 검증에 사용됨
-        (LMD-CONST-005 CACHE_INTEGRITY_VIOLATION과 연결)
+        [IT 기술: Cryptographic Integrity]
+        데이터 패킷의 고유 지문을 생성하여 캐시 변조를 원천 차단합니다.
         """
-        data_string = json.dumps(data, sort_keys=True, ensure_ascii=False)
-        return hashlib.sha256(data_string.encode()).hexdigest()
+        try:
+            # IT 기술: 키 순서 고정 및 유니코드 안전 직렬화 적용
+            data_string = json.dumps(data, sort_keys=True, ensure_ascii=False)
+            return hashlib.sha256(data_string.encode('utf-8')).hexdigest()
+        except Exception as e:
+            logger.error(f"🚨 서명 생성 실패 (Serialization Error): {e}")
+            return "SIGNATURE_ERROR"
 
-    # ── SHA-256 서명 검증 ──────────────────────────────────────────────────
     def verify_signature(self, data: Any, expected_signature: str) -> bool:
         """
-        캐시에서 로드한 데이터의 서명이 저장된 서명과 일치하는지 검증
-        불일치 시 → LMD-CONST-005 트리거
+        [LMD-CONST-005] 저장된 서명과 현재 데이터의 지문을 대조합니다.
+        불일치 시 외부 침입 또는 데이터 오염으로 간주하고 처리를 거부합니다.
         """
         computed = self.generate_signature(data)
         if computed != expected_signature:
-            print("🚨 [LMD-CONST-005] CACHE_INTEGRITY_VIOLATION: 서명 불일치 감지")
+            logger.critical("🚨 [LMD-CONST-005] CACHE_INTEGRITY_VIOLATION: 데이터 무결성 파괴 감지")
             return False
         return True

@@ -37,7 +37,6 @@
     "leader_registry": {
       "L01": { "name": "휘율", "specialty": "민사법", "profile": "대법원 재판연구관 출신 부장판사급" },
       "L08": { "name": "온유", "specialty": "임대차", "profile": "주택임대차분쟁조정위원급" },
-      "L12": { "name": "아슬", "specialty": "등기·경매", "profile": "법원 경매계장 출신급" },
       "L22": { "name": "무결", "specialty": "형사법", "profile": "특수부 부장검사 출신급" },
       "L60": { "name": "마디", "specialty": "시스템 총괄", "profile": "법원행정처 전산정보국장 출신급" }
     }
