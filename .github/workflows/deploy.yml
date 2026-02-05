@@ -61,7 +61,7 @@ jobs:
           # --set-env-vars를 통해 GitHub Secrets에 저장된 기밀 데이터를 안전하게 커널로 전달합니다.
           # --add-cloudsql-instances를 통해 백엔드와 DB 간의 보안 터널을 생성합니다.
           gcloud run deploy "${{ env.SERVICE }}" \
-            --image "${{ env.REPO_PATH }}@${{ env.DIGEST }}" \
+            --image "$REPO_PATH@$DIGEST" \
             --region "${{ env.REGION }}" \
             --project "${{ env.PROJECT_ID }}" \
             --set-env-vars "GEMINI_KEY=${{ secrets.GEMINI_KEY }}" \
