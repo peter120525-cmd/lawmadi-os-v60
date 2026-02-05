@@ -1,3 +1,4 @@
+from connectors.db_driver_adapter import create_connection
 import os
 import json
 import hashlib
@@ -42,7 +43,7 @@ def _get_connector() -> Connector:
         _connector = Connector()
     return _connector
 
-def _create_connection():
+def create_connection():
     """Cloud SQL Connector를 사용한 보안 커넥션 생성 (pg8000 드라이버)"""
     if not _db_enabled():
         raise RuntimeError("Cloud SQL 인프라 설정이 누락되었습니다.")
@@ -72,7 +73,7 @@ def _get_pool() -> queue.Queue:
 
         try:
             for _ in range(_MIN_CONN):
-                _pool.put(_create_connection())
+                _pool.put(create_connection())
             logger.info(f"✅ [DB] Cloud SQL 커넥션 풀 초기화 완료 (Version: {_ENV_VERSION})")
         except Exception as e:
             logger.error(f"🚨 [DB] 커넥션 풀 생성 중 치명적 오류: {e}")
@@ -88,7 +89,7 @@ def get_connection():
         # 풀에서 커넥션을 획득하되, 비어있으면 즉시 새로 생성
         conn = pool.get_nowait()
     except queue.Empty:
-        conn = _create_connection()
+        conn = create_connection()
     return conn
 
 def release_connection(conn):
