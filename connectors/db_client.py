@@ -53,7 +53,7 @@ def _create_connection():
         "pg8000",
         user=_env("DB_USER"),
         password=_env("DB_PASS"),
-        dbname=_env("DB_NAME"),
+        dbname=_env("DB"),
     )
 
 def _get_pool() -> queue.Queue:
