@@ -21,7 +21,16 @@ except Exception:
     db = None
 
 logger = logging.getLogger("LawmadiOS.DRFConnector")
-
+# FORCE_STDOUT_HANDLER
+try:
+    if not logger.handlers:
+        h = logging.StreamHandler()
+        h.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
+        logger.addHandler(h)
+    logger.setLevel(logging.INFO)
+    logger.propagate = True
+except Exception:
+    pass
 
 class DRFConnector:
     """
@@ -68,6 +77,7 @@ class DRFConnector:
         self.api_key = (api_key or "").strip()
         self.timeout_sec = max(0.5, timeout_ms / 1000.0)
         self.endpoints = {**self.DEFAULT_ENDPOINTS, **(endpoints or {})}
+        logger.warning(f"[DRF] init endpoints={self.endpoints} policy={api_failure_policy} timeout={self.timeout_sec}s")
         self.cb = cb
         self.policy = api_failure_policy
         self.env_version = env_version
