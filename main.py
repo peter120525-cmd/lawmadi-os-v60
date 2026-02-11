@@ -61,9 +61,16 @@ DEFAULT_LEADER_REGISTRY = {
 # =========================================================
 def _audit(event_type: str, payload: dict) -> None:
     try:
-        db_client.add_audit_log(event_type=event_type, payload=payload)
+        db_client.add_audit_log(
+            query=payload.get("query", ""),
+            response=payload.get("response_sha256", ""),
+            leader=payload.get("leader", "SYSTEM"),
+            status=payload.get("status", event_type),
+            latency_ms=payload.get("latency_ms", 0),
+        )
     except Exception as e:
-        logger.warning(f"⚠️ audit skipped: {e}")
+        logger.warning(f"[AUDIT] logging failed: {e}")
+
 
 # =========================================================
 # 🛠️ [ROBUST HELPERS] 데이터 정밀 추출 및 정규화 계층
