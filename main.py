@@ -12,7 +12,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 # (선택) SearchService를 실제로 쓸 때만 enable
-from services.search_service import SearchService
+try:
+    # (선택) SearchService를 실제로 쓸 때만 enable
+try:
+    from services.search_service import SearchService
+except Exception:
+    SearchService = None  # type: ignore
+except Exception:
+    SearchService = None  # type: ignore
 
 # [IT 기술: 프로젝트 내부 계층형 모듈 임포트]
 from core.security import SafetyGuard  # CircuitBreaker 미사용이면 제거 가능
@@ -294,7 +301,7 @@ async def startup():
 
     # (선택) SearchService 활성화 플래그
     search_service = None
-    if os.getenv("ENABLE_SEARCH_SERVICE", "false").lower() == "true":
+    if os.getenv("ENABLE_SEARCH_SERVICE", "false").lower() == "true" and SearchService is not None:
         try:
             search_service = SearchService()
             logger.info("✅ SearchService enabled")
