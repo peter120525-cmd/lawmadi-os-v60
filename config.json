@@ -58,8 +58,8 @@
     "request_timeout_ms": 10000,
     "api_failure_policy": "FAIL_CLOSED",
     "drf_endpoints": {
-      "lawSearch": "https://www.law.go.kr/DRF/lawSearch.do",
-      "lawService": "https://www.law.go.kr/DRF/lawService.do"
+      "lawSearch": "http://www.law.go.kr/DRF/lawSearch.do",
+      "lawService": "http://www.law.go.kr/DRF/lawService.do"
     }
   }
 }

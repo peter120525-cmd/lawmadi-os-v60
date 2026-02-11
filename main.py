@@ -291,7 +291,7 @@ async def startup():
         endpoints={
             "lawSearch": "http://www.law.go.kr/DRF/lawSearch.do",
             "lawService": "http://www.law.go.kr/DRF/lawService.do",
-            "precSearch": "http://www.law.go.kr/DRF/precSearch.do",
+            "precSearch": "http://www.law.go.kr/DRF/lawSearch.do",
         },
     )
 
