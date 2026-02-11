@@ -20,6 +20,11 @@ COPY connectors/ ./connectors/
 COPY main.py .
 COPY config.json .
 COPY leaders.json .
+COPY agents/ ./agents/
+COPY engines/ ./engines/
+COPY services/ ./services/
+COPY prompts/ ./prompts/
+COPY frontend/ ./frontend/
 
 # 6. 포트 설정 및 실행
 EXPOSE 8080
