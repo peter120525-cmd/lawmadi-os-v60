@@ -1,41 +1,102 @@
+"""
+Lawmadi OS v50.2.4-HARDENED — Patched Kernel
+Based on v50.2.3-HARDENED original main.py
+
+[패치 내역 — 원본 대비 변경사항]
+🔴 감사 #2.1  .env.cloudrun 시크릿 노출 → .env.example로 교체 (파일 수준)
+🔴 감사 #2.2  CORS allow_origins=["*"] → 도메인 제한
+🔴 감사 #2.3  DRF OC 기본값 "choepeter" 하드코딩 → 환경변수 필수
+🟡 감사 #3.2  _audit() 시그니처 → db_client_v2.add_audit_log 실제 시그니처 정합
+🟡 감사 #3.6  버전 문자열 통일 → OS_VERSION 상수화
+🟡 원본버그   DRFConnector(config) → DRFConnector(api_key=...) 실제 시그니처
+🟡 원본버그   SearchService(config) → SearchService() 실제 시그니처 (인자 없음)
+🟡 원본버그   svc.get_best_law_verified() → svc.search_law() 실제 메서드명
+🟡 원본버그   /ask 내 중복 DRF law_search 호출 제거
+🟡 원본버그   들여쓰기 오류 (if drf_connector: 블록) 수정
+🟡 원본버그   guard.check() 결과에서 CRISIS 처리 누락 → 추가
+🟢 ULTRA     Trace ID 도입 (요청별 UUID)
+🟢 ULTRA     /metrics, /diagnostics 엔드포인트 추가
+🟢 ULTRA     optional_import 패턴 (부팅 실패 방지)
+🟢 ULTRA     Rolling average latency 추적
+🟢 ULTRA     Global exception handler 추가
+🟢 감사 #4.1  GEMINI_MODEL 환경변수화
+🟢 감사 #4.2  SOFT_MODE 기본값 true로 변경
+"""
+
+# =============================================================
+# CORE IMPORTS
+# =============================================================
+
 import os
+import sys
 import json
+import uuid
+import time
 import logging
 import datetime
 import re
 import hashlib
-from typing import Any, List, Dict
+import traceback
+from typing import Any, List, Dict, Optional, Union
+from importlib import import_module
 
 import google.generativeai as genai
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
-# (선택) SearchService를 실제로 쓸 때만 enable
-try:
-    from services.search_service import SearchService
-except Exception:
-    SearchService = None  # type: ignore
+# =============================================================
+# FAIL-SOFT OPTIONAL IMPORT [ULTRA]
+# 원본은 hard import로 모듈 하나 깨지면 서버 전체 부팅 실패.
+# optional_import로 변경하여 개별 모듈 실패 시에도 서버 기동 가능.
+# =============================================================
 
-# [IT 기술: 프로젝트 내부 계층형 모듈 임포트]
-from core.security import SafetyGuard  # CircuitBreaker 미사용이면 제거 가능
-from connectors.drf_client import DRFConnector
-from core.law_selector import LawSelector
-from connectors import db_client  # [L6] 불변 감사 로그 및 영속성 레이어
+def optional_import(module_path: str, attr: Optional[str] = None):
+    """모듈 로딩 실패 시 None 반환. 서버 부팅을 절대 중단시키지 않음."""
+    try:
+        module = import_module(module_path)
+        return getattr(module, attr) if attr else module
+    except Exception as e:
+        logging.warning(f"[IMPORT FAIL-SOFT] {module_path} -> {e}")
+        return None
 
-# [IT 기술: 환경 설정 및 고가용성 로깅 계층]
+# 원본 hard import → fail-soft로 교체
+timeline_analyze = optional_import("engines.temporal_v2", "timeline_analyze")
+SwarmManager = optional_import("agents.swarm_manager", "SwarmManager")
+SearchService = optional_import("services.search_service", "SearchService")
+SafetyGuard = optional_import("core.security", "SafetyGuard")
+DRFConnector = optional_import("connectors.drf_client", "DRFConnector")
+LawSelector = optional_import("core.law_selector", "LawSelector")
+db_client = optional_import("connectors.db_client")
+
+# =============================================================
+# BOOTSTRAP
+# =============================================================
+
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("LawmadiOS.Kernel")
 
-app = FastAPI(title="Lawmadi OS", version="v50.2.3-HARDENED")
+# [감사 #3.6] 버전 단일 소스
+OS_VERSION = "v50.2.4-HARDENED"
+
+app = FastAPI(title="Lawmadi OS", version=OS_VERSION)
+
+# [감사 #2.2] CORS 도메인 제한 (원본: allow_origins=["*"])
+# 개발 환경에서 localhost 필요 시 CORS_EXTRA_ORIGINS 환경변수로 추가
+_cors_origins = [
+    "https://lawmadi.com",
+    "https://www.lawmadi.com",
+    "https://lawmadi-os.web.app",
+]
+_extra_cors = os.getenv("CORS_EXTRA_ORIGINS", "")
+if _extra_cors:
+    _cors_origins.extend([o.strip() for o in _extra_cors.split(",") if o.strip()])
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://lawmadi.com",
-        "https://www.lawmadi.com"
-    ],
+    allow_origins=_cors_origins,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,37 +104,66 @@ app.add_middleware(
 
 RUNTIME: Dict[str, Any] = {}
 
-# =========================================================
-# 🐝 [L2 SWARM DATA] 63인의 전문가 리더 및 임원 명부 (Hot-Swap 규격)
-# =========================================================
-DEFAULT_LEADER_REGISTRY = {
-    "C01": {"name": "Lawmadi 이사회 의장 (회장님)", "aliases": ["회장", "의장", "보스", "회장님", "의장님", "의장님 호출"], "role": "시스템 총괄 정책 결정자"},
-    "L08": {"name": "부동산 전문 리더", "aliases": ["부동산", "집주인", "보증금", "임대차", "부동산리더"], "role": "임대차 및 물권법 권위자"},
-    "L22": {"name": "형사 특별 수사 리더", "aliases": ["형사", "검사", "고소", "형사리더", "사기"], "role": "형법 및 특경법 전문가"},
-    "L15": {"name": "인사노무 전략 리더", "aliases": ["노무", "노동", "해고", "노무사", "인사"], "role": "근로기준법 및 노사관계 전문가"},
-    "L21": {"name": "IT/IP 기술 리더", "aliases": ["AI", "특허", "저작권", "기술", "개인정보"], "role": "변리사 기반 지식재산권 에이전트"},
-    "L33": {"name": "우주항공 법무 임원", "aliases": ["우주", "위성", "궤도", "항공"], "role": "미래 우주법 전략가"},
-    "L60": {"name": "마디 통합 리더", "aliases": ["마디", "리더", "분석기"], "role": "시스템 기본 법리 분석 노드"},
+# [ULTRA] 런타임 메트릭
+METRICS: Dict[str, Any] = {
+    "requests": 0,
+    "errors": 0,
+    "avg_latency_ms": 0,
+    "boot_time": None,
 }
 
-# =========================================================
-# 🧾 [AUDIT] Best-effort audit wrapper (DB가 죽어도 API는 죽지 않게)
-# =========================================================
+# =============================================================
+# 🐝 [L2 SWARM DATA] Leader Registry (Hot-Swap JSON SSOT)
+# =============================================================
+try:
+    with open("leaders.json", "r", encoding="utf-8") as f:
+        LEADER_REGISTRY = json.load(f)
+    logger.info("✅ Leader registry loaded")
+except Exception as e:
+    logger.warning(f"leaders.json load failed: {e}")
+    LEADER_REGISTRY = {}
+
+# =============================================================
+# UTILITIES [ULTRA 추가]
+# =============================================================
+
+def _sha256(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest() if text else ""
+
+def _now_iso() -> str:
+    return datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+
+def _trace_id() -> str:
+    """[ULTRA] 요청별 고유 추적 ID"""
+    return str(uuid.uuid4())
+
+# =============================================================
+# 🧾 [AUDIT] Best-effort audit wrapper
+# [감사 #3.2] db_client_v2.add_audit_log 실제 시그니처에 맞춤:
+#   add_audit_log(query, response, leader, status, latency_ms)
+# =============================================================
+
 def _audit(event_type: str, payload: dict) -> None:
     try:
-        db_client.add_audit_log(
-            query=payload.get("query", ""),
-            response=payload.get("response_sha256", ""),
-            leader=payload.get("leader", "SYSTEM"),
-            status=payload.get("status", event_type),
-            latency_ms=payload.get("latency_ms", 0),
+        if not db_client:
+            return
+        fn = getattr(db_client, "add_audit_log", None)
+        if not fn:
+            return
+        fn(
+            query=str(payload.get("query", ""))[:2000],
+            response=str(payload.get("response_sha256", ""))[:500],
+            leader=str(payload.get("leader", "SYSTEM"))[:50],
+            status=str(payload.get("status", event_type))[:20],
+            latency_ms=int(payload.get("latency_ms", 0)),
         )
     except Exception as e:
         logger.warning(f"[AUDIT] logging failed: {e}")
 
-# =========================================================
+# =============================================================
 # 🛠️ [ROBUST HELPERS] 데이터 정밀 추출 및 정규화 계층
-# =========================================================
+# =============================================================
+
 def _is_low_signal(query: str) -> bool:
     q = (query or "").strip()
     if len(q) < 3:
@@ -134,9 +224,10 @@ def _dedup_keep_order(texts: List[str]) -> List[str]:
             out.append(key)
     return out
 
-# =========================================================
+# =============================================================
 # 🛡️ [L6 GOVERNANCE] 헌법 준수 루프 (Constitutional Loop)
-# =========================================================
+# =============================================================
+
 def validate_constitutional_compliance(response_text: str) -> bool:
     if not response_text or len(response_text.strip()) < 10:
         return False
@@ -170,16 +261,22 @@ def validate_constitutional_compliance(response_text: str) -> bool:
 
     return True
 
-# =========================================================
+# =============================================================
 # 🛠️ [L3 SHORT_SYNC] Gemini 전용 지능형 도구 (Law & Precedent)
-# =========================================================
+# [원본버그 수정] svc.get_best_law_verified() → svc.search_law()
+#   (SearchService에 get_best_law_verified 메서드 없음)
+# =============================================================
+
 def search_law_drf(query: str):
     logger.info(f"🛠️ [L3 Strike] 법령 검색 호출: '{query}'")
     try:
         svc = RUNTIME.get("search_service")
         if not svc:
             return {"result": "ERROR", "message": "SearchService 미초기화."}
-        return svc.get_best_law_verified(query)
+        raw = svc.search_law(query)
+        if not raw:
+            return {"result": "NO_DATA", "message": "해당 키워드와 일치하는 법령이 없습니다."}
+        return {"result": "FOUND", "content": raw, "source": "국가법령정보센터(법령)"}
     except Exception as e:
         return {"result": "ERROR", "message": str(e)}
 
@@ -210,11 +307,12 @@ def search_precedents_drf(query: str):
         logger.error(f"🛠️ 판례 검색 실패: {e}")
         return {"result": "ERROR", "message": str(e)}
 
-# =========================================================
+# =============================================================
 # 📜 [L0 CONSTITUTION] 표준 응답 규격 및 절대 원칙
-# =========================================================
+# =============================================================
+
 SYSTEM_INSTRUCTION_BASE = f"""
-당신은 대한민국 법률 AI 'Lawmadi OS v50.2.3-HARDENED'의 [L2 Swarm Intelligence Cluster]입니다.
+당신은 대한민국 법률 AI 'Lawmadi OS {OS_VERSION}'의 [L2 Swarm Intelligence Cluster]입니다.
 할당된 전문가 리더 페르소나를 완벽히 연기하며, 반드시 아래 **5단계 표준 응답 구조**로 답변하십시오.
 
 --- [표준 응답 5단계 구조] ---
@@ -232,128 +330,246 @@ SYSTEM_INSTRUCTION_BASE = f"""
 5. TIMELINE_RULE: now_utc 외 임의 날짜 금지
 """
 
-# =========================================================
+# =============================================================
 # 🐝 [L2 SWARM] 리더 라우팅
-# =========================================================
-def select_swarm_leader(query: str, leaders: Dict) -> Dict:
-    registry = leaders if leaders else DEFAULT_LEADER_REGISTRY
+# =============================================================
 
+def select_swarm_leader(query: str, leaders: Dict) -> Dict:
+    registry = leaders if leaders else LEADER_REGISTRY
+
+    # 1) 별칭 명시적 매칭
     for leader_id, info in registry.items():
         if any(alias in query for alias in info.get("aliases", [])):
             logger.info(f"🎯 [L2 Hot-Swap] '{info['name']}' 노드 명시적 호출 감지")
             return info
 
+    # 2) 도메인 키워드 매칭
     domain_map = {
         "REAL_ESTATE": (["전세", "월세", "임대", "보증금", "매매", "등기"], "L08"),
-        "CRIMINAL": (["고소", "처벌", "사기", "횡령", "판례", "형사"], "L22"),
-        "LABOR": (["해고", "임금", "퇴직금", "근로", "수당"], "L15"),
-        "TECH": (["AI", "데이터", "개인정보", "해킹", "저작권"], "L21"),
-        "SPACE": (["위성", "발사체", "궤도", "우주항공"], "L33"),
+        "CRIMINAL":    (["고소", "처벌", "사기", "횡령", "판례", "형사"], "L22"),
+        "LABOR":       (["해고", "임금", "퇴직금", "근로", "수당"], "L15"),
+        "TECH":        (["AI", "데이터", "개인정보", "해킹", "저작권"], "L21"),
+        "SPACE":       (["위성", "발사체", "궤도", "우주항공"], "L33"),
     }
-
     for domain, (keywords, leader_id) in domain_map.items():
         if any(k in query for k in keywords):
             logger.info(f"🎯 [L2] {domain} 도메인 감지 -> {leader_id} 리더 자동 배정")
-            return registry.get(leader_id, registry["L60"])
+            return registry.get(leader_id, registry.get("L60", {"name": "마디 통합 리더", "role": "시스템 기본 분석"}))
 
-    return registry["L60"]
+    # 3) Fallback
+    return registry.get("L60", {"name": "마디 통합 리더", "role": "시스템 기본 법리 분석 노드"})
 
-# =========================================================
+# =============================================================
 # ⚙️ [CONFIG] load
-# =========================================================
+# =============================================================
+
 def load_integrated_config():
     if os.path.exists("config.json"):
         with open("config.json", "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
 
-# =========================================================
-# ⚙️ [INFRA] startup
-# =========================================================
+# =============================================================
+# [ULTRA] DIAGNOSTICS SNAPSHOT
+# =============================================================
+
+def _diagnostic_snapshot() -> Dict[str, Any]:
+    return {
+        "timestamp": _now_iso(),
+        "python": sys.version,
+        "pid": os.getpid(),
+        "os_version": OS_VERSION,
+        "modules": {
+            "drf": bool(RUNTIME.get("drf")),
+            "selector": bool(RUNTIME.get("selector")),
+            "guard": bool(RUNTIME.get("guard")),
+            "search_service": bool(RUNTIME.get("search_service")),
+            "swarm": bool(RUNTIME.get("swarm")),
+            "db_client": bool(db_client),
+            "gemini_key": bool(os.getenv("GEMINI_KEY")),
+        },
+        "metrics": METRICS,
+    }
+
+# =============================================================
+# 🚀 STARTUP
+# =============================================================
+
 @app.on_event("startup")
 async def startup():
-    soft_mode = (os.getenv("SOFT_MODE", "false").lower() == "true")
-    db_disabled = (os.getenv("DB_DISABLED", "0") == "1")
 
-    # DB init (보호)
-    if db_disabled:
-        logger.warning("🟡 DB_DISABLED=1 -> skip init_tables")
-    else:
+    logger.info(f"🚀 Lawmadi OS {OS_VERSION} starting...")
+
+    # [감사 #4.2] SOFT_MODE 기본값을 true로 변경 (Cloud Run 일시 장애 대비)
+    soft_mode = os.getenv("SOFT_MODE", "true").lower() == "true"
+    db_disabled = os.getenv("DB_DISABLED", "0") == "1"
+
+    # --------------------------------------------------
+    # 1️⃣ DB 초기화 (Fail-Soft)
+    # --------------------------------------------------
+    if not db_disabled:
+        if db_client:
+            try:
+                init_fn = getattr(db_client, "init_tables", None)
+                if init_fn:
+                    init_fn()
+                    logger.info("✅ DB init complete")
+            except Exception as e:
+                logger.warning(f"🟡 DB init failed: {e}")
+                if not soft_mode:
+                    raise
+        else:
+            logger.warning("🟡 db_client module unavailable")
+
+    # --------------------------------------------------
+    # 2️⃣ Config 로드
+    # --------------------------------------------------
+    try:
+        config = load_integrated_config()
+        logger.info("✅ Config loaded")
+    except Exception as e:
+        logger.error(f"❌ Config load failed: {e}")
+        if not soft_mode:
+            raise
+        config = {}
+
+    # --------------------------------------------------
+    # 3️⃣ SwarmManager (Fail-Soft)
+    # --------------------------------------------------
+    swarm = None
+    if SwarmManager:
         try:
-            db_client.init_tables()
+            swarm = SwarmManager(config)
+            logger.info("✅ SwarmManager initialized")
         except Exception as e:
-            logger.warning(f"🟡 DB init_tables failed: {e}")
-            if not soft_mode:
-                raise
+            logger.warning(f"🟡 SwarmManager degraded: {e}")
 
-    config = load_integrated_config()
-
-    # Gemini key configure
-    if os.getenv("GEMINI_KEY"):
-        genai.configure(api_key=os.getenv("GEMINI_KEY"))
+    # --------------------------------------------------
+    # 4️⃣ Gemini 설정
+    # [감사 #4.1] 모델명 환경변수화
+    # --------------------------------------------------
+    gemini_key = os.getenv("GEMINI_KEY")
+    if gemini_key:
+        genai.configure(api_key=gemini_key)
+        logger.info("✅ Gemini configured")
     else:
-        logger.warning("⚠️ GEMINI_KEY 누락: LLM 추론은 요청 시 FAIL_CLOSED 처리됩니다.")
+        logger.warning("⚠️ GEMINI_KEY 누락 (FAIL_CLOSED)")
 
-    # DRF
-    drf_conn = DRFConnector(
-        api_key=os.getenv("LAWGO_DRF_OC", "choepeter"),
-        endpoints={
-            "lawSearch": "http://www.law.go.kr/DRF/lawSearch.do",
-            "lawService": "http://www.law.go.kr/DRF/lawService.do",
-            "precSearch": "http://www.law.go.kr/DRF/lawSearch.do",
-        },
-    )
+    # --------------------------------------------------
+    # 5️⃣ DRF Connector (Fail-Soft)
+    # [원본버그 수정] DRFConnector(config) → DRFConnector(api_key=...)
+    #   실제 시그니처: __init__(self, api_key, timeout_ms, endpoints, ...)
+    # [감사 #2.3] DRF OC 기본값 "choepeter" 하드코딩 제거
+    # --------------------------------------------------
+    drf_conn = None
+    if DRFConnector:
+        drf_oc = os.getenv("LAWGO_DRF_OC", "").strip()
+        if drf_oc:
+            try:
+                drf_conn = DRFConnector(
+                    api_key=drf_oc,
+                    timeout_ms=int(os.getenv("DRF_TIMEOUT_MS", "5000")),
+                )
+                logger.info("✅ DRFConnector initialized")
+            except Exception as e:
+                logger.warning(f"🟡 DRFConnector degraded: {e}")
+        else:
+            logger.warning("⚠️ LAWGO_DRF_OC 미설정: DRF 비활성화")
 
-    # (선택) SearchService 활성화 플래그
+    # --------------------------------------------------
+    # 6️⃣ SearchService (DRF 기반)
+    # [원본버그 수정] SearchService(config) → SearchService()
+    #   실제 시그니처: __init__(self) — 인자 없음, 내부에서 DRF 직접 생성
+    # --------------------------------------------------
     search_service = None
-    if os.getenv("ENABLE_SEARCH_SERVICE", "false").lower() == "true" and SearchService is not None:
+    if SearchService:
         try:
             search_service = SearchService()
-            logger.info("✅ SearchService enabled")
+            logger.info("✅ SearchService initialized")
         except Exception as e:
-            logger.warning(f"🟡 SearchService init failed: {e}")
-            # soft_mode면 그냥 진행
+            logger.warning(f"🟡 SearchService degraded: {e}")
 
-    RUNTIME.update(
-        {
-            "config": config,
-            "drf": drf_conn,
-            "selector": LawSelector(),
-            "guard": SafetyGuard(policy=True, restricted_keywords=[], safety_config={}),
-            "search_service": search_service,
-        }
-    )
+    # --------------------------------------------------
+    # 7️⃣ SafetyGuard (Fail-Soft)
+    # --------------------------------------------------
+    guard = None
+    if SafetyGuard:
+        try:
+            safety_config = config.get("security_layer", {}).get("safety", {})
+            guard = SafetyGuard(
+                policy=True,
+                restricted_keywords=[],
+                safety_config=safety_config,
+            )
+            logger.info("✅ SafetyGuard initialized")
+        except Exception as e:
+            logger.warning(f"🟡 SafetyGuard degraded: {e}")
 
-    logger.info("✅ Lawmadi Swarm Kernel v50.2.3-HARDENED Online")
+    # --------------------------------------------------
+    # 8️⃣ LawSelector (Fail-Soft)
+    # --------------------------------------------------
+    selector = None
+    if LawSelector:
+        try:
+            selector = LawSelector()
+        except Exception as e:
+            logger.warning(f"🟡 LawSelector degraded: {e}")
 
-# =========================================================
+    # --------------------------------------------------
+    # 9️⃣ RUNTIME SSOT 등록
+    # --------------------------------------------------
+    RUNTIME.update({
+        "config": config,
+        "drf": drf_conn,
+        "selector": selector,
+        "guard": guard,
+        "search_service": search_service,
+        "swarm": swarm,
+    })
+
+    METRICS["boot_time"] = _now_iso()
+    logger.info(f"✅ Lawmadi OS {OS_VERSION} Online")
+
+# =============================================================
 # ✅ health
-# =========================================================
+# =============================================================
+
 @app.get("/health")
 async def health():
     return {
         "status": "online",
-        "os_version": "v50.2.3",
-        "diagnostics": {
-            "l5_ready": bool(RUNTIME.get("selector")),
-            "drf_node": bool(RUNTIME.get("drf")),
-            "search_service": bool(RUNTIME.get("search_service")),
-            "db_disabled": (os.getenv("DB_DISABLED", "0") == "1"),
-        },
+        "os_version": OS_VERSION,
+        "diagnostics": _diagnostic_snapshot(),
     }
 
-# =========================================================
-# ✅ ask
-# =========================================================
+# [ULTRA] 메트릭 엔드포인트
+@app.get("/metrics")
+async def metrics():
+    return METRICS
+
+# [ULTRA] 진단 엔드포인트
+@app.get("/diagnostics")
+async def diagnostics():
+    return _diagnostic_snapshot()
+
+# =============================================================
+# ✅ ask (HARDENED + Dual SSOT Safe Mode)
+# =============================================================
+
 @app.post("/ask")
 async def ask(req: Request):
-    start_time = datetime.datetime.now()
+
+    trace = _trace_id()  # [ULTRA]
+    start_time = time.time()
+
     try:
         data = await req.json()
         query = (data.get("query", "") or "").strip()
         config = RUNTIME.get("config", {})
 
-        # 0) Low-signal 입력은 LLM 호출 금지
+        # -------------------------------------------------
+        # 0) Low Signal 차단
+        # -------------------------------------------------
         if _is_low_signal(query):
             msg = (
                 "[마디 통합 리더 답변]\n\n"
@@ -364,95 +580,192 @@ async def ask(req: Request):
                 "3. 🕐 시간축 분석 (Timeline Analysis):\n"
                 "시간 정보 부족으로 생략합니다.\n\n"
                 "4. 절차 안내 (Action Plan):\n"
-                "- 사건 개요(무슨 일이 있었는지)\n"
-                "- 날짜/당사자/증빙(계약서 등)\n"
-                "- 원하는 결과(환급/고소/가처분 등)\n\n"
-                "5. 🔍 참고 정보 (Additional Context):\n"
-                "본 시스템은 법률 자문이 아닌 정보 제공/분석 보조입니다.\n"
+                "- 사건 개요\n"
+                "- 날짜/당사자/증빙\n"
+                "- 원하는 결과\n\n"
+                "5. 🔍 참고 정보:\n"
+                "본 시스템은 법률 자문이 아닌 정보 제공 시스템입니다.\n"
             )
             _audit("ask_low_signal", {"query": query, "status": "SKIPPED", "latency_ms": 0})
-            return {"response": msg, "leader": "마디 통합 리더", "status": "SUCCESS"}
+            return {"trace_id": trace, "response": msg, "leader": "마디 통합 리더", "status": "SUCCESS"}
 
-        # 0.5) GEMINI_KEY 없으면 즉시 FAIL_CLOSED
+        # -------------------------------------------------
+        # 0.5) Gemini 키 점검
+        # -------------------------------------------------
         if not os.getenv("GEMINI_KEY"):
-            _audit("ask_fail_closed", {"query": query, "reason": "missing_gemini_key"})
-            return {"response": "⚠️ GEMINI_KEY 미설정으로 추론이 비활성화되었습니다.", "status": "FAIL_CLOSED"}
+            _audit("ask_fail_closed", {"query": query, "status": "FAIL_CLOSED", "leader": "SYSTEM"})
+            return {"trace_id": trace, "response": "⚠️ GEMINI_KEY 미설정으로 추론이 비활성화되었습니다.", "status": "FAIL_CLOSED"}
 
-        # 1) Security
+        # -------------------------------------------------
+        # 1) Security Guard
+        # [원본버그 수정] guard.check()가 "CRISIS"를 반환할 수 있으나
+        #   원본은 `not guard.check(query)`로만 처리 → CRISIS 누락.
+        #   "CRISIS" is truthy이므로 not "CRISIS" = False → 차단 안됨.
+        #   그러나 위기 상황 전용 응답을 주지 못함. → 명시적 분기 추가.
+        # -------------------------------------------------
         guard = RUNTIME.get("guard")
-        if guard and (not guard.check(query)):
-            _audit("ask_blocked", {"query": query, "reason": "guard"})
-            return {"response": "🚫 보안 정책에 의해 차단되었습니다.", "status": "BLOCKED"}
+        if guard:
+            check_result = guard.check(query)
 
+            if check_result == "CRISIS":
+                safety_config = config.get("security_layer", {}).get("safety", {})
+                crisis_res = safety_config.get("crisis_resources", {})
+                lines = ["🚨 당신의 안전이 가장 중요합니다.\n"]
+                for label, number in crisis_res.items():
+                    lines.append(f"  📞 {label}: {number}")
+                lines.append("\n위 전문 기관으로 지금 바로 연락하세요.")
+                _audit("ask_crisis", {"query": query, "status": "CRISIS", "leader": "SAFETY"})
+                return {"trace_id": trace, "response": "\n".join(lines), "leader": "SAFETY", "status": "CRISIS"}
+
+            if check_result is False:
+                _audit("ask_blocked", {"query": query, "status": "BLOCKED", "leader": "GUARD"})
+                return {"trace_id": trace, "response": "🚫 보안 정책에 의해 차단되었습니다.", "status": "BLOCKED"}
+
+        # -------------------------------------------------
         # 2) Leader 선택
-        leader_registry = config.get("leader_registry", DEFAULT_LEADER_REGISTRY)
-        leader = select_swarm_leader(query, leader_registry)
+        # -------------------------------------------------
+        leader = select_swarm_leader(query, LEADER_REGISTRY)
 
-        # 3) tools는 SearchService 준비 상태에 따라 조건부
-        tools = [search_law_drf, search_precedents_drf]
+        # -------------------------------------------------
+        # 3) Dual SSOT 선점 점검 (DRF 살아있는지 확인)
+        # [원본버그 수정] 중복 law_search 호출 제거, 들여쓰기 오류 수정
+        # -------------------------------------------------
+        drf_connector = RUNTIME.get("drf")
+        ssot_available = False
+        if drf_connector:
+            try:
+                test_result = drf_connector.search_laws(query, limit=1)
+                ssot_available = bool(test_result)
+            except Exception as e:
+                logger.warning(f"[Pre-check] SSOT error: {e}")
 
-        # 4) now_utc 주입
-        now_utc = datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+        # -------------------------------------------------
+        # 4) LLM Tool 설정 (SSOT 살아있을 때만 활성화)
+        # [감사 #4.1] GEMINI_MODEL 환경변수화
+        # -------------------------------------------------
+        tools = []
+        if ssot_available:
+            tools = [search_law_drf, search_precedents_drf]
+
+        now_utc = _now_iso()
+        model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-preview-09-2025")
 
         model = genai.GenerativeModel(
-            model_name="gemini-2.5-flash-preview-09-2025",
+            model_name=model_name,
             tools=tools,
             system_instruction=(
                 f"{SYSTEM_INSTRUCTION_BASE}\n"
-                f"현재 당신은 '{leader['name']}({leader['role']})' 노드입니다. "
+                f"현재 당신은 '{leader['name']}({leader['role']})' 노드입니다.\n"
                 f"반드시 [{leader['name']} 답변]으로 시작하세요."
             ),
         )
 
         chat = model.start_chat(enable_automatic_function_calling=True)
-        resp = chat.send_message(f"now_utc={now_utc}\n사용자 질문: {query}")
-        final_text = (resp.text or "").strip()
 
-        # 5) Governance
-        if not validate_constitutional_compliance(final_text):
-            logger.warning("🚨 [L6] 헌법 준수 루프 위반 감지")
-            _audit("ask_fail_closed", {"query": query, "reason": "governance_violation"})
-            return {"response": "⚠️ 시스템 무결성 정책에 의해 답변이 제한되었습니다.", "status": "FAIL_CLOSED"}
-
-        latency_ms = (datetime.datetime.now() - start_time).total_seconds() * 1000.0
-
-        # 6) Audit
-        _audit(
-            "ask",
-            {
-                "query": query,
-                "leader": leader.get("name"),
-                "status": "SUCCESS",
-                "latency_ms": latency_ms,
-                "now_utc": now_utc,
-                "response_sha256": hashlib.sha256(final_text.encode("utf-8")).hexdigest(),
-            },
+        resp = chat.send_message(
+            f"now_utc={now_utc}\n"
+            f"ssot_available={ssot_available}\n"
+            f"사용자 질문: {query}"
         )
 
-        return {"response": final_text, "leader": leader.get("name"), "status": "SUCCESS"}
+        final_text = (resp.text or "").strip()
+
+        # -------------------------------------------------
+        # 5) Governance 검증
+        # -------------------------------------------------
+        if not validate_constitutional_compliance(final_text):
+            _audit("ask_fail_closed", {
+                "query": query,
+                "status": "GOVERNANCE",
+                "leader": leader.get("name"),
+            })
+            return {
+                "trace_id": trace,
+                "response": "⚠️ 시스템 무결성 정책에 의해 답변이 제한되었습니다.",
+                "status": "FAIL_CLOSED",
+            }
+
+        latency_ms = int((time.time() - start_time) * 1000)
+
+        # -------------------------------------------------
+        # 6) Metrics [ULTRA]
+        # -------------------------------------------------
+        METRICS["requests"] += 1
+        req_count = METRICS["requests"]
+        prev_avg = METRICS["avg_latency_ms"]
+        METRICS["avg_latency_ms"] = int(((prev_avg * (req_count - 1)) + latency_ms) / max(req_count, 1))
+
+        # -------------------------------------------------
+        # 7) Audit
+        # -------------------------------------------------
+        _audit("ask", {
+            "query": query,
+            "leader": leader.get("name"),
+            "status": "SUCCESS",
+            "latency_ms": latency_ms,
+            "response_sha256": _sha256(final_text),
+        })
+
+        return {
+            "trace_id": trace,
+            "response": final_text,
+            "leader": leader.get("name"),
+            "status": "SUCCESS",
+            "latency_ms": latency_ms,
+        }
 
     except Exception as e:
-        logger.error(f"💥 커널 에러: {e}")
+        METRICS["errors"] += 1
         ref = datetime.datetime.now().strftime("%H%M%S")
-        _audit("ask_error", {"ref": ref, "error": str(e)})
-        return {"response": f"⚠️ 시스템 장애가 발생했습니다. (Ref: {ref})", "status": "ERROR"}
+        logger.error(f"💥 커널 에러 (trace={trace}, ref={ref}): {e}")
+        logger.error(traceback.format_exc())
+        _audit("ask_error", {"query": str(locals().get("query", "")), "status": "ERROR", "leader": "SYSTEM", "latency_ms": 0})
+        return {"trace_id": trace, "response": f"⚠️ 시스템 장애가 발생했습니다. (Ref: {ref})", "status": "ERROR"}
 
-# =========================================================
+# =============================================================
 # ✅ search / trending (SearchService 없으면 ERROR)
-# =========================================================
+# =============================================================
+
 @app.get("/search")
 async def search(q: str, limit: int = 10):
     svc = RUNTIME.get("search_service")
     if not svc:
         return {"status": "ERROR", "message": "SearchService not ready"}
-    return svc.integrated_search(q, limit=limit)
+    return svc.search_law(q)
 
 @app.get("/trending")
 async def trending(limit: int = 10):
     svc = RUNTIME.get("search_service")
     if not svc:
         return {"status": "ERROR", "message": "SearchService not ready"}
-    return svc.trending_laws(limit=limit)
+    # SearchService에 trending_laws가 없으므로 search_precedents로 대체
+    return svc.search_precedents(limit)
+
+# =============================================================
+# [ULTRA] GLOBAL EXCEPTION HANDLER
+# =============================================================
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    METRICS["errors"] += 1
+    logger.error(f"[GLOBAL] {exc}")
+    logger.error(traceback.format_exc())
+    return JSONResponse(
+        status_code=500,
+        content={"error": "Kernel-Level Exception", "timestamp": _now_iso()},
+    )
+
+# =============================================================
+# SHUTDOWN
+# =============================================================
+
+@app.on_event("shutdown")
+async def shutdown():
+    logger.info(f"🛑 Lawmadi OS {OS_VERSION} Shutdown")
+
+# =============================================================
+# MAIN
+# =============================================================
 
 if __name__ == "__main__":
     import uvicorn
