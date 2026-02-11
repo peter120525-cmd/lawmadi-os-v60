@@ -32,8 +32,11 @@ app = FastAPI(title="Lawmadi OS", version="v50.2.3-HARDENED")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=[
+        "https://lawmadi.com",
+        "https://www.lawmadi.com"
+    ],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
