@@ -71,7 +71,6 @@ def _audit(event_type: str, payload: dict) -> None:
     except Exception as e:
         logger.warning(f"[AUDIT] logging failed: {e}")
 
-
 # =========================================================
 # 🛠️ [ROBUST HELPERS] 데이터 정밀 추출 및 정규화 계층
 # =========================================================
