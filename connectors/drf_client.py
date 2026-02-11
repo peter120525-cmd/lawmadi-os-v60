@@ -99,7 +99,6 @@ class DRFConnector:
 
     def _request_json(self, url: str, params: Dict[str, str]) -> Optional[Dict[str, Any]]:
         try:
-            logger.info('[DRF] GET requests.get(...)')
             r = requests.get(url, params=params, timeout=self.timeout_sec)
             r.raise_for_status()
             return r.json()
