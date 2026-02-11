@@ -13,11 +13,7 @@ from dotenv import load_dotenv
 
 # (선택) SearchService를 실제로 쓸 때만 enable
 try:
-    # (선택) SearchService를 실제로 쓸 때만 enable
-try:
     from services.search_service import SearchService
-except Exception:
-    SearchService = None  # type: ignore
 except Exception:
     SearchService = None  # type: ignore
 
