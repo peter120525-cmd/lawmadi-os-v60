@@ -4,3 +4,7 @@ __pycache__/
 .venv/
 venv/
 *.log
+
+# Lawmadi secret files
+.env.cloudrun
+.env
