@@ -109,11 +109,15 @@ class DRFConnector:
 
     def _request_json(self, url: str, params: Dict[str, str]) -> Optional[Dict[str, Any]]:
         try:
-            logger.info(f"[DRF] url={url} params={json.dumps(params, ensure_ascii=False)}")
-            params = dict(params or {})
-            params.setdefault('target','prec')
+            # LMD_DRF_CT_CHECK
             r = requests.get(url, params=params, timeout=self.timeout_sec)
+            ct = (r.headers.get('Content-Type') or '').lower()
+            head = (r.text or '')[:180].replace('\n',' ').replace('\r',' ')
+            logger.warning(f"[DRF] status={r.status_code} ct={ct} url={r.url} head={head}")
             r.raise_for_status()
+            if 'json' not in ct:
+                # HTML/XML 등은 JSON 파싱 금지 (Fail-Closed)
+                return None
             return r.json()
         except Exception as e:
             logger.error(f"📡 API 통신 오류: {url} | {e}")
