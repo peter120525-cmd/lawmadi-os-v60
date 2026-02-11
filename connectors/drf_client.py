@@ -33,8 +33,8 @@ class DRFConnector:
     DEFAULT_ENDPOINTS = {
         "lawSearch": "http://www.law.go.kr/DRF/lawSearch.do",
         "lawService": "http://www.law.go.kr/DRF/lawService.do",
-        "precSearch": "http://www.law.go.kr/DRF/precSearch.do",
-        "precService": "http://www.law.go.kr/DRF/precService.do",
+        "precSearch": "http://www.law.go.kr/DRF/lawSearch.do",
+        "precService": "http://www.law.go.kr/DRF/lawService.do",
         # 필요 시 확장:
         # "admrulSearch": "http://www.law.go.kr/DRF/admrulSearch.do",
         # "admrulService": "http://www.law.go.kr/DRF/admrulService.do",
@@ -296,7 +296,7 @@ class DRFConnector:
 
     def fetch_precedents(self, query: str) -> Dict[str, Any]:
         """
-        precSearch.do 판례 목록 검색 (필요 시 precService 확장)
+        lawSearch.do 판례 목록 검색 (필요 시 precService 확장)
         """
         q = (query or "").strip()
         if not q:
