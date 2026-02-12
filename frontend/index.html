@@ -942,31 +942,14 @@
             this.initVisitorTracking();
         },
 
-        // 방문자 ID 생성 (브라우저 fingerprint)
-        getVisitorId() {
-            let visitorId = localStorage.getItem('lawmadi_visitor_id');
-            if (!visitorId) {
-                // UUID v4 생성
-                visitorId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                    const r = Math.random() * 16 | 0;
-                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-                    return v.toString(16);
-                });
-                localStorage.setItem('lawmadi_visitor_id', visitorId);
-            }
-            return visitorId;
-        },
-
-        // 방문자 추적 초기화
+        // 방문자 추적 초기화 (IP 기반 자동 식별)
         async initVisitorTracking() {
             try {
-                const visitorId = this.getVisitorId();
-
-                // 방문 기록
+                // 서버에서 IP를 자동으로 추출하므로 빈 객체 전송
                 await fetch(`${this.BASE_URL}/api/visit`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ visitor_id: visitorId })
+                    body: JSON.stringify({})
                 });
 
                 // 통계 로드
@@ -1026,14 +1009,11 @@
             this.appendMessage('ai', '전문가 스웜 분석 중...', loadingId);
 
             try {
-                const visitorId = this.getVisitorId();
+                // 서버에서 IP를 자동으로 추출하므로 query만 전송
                 const response = await fetch(this.API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        query: query,
-                        visitor_id: visitorId
-                    })
+                    body: JSON.stringify({ query: query })
                 });
 
                 if (!response.ok) throw new Error('Communication Error');

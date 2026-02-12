@@ -132,6 +132,29 @@ except Exception as e:
 def _sha256(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest() if text else ""
 
+def _get_client_ip(request: Request) -> str:
+    """
+    클라이언트 IP 주소 추출
+    - X-Forwarded-For 헤더 우선 (프록시/로드밸런서 고려)
+    - 없으면 request.client.host 사용
+    """
+    # X-Forwarded-For 헤더 확인 (프록시 환경)
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        # 여러 IP가 있을 경우 첫 번째가 실제 클라이언트 IP
+        return forwarded.split(",")[0].strip()
+
+    # X-Real-IP 헤더 확인
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip.strip()
+
+    # 직접 연결
+    if request.client and request.client.host:
+        return request.client.host
+
+    return "unknown"
+
 def _now_iso() -> str:
     return datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
 
@@ -631,17 +654,17 @@ async def diagnostics(authorization: str = Header(default="")):
 async def record_visitor(req: Request):
     """
     방문 기록 API
-    - visitor_id를 받아서 방문 기록
+    - IP 주소를 자동으로 추출하여 visitor_id로 사용
     - 신규 방문자 여부 반환
     """
     try:
-        data = await req.json()
-        visitor_id = data.get("visitor_id", "")
+        # IP 주소를 visitor_id로 사용
+        visitor_id = _get_client_ip(req)
 
-        if not visitor_id:
+        if not visitor_id or visitor_id == "unknown":
             return JSONResponse(
                 status_code=400,
-                content={"ok": False, "error": "visitor_id required"}
+                content={"ok": False, "error": "Could not determine client IP"}
             )
 
         db_client = optional_import("connectors.db_client_v2")
@@ -784,7 +807,11 @@ async def ask(req: Request):
     try:
         data = await req.json()
         query = (data.get("query", "") or "").strip()
-        visitor_id = data.get("visitor_id", None)  # 프론트엔드에서 전송
+
+        # IP 주소를 사용자 ID로 사용 (자동 추출)
+        visitor_id = _get_client_ip(req)
+        logger.info(f"🔍 Request from IP: {visitor_id}")
+
         config = RUNTIME.get("config", {})
 
         # -------------------------------------------------
