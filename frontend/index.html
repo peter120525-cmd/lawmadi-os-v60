@@ -903,7 +903,9 @@
         landingContent: document.getElementById('landing-content'),
         convArea: document.getElementById('conversation-area'),
         API_URL: 'https://lawmadi-os-v50-938146962157.asia-northeast3.run.app/ask',
+        STREAM_URL: 'https://lawmadi-os-v50-938146962157.asia-northeast3.run.app/ask/stream',
         BASE_URL: 'https://lawmadi-os-v50-938146962157.asia-northeast3.run.app',
+        USE_STREAMING: true,  // 스트리밍 활성화 (false로 설정 시 기존 방식)
 
         init() {
             // Menu toggle
@@ -996,6 +998,12 @@
         },
 
         async dispatchPacket() {
+            // 스트리밍 활성화 시 스트리밍 방식 사용
+            if (this.USE_STREAMING) {
+                return this.dispatchPacketStream();
+            }
+
+            // 기존 방식 (비스트리밍)
             const query = this.userInput.value.trim();
             if(!query) return;
 
@@ -1009,7 +1017,6 @@
             this.appendMessage('ai', '전문가 스웜 분석 중...', loadingId);
 
             try {
-                // 서버에서 IP를 자동으로 추출하므로 query만 전송
                 const response = await fetch(this.API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1023,6 +1030,86 @@
                 this.updateMessage(loadingId, formattedHtml);
 
             } catch (error) {
+                this.updateMessage(loadingId, "<div style='color:red;'>⚠️ 시스템 통신 장애가 발생했습니다. 잠시 후 다시 시도해 주세요.</div>");
+            }
+        },
+
+        async dispatchPacketStream() {
+            const query = this.userInput.value.trim();
+            if(!query) return;
+
+            this.switchToChatMode();
+
+            this.appendMessage('user', query);
+            this.userInput.value = "";
+            this.userInput.style.height = 'auto';
+
+            const loadingId = 'ai-loading-' + Date.now();
+            this.appendMessage('ai', '<div style="color:#666;">🌊 실시간 분석 중...</div>', loadingId);
+
+            let fullText = '';
+            let startTime = Date.now();
+
+            try {
+                const response = await fetch(this.STREAM_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query })
+                });
+
+                if (!response.ok) throw new Error('Stream Error');
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.substring(6));
+
+                                if (data.type === 'start') {
+                                    // 시작 - 타임스탬프 기록
+                                    startTime = Date.now();
+                                }
+                                else if (data.type === 'chunk') {
+                                    // 청크 수신 - 점진적 업데이트
+                                    fullText += data.text;
+
+                                    // 매 청크마다 formatReport 적용 (라이브 렌더링)
+                                    const formattedHtml = this.formatReport(fullText);
+                                    this.updateMessage(loadingId, formattedHtml);
+                                }
+                                else if (data.type === 'done') {
+                                    // 완료 - 최종 포맷 적용
+                                    const formattedHtml = this.formatReport(fullText);
+                                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+                                    // 리더 정보 추가
+                                    const footer = `<div style="margin-top:16px;padding-top:12px;border-top:1px solid #e2e8f0;color:#718096;font-size:0.9em;">` +
+                                        `📊 리더: ${data.leader} | ⏱️ ${elapsed}초 | 💬 ${data.chunks || 0}개 청크` +
+                                        `</div>`;
+
+                                    this.updateMessage(loadingId, formattedHtml + footer);
+                                }
+                                else if (data.type === 'error') {
+                                    throw new Error(data.message);
+                                }
+                            } catch (parseError) {
+                                console.warn('JSON 파싱 오류:', parseError);
+                            }
+                        }
+                    }
+                }
+
+            } catch (error) {
+                console.error('스트리밍 에러:', error);
                 this.updateMessage(loadingId, "<div style='color:red;'>⚠️ 시스템 통신 장애가 발생했습니다. 잠시 후 다시 시도해 주세요.</div>");
             }
         },
