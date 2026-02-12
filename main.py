@@ -1180,7 +1180,16 @@ async def ask_stream(req: Request):
     - Server-Sent Events (SSE) 형식으로 실시간 응답
     - 첫 응답: 3-5초 (vs 기존 28초)
     - 점진적 렌더링으로 사용자 경험 대폭 개선
+    - 환경변수 ENABLE_STREAMING=true로 활성화
     """
+    # 스트리밍 기능 활성화 확인
+    if os.getenv("ENABLE_STREAMING", "false").lower() != "true":
+        return JSONResponse({
+            "error": "Streaming not enabled",
+            "message": "Set ENABLE_STREAMING=true to use this endpoint",
+            "fallback": "Use /ask endpoint instead"
+        }, status_code=503)
+
     trace = _trace_id()
     start_time = time.time()
 
