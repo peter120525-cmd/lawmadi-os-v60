@@ -1030,15 +1030,125 @@
         formatReport(text) {
             if (!text) return "응답 데이터를 수신하지 못했습니다.";
 
-            let html = text
-                .replace(/1\. 요약 \(Quick Insight\)/g, '<h3 style="margin-top:0;">💡 1. 요약 (Quick Insight)</h3>')
-                .replace(/2\. 📚 법률 근거 \(Verified Evidence\)/g, '<h3>📚 2. 법률 근거 (Verified Evidence)</h3>')
-                .replace(/3\. 🕐 시간축 분석 \(Timeline Analysis\)/g, '<h3>🕐 3. 시간축 분석 (Timeline Analysis)</h3>')
-                .replace(/4\. 절차 안내 \(Action Plan\)/g, '<h3>📋 4. 절차 안내 (Action Plan)</h3>')
-                .replace(/5\. 🔍 참고 정보 \(Additional Context\)/g, '<h3>🔍 5. 참고 정보 (Additional Context)</h3>')
-                .replace(/\n/g, '<br>');
+            let html = text;
+
+            // 1. 5단계 구조 헤더 변환 (이모티콘 추가)
+            html = html
+                .replace(/1\. 요약 \(Quick Insight\)/g, '<h3 style="margin-top:0;color:#2c5282;border-bottom:2px solid #4299e1;padding-bottom:8px;">💡 1. 요약 (Quick Insight)</h3>')
+                .replace(/2\. 📚 법률 근거 \(Verified Evidence\)/g, '<h3 style="color:#2c5282;border-bottom:2px solid #4299e1;padding-bottom:8px;">📚 2. 법률 근거 (Verified Evidence)</h3>')
+                .replace(/3\. 🕐 시간축 분석 \(Timeline Analysis\)/g, '<h3 style="color:#2c5282;border-bottom:2px solid #4299e1;padding-bottom:8px;">🕐 3. 시간축 분석 (Timeline Analysis)</h3>')
+                .replace(/4\. 절차 안내 \(Action Plan\)/g, '<h3 style="color:#2c5282;border-bottom:2px solid #4299e1;padding-bottom:8px;">📋 4. 절차 안내 (Action Plan)</h3>')
+                .replace(/5\. 🔍 참고 정보 \(Additional Context\)/g, '<h3 style="color:#2c5282;border-bottom:2px solid #4299e1;padding-bottom:8px;">🔍 5. 참고 정보 (Additional Context)</h3>');
+
+            // 2. Markdown 테이블 변환
+            html = this.convertMarkdownTables(html);
+
+            // 3. 볼드/이탤릭 변환
+            html = html
+                .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')  // ***bold italic***
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')                // **bold**
+                .replace(/\*(.+?)\*/g, '<em>$1</em>');                           // *italic*
+
+            // 4. 리스트 변환 (bullet points)
+            const lines = html.split('\n');
+            const processedLines = [];
+            let inList = false;
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+
+                // 불릿 포인트 (-, •, *, ✓, ✅, ▪, ◦ 등)
+                if (/^[\s]*[-•*✓✅▪◦]\s+(.+)/.test(line)) {
+                    if (!inList) {
+                        processedLines.push('<ul style="margin:8px 0;padding-left:24px;">');
+                        inList = true;
+                    }
+                    const content = line.replace(/^[\s]*[-•*✓✅▪◦]\s+/, '');
+                    processedLines.push(`<li style="margin:4px 0;">${content}</li>`);
+                } else {
+                    if (inList) {
+                        processedLines.push('</ul>');
+                        inList = false;
+                    }
+                    processedLines.push(line);
+                }
+            }
+            if (inList) processedLines.push('</ul>');
+
+            html = processedLines.join('\n');
+
+            // 5. 번호 리스트 변환 (1., 2., 3., ①, ②, ③ 등)
+            html = html.replace(/(\d+\.\s+.+?)(?=\n|$)/g, '<div style="margin:4px 0;padding-left:8px;">$1</div>');
+
+            // 6. 인용구 변환 (> 로 시작하는 줄)
+            html = html.replace(/^>\s+(.+)$/gm, '<blockquote style="border-left:4px solid #4299e1;padding-left:16px;margin:8px 0;color:#555;">$1</blockquote>');
+
+            // 7. 코드 블록 변환
+            html = html.replace(/```(.+?)```/gs, '<pre style="background:#f7fafc;padding:12px;border-radius:6px;overflow-x:auto;"><code>$1</code></pre>');
+            html = html.replace(/`(.+?)`/g, '<code style="background:#edf2f7;padding:2px 6px;border-radius:3px;font-size:0.9em;">$1</code>');
+
+            // 8. 줄바꿈 처리 (빈 줄은 단락으로, 일반 줄은 br)
+            html = html.replace(/\n\n/g, '</p><p style="margin:12px 0;">');
+            html = html.replace(/\n/g, '<br>');
+            html = '<p style="margin:12px 0;">' + html + '</p>';
+
+            // 9. 강조 표시 (⚠️, ✅, ❌, 📌 등의 이모티콘이 있는 줄 하이라이트)
+            html = html.replace(/(⚠️.+?)(<br>|<\/)/g, '<span style="background:#fff3cd;padding:4px 8px;border-radius:4px;display:inline-block;margin:2px 0;">$1</span>$2');
+            html = html.replace(/(✅.+?)(<br>|<\/)/g, '<span style="background:#d4edda;padding:4px 8px;border-radius:4px;display:inline-block;margin:2px 0;">$1</span>$2');
+            html = html.replace(/(❌.+?)(<br>|<\/)/g, '<span style="background:#f8d7da;padding:4px 8px;border-radius:4px;display:inline-block;margin:2px 0;">$1</span>$2');
 
             return html;
+        },
+
+        convertMarkdownTables(text) {
+            // Markdown 테이블 감지 및 HTML 테이블로 변환
+            const tableRegex = /(\|.+\|\n)+/g;
+
+            return text.replace(tableRegex, (match) => {
+                const rows = match.trim().split('\n');
+                if (rows.length < 2) return match;
+
+                // 헤더 분리선 (|---|---|) 찾기
+                const separatorIndex = rows.findIndex(row => /^\|[\s:-]+\|/.test(row));
+                if (separatorIndex === -1) return match;
+
+                const headerRows = rows.slice(0, separatorIndex);
+                const bodyRows = rows.slice(separatorIndex + 1);
+
+                let tableHtml = '<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:0.95em;">';
+
+                // 헤더
+                if (headerRows.length > 0) {
+                    tableHtml += '<thead style="background:#edf2f7;">';
+                    headerRows.forEach(row => {
+                        const cells = row.split('|').filter(c => c.trim());
+                        tableHtml += '<tr>';
+                        cells.forEach(cell => {
+                            tableHtml += `<th style="border:1px solid #cbd5e0;padding:10px;text-align:left;font-weight:600;">${cell.trim()}</th>`;
+                        });
+                        tableHtml += '</tr>';
+                    });
+                    tableHtml += '</thead>';
+                }
+
+                // 바디
+                if (bodyRows.length > 0) {
+                    tableHtml += '<tbody>';
+                    bodyRows.forEach((row, idx) => {
+                        const cells = row.split('|').filter(c => c.trim());
+                        const bgColor = idx % 2 === 0 ? '#ffffff' : '#f7fafc';
+                        tableHtml += `<tr style="background:${bgColor};">`;
+                        cells.forEach(cell => {
+                            tableHtml += `<td style="border:1px solid #cbd5e0;padding:10px;">${cell.trim()}</td>`;
+                        });
+                        tableHtml += '</tr>';
+                    });
+                    tableHtml += '</tbody>';
+                }
+
+                tableHtml += '</table>';
+                return tableHtml;
+            });
         },
 
         appendMessage(sender, text, id = null) {
