@@ -83,3 +83,25 @@ class DRFIntegrity:
 def verify_articles(articles: List[Dict[str, Any]]) -> bool:
     engine = DRFIntegrity()
     return engine.verify_articles(articles)
+
+def validate_drf_xml(xml_text: str) -> bool:
+    """
+    DRF XML 응답 기본 검증
+    - XML 형식 기본 체크
+    - 에러 태그 확인
+    """
+    if not xml_text or len(xml_text) < 10:
+        logger.warning("⚠️ DRF XML 응답이 비어있거나 너무 짧습니다")
+        return False
+
+    # 기본 XML 구조 확인
+    if not xml_text.strip().startswith('<'):
+        logger.warning("⚠️ DRF 응답이 XML 형식이 아닙니다")
+        return False
+
+    # 에러 태그 확인
+    if '<error>' in xml_text.lower() or '<err>' in xml_text.lower():
+        logger.warning("⚠️ DRF XML에 에러 태그가 포함되어 있습니다")
+        return False
+
+    return True
