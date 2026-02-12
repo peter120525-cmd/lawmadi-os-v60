@@ -1,6 +1,9 @@
 import http.server
 import socketserver
 import json
+import logging
+
+logger = logging.getLogger("LawmadiOS.UIServer")
 
 PORT = 8080
 DIRECTORY = "frontend"
@@ -27,6 +30,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         else:
             self.send_error(404)
 
-print(f"🚀 Lawmadi OS UI Server Running: http://localhost:{PORT}")
+logger.info(f"Lawmadi OS UI Server Running: http://localhost:{PORT}")
 with socketserver.TCPServer(("", PORT), Handler) as httpd:
     httpd.serve_forever()

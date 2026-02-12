@@ -17,7 +17,7 @@ class DRFIntegrity:
         # IT 기술: 보안 버전 관리 및 알고리즘 정의
         self.algo = hashlib.sha256
         self.encoding = "utf-8"
-        self.version = "v50.2.3-HARDENED"
+        self.version = "v50.2.4-HARDENED"
 
     def generate_article_hash(self, article: Dict[str, Any]) -> str:
         """

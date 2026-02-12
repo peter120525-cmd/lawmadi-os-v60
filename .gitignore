@@ -1,4 +1,5 @@
 .env
+.env.*
 *.pyc
 __pycache__/
 .venv/
@@ -7,4 +8,14 @@ venv/
 
 # Lawmadi secret files
 .env.cloudrun
-.env
+
+# Backup files
+*.bak
+*_backup*
+*_old*
+backups/
+main_old.py
+main_20260211.py
+
+# Duplicate project folder
+lawmadi-os-v50/
