@@ -694,6 +694,83 @@ async def get_visitor_statistics():
             }
         )
 
+
+@app.get("/api/admin/leader-stats")
+async def get_leader_stats_api(days: int = 30, authorization: str = Header(default="")):
+    """
+    관리자 API: 리더별 통계
+    - days: 최근 N일 (기본 30일)
+    """
+    _verify_internal_auth(authorization)
+
+    try:
+        db_client = optional_import("connectors.db_client_v2")
+        if db_client and hasattr(db_client, "get_leader_statistics"):
+            stats = db_client.get_leader_statistics(days)
+            return stats
+        else:
+            return {"ok": False, "error": "DB module not available"}
+
+    except Exception as e:
+        logger.error(f"⚠️ [API] /api/admin/leader-stats 실패: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "error": str(e)}
+        )
+
+
+@app.get("/api/admin/category-stats")
+async def get_category_stats_api(days: int = 30, authorization: str = Header(default="")):
+    """
+    관리자 API: 질문 유형별 통계
+    - days: 최근 N일 (기본 30일)
+    """
+    _verify_internal_auth(authorization)
+
+    try:
+        db_client = optional_import("connectors.db_client_v2")
+        if db_client and hasattr(db_client, "get_query_category_statistics"):
+            stats = db_client.get_query_category_statistics(days)
+            return stats
+        else:
+            return {"ok": False, "error": "DB module not available"}
+
+    except Exception as e:
+        logger.error(f"⚠️ [API] /api/admin/category-stats 실패: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "error": str(e)}
+        )
+
+
+@app.get("/api/admin/leader-queries/{leader_code}")
+async def get_leader_queries_api(
+    leader_code: str,
+    limit: int = 10,
+    authorization: str = Header(default="")
+):
+    """
+    관리자 API: 특정 리더가 받은 질문 샘플
+    - leader_code: 리더 코드 (예: "온유", "L08")
+    - limit: 최대 개수 (기본 10)
+    """
+    _verify_internal_auth(authorization)
+
+    try:
+        db_client = optional_import("connectors.db_client_v2")
+        if db_client and hasattr(db_client, "get_leader_query_samples"):
+            samples = db_client.get_leader_query_samples(leader_code, limit)
+            return samples
+        else:
+            return {"ok": False, "error": "DB module not available"}
+
+    except Exception as e:
+        logger.error(f"⚠️ [API] /api/admin/leader-queries 실패: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "error": str(e)}
+        )
+
 # =============================================================
 # ✅ ask (HARDENED + Dual SSOT Safe Mode)
 # =============================================================
@@ -707,6 +784,7 @@ async def ask(req: Request):
     try:
         data = await req.json()
         query = (data.get("query", "") or "").strip()
+        visitor_id = data.get("visitor_id", None)  # 프론트엔드에서 전송
         config = RUNTIME.get("config", {})
 
         # -------------------------------------------------
@@ -922,6 +1000,35 @@ async def ask(req: Request):
             "response_sha256": _sha256(final_text),
             "swarm_mode": swarm_mode if 'swarm_mode' in locals() else False,
         })
+
+        # -------------------------------------------------
+        # 8) Chat History 저장 (사용자 로그 분석용)
+        # -------------------------------------------------
+        try:
+            db_client_v2 = optional_import("connectors.db_client_v2")
+            if db_client_v2 and hasattr(db_client_v2, "save_chat_history"):
+                # 질문 유형 자동 분류
+                query_category = db_client_v2.classify_query_category(query)
+
+                # 리더 목록 (Swarm 모드인 경우)
+                leaders_used = None
+                if swarm_mode and 'leader_names' in locals():
+                    leaders_used = leader_names
+
+                # 저장
+                db_client_v2.save_chat_history(
+                    user_query=query,
+                    ai_response=final_text,
+                    leader=leader_name,
+                    status="success",
+                    latency_ms=latency_ms,
+                    visitor_id=visitor_id,
+                    swarm_mode=swarm_mode if 'swarm_mode' in locals() else False,
+                    leaders_used=leaders_used,
+                    query_category=query_category
+                )
+        except Exception as log_error:
+            logger.warning(f"⚠️ [ChatHistory] 저장 실패 (무시): {log_error}")
 
         return {
             "trace_id": trace,
