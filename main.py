@@ -1184,12 +1184,17 @@ async def ask_stream(req: Request):
     trace = _trace_id()
     start_time = time.time()
 
+    # Request body를 generator 외부에서 읽기 (중요!)
+    try:
+        data = await req.json()
+    except Exception as e:
+        return JSONResponse({"error": "Invalid JSON", "trace_id": trace}, status_code=400)
+
+    query = (data.get("query", "") or "").strip()
+    visitor_id = _get_client_ip(req)
+
     async def generate():
         try:
-            data = await req.json()
-            query = (data.get("query", "") or "").strip()
-            visitor_id = _get_client_ip(req)
-
             logger.info(f"🌊 [Stream] Request from IP: {visitor_id}")
 
             # Low Signal 차단
