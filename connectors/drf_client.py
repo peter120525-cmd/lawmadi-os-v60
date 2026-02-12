@@ -3,9 +3,27 @@ import os
 import requests
 import xml.etree.ElementTree as ET
 import logging
+import hashlib
 from typing import Optional, Dict
 
 logger = logging.getLogger(__name__)
+
+# Import cache functions (lazy import to avoid circular dependency)
+_cache_get = None
+_cache_set = None
+
+def _init_cache():
+    global _cache_get, _cache_set
+    if _cache_get is None:
+        try:
+            from connectors.db_client_v2 import cache_get, cache_set
+            _cache_get = cache_get
+            _cache_set = cache_set
+            logger.info("✅ DRF 캐싱 활성화")
+        except Exception as e:
+            logger.warning(f"⚠️ DRF 캐싱 비활성화: {e}")
+            _cache_get = lambda k: None
+            _cache_set = lambda k, v, t: None
 
 _DEFAULT_DRF_URL = "https://www.law.go.kr/DRF/lawSearch.do"
 
@@ -92,9 +110,26 @@ class DRFConnector:
         return ET.fromstring(r.text)
 
     # -------------------------------------------------
-    # 🔥 교차 재시도 Dual SSOT
+    # 🔥 교차 재시도 Dual SSOT (+ 캐싱)
     # -------------------------------------------------
     def law_search(self, query):
+        # 캐싱 초기화 (최초 1회)
+        _init_cache()
+
+        # 1) 캐시 조회 (query 기반 MD5 해시)
+        cache_key = f"drf:v2:{hashlib.md5(query.encode('utf-8')).hexdigest()}"
+
+        try:
+            cached_data = _cache_get(cache_key)
+            if cached_data and cached_data.get("xml_text"):
+                logger.info(f"🎯 [Cache HIT] {query[:50]}...")
+                # 캐시된 XML 텍스트를 ElementTree로 파싱
+                return ET.fromstring(cached_data["xml_text"])
+        except Exception as e:
+            logger.warning(f"⚠️ [Cache] 조회 실패: {e}")
+
+        # 2) 캐시 미스 - API 호출 (기존 Dual SSOT 로직)
+        logger.info(f"🔍 [Cache MISS] {query[:50]}... (API 호출)")
 
         attempts = [
             ("DRF-1", self._call_drf),
@@ -110,6 +145,23 @@ class DRFConnector:
 
                 if result is not None:
                     logger.info(f"[DualSSOT] SUCCESS via {label}")
+
+                    # 3) 캐시 저장 (XML 텍스트로 변환하여 저장)
+                    try:
+                        xml_text = ET.tostring(result, encoding='unicode')
+                        _cache_set(
+                            cache_key,
+                            {
+                                "xml_text": xml_text,
+                                "query": query[:200],  # 디버깅용
+                                "source": label
+                            },
+                            ttl_seconds=3600  # 1시간 캐시
+                        )
+                        logger.info(f"💾 [Cache SET] {cache_key[:16]}... (TTL: 1h)")
+                    except Exception as e:
+                        logger.warning(f"⚠️ [Cache] 저장 실패: {e}")
+
                     return result
 
             except Exception as e:
