@@ -43,7 +43,8 @@ from importlib import import_module
 import google.generativeai as genai
 from fastapi import FastAPI, Request, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
 # =============================================================
@@ -91,6 +92,7 @@ _cors_origins = [
     "https://lawmadi.com",
     "https://www.lawmadi.com",
     "https://lawmadi-os.web.app",
+    "https://lawmadi-db.web.app",  # Firebase Hosting (current)
 ]
 _extra_cors = os.getenv("CORS_EXTRA_ORIGINS", "")
 if _extra_cors:
@@ -686,6 +688,22 @@ async def startup():
 
     METRICS["boot_time"] = _now_iso()
     logger.info(f"✅ Lawmadi OS {OS_VERSION} Online")
+
+# =============================================================
+# 🏠 Frontend Serving (Homepage)
+# =============================================================
+
+# Static files (CSS, JS, images) - must be before root route
+if os.path.exists("frontend"):
+    app.mount("/static", StaticFiles(directory="frontend"), name="static")
+
+@app.get("/")
+async def serve_homepage():
+    """Root route - serve homepage"""
+    frontend_path = os.path.join(os.path.dirname(__file__), "frontend", "index.html")
+    if os.path.exists(frontend_path):
+        return FileResponse(frontend_path)
+    return {"message": "Lawmadi OS v50 API", "version": OS_VERSION, "frontend": "https://lawmadi-db.web.app"}
 
 # =============================================================
 # ✅ health
