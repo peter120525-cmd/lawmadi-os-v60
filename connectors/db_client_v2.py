@@ -248,7 +248,7 @@ def add_audit_log(
         """)
 
         cur.execute("""
-            INSERT INTO audit_logs 
+            INSERT INTO audit_logs
             (query, response, leader, status, latency_ms, env_version)
             VALUES (%s, %s, %s, %s, %s, %s)
         """, (
@@ -268,4 +268,158 @@ def add_audit_log(
         if cur: cur.close()
         if conn:
           release_connection(conn)
+
+
+# =====================================================
+# 📊 Visitor Tracking System
+# =====================================================
+
+def init_visitor_stats_table():
+    """방문자 통계 테이블 초기화"""
+    if not _db_enabled():
+        return
+
+    conn = get_connection()
+    cur = None
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS visitor_stats (
+                id SERIAL PRIMARY KEY,
+                visitor_id VARCHAR(64) UNIQUE NOT NULL,
+                first_visit TIMESTAMPTZ DEFAULT NOW(),
+                last_visit TIMESTAMPTZ DEFAULT NOW(),
+                visit_count INTEGER DEFAULT 1,
+                env_version VARCHAR(50)
+            )
+        """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS daily_visitors (
+                visit_date DATE PRIMARY KEY,
+                unique_visitors INTEGER DEFAULT 0,
+                total_visits INTEGER DEFAULT 0,
+                env_version VARCHAR(50)
+            )
+        """)
+
+        conn.commit()
+        logger.info("✅ [Visitor] 통계 테이블 초기화 완료")
+    except Exception as e:
+        logger.error(f"⚠️ [Visitor] 테이블 생성 실패: {e}")
+    finally:
+        if cur: cur.close()
+        if conn: release_connection(conn)
+
+
+def record_visit(visitor_id: str) -> Dict[str, Any]:
+    """
+    방문 기록
+    - visitor_id: 브라우저 fingerprint 또는 UUID
+    - 신규 방문자인지 여부를 반환
+    """
+    if not _db_enabled():
+        return {"ok": False, "error": "DB_DISABLED"}
+
+    conn = get_connection()
+    cur = None
+    try:
+        cur = conn.cursor()
+        now = datetime.now(timezone.utc)
+        today = now.date()
+
+        # 1. visitor_stats 업데이트 (UPSERT)
+        cur.execute("""
+            INSERT INTO visitor_stats (visitor_id, first_visit, last_visit, visit_count, env_version)
+            VALUES (%s, %s, %s, 1, %s)
+            ON CONFLICT (visitor_id)
+            DO UPDATE SET
+                last_visit = EXCLUDED.last_visit,
+                visit_count = visitor_stats.visit_count + 1
+            RETURNING (xmax = 0) AS is_new_visitor
+        """, (visitor_id, now, now, _ENV_VERSION))
+
+        result = cur.fetchone()
+        is_new_visitor = result[0] if result else False
+
+        # 2. daily_visitors 업데이트
+        cur.execute("""
+            INSERT INTO daily_visitors (visit_date, unique_visitors, total_visits, env_version)
+            VALUES (%s, %s, 1, %s)
+            ON CONFLICT (visit_date)
+            DO UPDATE SET
+                unique_visitors = daily_visitors.unique_visitors + %s,
+                total_visits = daily_visitors.total_visits + 1
+        """, (today, 1 if is_new_visitor else 0, _ENV_VERSION, 1 if is_new_visitor else 0))
+
+        conn.commit()
+        return {"ok": True, "is_new_visitor": is_new_visitor}
+
+    except Exception as e:
+        logger.error(f"⚠️ [Visitor] 기록 실패: {e}")
+        return {"ok": False, "error": str(e)}
+    finally:
+        if cur: cur.close()
+        if conn: release_connection(conn)
+
+
+def get_visitor_stats() -> Dict[str, Any]:
+    """
+    방문자 통계 조회
+    - today_visitors: 오늘 방문자 수
+    - total_visitors: 총 누적 방문자 수
+    """
+    if not _db_enabled():
+        return {
+            "ok": False,
+            "today_visitors": 0,
+            "total_visitors": 0,
+            "error": "DB_DISABLED"
+        }
+
+    conn = get_connection()
+    cur = None
+    try:
+        cur = conn.cursor()
+        today = datetime.now(timezone.utc).date()
+
+        # 오늘 방문자 수
+        cur.execute("""
+            SELECT unique_visitors, total_visits
+            FROM daily_visitors
+            WHERE visit_date = %s
+        """, (today,))
+        today_row = cur.fetchone()
+        today_visitors = today_row[0] if today_row else 0
+        today_visits = today_row[1] if today_row else 0
+
+        # 총 누적 방문자 수
+        cur.execute("SELECT COUNT(*) FROM visitor_stats")
+        total_row = cur.fetchone()
+        total_visitors = total_row[0] if total_row else 0
+
+        # 총 누적 방문 횟수
+        cur.execute("SELECT SUM(visit_count) FROM visitor_stats")
+        total_visits_row = cur.fetchone()
+        total_visits = total_visits_row[0] if total_visits_row and total_visits_row[0] else 0
+
+        return {
+            "ok": True,
+            "today_visitors": today_visitors,
+            "today_visits": today_visits,
+            "total_visitors": total_visitors,
+            "total_visits": total_visits
+        }
+
+    except Exception as e:
+        logger.error(f"⚠️ [Visitor] 통계 조회 실패: {e}")
+        return {
+            "ok": False,
+            "today_visitors": 0,
+            "total_visitors": 0,
+            "error": str(e)
+        }
+    finally:
+        if cur: cur.close()
+        if conn: release_connection(conn)
 

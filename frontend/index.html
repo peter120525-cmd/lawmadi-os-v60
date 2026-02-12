@@ -856,6 +856,14 @@
                         <div class="stat-number">5단계</div>
                         <div class="stat-label">구조화 응답</div>
                     </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="todayVisitors">-</div>
+                        <div class="stat-label">오늘 방문자</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="totalVisitors">-</div>
+                        <div class="stat-label">총 방문자</div>
+                    </div>
                 </div>
 
                 <div class="verification">
@@ -895,6 +903,7 @@
         landingContent: document.getElementById('landing-content'),
         convArea: document.getElementById('conversation-area'),
         API_URL: 'https://lawmadi-os-v50-938146962157.asia-northeast3.run.app/ask',
+        BASE_URL: 'https://lawmadi-os-v50-938146962157.asia-northeast3.run.app',
 
         init() {
             // Menu toggle
@@ -928,6 +937,68 @@
                     this.dispatchPacket();
                 };
             });
+
+            // 방문자 추적 및 통계 로드
+            this.initVisitorTracking();
+        },
+
+        // 방문자 ID 생성 (브라우저 fingerprint)
+        getVisitorId() {
+            let visitorId = localStorage.getItem('lawmadi_visitor_id');
+            if (!visitorId) {
+                // UUID v4 생성
+                visitorId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    const r = Math.random() * 16 | 0;
+                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+                localStorage.setItem('lawmadi_visitor_id', visitorId);
+            }
+            return visitorId;
+        },
+
+        // 방문자 추적 초기화
+        async initVisitorTracking() {
+            try {
+                const visitorId = this.getVisitorId();
+
+                // 방문 기록
+                await fetch(`${this.BASE_URL}/api/visit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ visitor_id: visitorId })
+                });
+
+                // 통계 로드
+                this.loadVisitorStats();
+
+            } catch (error) {
+                console.error('방문자 추적 실패:', error);
+            }
+        },
+
+        // 방문자 통계 로드
+        async loadVisitorStats() {
+            try {
+                const response = await fetch(`${this.BASE_URL}/api/visitor-stats`);
+                const data = await response.json();
+
+                if (data.ok) {
+                    const todayEl = document.getElementById('todayVisitors');
+                    const totalEl = document.getElementById('totalVisitors');
+
+                    if (todayEl) {
+                        todayEl.textContent = data.today_visitors.toLocaleString();
+                    }
+                    if (totalEl) {
+                        totalEl.textContent = data.total_visitors.toLocaleString();
+                    }
+                }
+
+            } catch (error) {
+                console.error('통계 로드 실패:', error);
+                // 실패 시 기본값 유지 ("-")
+            }
         },
 
         toggleSidebar(state) {

@@ -64,6 +64,8 @@ def optional_import(module_path: str, attr: Optional[str] = None) -> Optional[An
 # 원본 hard import → fail-soft로 교체
 timeline_analyze = optional_import("engines.temporal_v2", "timeline_analyze")
 SwarmManager = optional_import("agents.swarm_manager", "SwarmManager")
+SwarmOrchestrator = optional_import("agents.swarm_orchestrator", "SwarmOrchestrator")
+CLevelHandler = optional_import("agents.clevel_handler", "CLevelHandler")
 SearchService = optional_import("services.search_service", "SearchService")
 SafetyGuard = optional_import("core.security", "SafetyGuard")
 DRFConnector = optional_import("connectors.drf_client", "DRFConnector")
@@ -385,6 +387,8 @@ def _diagnostic_snapshot() -> Dict[str, Any]:
             "guard": bool(RUNTIME.get("guard")),
             "search_service": bool(RUNTIME.get("search_service")),
             "swarm": bool(RUNTIME.get("swarm")),
+            "swarm_orchestrator": bool(RUNTIME.get("swarm_orchestrator")),
+            "clevel_handler": bool(RUNTIME.get("clevel_handler")),
             "db_client": bool(db_client),
             "gemini_key": bool(os.getenv("GEMINI_KEY")),
         },
@@ -414,6 +418,12 @@ async def startup():
                 if init_fn:
                     init_fn()
                     logger.info("✅ DB init complete")
+
+                # 방문자 통계 테이블 초기화
+                db_client_v2 = optional_import("connectors.db_client_v2")
+                if db_client_v2 and hasattr(db_client_v2, "init_visitor_stats_table"):
+                    db_client_v2.init_visitor_stats_table()
+
             except Exception as e:
                 logger.warning(f"🟡 DB init failed: {e}")
                 if not soft_mode:
@@ -443,6 +453,51 @@ async def startup():
             logger.info("✅ SwarmManager initialized")
         except Exception as e:
             logger.warning(f"🟡 SwarmManager degraded: {e}")
+
+    # --------------------------------------------------
+    # 3.5️⃣ SwarmOrchestrator (60 Leader 진정한 협업)
+    # --------------------------------------------------
+    swarm_orchestrator = None
+    if SwarmOrchestrator:
+        try:
+            # leaders.json에서 로드된 leader_registry 사용
+            # config.json의 swarm_engine_config가 있으면 그것을 사용, 없으면 별도 파일에서 로드
+            leader_reg = config.get("swarm_engine_config", {}).get("leader_registry", {})
+
+            # 별도 leaders.json 파일이 있는 경우 그것 우선 사용
+            if os.path.exists("leaders.json"):
+                try:
+                    with open("leaders.json", "r", encoding="utf-8") as f:
+                        leaders_data = json.load(f)
+                        leader_reg = leaders_data.get("swarm_engine_config", {}).get("leader_registry", leader_reg)
+                except Exception as e:
+                    logger.warning(f"leaders.json 로드 실패: {e}")
+
+            swarm_orchestrator = SwarmOrchestrator(leader_reg, config)
+            logger.info(f"✅ SwarmOrchestrator initialized ({len(leader_reg)} leaders)")
+        except Exception as e:
+            logger.warning(f"🟡 SwarmOrchestrator degraded: {e}")
+
+    # --------------------------------------------------
+    # 3.6️⃣ CLevelHandler (C-Level 임원 호출)
+    # --------------------------------------------------
+    clevel_handler = None
+    if CLevelHandler:
+        try:
+            # leaders.json에서 core_registry 로드
+            core_reg = {}
+            if os.path.exists("leaders.json"):
+                try:
+                    with open("leaders.json", "r", encoding="utf-8") as f:
+                        leaders_data = json.load(f)
+                        core_reg = leaders_data.get("core_registry", {})
+                except Exception as e:
+                    logger.warning(f"core_registry 로드 실패: {e}")
+
+            clevel_handler = CLevelHandler(core_reg)
+            logger.info(f"✅ CLevelHandler initialized ({len(core_reg)} executives)")
+        except Exception as e:
+            logger.warning(f"🟡 CLevelHandler degraded: {e}")
 
     # --------------------------------------------------
     # 4️⃣ Gemini 설정
@@ -525,6 +580,8 @@ async def startup():
         "guard": guard,
         "search_service": search_service,
         "swarm": swarm,
+        "swarm_orchestrator": swarm_orchestrator,
+        "clevel_handler": clevel_handler,
     })
 
     METRICS["boot_time"] = _now_iso()
@@ -565,6 +622,77 @@ async def metrics(authorization: str = Header(default="")):
 async def diagnostics(authorization: str = Header(default="")):
     _verify_internal_auth(authorization)
     return _diagnostic_snapshot()
+
+# =============================================================
+# 📊 Visitor Stats API
+# =============================================================
+
+@app.post("/api/visit")
+async def record_visitor(req: Request):
+    """
+    방문 기록 API
+    - visitor_id를 받아서 방문 기록
+    - 신규 방문자 여부 반환
+    """
+    try:
+        data = await req.json()
+        visitor_id = data.get("visitor_id", "")
+
+        if not visitor_id:
+            return JSONResponse(
+                status_code=400,
+                content={"ok": False, "error": "visitor_id required"}
+            )
+
+        db_client = optional_import("connectors.db_client_v2")
+        if db_client and hasattr(db_client, "record_visit"):
+            result = db_client.record_visit(visitor_id)
+            return result
+        else:
+            return {"ok": False, "error": "DB module not available"}
+
+    except Exception as e:
+        logger.error(f"⚠️ [API] /api/visit 실패: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "error": str(e)}
+        )
+
+
+@app.get("/api/visitor-stats")
+async def get_visitor_statistics():
+    """
+    방문자 통계 조회 API
+    - today_visitors: 오늘 방문자 수
+    - total_visitors: 총 누적 방문자 수
+    """
+    try:
+        db_client = optional_import("connectors.db_client_v2")
+        if db_client and hasattr(db_client, "get_visitor_stats"):
+            stats = db_client.get_visitor_stats()
+            return stats
+        else:
+            # DB 비활성화 시 기본값 반환
+            return {
+                "ok": True,
+                "today_visitors": 0,
+                "total_visitors": 0,
+                "today_visits": 0,
+                "total_visits": 0,
+                "note": "DB disabled"
+            }
+
+    except Exception as e:
+        logger.error(f"⚠️ [API] /api/visitor-stats 실패: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "ok": False,
+                "today_visitors": 0,
+                "total_visitors": 0,
+                "error": str(e)
+            }
+        )
 
 # =============================================================
 # ✅ ask (HARDENED + Dual SSOT Safe Mode)
@@ -636,9 +764,14 @@ async def ask(req: Request):
                 return {"trace_id": trace, "response": "🚫 보안 정책에 의해 차단되었습니다.", "status": "BLOCKED"}
 
         # -------------------------------------------------
-        # 2) Leader 선택
+        # 2) C-Level 임원 호출 확인
         # -------------------------------------------------
-        leader = select_swarm_leader(query, LEADER_REGISTRY)
+        clevel = RUNTIME.get("clevel_handler")
+        clevel_decision = None
+        if clevel:
+            clevel_decision = clevel.should_invoke_clevel(query)
+            if clevel_decision.get("invoke"):
+                logger.info(f"🎯 C-Level 호출: {clevel_decision.get('executive_id')} - {clevel_decision.get('reason')}")
 
         # -------------------------------------------------
         # 3) Dual SSOT 선점 점검 (DRF 살아있는지 확인)
@@ -654,7 +787,7 @@ async def ask(req: Request):
                 logger.warning(f"[Pre-check] SSOT error: {e}")
 
         # -------------------------------------------------
-        # 4) LLM Tool 설정 (SSOT 살아있을 때만 활성화)
+        # 3) LLM Tool 설정 (SSOT 살아있을 때만 활성화)
         # [감사 #4.1] GEMINI_MODEL 환경변수화
         # -------------------------------------------------
         tools = []
@@ -664,25 +797,94 @@ async def ask(req: Request):
         now_utc = _now_iso()
         model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-preview-09-2025")
 
-        model = genai.GenerativeModel(
-            model_name=model_name,
-            tools=tools,
-            system_instruction=(
-                f"{SYSTEM_INSTRUCTION_BASE}\n"
-                f"현재 당신은 '{leader['name']}({leader['role']})' 노드입니다.\n"
-                f"반드시 [{leader['name']} 답변]으로 시작하세요."
-            ),
-        )
+        # -------------------------------------------------
+        # 4) C-Level 직접 호출 처리
+        # -------------------------------------------------
+        if clevel_decision and clevel_decision.get("mode") == "direct":
+            # C-Level 임원 직접 호출
+            exec_id = clevel_decision.get("executive_id")
+            logger.info(f"🎯 C-Level 직접 모드: {exec_id}")
 
-        chat = model.start_chat(enable_automatic_function_calling=True)
+            # C-Level 전용 시스템 지시
+            clevel_instruction = clevel.get_clevel_system_instruction(exec_id, SYSTEM_INSTRUCTION_BASE)
 
-        resp = chat.send_message(
-            f"now_utc={now_utc}\n"
-            f"ssot_available={ssot_available}\n"
-            f"사용자 질문: {query}"
-        )
+            model = genai.GenerativeModel(
+                model_name=model_name,
+                tools=tools,
+                system_instruction=clevel_instruction
+            )
 
-        final_text = (resp.text or "").strip()
+            chat = model.start_chat(enable_automatic_function_calling=True)
+            resp = chat.send_message(
+                f"now_utc={now_utc}\n"
+                f"ssot_available={ssot_available}\n"
+                f"사용자 질문: {query}"
+            )
+
+            final_text = (resp.text or "").strip()
+            leader_name = clevel.executives.get(exec_id, {}).get("name", exec_id)
+            swarm_mode = False
+
+            logger.info(f"✅ C-Level 분석 완료: {leader_name}")
+
+        # -------------------------------------------------
+        # 5) SwarmOrchestrator 우선 사용 (60 Leader 협업)
+        # -------------------------------------------------
+        elif not (clevel_decision and clevel_decision.get("mode") == "direct"):
+            orchestrator = RUNTIME.get("swarm_orchestrator")
+
+            if orchestrator and os.getenv("USE_SWARM", "true").lower() == "true":
+                # Swarm 모드: 진정한 다중 Leader 협업
+                logger.info("🐝 SwarmOrchestrator 모드 활성화")
+
+                try:
+                    swarm_result = orchestrator.orchestrate(
+                        query=query,
+                        tools=tools,
+                        system_instruction_base=SYSTEM_INSTRUCTION_BASE,
+                        model_name=model_name,
+                        force_single=False
+                    )
+
+                    final_text = swarm_result["response"]
+                    leader_names = swarm_result.get("leaders", ["마디"])
+                    leader_name = ", ".join(leader_names[:3]) + (f" 외 {len(leader_names)-3}명" if len(leader_names) > 3 else "")
+                    swarm_mode = swarm_result.get("swarm_mode", False)
+
+                    logger.info(f"✅ Swarm 분석 완료: {leader_name} ({swarm_result.get('leader_count', 1)}명 협업)")
+
+                except Exception as e:
+                    logger.error(f"❌ SwarmOrchestrator 실패, Fallback: {e}")
+                    # Fallback to single leader
+                    orchestrator = None
+
+            if not orchestrator or os.getenv("USE_SWARM", "true").lower() != "true":
+                # 기존 단일 Leader 모드 (Fallback)
+                logger.info("🔄 단일 Leader 모드 (Fallback)")
+
+                leader = select_swarm_leader(query, LEADER_REGISTRY)
+                leader_name = leader['name']
+                swarm_mode = False
+
+                model = genai.GenerativeModel(
+                    model_name=model_name,
+                    tools=tools,
+                    system_instruction=(
+                        f"{SYSTEM_INSTRUCTION_BASE}\n"
+                        f"현재 당신은 '{leader['name']}({leader['role']})' 노드입니다.\n"
+                        f"반드시 [{leader['name']} 답변]으로 시작하세요."
+                    ),
+                )
+
+                chat = model.start_chat(enable_automatic_function_calling=True)
+
+                resp = chat.send_message(
+                    f"now_utc={now_utc}\n"
+                    f"ssot_available={ssot_available}\n"
+                    f"사용자 질문: {query}"
+                )
+
+                final_text = (resp.text or "").strip()
 
         # -------------------------------------------------
         # 5) Governance 검증
@@ -691,7 +893,7 @@ async def ask(req: Request):
             _audit("ask_fail_closed", {
                 "query": query,
                 "status": "GOVERNANCE",
-                "leader": leader.get("name"),
+                "leader": leader_name,
             })
             return {
                 "trace_id": trace,
@@ -714,18 +916,20 @@ async def ask(req: Request):
         # -------------------------------------------------
         _audit("ask", {
             "query": query,
-            "leader": leader.get("name"),
+            "leader": leader_name,
             "status": "SUCCESS",
             "latency_ms": latency_ms,
             "response_sha256": _sha256(final_text),
+            "swarm_mode": swarm_mode if 'swarm_mode' in locals() else False,
         })
 
         return {
             "trace_id": trace,
             "response": final_text,
-            "leader": leader.get("name"),
+            "leader": leader_name,
             "status": "SUCCESS",
             "latency_ms": latency_ms,
+            "swarm_mode": swarm_mode if 'swarm_mode' in locals() else False,
         }
 
     except Exception as e:
