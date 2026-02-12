@@ -2,8 +2,11 @@ import re
 import time
 import hashlib
 import enum
+import logging
 import threading
 from typing import List, Dict, Any, Optional, Union
+
+logger = logging.getLogger("LawmadiOS.Security")
 
 # ─── [IT 기술: LMD-CONST 헌법 이벤트 정의] ──────────────────────────────────────────
 class ConstitutionEvent(enum.Enum):
@@ -48,18 +51,18 @@ class CircuitBreaker:
         self.state = CBState.OPEN
         self.opened_at = time.time()
         self.half_open_call_count = 0
-        print(f"🔴 [CB:{self.provider_name}] CLOSED → OPEN (failures={self.failure_count})")
+        logger.warning(f"[CB:{self.provider_name}] CLOSED → OPEN (failures={self.failure_count})")
 
     def _transition_to_half_open(self):
         self.state = CBState.HALF_OPEN
         self.half_open_call_count = 0
-        print(f"🟡 [CB:{self.provider_name}] OPEN → HALF_OPEN (reset_timeout 경과)")
+        logger.info(f"[CB:{self.provider_name}] OPEN → HALF_OPEN (reset_timeout 경과)")
 
     def _transition_to_closed(self):
         self.state = CBState.CLOSED
         self.failure_count = 0
         self.half_open_call_count = 0
-        print(f"🟢 [CB:{self.provider_name}] HALF_OPEN → CLOSED (복구 완료)")
+        logger.info(f"[CB:{self.provider_name}] HALF_OPEN → CLOSED (복구 완료)")
 
     # ── [IT 기술: 가용성 판정 (Flow Control)] ───────────────────────────────────────
     def is_allowed(self) -> bool:
@@ -102,7 +105,7 @@ class CircuitBreaker:
                 # 복구 시도 중 실패 시 즉시 재차단 (Fail-Fast 정책)
                 self.state = CBState.OPEN
                 self.opened_at = time.time()
-                print(f"🔴 [CB:{self.provider_name}] HALF_OPEN → OPEN (복구 실패)")
+                logger.warning(f"[CB:{self.provider_name}] HALF_OPEN → OPEN (복구 실패)")
 
     def get_state(self) -> str:
         return self.state.value
@@ -146,20 +149,20 @@ class SafetyGuard:
 
         # 1. Anti-Leak: 시스템 내부 기밀 정보 유출 시도 차단
         if self.malicious_pattern.search(user_input):
-            print("🔒 [LMD-SECURITY-001] 보안 프로토콜에 따라 시스템 핵심 인증 자산 접근이 차단되었습니다.")
+            logger.warning("[LMD-SECURITY-001] 보안 프로토콜에 따라 시스템 핵심 인증 자산 접근이 차단되었습니다.")
             return False
 
         # 2. 금지 키워드 필터링 (Blacklist)
         lower_input = user_input.lower()
         for word in self.restricted_keywords:
             if word in lower_input:
-                print(f"🛡️ [Security] 금지 키워드 감지: '{word}'")
+                logger.warning(f"[Security] 금지 키워드 감지: '{word}'")
                 return False
 
         # 3. 인젝션 공격 방어 (SQL/Command Injection Patterns)
         injection_patterns = [";", "--", "DROP TABLE", "UNION SELECT", "'; --"]
         if any(p in user_input for p in injection_patterns):
-            print("🛡️ [Security] 주입 공격 패턴이 감지되었습니다.")
+            logger.warning("[Security] 주입 공격 패턴이 감지되었습니다.")
             return False
 
         # 4. 위급 상황(Crisis) 트리거 감지
@@ -174,11 +177,11 @@ class SafetyGuard:
         사용자의 안전을 최우선으로 하는 위급 상황 프로토콜을 가동합니다.
         IT 서비스 윤리와 기술적 가용성을 동시에 확보합니다.
         """
-        print(f"\n⚠️ [Safety] {self.confirmation_question}")
+        logger.warning(f"[Safety] {self.confirmation_question}")
 
         if not get_user_response_fn:
              # 서버 환경(Cloud Run 등)에서는 Blocking 방지를 위해 즉시 안내 메시지 출력
-             print("ℹ️ [Server Mode] 인터랙티브 입력이 불가능하므로 안전 안내를 즉시 표시합니다.")
+             logger.info("[Server Mode] 인터랙티브 입력이 불가능하므로 안전 안내를 즉시 표시합니다.")
              self._activate_crisis_mode()
              return
 
@@ -188,25 +191,16 @@ class SafetyGuard:
         if user_answer in ("예", "yes", "Y", "y"):
             self._activate_crisis_mode()
         elif user_answer in ("아니오", "no", "N", "n"):
-            print("✅ [Safety] 안전 상황 확인됨. 법률 상담 대화를 계속합니다.")
+            logger.info("[Safety] 안전 상황 확인됨. 법률 상담 대화를 계속합니다.")
         else:
             # 타임아웃 또는 모호한 응답 시 안전을 위해 Crisis 모드 진입
-            print("⏱️ [Safety-TIMEOUT] 응답 시간이 초과되어 안전 모드를 가동합니다.")
+            logger.warning("[Safety-TIMEOUT] 응답 시간이 초과되어 안전 모드를 가동합니다.")
             self._activate_crisis_mode()
 
-    def _activate_crisis_mode(self):
+    def _activate_crisis_mode(self) -> None:
         """[IT 서비스 윤리] 즉시 위급 모드 가동 및 안전 리소스 로드"""
-        print("\n" + "=" * 60)
-        print("🚨 [IMMEDIATE CRISIS MODE]")
-        print("=" * 60)
-        print("지금 당신의 안전이 법률 지식보다 훨씬 더 중요합니다.")
-        print()
-        for label, number in self.crisis_resources.items():
-            print(f"  📞 {label}: {number}")
-        print()
-        print("위의 전문 기관으로 지금 바로 연락하여 도움을 받으세요.")
-        print("Lawmadi OS는 당신의 생명과 안전을 지지합니다.")
-        print("=" * 60 + "\n")
+        resources = ", ".join(f"{label}: {number}" for label, number in self.crisis_resources.items())
+        logger.critical(f"[IMMEDIATE CRISIS MODE] 위급 모드 가동. 리소스: {resources}")
 
 
 # ─── [IT 기술: 데이터 무결성 검증 (SHA-256)] ──────────────────────────────────────

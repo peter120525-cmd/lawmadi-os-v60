@@ -38,7 +38,7 @@ class LawmadiParser:
             structured_data = {
                 "metadata": self._extract_metadata(raw_text),
                 "content": self._split_by_hierarchy(raw_text),
-                "os_version": "v50.2.3-HARDENED",
+                "os_version": "v50.2.4-HARDENED",
                 "integrity_check": "PENDING"
             }
             logger.info(f"✅ [L1] 문서 구조화 완료: {structured_data['metadata'].get('case_number')}")

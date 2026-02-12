@@ -24,7 +24,7 @@ _pool: Optional[queue.Queue] = None
 _pool_lock = threading.Lock()
 _MIN_CONN = 2
 _MAX_CONN = 10
-_ENV_VERSION = 'v50.2.3-HARDENED'
+_ENV_VERSION = 'v50.2.4-HARDENED'
 
 def _env(name: str) -> Optional[str]:
     v = os.getenv(name)
@@ -42,15 +42,6 @@ def _get_connector() -> Connector:
     if _connector is None:
         _connector = Connector()
     return _connector
-
-    connector = _get_connector()
-    return connector.connect(
-        _env("CLOUD_SQL_INSTANCE"),
-        "pg8000",
-        user=_env("DB_USER"),
-        password=_env("DB_PASS"),
-        dbname=_env("DB"),
-    )
 
 def _get_pool() -> queue.Queue:
     global _pool
@@ -92,13 +83,13 @@ def release_connection(conn):
     try:
         try:
             conn.rollback()
-        except:
+        except Exception:
             pass
         pool.put_nowait(conn)
     except queue.Full:
         try:
             conn.close()
-        except:
+        except Exception:
             pass
 
 def init_tables():

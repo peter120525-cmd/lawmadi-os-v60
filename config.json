@@ -1,6 +1,6 @@
 {
   "system_metadata": {
-    "os_version": "v50.2.3-HARDENED",
+    "os_version": "v50.2.4-HARDENED",
     "organization": "Lawmadi Legion (63 Personas)",
     "last_updated": "2026-02-04"
   },
@@ -163,10 +163,29 @@
     "request_timeout_ms": 10000,
     "api_failure_policy": "FAIL_CLOSED",
     "drf_endpoints": {
-      "lawSearch": "http://www.law.go.kr/DRF/lawSearch.do",
-      "lawService": "http://www.law.go.kr/DRF/lawService.do",
+      "lawSearch": "https://www.law.go.kr/DRF/lawSearch.do",
+      "lawService": "https://www.law.go.kr/DRF/lawService.do",
       "precSearch": "https://www.law.go.kr/DRF/lawSearch.do",
       "precService": "https://www.law.go.kr/DRF/lawService.do"
+    }
+  },
+  "drf": {
+    "base_url": "https://apis.data.go.kr/1170000/LawService",
+    "api_key_env": "DATA_GO_KR_API_KEY",
+    "default_format": "XML",
+    "endpoints": {
+      "lawSearch": "lawSearch.do",
+      "lawList": "lawSearchList.do"
+    }
+  },
+  "dual_ssot": {
+    "primary": {
+      "type": "LAW_GO_KR",
+      "base_url": "https://www.law.go.kr/DRF"
+    },
+    "fallback": {
+      "type": "OPEN_DATA_GO_KR",
+      "base_url": "https://apis.data.go.kr/1170000/LawService"
     }
   }
 }

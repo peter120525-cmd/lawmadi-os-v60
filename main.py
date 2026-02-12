@@ -41,11 +41,10 @@ from typing import Any, List, Dict, Optional, Union
 from importlib import import_module
 
 import google.generativeai as genai
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
-from services.search_service import SearchService
 
 # =============================================================
 # FAIL-SOFT OPTIONAL IMPORT [ULTRA]
@@ -53,7 +52,7 @@ from services.search_service import SearchService
 # optional_import로 변경하여 개별 모듈 실패 시에도 서버 기동 가능.
 # =============================================================
 
-def optional_import(module_path: str, attr: Optional[str] = None):
+def optional_import(module_path: str, attr: Optional[str] = None) -> Optional[Any]:
     """모듈 로딩 실패 시 None 반환. 서버 부팅을 절대 중단시키지 않음."""
     try:
         module = import_module(module_path)
@@ -99,8 +98,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
     allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 RUNTIME: Dict[str, Any] = {}
@@ -268,7 +267,7 @@ def validate_constitutional_compliance(response_text: str) -> bool:
 #   (SearchService에 get_best_law_verified 메서드 없음)
 # =============================================================
 
-def search_law_drf(query: str):
+def search_law_drf(query: str) -> Dict[str, Any]:
     logger.info(f"🛠️ [L3 Strike] 법령 검색 호출: '{query}'")
     try:
         svc = RUNTIME.get("search_service")
@@ -281,14 +280,14 @@ def search_law_drf(query: str):
     except Exception as e:
         return {"result": "ERROR", "message": str(e)}
 
-def search_precedents_drf(query: str):
+def search_precedents_drf(query: str) -> Dict[str, Any]:
     logger.info(f"🛠️ [L3 Strike] 판례 검색 호출: '{query}'")
     try:
         drf_inst = RUNTIME.get("drf")
         if not drf_inst:
             return {"result": "ERROR", "message": "DRF 커넥터 미초기화."}
 
-        raw_result = drf_inst.fetch_precedents(query)
+        raw_result = drf_inst.law_search(query)
         items = _extract_best_dict_list(raw_result)
         if not items:
             return {"result": "NO_DATA", "message": "해당 키워드와 일치하는 판례가 없습니다."}
@@ -364,7 +363,7 @@ def select_swarm_leader(query: str, leaders: Dict) -> Dict:
 # ⚙️ [CONFIG] load
 # =============================================================
 
-def load_integrated_config():
+def load_integrated_config() -> Dict[str, Any]:
     if os.path.exists("config.json"):
         with open("config.json", "r", encoding="utf-8") as f:
             return json.load(f)
@@ -543,14 +542,28 @@ async def health():
         "diagnostics": _diagnostic_snapshot(),
     }
 
-# [ULTRA] 메트릭 엔드포인트
+# [ULTRA] 내부 전용 엔드포인트 인증
+_INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
+
+def _verify_internal_auth(authorization: str = Header(default="")) -> None:
+    """내부 엔드포인트 접근 시 Bearer token 검증"""
+    if not _INTERNAL_API_KEY:
+        # 키 미설정 시 FAIL_CLOSED: 접근 차단
+        raise HTTPException(status_code=403, detail="INTERNAL_API_KEY not configured")
+    token = authorization.removeprefix("Bearer ").strip()
+    if token != _INTERNAL_API_KEY:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+# [ULTRA] 메트릭 엔드포인트 (인증 필수)
 @app.get("/metrics")
-async def metrics():
+async def metrics(authorization: str = Header(default="")):
+    _verify_internal_auth(authorization)
     return METRICS
 
-# [ULTRA] 진단 엔드포인트
+# [ULTRA] 진단 엔드포인트 (인증 필수)
 @app.get("/diagnostics")
-async def diagnostics():
+async def diagnostics(authorization: str = Header(default="")):
+    _verify_internal_auth(authorization)
     return _diagnostic_snapshot()
 
 # =============================================================
@@ -635,7 +648,7 @@ async def ask(req: Request):
         ssot_available = False
         if drf_connector:
             try:
-                test_result = drf_connector.search_laws(query, limit=1)
+                test_result = drf_connector.law_search(query)
                 ssot_available = bool(test_result)
             except Exception as e:
                 logger.warning(f"[Pre-check] SSOT error: {e}")

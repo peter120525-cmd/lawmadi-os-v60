@@ -11,7 +11,7 @@ from .db_client import (
     validator
 )
 
-_ENV_VERSION = "v50.2.3-HARDENED"
+_ENV_VERSION = "v50.2.4-HARDENED"
 
 
 def execute(query: str, params=None, fetch="all"):

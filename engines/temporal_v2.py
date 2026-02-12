@@ -175,5 +175,5 @@ class AddendaParser:
         if amendment_dates:
             for d in amendment_dates:
                 tl.append(f"   |── [개정] {d}")
-        tl.append(f"   └────────────▶ [오늘] {today} (v50.2.3)")
+        tl.append(f"   └────────────▶ [오늘] {today} (v50.2.4)")
         return "\n".join(tl)

@@ -1,30 +1,58 @@
-import os
 import logging
-from typing import Any, Dict, Optional
+from typing import Optional, Any, Dict
 
 from connectors.drf_client import DRFConnector
 
-logger = logging.getLogger("LawmadiOS.SearchService")
+logger = logging.getLogger(__name__)
+
 
 class SearchService:
     """
-    Minimal SearchService (debug-stable)
-    - main.py가 ENABLE_SEARCH_SERVICE=true일 때 생성할 수 있도록
-      __init__() 인자 없이 동작
-    - 내부에서 DRFConnector를 직접 생성해 lawSearch/precSearch를 호출
+    SearchService (Facade)
+    - 외부 인터페이스 유지
+    - 실제 SSOT 검색은 DRFConnector에 위임
     """
 
-    def __init__(self):
-        oc = os.getenv("LAWGO_DRF_OC", "choepeter").strip()
-        timeout_ms = int(os.getenv("DRF_TIMEOUT_MS", "5000"))
-        self.drf = DRFConnector(api_key=oc, timeout_ms=timeout_ms)
-        logger.warning(f"✅ SearchService online (oc={oc}, timeout_ms={timeout_ms})")
+    def __init__(self, config: Optional[Dict] = None) -> None:
+        try:
+            if config:
+                self.drf = DRFConnector(config=config)
+            else:
+                self.drf = DRFConnector()
+            self.ready = True
+            logger.info("✅ SearchService bound to DRFConnector (Dual SSOT)")
+        except Exception as e:
+            self.drf = None
+            self.ready = False
+            logger.warning(f"🟡 SearchService init degraded: {e}")
 
-    def search_law(self, query: str) -> Optional[Dict[str, Any]]:
-        params = {"OC": self.drf.api_key, "target": "law", "type": "JSON", "query": query}
-        return self.drf._request_json(self.drf.endpoints["lawSearch"], params)
+    def search_law(self, query: str) -> Optional[Any]:
+        if not self.ready or not self.drf:
+            logger.warning("⚠️ SearchService not ready (law)")
+            return None
+        try:
+            return self.drf.law_search(query)
+        except Exception as e:
+            logger.warning(f"⚠️ search_law failed: {e}")
+            return None
 
-    def search_precedents(self, query: str) -> Optional[Dict[str, Any]]:
-        params = {"OC": self.drf.api_key, "target": "prec", "type": "JSON", "query": query}
-        # precSearch는 현재 lawSearch.do로 매핑되어 있어야 정상
-        return self.drf._request_json(self.drf.endpoints["precSearch"], params)
+    def search_precedent(self, query: str) -> Optional[Any]:
+        if not self.ready or not self.drf:
+            logger.warning("⚠️ SearchService not ready (precedent)")
+            return None
+        try:
+            return self.drf.law_search(query)
+        except Exception as e:
+            logger.warning(f"⚠️ search_precedent failed: {e}")
+            return None
+
+    def search_precedents(self, limit: int = 10) -> Optional[Any]:
+        """판례 목록 조회 (DRF law_search 위임)"""
+        if not self.ready or not self.drf:
+            logger.warning("⚠️ SearchService not ready (precedents)")
+            return None
+        try:
+            return self.drf.law_search("판례")
+        except Exception as e:
+            logger.warning(f"⚠️ search_precedents failed: {e}")
+            return None
