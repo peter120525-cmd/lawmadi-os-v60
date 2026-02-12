@@ -1026,10 +1026,14 @@
             this.appendMessage('ai', '전문가 스웜 분석 중...', loadingId);
 
             try {
+                const visitorId = this.getVisitorId();
                 const response = await fetch(this.API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query: query })
+                    body: JSON.stringify({
+                        query: query,
+                        visitor_id: visitorId
+                    })
                 });
 
                 if (!response.ok) throw new Error('Communication Error');

@@ -363,6 +363,253 @@ def record_visit(visitor_id: str) -> Dict[str, Any]:
         if conn: release_connection(conn)
 
 
+def save_chat_history(
+    user_query: str,
+    ai_response: str,
+    leader: str,
+    status: str,
+    latency_ms: int,
+    visitor_id: Optional[str] = None,
+    swarm_mode: bool = False,
+    leaders_used: Optional[List[str]] = None,
+    query_category: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    채팅 기록 저장 (개선된 버전)
+    - 기존 chat_history 테이블 활용
+    - 추가 정보: visitor_id, swarm_mode, leaders_used, query_category
+    """
+    if not _db_enabled():
+        return {"ok": False, "error": "DB_DISABLED"}
+
+    conn = get_connection()
+    cur = None
+    try:
+        cur = conn.cursor()
+
+        # chat_history 테이블에 새 컬럼 추가 (없으면)
+        try:
+            cur.execute("""
+                ALTER TABLE chat_history
+                ADD COLUMN IF NOT EXISTS status VARCHAR(20),
+                ADD COLUMN IF NOT EXISTS latency_ms INTEGER,
+                ADD COLUMN IF NOT EXISTS visitor_id VARCHAR(64),
+                ADD COLUMN IF NOT EXISTS swarm_mode BOOLEAN DEFAULT FALSE,
+                ADD COLUMN IF NOT EXISTS leaders_used TEXT,
+                ADD COLUMN IF NOT EXISTS query_category VARCHAR(50),
+                ADD COLUMN IF NOT EXISTS env_version VARCHAR(50)
+            """)
+        except Exception:
+            pass  # 컬럼이 이미 있으면 무시
+
+        # 데이터 삽입
+        leaders_str = ",".join(leaders_used) if leaders_used else leader
+
+        cur.execute("""
+            INSERT INTO chat_history (
+                user_id, user_query, ai_response, leader_code,
+                status, latency_ms, visitor_id, swarm_mode,
+                leaders_used, query_category, created_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+        """, (
+            visitor_id or "anonymous",
+            user_query,
+            ai_response[:5000],  # 응답이 너무 길면 5000자로 제한
+            leader,
+            status,
+            latency_ms,
+            visitor_id,
+            swarm_mode,
+            leaders_str,
+            query_category
+        ))
+
+        conn.commit()
+        return {"ok": True}
+
+    except Exception as e:
+        logger.error(f"⚠️ [ChatHistory] 저장 실패: {e}")
+        return {"ok": False, "error": str(e)}
+    finally:
+        if cur: cur.close()
+        if conn: release_connection(conn)
+
+
+def classify_query_category(query: str) -> str:
+    """
+    질문 자동 분류
+    - 키워드 기반 카테고리 분류
+    """
+    query_lower = query.lower()
+
+    categories = {
+        "임대차": ["전세", "월세", "임대", "임차", "보증금", "집주인"],
+        "민사": ["손해배상", "계약", "채권", "채무", "소송", "민사"],
+        "형사": ["고소", "고발", "형사", "범죄", "처벌", "벌금"],
+        "가족법": ["이혼", "양육", "상속", "유언", "가족", "혼인"],
+        "부동산": ["부동산", "매매", "등기", "아파트", "토지"],
+        "노동": ["해고", "노동", "임금", "퇴직", "산재", "근로"],
+        "행정": ["행정", "인허가", "과태료", "행정처분"],
+        "지식재산": ["특허", "상표", "저작권", "지식재산"],
+        "회사법": ["회사", "법인", "주주", "이사", "기업"],
+        "세금": ["세금", "국세", "지방세", "증여세", "상속세"],
+    }
+
+    for category, keywords in categories.items():
+        if any(kw in query_lower for kw in keywords):
+            return category
+
+    return "기타"
+
+
+def get_leader_statistics(days: int = 30) -> Dict[str, Any]:
+    """
+    리더별 통계 조회
+    - days: 최근 N일 데이터
+    """
+    if not _db_enabled():
+        return {"ok": False, "error": "DB_DISABLED"}
+
+    conn = get_connection()
+    cur = None
+    try:
+        cur = conn.cursor()
+
+        # 리더별 호출 통계
+        cur.execute("""
+            SELECT
+                leader_code,
+                COUNT(*) as total_calls,
+                AVG(latency_ms) as avg_latency,
+                COUNT(CASE WHEN status = 'success' THEN 1 END) as success_count
+            FROM chat_history
+            WHERE created_at >= NOW() - INTERVAL '%s days'
+            GROUP BY leader_code
+            ORDER BY total_calls DESC
+            LIMIT 20
+        """, (days,))
+
+        leaders = []
+        for row in cur.fetchall():
+            leader, total, avg_lat, success = row
+            leaders.append({
+                "leader": leader,
+                "total_calls": total,
+                "avg_latency_ms": round(avg_lat, 1) if avg_lat else 0,
+                "success_count": success,
+                "success_rate": round(success / total * 100, 1) if total > 0 else 0
+            })
+
+        return {
+            "ok": True,
+            "leaders": leaders,
+            "period_days": days
+        }
+
+    except Exception as e:
+        logger.error(f"⚠️ [LeaderStats] 조회 실패: {e}")
+        return {"ok": False, "error": str(e)}
+    finally:
+        if cur: cur.close()
+        if conn: release_connection(conn)
+
+
+def get_query_category_statistics(days: int = 30) -> Dict[str, Any]:
+    """
+    질문 유형별 통계
+    """
+    if not _db_enabled():
+        return {"ok": False, "error": "DB_DISABLED"}
+
+    conn = get_connection()
+    cur = None
+    try:
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT
+                query_category,
+                COUNT(*) as count
+            FROM chat_history
+            WHERE created_at >= NOW() - INTERVAL '%s days'
+                AND query_category IS NOT NULL
+            GROUP BY query_category
+            ORDER BY count DESC
+        """, (days,))
+
+        categories = []
+        for row in cur.fetchall():
+            category, count = row
+            categories.append({
+                "category": category,
+                "count": count
+            })
+
+        return {
+            "ok": True,
+            "categories": categories,
+            "period_days": days
+        }
+
+    except Exception as e:
+        logger.error(f"⚠️ [CategoryStats] 조회 실패: {e}")
+        return {"ok": False, "error": str(e)}
+    finally:
+        if cur: cur.close()
+        if conn: release_connection(conn)
+
+
+def get_leader_query_samples(leader_code: str, limit: int = 10) -> Dict[str, Any]:
+    """
+    특정 리더가 받은 질문 샘플
+    """
+    if not _db_enabled():
+        return {"ok": False, "error": "DB_DISABLED"}
+
+    conn = get_connection()
+    cur = None
+    try:
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT
+                created_at,
+                user_query,
+                query_category,
+                status,
+                latency_ms
+            FROM chat_history
+            WHERE leader_code = %s
+            ORDER BY created_at DESC
+            LIMIT %s
+        """, (leader_code, limit))
+
+        queries = []
+        for row in cur.fetchall():
+            created, query, category, status, latency = row
+            queries.append({
+                "timestamp": created.isoformat() if created else None,
+                "query": query[:200],  # 200자 미리보기
+                "category": category,
+                "status": status,
+                "latency_ms": latency
+            })
+
+        return {
+            "ok": True,
+            "leader": leader_code,
+            "queries": queries
+        }
+
+    except Exception as e:
+        logger.error(f"⚠️ [LeaderQueries] 조회 실패: {e}")
+        return {"ok": False, "error": str(e)}
+    finally:
+        if cur: cur.close()
+        if conn: release_connection(conn)
+
+
 def get_visitor_stats() -> Dict[str, Any]:
     """
     방문자 통계 조회
