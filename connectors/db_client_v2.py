@@ -1,6 +1,6 @@
 import logging
 from connectors.validator import LawmadiValidator
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime, timedelta, timezone
 import json
 from .db_client import (
