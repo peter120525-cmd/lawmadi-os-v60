@@ -179,6 +179,19 @@
     }
   },
   "dual_ssot": {
+    "enabled": true,
+    "retry_sequence": ["DRF-1", "DATA-1", "DRF-2"],
+    "cache_ttl_seconds": 3600,
+    "drf": {
+      "base_url": "https://www.law.go.kr/DRF/lawSearch.do",
+      "api_key_env": "LAWGO_DRF_OC",
+      "timeout_ms": 5000
+    },
+    "data_go_kr": {
+      "base_url": "https://apis.data.go.kr/1170000/LawService",
+      "api_key_env": "DATA_GO_KR_API_KEY",
+      "timeout_ms": 5000
+    },
     "primary": {
       "type": "LAW_GO_KR",
       "base_url": "https://www.law.go.kr/DRF"
@@ -187,6 +200,17 @@
       "type": "OPEN_DATA_GO_KR",
       "base_url": "https://apis.data.go.kr/1170000/LawService"
     }
+  },
+  "article1": {
+    "drf_type_json_required": true,
+    "description": "DRF API 호출 시 type=JSON 필수",
+    "enforcement": "STRICT"
+  },
+  "failclosed_principle": {
+    "enabled": true,
+    "description": "검증 실패 시 응답 차단",
+    "block_html_responses": true,
+    "block_invalid_json": true
   },
   "ssot_registry": {
     "SSOT_01": {

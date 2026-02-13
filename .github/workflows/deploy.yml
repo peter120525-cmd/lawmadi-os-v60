@@ -1,33 +1,35 @@
-name: Build & Deploy Lawmadi OS to Cloud Run
+name: Deploy to Cloud Run and Firebase
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
+  workflow_dispatch:  # 수동 실행 가능
 
 env:
   PROJECT_ID: lawmadi-db
   REGION: asia-northeast3
-  SERVICE: lawmadi-os
-  REPO: lawmadi-images
-  IMAGE: lawmadi-os
-  # IT 기술: Cloud SQL 인스턴스 연결 이름 정의
-  CLOUD_SQL_INSTANCE: lawmadi-db:asia-northeast3:lawmadi-db-v1
+  SERVICE_NAME: lawmadi-os-v60
+  REPOSITORY: lawmadi-repo
+  IMAGE_NAME: lawmadi-os-v60
 
 jobs:
-  deploy:
+  deploy-backend:
+    name: Deploy to Cloud Run
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
       id-token: write
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY_JSON }}
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
@@ -36,40 +38,87 @@ jobs:
 
       - name: Configure Docker for Artifact Registry
         run: |
-          gcloud auth configure-docker "${{ env.REGION }}-docker.pkg.dev" --quiet
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
 
-      - name: Build & Push image
+      - name: Build Docker image
         run: |
-          set -euo pipefail
+          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+                       -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest \
+                       .
 
-          REPO_PATH="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO }}/${{ env.IMAGE }}"
-          TAG="${GITHUB_SHA}"
-
-          # IT 기술: Docker 레이어 캐싱 및 멀티 스테이지 빌드 최적화 권장
-          docker build -t "${REPO_PATH}:${TAG}" .
-          docker push "${REPO_PATH}:${TAG}"
-
-          DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "${REPO_PATH}:${TAG}" | awk -F@ '{print $2}')"
-          echo "REPO_PATH=${REPO_PATH}" >> "$GITHUB_ENV"
-          echo "DIGEST=${DIGEST}" >> "$GITHUB_ENV"
-
-      - name: Deploy to Cloud Run (Hardened Configuration)
+      - name: Push Docker image to Artifact Registry
         run: |
-          set -euo pipefail
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest
 
-          # [IT 기술: Secure Environment Injection & Instance Tunneling]
-          # --set-env-vars를 통해 GitHub Secrets에 저장된 기밀 데이터를 안전하게 커널로 전달합니다.
-          # --add-cloudsql-instances를 통해 백엔드와 DB 간의 보안 터널을 생성합니다.
-          gcloud run deploy "${{ env.SERVICE }}" \
-            --image "$REPO_PATH@$DIGEST" \
-            --region "${{ env.REGION }}" \
-            --project "${{ env.PROJECT_ID }}" \
-            --set-env-vars "GEMINI_KEY=${{ secrets.GEMINI_KEY }}" \
-            --set-env-vars "LAWGO_DRF_OC=${{ secrets.LAWGO_DRF_OC }}" \
-            --set-env-vars "DB_USER=${{ secrets.DB_USER }}" \
-            --set-env-vars "DB_PASS=${{ secrets.DB_PASS }}" \
-            --set-env-vars "DB_NAME=${{ secrets.DB_NAME }}" \
-            --set-env-vars "CLOUD_SQL_INSTANCE=${{ env.CLOUD_SQL_INSTANCE }}" \
-            --set-env-vars "DB_DISABLED=0" \
-            --add-cloudsql-instances "${{ env.CLOUD_SQL_INSTANCE }}" \
-            --allow-unauthenticated
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --platform=managed \
+            --region=${{ env.REGION }} \
+            --allow-unauthenticated \
+            --memory=2Gi \
+            --cpu=2 \
+            --timeout=300 \
+            --concurrency=80 \
+            --max-instances=10 \
+            --set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest,LAWGO_DRF_OC=LAWGO_DRF_OC:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,DATABASE_URL=DATABASE_URL:latest"
+
+      - name: Get Cloud Run URL
+        id: deploy
+        run: |
+          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region=${{ env.REGION }} \
+            --format='value(status.url)')
+          echo "url=$SERVICE_URL" >> $GITHUB_OUTPUT
+          echo "🚀 Deployed to: $SERVICE_URL"
+
+      - name: Verify deployment
+        run: |
+          sleep 10
+          curl -f ${{ steps.deploy.outputs.url }}/health || exit 1
+          echo "✅ Health check passed"
+
+  deploy-frontend:
+    name: Deploy to Firebase Hosting
+    runs-on: ubuntu-latest
+    needs: deploy-backend  # Backend 배포 후 실행
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Deploy to Firebase Hosting
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          firebase deploy --only hosting --token "$FIREBASE_TOKEN" --project ${{ env.PROJECT_ID }}
+
+      - name: Verify Firebase deployment
+        run: |
+          sleep 5
+          curl -f https://lawmadi-db.web.app || exit 1
+          echo "✅ Firebase Hosting deployed successfully"
+
+  notify:
+    name: Send deployment notification
+    runs-on: ubuntu-latest
+    needs: [deploy-backend, deploy-frontend]
+    if: always()
+
+    steps:
+      - name: Deployment summary
+        run: |
+          echo "🎉 Deployment completed!"
+          echo "Backend: https://lawmadi-os-v60-uzqkp6kadq-du.a.run.app"
+          echo "Frontend: https://lawmadi-db.web.app"
+          echo "Status: ${{ needs.deploy-backend.result }} / ${{ needs.deploy-frontend.result }}"

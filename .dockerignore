@@ -1,9 +1,41 @@
-.env
-__pycache__/
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
 *.pyc
-.git/
-.github/
-*.log
-.venv/
+*.pyo
+*.pyd
+.Python
+*.so
+.env
 venv/
-sa-key.json
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# 테스트 및 문서
+test_*.py
+*_test.py
+*.md
+!README.md
+
+# 로컬 데이터
+uploads/*
+!uploads/.gitkeep
+temp/
+logs/
+*.log
+
+# 배포 관련
+.firebase/
+.gcloudignore
+cloudbuild.yaml
+
+# 백업 및 임시
+*.bak
+*.tmp
+.DS_Store
