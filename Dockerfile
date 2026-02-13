@@ -1,6 +1,9 @@
 # 1. 가볍고 안정적인 Python 3.10 이미지 사용
 FROM python:3.10-slim
 
+# 캐시 무효화를 위한 빌드 인자 (v50.2.6-SWARM)
+ARG CACHEBUST=2
+
 # 2. 작업 디렉토리 설정
 WORKDIR /app
 
