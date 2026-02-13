@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Lawmadi OS - 당신의 법률 문제, 60명의 전문가가 함께 분석합니다</title>
-    <meta name="description" content="복합 법률 사안도 걱정 없이, 60명의 전문 리더가 협업하여 당신을 위한 판단 흐름을 만들어드립니다.">
+    <title>Lawmadi OS - 불안을 행동으로 바꾸는 법률 AI</title>
+    <meta name="description" content="법률 문제로 인한 불안, 60명의 전문 리더가 협업하여 구체적인 행동 계획으로 바꿔드립니다.">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
     <style>
@@ -679,11 +679,322 @@
             align-self: flex-start;
             background: white;
             border: 1px solid var(--border);
-            padding: 24px;
-            border-radius: 20px;
+            padding: 24px 28px;
+            border-radius: 16px;
             max-width: 90%;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            line-height: 1.8;
+            font-size: 15px;
+            color: #374151;
+        }
+
+        /* AI 메시지 내부 스타일 (ChatGPT 스타일) */
+        .ai-msg h1, .ai-msg h2, .ai-msg h3 {
+            margin-top: 24px;
+            margin-bottom: 12px;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+
+        .ai-msg h1 { font-size: 1.5rem; color: #111827; }
+        .ai-msg h2 { font-size: 1.3rem; color: #1f2937; }
+        .ai-msg h3 {
+            font-size: 1.15rem;
+            color: #2563eb;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 8px;
+            margin-top: 28px;
+        }
+
+        .ai-msg h1:first-child,
+        .ai-msg h2:first-child,
+        .ai-msg h3:first-child {
+            margin-top: 0;
+        }
+
+        .ai-msg p {
+            margin: 12px 0;
+            line-height: 1.8;
+        }
+
+        .ai-msg ul, .ai-msg ol {
+            margin: 16px 0;
+            padding-left: 28px;
+        }
+
+        .ai-msg ul li, .ai-msg ol li {
+            margin: 8px 0;
             line-height: 1.7;
+        }
+
+        .ai-msg ul li::marker {
+            color: #2563eb;
+        }
+
+        .ai-msg strong {
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .ai-msg em {
+            font-style: italic;
+            color: #4b5563;
+        }
+
+        .ai-msg code {
+            background: #f3f4f6;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #dc2626;
+            border: 1px solid #e5e7eb;
+        }
+
+        .ai-msg pre {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 16px 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 16px 0;
+            border: 1px solid #374151;
+        }
+
+        .ai-msg pre code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            color: #f9fafb;
+            font-size: 0.9rem;
+        }
+
+        .ai-msg blockquote {
+            border-left: 4px solid #3b82f6;
+            padding-left: 20px;
+            margin: 16px 0;
+            color: #4b5563;
+            font-style: italic;
+            background: #f9fafb;
+            padding: 12px 20px;
+            border-radius: 4px;
+        }
+
+        .ai-msg table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.95em;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .ai-msg table th {
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .ai-msg table td {
+            border: 1px solid #e5e7eb;
+            padding: 12px 16px;
+        }
+
+        .ai-msg table tr:nth-child(even) {
+            background: #f9fafb;
+        }
+
+        .ai-msg table tr:hover {
+            background: #f3f4f6;
+        }
+
+        /* 강조 배지 스타일 */
+        .ai-msg .highlight-warning {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 12px 16px;
+            margin: 12px 0;
+            border-radius: 4px;
+        }
+
+        .ai-msg .highlight-success {
+            background: #d1fae5;
+            border-left: 4px solid #10b981;
+            padding: 12px 16px;
+            margin: 12px 0;
+            border-radius: 4px;
+        }
+
+        .ai-msg .highlight-error {
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+            padding: 12px 16px;
+            margin: 12px 0;
+            border-radius: 4px;
+        }
+
+        /* 구분선 */
+        .ai-msg hr {
+            border: none;
+            border-top: 2px solid #e5e7eb;
+            margin: 24px 0;
+        }
+
+        /* 📋 절차 안내 고퀄리티 스타일 */
+        .ai-msg li {
+            position: relative;
+            padding-left: 8px;
+        }
+
+        /* ✅ 구체적 행동 - 그린 */
+        .ai-msg li:has(strong:first-child:contains("구체적 행동")),
+        .ai-msg li strong:first-child:contains("구체적 행동") {
+            color: #059669;
+        }
+
+        .ai-msg p:has(> strong:contains("✅")),
+        .ai-msg li:contains("✅") {
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, transparent 100%);
+            border-left: 3px solid #10b981;
+            padding: 10px 16px;
+            margin: 8px 0;
+            border-radius: 6px;
+        }
+
+        /* 💡 대응 전략 - 블루 */
+        .ai-msg p:has(> strong:contains("💡")),
+        .ai-msg li:contains("💡") {
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.08) 0%, transparent 100%);
+            border-left: 3px solid #3b82f6;
+            padding: 10px 16px;
+            margin: 8px 0;
+            border-radius: 6px;
+        }
+
+        /* ⚠️ 주의사항 - 옐로우/오렌지 */
+        .ai-msg p:has(> strong:contains("⚠️")),
+        .ai-msg li:contains("⚠️") {
+            background: linear-gradient(90deg, rgba(245, 158, 11, 0.08) 0%, transparent 100%);
+            border-left: 3px solid #f59e0b;
+            padding: 10px 16px;
+            margin: 8px 0;
+            border-radius: 6px;
+        }
+
+        /* 📋 필요 서류 - 퍼플 */
+        .ai-msg p:has(> strong:contains("📋")),
+        .ai-msg li:contains("📋") {
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.08) 0%, transparent 100%);
+            border-left: 3px solid #8b5cf6;
+            padding: 10px 16px;
+            margin: 8px 0;
+            border-radius: 6px;
+        }
+
+        /* 💰 예상 비용 - 골드 */
+        .ai-msg p:has(> strong:contains("💰")),
+        .ai-msg li:contains("💰") {
+            background: linear-gradient(90deg, rgba(251, 191, 36, 0.08) 0%, transparent 100%);
+            border-left: 3px solid #fbbf24;
+            padding: 10px 16px;
+            margin: 8px 0;
+            border-radius: 6px;
+        }
+
+        /* ⏱️ 예상 기간 - 시안 */
+        .ai-msg p:has(> strong:contains("⏱️")),
+        .ai-msg li:contains("⏱️") {
+            background: linear-gradient(90deg, rgba(6, 182, 212, 0.08) 0%, transparent 100%);
+            border-left: 3px solid #06b6d4;
+            padding: 10px 16px;
+            margin: 8px 0;
+            border-radius: 6px;
+        }
+
+        /* 단계 구분 강조 (📍) */
+        .ai-msg p:has(> strong:contains("📍")),
+        .ai-msg li:contains("📍") {
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            border: 2px solid #d1d5db;
+            padding: 16px 20px;
+            margin: 20px 0;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            font-weight: 600;
+        }
+
+        /* 분기 시나리오 박스 */
+        .ai-msg p:has(> strong:contains("상황별")),
+        .ai-msg p:has(> strong:contains("분기")),
+        .ai-msg ul:has(li:contains("응답하는 경우")),
+        .ai-msg ul:has(li:contains("무응답인 경우")),
+        .ai-msg ul:has(li:contains("거부하는 경우")) {
+            background: #fafafa;
+            border: 2px dashed #9ca3af;
+            padding: 16px;
+            margin: 16px 0;
+            border-radius: 10px;
+        }
+
+        /* 화살표 스타일 */
+        .ai-msg li:contains("→") {
+            padding-left: 24px;
+            position: relative;
+        }
+
+        .ai-msg li:contains("→")::before {
+            content: "➜";
+            position: absolute;
+            left: 0;
+            color: #3b82f6;
+            font-weight: bold;
+        }
+
+        /* 이모티콘 강조 */
+        .ai-msg strong:contains("✅"),
+        .ai-msg strong:contains("💡"),
+        .ai-msg strong:contains("⚠️"),
+        .ai-msg strong:contains("📋"),
+        .ai-msg strong:contains("💰"),
+        .ai-msg strong:contains("⏱️"),
+        .ai-msg strong:contains("📍") {
+            font-size: 1.05em;
+            display: inline-block;
+            margin-right: 4px;
+        }
+
+        /* 절차 번호 스타일 개선 */
+        .ai-msg ol {
+            counter-reset: procedure-counter;
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .ai-msg ol li {
+            counter-increment: procedure-counter;
+            position: relative;
+            padding-left: 48px;
+            margin: 24px 0;
+        }
+
+        .ai-msg ol li::before {
+            content: counter(procedure-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 1.1rem;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
         }
 
         .user-msg {
@@ -712,11 +1023,11 @@
                 <span class="material-symbols-outlined">chat_bubble</span>
                 <span>법률 분석</span>
             </div>
-            <div class="menu-item">
+            <div class="menu-item" onclick="window.location.href='leaders.html'" style="cursor: pointer;">
                 <span class="material-symbols-outlined">account_tree</span>
                 <span>60 Leaders</span>
             </div>
-            <div class="menu-item">
+            <div class="menu-item" onclick="window.location.href='clevel.html'" style="cursor: pointer;">
                 <span class="material-symbols-outlined">groups</span>
                 <span>C-Level 임원</span>
             </div>
@@ -751,11 +1062,11 @@
         <div id="landing-content" class="content-viewport">
             <!-- Hero Section -->
             <div class="hero-section">
-                <h1 class="hero-title">당신의 법률 문제,<br>60명의 전문가가 함께 분석합니다</h1>
+                <h1 class="hero-title">불안을 행동으로 바꾸는<br>Lawmadi OS</h1>
                 <p class="hero-subtitle">
-                    복합 법률 사안도 걱정 없이,<br>
-                    전문 분야별 리더들이 협업하여<br>
-                    당신을 위한 판단 흐름을 만들어드립니다
+                    법률 문제로 인한 불안,<br>
+                    60명의 전문 리더가 협업하여<br>
+                    구체적인 행동 계획으로 바꿔드립니다
                 </p>
 
                 <div class="hero-features">
@@ -774,7 +1085,7 @@
                 </div>
 
                 <div class="cta-section">
-                    <button class="cta-primary" id="startChatBtn">지금 무료로 상담하기</button>
+                    <button class="cta-primary" id="startChatBtn">지금 무료로 체험하기</button>
                     <p class="cta-subtext">법률 질문을 입력하시면 즉시 분석을 시작합니다</p>
                 </div>
             </div>
@@ -905,7 +1216,8 @@
         API_URL: 'https://lawmadi-os-v50-938146962157.asia-northeast3.run.app/ask',
         STREAM_URL: 'https://lawmadi-os-v50-938146962157.asia-northeast3.run.app/ask/stream',
         BASE_URL: 'https://lawmadi-os-v50-938146962157.asia-northeast3.run.app',
-        USE_STREAMING: false,  // 스트리밍 비활성화 (백엔드에서 제거됨)
+        USE_STREAMING: false,  // 백엔드 스트리밍 비활성화
+        USE_TYPING_EFFECT: false,  // 타이핑 효과 비활성화 (포맷팅 우선)
 
         init() {
             // Menu toggle
@@ -1014,7 +1326,7 @@
             this.userInput.style.height = 'auto';
 
             const loadingId = 'ai-loading-' + Date.now();
-            this.appendMessage('ai', '전문가 스웜 분석 중...', loadingId);
+            this.appendMessage('ai', '<p>지금 담당 리더님이 <b>슈퍼 컴퓨터급 두뇌</b>를 풀가동해 답변 생성 중! 서버 로딩이 살짝 느려도 너그럽게 봐주실 거죠? 😊⭐</p><p>저희 안테나는 <b>365일 24시간 풀가동 중!</b> 소중한 이야기에 초고속 접속해 대기할 테니 조금만 기다려주세요오~ 히히. 💕</p>', loadingId);
 
             try {
                 const response = await fetch(this.API_URL, {
@@ -1027,11 +1339,86 @@
                 const data = await response.json();
 
                 const formattedHtml = this.formatReport(data.response);
-                this.updateMessage(loadingId, formattedHtml);
+
+                // 타이핑 효과 적용
+                if (this.USE_TYPING_EFFECT) {
+                    await this.typewriterEffect(loadingId, formattedHtml);
+                } else {
+                    this.updateMessage(loadingId, formattedHtml);
+                }
 
             } catch (error) {
                 this.updateMessage(loadingId, "<div style='color:red;'>⚠️ 시스템 통신 장애가 발생했습니다. 잠시 후 다시 시도해 주세요.</div>");
             }
+        },
+
+        // 타이핑 효과 함수 (HTML 포맷 유지)
+        async typewriterEffect(elementId, finalHtml) {
+            const msgDiv = document.getElementById(elementId);
+            if (!msgDiv) return;
+
+            // HTML 문자열을 작은 단위로 분할 (단어 또는 태그 단위)
+            const chunks = this.splitHtmlIntoChunks(finalHtml);
+
+            msgDiv.innerHTML = '';
+            const speed = 20; // 밀리초당 청크 속도
+
+            for (let i = 0; i < chunks.length; i++) {
+                msgDiv.innerHTML += chunks[i];
+
+                // 스크롤 유지
+                this.convArea.scrollTo({ top: this.convArea.scrollHeight, behavior: 'smooth' });
+
+                // 속도 조절
+                await new Promise(resolve => setTimeout(resolve, speed));
+            }
+        },
+
+        // HTML을 작은 청크로 분할 (태그와 텍스트를 구분)
+        splitHtmlIntoChunks(html) {
+            const chunks = [];
+            let buffer = '';
+            let inTag = false;
+
+            for (let i = 0; i < html.length; i++) {
+                const char = html[i];
+
+                if (char === '<') {
+                    // 태그 시작 - 이전 텍스트 버퍼를 청크로 추가
+                    if (buffer && !inTag) {
+                        // 텍스트를 단어 단위로 분할
+                        const words = buffer.split(/(\s+)/);
+                        words.forEach(word => {
+                            if (word) chunks.push(word);
+                        });
+                        buffer = '';
+                    }
+                    inTag = true;
+                    buffer += char;
+                } else if (char === '>') {
+                    // 태그 끝 - 태그 전체를 한 청크로
+                    buffer += char;
+                    chunks.push(buffer);
+                    buffer = '';
+                    inTag = false;
+                } else {
+                    buffer += char;
+                }
+            }
+
+            // 남은 버퍼 처리
+            if (buffer) {
+                if (inTag) {
+                    chunks.push(buffer);
+                } else {
+                    const words = buffer.split(/(\s+)/);
+                    words.forEach(word => {
+                        if (word) chunks.push(word);
+                    });
+                }
+            }
+
+            return chunks;
         },
 
         async dispatchPacketStream() {
@@ -1045,7 +1432,7 @@
             this.userInput.style.height = 'auto';
 
             const loadingId = 'ai-loading-' + Date.now();
-            this.appendMessage('ai', '<div style="color:#666;">🌊 실시간 분석 중...</div>', loadingId);
+            this.appendMessage('ai', '<p>지금 담당 리더님이 <b>슈퍼 컴퓨터급 두뇌</b>를 풀가동해 답변 생성 중! 서버 로딩이 살짝 느려도 너그럽게 봐주실 거죠? 😊⭐</p><p>저희 안테나는 <b>365일 24시간 풀가동 중!</b> 소중한 이야기에 초고속 접속해 대기할 테니 조금만 기다려주세요오~ 히히. 💕</p>', loadingId);
 
             let fullText = '';
             let startTime = Date.now();
@@ -1117,74 +1504,170 @@
         formatReport(text) {
             if (!text) return "응답 데이터를 수신하지 못했습니다.";
 
-            let html = text;
-
-            // 1. 5단계 구조 헤더 변환 (이모티콘 추가)
-            html = html
-                .replace(/1\. 요약 \(Quick Insight\)/g, '<h3 style="margin-top:0;color:#2c5282;border-bottom:2px solid #4299e1;padding-bottom:8px;">💡 1. 요약 (Quick Insight)</h3>')
-                .replace(/2\. 📚 법률 근거 \(Verified Evidence\)/g, '<h3 style="color:#2c5282;border-bottom:2px solid #4299e1;padding-bottom:8px;">📚 2. 법률 근거 (Verified Evidence)</h3>')
-                .replace(/3\. 🕐 시간축 분석 \(Timeline Analysis\)/g, '<h3 style="color:#2c5282;border-bottom:2px solid #4299e1;padding-bottom:8px;">🕐 3. 시간축 분석 (Timeline Analysis)</h3>')
-                .replace(/4\. 절차 안내 \(Action Plan\)/g, '<h3 style="color:#2c5282;border-bottom:2px solid #4299e1;padding-bottom:8px;">📋 4. 절차 안내 (Action Plan)</h3>')
-                .replace(/5\. 🔍 참고 정보 \(Additional Context\)/g, '<h3 style="color:#2c5282;border-bottom:2px solid #4299e1;padding-bottom:8px;">🔍 5. 참고 정보 (Additional Context)</h3>');
-
-            // 2. Markdown 테이블 변환
-            html = this.convertMarkdownTables(html);
-
-            // 3. 볼드/이탤릭 변환
-            html = html
-                .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')  // ***bold italic***
-                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')                // **bold**
-                .replace(/\*(.+?)\*/g, '<em>$1</em>');                           // *italic*
-
-            // 4. 리스트 변환 (bullet points)
-            const lines = html.split('\n');
-            const processedLines = [];
+            // 간단하고 확실한 방식으로 변환
+            let lines = text.split('\n');
+            let html = [];
             let inList = false;
+            let inOrderedList = false;
+            let inTable = false;
+            let tableLines = [];
 
             for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
+                let line = lines[i];
+                let trimmed = line.trim();
 
-                // 불릿 포인트 (-, •, *, ✓, ✅, ▪, ◦ 등)
-                if (/^[\s]*[-•*✓✅▪◦]\s+(.+)/.test(line)) {
-                    if (!inList) {
-                        processedLines.push('<ul style="margin:8px 0;padding-left:24px;">');
-                        inList = true;
+                // 빈 줄
+                if (!trimmed) {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    if (inTable) {
+                        html.push(this.convertMarkdownTables(tableLines.join('\n')));
+                        tableLines = [];
+                        inTable = false;
                     }
-                    const content = line.replace(/^[\s]*[-•*✓✅▪◦]\s+/, '');
-                    processedLines.push(`<li style="margin:4px 0;">${content}</li>`);
-                } else {
-                    if (inList) {
-                        processedLines.push('</ul>');
-                        inList = false;
+                    html.push('<p></p>');
+                    continue;
+                }
+
+                // 테이블 감지
+                if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+                    if (!inTable) {
+                        if (inList) { html.push('</ul>'); inList = false; }
+                        if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                        inTable = true;
                     }
-                    processedLines.push(line);
+                    tableLines.push(line);
+                    continue;
+                } else if (inTable) {
+                    html.push(this.convertMarkdownTables(tableLines.join('\n')));
+                    tableLines = [];
+                    inTable = false;
+                }
+
+                // 5단계 구조 헤더
+                if (trimmed.includes('1. 요약 (Quick Insight)')) {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    html.push('<h3>💡 1. 요약 (Quick Insight)</h3>');
+                }
+                else if (trimmed.includes('2. 📚 법률 근거')) {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    html.push('<h3>📚 2. 법률 근거 (Verified Evidence)</h3>');
+                }
+                else if (trimmed.includes('3. 🕐 시간축 분석')) {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    html.push('<h3>🕐 3. 시간축 분석 (Timeline Analysis)</h3>');
+                }
+                else if (trimmed.includes('4. 절차 안내')) {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    html.push('<h3>📋 4. 절차 안내 (Action Plan)</h3>');
+                }
+                else if (trimmed.includes('5. 🔍 참고 정보')) {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    html.push('<h3>🔍 5. 참고 정보 (Additional Context)</h3>');
+                }
+                // 마크다운 헤더
+                else if (trimmed.startsWith('### ')) {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    html.push('<h3>' + trimmed.substring(4) + '</h3>');
+                }
+                else if (trimmed.startsWith('## ')) {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    html.push('<h2>' + trimmed.substring(3) + '</h2>');
+                }
+                else if (trimmed.startsWith('# ')) {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    html.push('<h1>' + trimmed.substring(2) + '</h1>');
+                }
+                // 불릿 리스트
+                else if (/^[-•*✓✅▪◦]\s+/.test(trimmed)) {
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    if (!inList) { html.push('<ul>'); inList = true; }
+                    let content = trimmed.replace(/^[-•*✓✅▪◦]\s+/, '');
+                    content = this.formatInline(content);
+                    html.push('<li>' + content + '</li>');
+                }
+                // 번호 리스트
+                else if (/^\d+\.\s+/.test(trimmed)) {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (!inOrderedList) { html.push('<ol>'); inOrderedList = true; }
+                    let content = trimmed.replace(/^\d+\.\s+/, '');
+                    content = this.formatInline(content);
+                    html.push('<li>' + content + '</li>');
+                }
+                // 인용구
+                else if (trimmed.startsWith('> ')) {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    let content = this.formatInline(trimmed.substring(2));
+                    html.push('<blockquote>' + content + '</blockquote>');
+                }
+                // 수평선
+                else if (trimmed === '---' || trimmed === '***') {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    html.push('<hr>');
+                }
+                // 일반 텍스트
+                else {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    let content = this.formatInline(trimmed);
+                    html.push('<p>' + content + '</p>');
                 }
             }
-            if (inList) processedLines.push('</ul>');
 
-            html = processedLines.join('\n');
+            // 열린 리스트 닫기
+            if (inList) html.push('</ul>');
+            if (inOrderedList) html.push('</ol>');
+            if (inTable && tableLines.length > 0) {
+                html.push(this.convertMarkdownTables(tableLines.join('\n')));
+            }
 
-            // 5. 번호 리스트 변환 (1., 2., 3., ①, ②, ③ 등)
-            html = html.replace(/(\d+\.\s+.+?)(?=\n|$)/g, '<div style="margin:4px 0;padding-left:8px;">$1</div>');
+            return html.join('\n');
+        },
 
-            // 6. 인용구 변환 (> 로 시작하는 줄)
-            html = html.replace(/^>\s+(.+)$/gm, '<blockquote style="border-left:4px solid #4299e1;padding-left:16px;margin:8px 0;color:#555;">$1</blockquote>');
+        formatInline(text) {
+            // 인라인 포맷팅 (볼드, 이탤릭, 코드)
+            let result = text;
 
-            // 7. 코드 블록 변환
-            html = html.replace(/```(.+?)```/gs, '<pre style="background:#f7fafc;padding:12px;border-radius:6px;overflow-x:auto;"><code>$1</code></pre>');
-            html = html.replace(/`(.+?)`/g, '<code style="background:#edf2f7;padding:2px 6px;border-radius:3px;font-size:0.9em;">$1</code>');
+            // 코드 블록 (먼저 처리하여 내부 마크다운 무시)
+            result = result.replace(/```([\s\S]+?)```/g, (match, code) => {
+                return '<pre><code>' + this.escapeHtml(code.trim()) + '</code></pre>';
+            });
 
-            // 8. 줄바꿈 처리 (빈 줄은 단락으로, 일반 줄은 br)
-            html = html.replace(/\n\n/g, '</p><p style="margin:12px 0;">');
-            html = html.replace(/\n/g, '<br>');
-            html = '<p style="margin:12px 0;">' + html + '</p>';
+            // 인라인 코드 (먼저 처리하여 내부 ** 무시)
+            result = result.replace(/`([^`]+?)`/g, '<code>$1</code>');
 
-            // 9. 강조 표시 (⚠️, ✅, ❌, 📌 등의 이모티콘이 있는 줄 하이라이트)
-            html = html.replace(/(⚠️.+?)(<br>|<\/)/g, '<span style="background:#fff3cd;padding:4px 8px;border-radius:4px;display:inline-block;margin:2px 0;">$1</span>$2');
-            html = html.replace(/(✅.+?)(<br>|<\/)/g, '<span style="background:#d4edda;padding:4px 8px;border-radius:4px;display:inline-block;margin:2px 0;">$1</span>$2');
-            html = html.replace(/(❌.+?)(<br>|<\/)/g, '<span style="background:#f8d7da;padding:4px 8px;border-radius:4px;display:inline-block;margin:2px 0;">$1</span>$2');
+            // 볼드/이탤릭 (개선된 패턴)
+            result = result.replace(/\*\*\*([^*]+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+            result = result.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>');
+            result = result.replace(/\*([^*\n]+?)\*/g, '<em>$1</em>');
 
-            return html;
+            // 하이라이트
+            result = result.replace(/(⚠️[^<\n]+)/g, '<span class="highlight-warning">$1</span>');
+            result = result.replace(/(✅[^<\n]+)/g, '<span class="highlight-success">$1</span>');
+            result = result.replace(/(❌[^<\n]+)/g, '<span class="highlight-error">$1</span>');
+
+            return result;
+        },
+
+        escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
         },
 
         convertMarkdownTables(text) {
