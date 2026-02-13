@@ -11,7 +11,8 @@ from .db_client import (
     validator
 )
 
-_ENV_VERSION = "v50.2.4-HARDENED"
+# ⚠️ SYNC: main.py:85의 OS_VERSION과 동기화 필요
+_ENV_VERSION = "v50.3.0-FINAL"
 
 
 def execute(query: str, params=None, fetch="all"):
@@ -604,6 +605,217 @@ def get_leader_query_samples(leader_code: str, limit: int = 10) -> Dict[str, Any
 
     except Exception as e:
         logger.error(f"⚠️ [LeaderQueries] 조회 실패: {e}")
+        return {"ok": False, "error": str(e)}
+    finally:
+        if cur: cur.close()
+        if conn: release_connection(conn)
+
+
+# =====================================================
+# 🛡️ Response Verification System
+# =====================================================
+
+def init_verification_table():
+    """응답 검증 테이블 초기화"""
+    if not _db_enabled():
+        return
+
+    conn = get_connection()
+    cur = None
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS response_verification (
+                id SERIAL PRIMARY KEY,
+                session_id VARCHAR(64),
+                user_query TEXT NOT NULL,
+                gemini_response TEXT NOT NULL,
+                tools_used JSONB,
+                tool_results JSONB,
+                verification_result VARCHAR(20),
+                ssot_compliance_score INTEGER,
+                issues_found JSONB,
+                claude_feedback TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                env_version VARCHAR(50)
+            )
+        """)
+
+        # 인덱스 생성 (성능 최적화)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_verification_result
+            ON response_verification(verification_result)
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_verification_score
+            ON response_verification(ssot_compliance_score)
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_verification_created
+            ON response_verification(created_at DESC)
+        """)
+
+        conn.commit()
+        logger.info("✅ [Verification] 테이블 초기화 완료")
+    except Exception as e:
+        logger.error(f"⚠️ [Verification] 테이블 생성 실패: {e}")
+    finally:
+        if cur: cur.close()
+        if conn: release_connection(conn)
+
+
+def save_verification_result(
+    session_id: str,
+    user_query: str,
+    gemini_response: str,
+    tools_used: List[Dict[str, Any]],
+    tool_results: List[Dict[str, Any]],
+    verification_result: str,
+    ssot_compliance_score: int,
+    issues_found: List[str],
+    claude_feedback: str
+) -> Dict[str, Any]:
+    """
+    검증 결과 저장
+
+    Args:
+        session_id: 세션 ID
+        user_query: 사용자 질문
+        gemini_response: Gemini 응답
+        tools_used: 사용된 tool 함수 목록
+        tool_results: tool 실행 결과
+        verification_result: PASS/WARNING/FAIL/ERROR
+        ssot_compliance_score: SSOT 준수 점수 (0-100)
+        issues_found: 발견된 문제점 목록
+        claude_feedback: Claude의 피드백
+    """
+    if not _db_enabled():
+        return {"ok": False, "error": "DB_DISABLED"}
+
+    conn = get_connection()
+    cur = None
+    try:
+        cur = conn.cursor()
+
+        cur.execute("""
+            INSERT INTO response_verification (
+                session_id, user_query, gemini_response,
+                tools_used, tool_results,
+                verification_result, ssot_compliance_score,
+                issues_found, claude_feedback,
+                env_version
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+        """, (
+            session_id,
+            user_query[:5000],  # 길이 제한
+            gemini_response[:10000],
+            json.dumps(tools_used, ensure_ascii=False),
+            json.dumps(tool_results, ensure_ascii=False),
+            verification_result,
+            ssot_compliance_score,
+            json.dumps(issues_found, ensure_ascii=False),
+            claude_feedback[:2000],
+            _ENV_VERSION
+        ))
+
+        verification_id = cur.fetchone()[0]
+        conn.commit()
+
+        logger.info(f"✅ [Verification] 검증 결과 저장 완료 (ID: {verification_id}, 결과: {verification_result}, 점수: {ssot_compliance_score})")
+        return {"ok": True, "verification_id": verification_id}
+
+    except Exception as e:
+        logger.error(f"⚠️ [Verification] 저장 실패: {e}")
+        return {"ok": False, "error": str(e)}
+    finally:
+        if cur: cur.close()
+        if conn: release_connection(conn)
+
+
+def get_verification_statistics(days: int = 7) -> Dict[str, Any]:
+    """
+    검증 통계 조회
+
+    Args:
+        days: 최근 N일 데이터
+
+    Returns:
+        {
+            "total_verifications": int,
+            "pass_count": int,
+            "warning_count": int,
+            "fail_count": int,
+            "avg_score": float,
+            "recent_failures": [...]
+        }
+    """
+    if not _db_enabled():
+        return {"ok": False, "error": "DB_DISABLED"}
+
+    conn = get_connection()
+    cur = None
+    try:
+        cur = conn.cursor()
+
+        # 전체 통계
+        cur.execute(f"""
+            SELECT
+                COUNT(*) as total,
+                COUNT(CASE WHEN verification_result = 'PASS' THEN 1 END) as pass_count,
+                COUNT(CASE WHEN verification_result = 'WARNING' THEN 1 END) as warning_count,
+                COUNT(CASE WHEN verification_result = 'FAIL' THEN 1 END) as fail_count,
+                AVG(ssot_compliance_score) as avg_score
+            FROM response_verification
+            WHERE created_at >= NOW() - INTERVAL '{int(days)} days'
+        """)
+
+        stats = cur.fetchone()
+        total, pass_cnt, warn_cnt, fail_cnt, avg_score = stats
+
+        # 최근 실패 케이스
+        cur.execute(f"""
+            SELECT
+                created_at,
+                user_query,
+                verification_result,
+                ssot_compliance_score,
+                issues_found,
+                claude_feedback
+            FROM response_verification
+            WHERE verification_result IN ('FAIL', 'WARNING')
+                AND created_at >= NOW() - INTERVAL '{int(days)} days'
+            ORDER BY created_at DESC
+            LIMIT 10
+        """)
+
+        recent_failures = []
+        for row in cur.fetchall():
+            created, query, result, score, issues, feedback = row
+            recent_failures.append({
+                "timestamp": created.isoformat() if created else None,
+                "query": query[:100],
+                "result": result,
+                "score": score,
+                "issues": json.loads(issues) if issues else [],
+                "feedback": feedback[:200]
+            })
+
+        return {
+            "ok": True,
+            "period_days": days,
+            "total_verifications": total or 0,
+            "pass_count": pass_cnt or 0,
+            "warning_count": warn_cnt or 0,
+            "fail_count": fail_cnt or 0,
+            "avg_score": round(avg_score, 1) if avg_score else 0,
+            "pass_rate": round((pass_cnt or 0) / total * 100, 1) if total > 0 else 0,
+            "recent_failures": recent_failures
+        }
+
+    except Exception as e:
+        logger.error(f"⚠️ [VerificationStats] 조회 실패: {e}")
         return {"ok": False, "error": str(e)}
     finally:
         if cur: cur.close()

@@ -10,6 +10,7 @@
     <style>
         :root {
             --primary: #2563eb;
+            --primary-dark: #1d4ed8;
             --primary-light: #eff6ff;
             --accent-gold: #f59e0b;
             --success: #10b981;
@@ -22,7 +23,11 @@
             --sidebar-width: 280px;
         }
 
-        * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+        * {
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
 
         body {
             margin: 0;
@@ -45,36 +50,88 @@
         /* Sidebar */
         .sidebar {
             width: var(--sidebar-width);
-            background: var(--sidebar-bg);
+            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
             color: white;
             display: flex;
             flex-direction: column;
             position: relative;
             z-index: 1000;
             transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 4px 0 24px rgba(0,0,0,0.12);
         }
 
         .brand {
-            padding: 24px;
+            padding: 28px 24px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.02);
+        }
+
+        .brand .icon {
+            color: var(--primary);
+            font-size: 28px;
+            filter: drop-shadow(0 0 8px rgba(37, 99, 235, 0.6));
+        }
+
+        .brand .text {
+            font-weight: 900;
+            font-size: 1.25rem;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .menu {
+            flex: 1;
+            padding: 20px 16px;
+            overflow-y: auto;
+        }
+
+        .menu-item {
             display: flex;
             align-items: center;
             gap: 12px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding: 12px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            color: #94a3b8;
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
         }
 
-        .brand .icon { color: var(--primary); font-size: 20px; font-weight: bold; }
-        .brand .text { font-weight: 800; font-size: 1.1rem; letter-spacing: -0.5px; }
-
-        .menu { flex: 1; padding: 16px; overflow-y: auto; }
-        .menu-item {
-            display: flex;
-            align-items: center; gap: 10px;
-            padding: 10px 14px; border-radius: 10px;
-            cursor: pointer; color: #94a3b8; font-size: 0.9rem; margin-bottom: 2px;
-            transition: all 0.2s;
+        .menu-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 3px;
+            height: 100%;
+            background: var(--primary);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
         }
-        .menu-item:hover { background: rgba(255,255,255,0.05); }
-        .menu-item.active { background: rgba(255,255,255,0.08); color: white; }
+
+        .menu-item:hover {
+            background: rgba(255,255,255,0.08);
+            color: white;
+            transform: translateX(4px);
+        }
+
+        .menu-item.active {
+            background: rgba(37, 99, 235, 0.15);
+            color: white;
+        }
+
+        .menu-item.active::before {
+            transform: scaleY(1);
+        }
 
         /* Main Canvas */
         .main-canvas {
@@ -88,32 +145,47 @@
 
         header.top-status {
             flex: 0 0 auto;
-            height: 64px;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(15px);
+            height: 72px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 20px;
+            padding: 0 28px;
             z-index: 900;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
 
-        .header-left { display: flex; align-items: center; gap: 10px; }
-        .header-right { display: flex; align-items: center; gap: 12px; }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
 
         .badge-base {
             font-size: 0.9rem;
             font-weight: 700;
-            padding: 6px 14px;
+            padding: 8px 16px;
             border-radius: 30px;
             white-space: nowrap;
             display: flex;
             align-items: center;
             gap: 6px;
+            transition: all 0.2s;
         }
 
-        .system-badge { background: var(--primary-light); color: var(--primary); }
+        .system-badge {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            color: #065f46;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+        }
 
         /* Content Area */
         .content-viewport {
@@ -123,176 +195,323 @@
             scroll-behavior: smooth;
         }
 
-        /* Hero Section - IMPROVED */
+        /* ✨ Hero Section - PREMIUM */
         .hero-section {
-            max-width: 900px;
-            margin: 40px auto;
+            max-width: 1100px;
+            margin: 60px auto;
             text-align: center;
+            position: relative;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            color: var(--primary);
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
         .hero-title {
-            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
             font-weight: 900;
-            line-height: 1.2;
-            letter-spacing: -0.02em;
-            color: var(--text-main);
-            margin-bottom: 1rem;
+            line-height: 1.15;
+            letter-spacing: -0.03em;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
         }
 
         .hero-subtitle {
-            font-size: clamp(1rem, 2vw, 1.25rem);
-            line-height: 1.6;
+            font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+            line-height: 1.7;
             color: var(--text-muted);
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            animation: fadeInUp 0.8s ease-out 0.4s both;
         }
 
         /* Feature Badges */
         .hero-features {
             display: flex;
             justify-content: center;
-            gap: 12px;
+            gap: 14px;
             flex-wrap: wrap;
-            margin: 2rem 0;
+            margin: 3rem 0;
+            animation: fadeInUp 0.8s ease-out 0.6s both;
         }
 
         .feature-badge {
             background: white;
-            border: 1px solid var(--border);
-            padding: 8px 16px;
-            border-radius: 30px;
+            border: 2px solid var(--border);
+            padding: 12px 24px;
+            border-radius: 40px;
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 0.9rem;
-            font-weight: 600;
+            gap: 10px;
+            font-size: 0.95rem;
+            font-weight: 700;
             color: var(--text-main);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .feature-badge:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.15);
+            border-color: var(--primary);
         }
 
         .feature-badge .icon {
-            font-size: 1.2rem;
+            font-size: 1.4rem;
         }
 
         /* CTA Section */
         .cta-section {
-            margin: 2rem 0;
+            margin: 3rem 0;
+            animation: scaleIn 0.8s ease-out 0.8s both;
         }
 
         .cta-primary {
-            background: var(--primary);
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
             color: white;
             border: none;
-            padding: 16px 32px;
-            border-radius: 12px;
-            font-size: 1.1rem;
-            font-weight: 700;
+            padding: 20px 48px;
+            border-radius: 16px;
+            font-size: 1.2rem;
+            font-weight: 800;
             cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-primary::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.5s, height 0.5s;
+        }
+
+        .cta-primary:hover::before {
+            width: 300px;
+            height: 300px;
         }
 
         .cta-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 28px rgba(37, 99, 235, 0.45);
+        }
+
+        .cta-primary:active {
+            transform: translateY(-1px);
         }
 
         .cta-subtext {
-            margin-top: 12px;
-            font-size: 0.9rem;
+            margin-top: 16px;
+            font-size: 0.95rem;
             color: var(--text-muted);
         }
 
         /* Example Questions */
         .example-questions {
-            max-width: 800px;
-            margin: 3rem auto;
+            max-width: 900px;
+            margin: 5rem auto;
             text-align: center;
         }
 
         .example-questions h3 {
-            font-size: 1.3rem;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
             color: var(--text-main);
         }
 
         .example-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
         }
 
         .example-btn {
             background: white;
             border: 2px solid var(--border);
-            padding: 16px 20px;
-            border-radius: 12px;
+            padding: 20px 24px;
+            border-radius: 16px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             text-align: left;
-            font-size: 0.95rem;
+            font-size: 1rem;
             color: var(--text-main);
             font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .example-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
         }
 
         .example-btn:hover {
             border-color: var(--primary);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.12);
         }
 
-        /* Core Features Section */
+        .example-btn:hover::before {
+            transform: scaleY(1);
+        }
+
+        /* Core Features Section - PREMIUM */
         .core-features-section {
             max-width: 1200px;
-            margin: 4rem auto;
-            padding: 3rem 20px;
-            background: white;
-            border-radius: 20px;
+            margin: 6rem auto;
+            padding: 4rem 28px;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 32px;
             border: 1px solid var(--border);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.08);
         }
 
         .core-features-section h2 {
             text-align: center;
-            font-size: 2rem;
-            font-weight: 800;
-            margin-bottom: 3rem;
-            color: var(--text-main);
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin-bottom: 4rem;
+            background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .feature-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 24px;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 32px;
         }
 
         .feature-card {
-            background: var(--bg);
-            padding: 32px;
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            transition: all 0.3s;
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            border: 2px solid var(--border);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--accent-gold) 100%);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
         }
 
         .feature-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+            border-color: var(--primary);
+        }
+
+        .feature-card:hover::before {
+            transform: scaleX(1);
         }
 
         .feature-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
         }
 
         .feature-card h3 {
-            font-size: 1.3rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
             color: var(--text-main);
         }
 
         .feature-card p {
             color: var(--text-muted);
-            line-height: 1.6;
-            margin-bottom: 1rem;
+            line-height: 1.7;
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
         }
 
         .feature-card ul {
@@ -302,82 +521,110 @@
         }
 
         .feature-card li {
-            padding: 6px 0;
+            padding: 10px 0;
             color: var(--text-muted);
-            font-size: 0.9rem;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         .feature-card li:before {
-            content: "✓ ";
+            content: "✓";
             color: var(--success);
-            font-weight: bold;
-            margin-right: 8px;
+            font-weight: 900;
+            font-size: 1.2rem;
+            flex-shrink: 0;
         }
 
-        /* Trust Section */
+        /* Trust Section - PREMIUM */
         .trust-section {
-            max-width: 1000px;
-            margin: 4rem auto;
+            max-width: 1100px;
+            margin: 6rem auto;
             text-align: center;
-            padding: 2rem;
+            padding: 4rem 28px;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-radius: 32px;
+            border: 2px solid rgba(37, 99, 235, 0.2);
         }
 
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 24px;
-            margin-bottom: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 32px;
+            margin-bottom: 3rem;
         }
 
         .stat-item {
-            padding: 20px;
+            padding: 24px;
+            background: white;
+            border-radius: 20px;
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .stat-item:hover {
+            transform: translateY(-5px);
         }
 
         .stat-number {
-            font-size: 2.5rem;
+            font-size: 3rem;
             font-weight: 900;
-            color: var(--primary);
-            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
         }
 
         .stat-label {
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             color: var(--text-muted);
+            font-weight: 600;
         }
 
         .verification {
             display: flex;
             justify-content: center;
-            gap: 24px;
+            gap: 32px;
             flex-wrap: wrap;
-            margin-top: 2rem;
+            margin-top: 3rem;
         }
 
         .verification p {
             color: var(--success);
-            font-weight: 600;
+            font-weight: 700;
             margin: 0;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         /* Input Section */
         .input-pipeline-wrapper {
             flex: 0 0 auto;
-            padding: 16px;
+            padding: 20px;
             background: white;
             border-top: 1px solid var(--border);
         }
 
         .input-container {
-            max-width: 850px;
+            max-width: 900px;
             margin: 0 auto;
             background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 8px 12px 8px 18px;
+            border: 2px solid var(--border);
+            border-radius: 24px;
+            padding: 10px 14px 10px 22px;
             display: flex;
             align-items: flex-end;
-            gap: 10px;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.02);
+            gap: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+
+        .input-container:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.2);
         }
 
         #userInput {
@@ -385,32 +632,38 @@
             border: none;
             outline: none;
             background: transparent;
-            padding: 10px 0;
-            font-size: 1rem;
-            line-height: 1.5;
-            max-height: 120px;
+            padding: 12px 0;
+            font-size: 1.05rem;
+            line-height: 1.6;
+            max-height: 140px;
             overflow-y: auto;
             resize: none;
         }
 
         .send-action {
-            width: 42px;
-            height: 42px;
-            background: var(--primary);
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
             border: none;
-            border-radius: 12px;
+            border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             flex-shrink: 0;
-            transition: all 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
         }
 
         .send-action:hover {
-            background: #1d4ed8;
-            transform: scale(1.05);
+            background: linear-gradient(135deg, var(--primary-dark) 0%, #1e40af 100%);
+            transform: scale(1.08);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+        }
+
+        .send-action:active {
+            transform: scale(0.98);
         }
 
         /* Overlay */
@@ -418,292 +671,54 @@
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.4);
-            backdrop-filter: blur(4px);
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(8px);
             z-index: 950;
         }
 
-        /* Responsive - Mobile Optimized */
-        @media (max-width: 768px) {
-            body {
-                height: 100vh; /* iOS Safari 호환 */
-                height: 100dvh;
-            }
-
-            .sidebar {
-                position: absolute;
-                transform: translateX(-100%);
-                height: 100vh;
-                height: 100dvh;
-            }
-            .sidebar.active { transform: translateX(0); }
-            .overlay.active { display: block; }
-
-            header.top-status {
-                height: 56px;
-                padding: 0 12px;
-            }
-
-            .badge-base {
-                font-size: 0.8rem;
-                padding: 4px 10px;
-            }
-
-            .header-right {
-                font-size: 0.8rem;
-            }
-
-            .content-viewport {
-                padding: 12px;
-            }
-
-            .hero-section {
-                margin: 20px auto;
-            }
-
-            .hero-title {
-                font-size: 1.75rem;
-                margin-bottom: 0.75rem;
-            }
-
-            .hero-subtitle {
-                font-size: 0.95rem;
-                margin-bottom: 1.5rem;
-            }
-
-            .hero-features {
-                gap: 8px;
-                margin: 1.5rem 0;
-            }
-
-            .feature-badge {
-                font-size: 0.85rem;
-                padding: 6px 12px;
-            }
-
-            .cta-primary {
-                width: 100%;
-                padding: 14px 24px;
-                font-size: 1rem;
-            }
-
-            .example-questions {
-                margin: 2rem auto;
-            }
-
-            .example-questions h3 {
-                font-size: 1.1rem;
-                margin-bottom: 1rem;
-            }
-
-            .example-grid {
-                grid-template-columns: 1fr;
-                gap: 10px;
-            }
-
-            .example-btn {
-                padding: 14px 16px;
-                font-size: 0.9rem;
-            }
-
-            .core-features-section {
-                margin: 2rem auto;
-                padding: 2rem 16px;
-            }
-
-            .core-features-section h2 {
-                font-size: 1.5rem;
-                margin-bottom: 2rem;
-            }
-
-            .feature-cards {
-                grid-template-columns: 1fr;
-                gap: 16px;
-            }
-
-            .feature-card {
-                padding: 24px;
-            }
-
-            .trust-section {
-                margin: 2rem auto;
-                padding: 1rem;
-            }
-
-            .stats {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 16px;
-            }
-
-            .stat-number {
-                font-size: 2rem;
-            }
-
-            .verification {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .verification p {
-                font-size: 0.85rem;
-            }
-
-            .input-pipeline-wrapper {
-                padding: 12px;
-            }
-
-            .input-container {
-                padding: 6px 10px 6px 14px;
-            }
-
-            #userInput {
-                font-size: 0.95rem;
-            }
-
-            .send-action {
-                width: 40px;
-                height: 40px;
-            }
-
-            .ai-msg {
-                padding: 16px;
-                max-width: 95%;
-                font-size: 0.95rem;
-            }
-
-            .user-msg {
-                padding: 10px 14px;
-                max-width: 85%;
-                font-size: 0.95rem;
-            }
-        }
-
-        /* Small Mobile - 480px 이하 */
-        @media (max-width: 480px) {
-            .hero-title {
-                font-size: 1.5rem;
-            }
-
-            .hero-subtitle {
-                font-size: 0.9rem;
-            }
-
-            .feature-badge {
-                font-size: 0.8rem;
-                padding: 5px 10px;
-            }
-
-            .cta-primary {
-                font-size: 0.95rem;
-                padding: 12px 20px;
-            }
-
-            .core-features-section h2 {
-                font-size: 1.3rem;
-            }
-
-            .feature-card h3 {
-                font-size: 1.1rem;
-            }
-
-            .stats {
-                grid-template-columns: 1fr;
-                gap: 12px;
-            }
-
-            .stat-item {
-                padding: 16px;
-            }
-        }
-
-        /* Landscape Mobile */
-        @media (max-width: 896px) and (orientation: landscape) {
-            .hero-section {
-                margin: 16px auto;
-            }
-
-            .hero-title {
-                font-size: 1.5rem;
-            }
-
-            .hero-subtitle {
-                font-size: 0.9rem;
-                margin-bottom: 1rem;
-            }
-
-            .hero-features {
-                margin: 1rem 0;
-            }
-
-            .cta-section {
-                margin: 1rem 0;
-            }
-
-            .example-questions,
-            .core-features-section,
-            .trust-section {
-                margin: 1.5rem auto;
-            }
-        }
-
-        /* Touch-friendly improvements */
-        @media (hover: none) and (pointer: coarse) {
-            .menu-item,
-            .example-btn,
-            .cta-primary,
-            .send-action {
-                min-height: 44px; /* iOS 권장 터치 영역 */
-            }
-
-            .menu-item {
-                padding: 12px 14px;
-            }
-        }
-
-        /* Hidden class for chat mode */
+        /* Hidden class */
         .hidden {
             display: none !important;
         }
 
-        /* Chat Messages (reused from original) */
+        /* Chat Messages */
         .conversation-viewport {
             flex: 1 1 auto;
             overflow-y: auto;
-            padding: 20px;
+            padding: 24px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 24px;
         }
 
         .ai-msg {
             align-self: flex-start;
             background: white;
-            border: 1px solid var(--border);
-            padding: 24px 28px;
-            border-radius: 16px;
+            border: 2px solid var(--border);
+            padding: 28px 32px;
+            border-radius: 20px;
             max-width: 90%;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
             line-height: 1.8;
             font-size: 15px;
             color: #374151;
         }
 
-        /* AI 메시지 내부 스타일 (ChatGPT 스타일) */
         .ai-msg h1, .ai-msg h2, .ai-msg h3 {
-            margin-top: 24px;
-            margin-bottom: 12px;
-            font-weight: 700;
+            margin-top: 28px;
+            margin-bottom: 14px;
+            font-weight: 800;
             line-height: 1.3;
         }
 
-        .ai-msg h1 { font-size: 1.5rem; color: #111827; }
-        .ai-msg h2 { font-size: 1.3rem; color: #1f2937; }
+        .ai-msg h1 { font-size: 1.6rem; color: #111827; }
+        .ai-msg h2 { font-size: 1.4rem; color: #1f2937; }
         .ai-msg h3 {
-            font-size: 1.15rem;
+            font-size: 1.2rem;
             color: #2563eb;
-            border-bottom: 2px solid #3b82f6;
-            padding-bottom: 8px;
-            margin-top: 28px;
+            border-bottom: 3px solid #3b82f6;
+            padding-bottom: 10px;
+            margin-top: 32px;
         }
 
         .ai-msg h1:first-child,
@@ -713,297 +728,72 @@
         }
 
         .ai-msg p {
-            margin: 12px 0;
+            margin: 14px 0;
             line-height: 1.8;
         }
 
         .ai-msg ul, .ai-msg ol {
-            margin: 16px 0;
-            padding-left: 28px;
+            margin: 18px 0;
+            padding-left: 32px;
         }
 
         .ai-msg ul li, .ai-msg ol li {
-            margin: 8px 0;
-            line-height: 1.7;
-        }
-
-        .ai-msg ul li::marker {
-            color: #2563eb;
+            margin: 10px 0;
+            line-height: 1.8;
         }
 
         .ai-msg strong {
-            font-weight: 700;
+            font-weight: 800;
             color: #111827;
-        }
-
-        .ai-msg em {
-            font-style: italic;
-            color: #4b5563;
-        }
-
-        .ai-msg code {
-            background: #f3f4f6;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-family: 'JetBrains Mono', 'Courier New', monospace;
-            font-size: 0.9em;
-            color: #dc2626;
-            border: 1px solid #e5e7eb;
-        }
-
-        .ai-msg pre {
-            background: #1f2937;
-            color: #f9fafb;
-            padding: 16px 20px;
-            border-radius: 8px;
-            overflow-x: auto;
-            margin: 16px 0;
-            border: 1px solid #374151;
-        }
-
-        .ai-msg pre code {
-            background: transparent;
-            padding: 0;
-            border: none;
-            color: #f9fafb;
-            font-size: 0.9rem;
-        }
-
-        .ai-msg blockquote {
-            border-left: 4px solid #3b82f6;
-            padding-left: 20px;
-            margin: 16px 0;
-            color: #4b5563;
-            font-style: italic;
-            background: #f9fafb;
-            padding: 12px 20px;
-            border-radius: 4px;
-        }
-
-        .ai-msg table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-            font-size: 0.95em;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .ai-msg table th {
-            background: #f3f4f6;
-            border: 1px solid #d1d5db;
-            padding: 12px 16px;
-            text-align: left;
-            font-weight: 700;
-            color: #111827;
-        }
-
-        .ai-msg table td {
-            border: 1px solid #e5e7eb;
-            padding: 12px 16px;
-        }
-
-        .ai-msg table tr:nth-child(even) {
-            background: #f9fafb;
-        }
-
-        .ai-msg table tr:hover {
-            background: #f3f4f6;
-        }
-
-        /* 강조 배지 스타일 */
-        .ai-msg .highlight-warning {
-            background: #fef3c7;
-            border-left: 4px solid #f59e0b;
-            padding: 12px 16px;
-            margin: 12px 0;
-            border-radius: 4px;
-        }
-
-        .ai-msg .highlight-success {
-            background: #d1fae5;
-            border-left: 4px solid #10b981;
-            padding: 12px 16px;
-            margin: 12px 0;
-            border-radius: 4px;
-        }
-
-        .ai-msg .highlight-error {
-            background: #fee2e2;
-            border-left: 4px solid #ef4444;
-            padding: 12px 16px;
-            margin: 12px 0;
-            border-radius: 4px;
-        }
-
-        /* 구분선 */
-        .ai-msg hr {
-            border: none;
-            border-top: 2px solid #e5e7eb;
-            margin: 24px 0;
-        }
-
-        /* 📋 절차 안내 고퀄리티 스타일 */
-        .ai-msg li {
-            position: relative;
-            padding-left: 8px;
-        }
-
-        /* ✅ 구체적 행동 - 그린 */
-        .ai-msg li:has(strong:first-child:contains("구체적 행동")),
-        .ai-msg li strong:first-child:contains("구체적 행동") {
-            color: #059669;
-        }
-
-        .ai-msg p:has(> strong:contains("✅")),
-        .ai-msg li:contains("✅") {
-            background: linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, transparent 100%);
-            border-left: 3px solid #10b981;
-            padding: 10px 16px;
-            margin: 8px 0;
-            border-radius: 6px;
-        }
-
-        /* 💡 대응 전략 - 블루 */
-        .ai-msg p:has(> strong:contains("💡")),
-        .ai-msg li:contains("💡") {
-            background: linear-gradient(90deg, rgba(59, 130, 246, 0.08) 0%, transparent 100%);
-            border-left: 3px solid #3b82f6;
-            padding: 10px 16px;
-            margin: 8px 0;
-            border-radius: 6px;
-        }
-
-        /* ⚠️ 주의사항 - 옐로우/오렌지 */
-        .ai-msg p:has(> strong:contains("⚠️")),
-        .ai-msg li:contains("⚠️") {
-            background: linear-gradient(90deg, rgba(245, 158, 11, 0.08) 0%, transparent 100%);
-            border-left: 3px solid #f59e0b;
-            padding: 10px 16px;
-            margin: 8px 0;
-            border-radius: 6px;
-        }
-
-        /* 📋 필요 서류 - 퍼플 */
-        .ai-msg p:has(> strong:contains("📋")),
-        .ai-msg li:contains("📋") {
-            background: linear-gradient(90deg, rgba(139, 92, 246, 0.08) 0%, transparent 100%);
-            border-left: 3px solid #8b5cf6;
-            padding: 10px 16px;
-            margin: 8px 0;
-            border-radius: 6px;
-        }
-
-        /* 💰 예상 비용 - 골드 */
-        .ai-msg p:has(> strong:contains("💰")),
-        .ai-msg li:contains("💰") {
-            background: linear-gradient(90deg, rgba(251, 191, 36, 0.08) 0%, transparent 100%);
-            border-left: 3px solid #fbbf24;
-            padding: 10px 16px;
-            margin: 8px 0;
-            border-radius: 6px;
-        }
-
-        /* ⏱️ 예상 기간 - 시안 */
-        .ai-msg p:has(> strong:contains("⏱️")),
-        .ai-msg li:contains("⏱️") {
-            background: linear-gradient(90deg, rgba(6, 182, 212, 0.08) 0%, transparent 100%);
-            border-left: 3px solid #06b6d4;
-            padding: 10px 16px;
-            margin: 8px 0;
-            border-radius: 6px;
-        }
-
-        /* 단계 구분 강조 (📍) */
-        .ai-msg p:has(> strong:contains("📍")),
-        .ai-msg li:contains("📍") {
-            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-            border: 2px solid #d1d5db;
-            padding: 16px 20px;
-            margin: 20px 0;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            font-weight: 600;
-        }
-
-        /* 분기 시나리오 박스 */
-        .ai-msg p:has(> strong:contains("상황별")),
-        .ai-msg p:has(> strong:contains("분기")),
-        .ai-msg ul:has(li:contains("응답하는 경우")),
-        .ai-msg ul:has(li:contains("무응답인 경우")),
-        .ai-msg ul:has(li:contains("거부하는 경우")) {
-            background: #fafafa;
-            border: 2px dashed #9ca3af;
-            padding: 16px;
-            margin: 16px 0;
-            border-radius: 10px;
-        }
-
-        /* 화살표 스타일 */
-        .ai-msg li:contains("→") {
-            padding-left: 24px;
-            position: relative;
-        }
-
-        .ai-msg li:contains("→")::before {
-            content: "➜";
-            position: absolute;
-            left: 0;
-            color: #3b82f6;
-            font-weight: bold;
-        }
-
-        /* 이모티콘 강조 */
-        .ai-msg strong:contains("✅"),
-        .ai-msg strong:contains("💡"),
-        .ai-msg strong:contains("⚠️"),
-        .ai-msg strong:contains("📋"),
-        .ai-msg strong:contains("💰"),
-        .ai-msg strong:contains("⏱️"),
-        .ai-msg strong:contains("📍") {
-            font-size: 1.05em;
-            display: inline-block;
-            margin-right: 4px;
-        }
-
-        /* 절차 번호 스타일 개선 */
-        .ai-msg ol {
-            counter-reset: procedure-counter;
-            list-style: none;
-            padding-left: 0;
-        }
-
-        .ai-msg ol li {
-            counter-increment: procedure-counter;
-            position: relative;
-            padding-left: 48px;
-            margin: 24px 0;
-        }
-
-        .ai-msg ol li::before {
-            content: counter(procedure-counter);
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 900;
-            font-size: 1.1rem;
-            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
         }
 
         .user-msg {
             align-self: flex-end;
-            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
-            padding: 12px 18px;
-            border-radius: 20px;
+            padding: 14px 22px;
+            border-radius: 22px;
             max-width: 80%;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: absolute;
+                transform: translateX(-100%);
+                height: 100vh;
+                height: 100dvh;
+            }
+
+            .sidebar.active { transform: translateX(0); }
+            .overlay.active { display: block; }
+
+            header.top-status {
+                height: 64px;
+                padding: 0 16px;
+            }
+
+            .hero-section {
+                margin: 32px auto;
+            }
+
+            .hero-title {
+                font-size: 2rem;
+            }
+
+            .core-features-section {
+                padding: 3rem 20px;
+            }
+
+            .feature-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
     </style>
 </head>
@@ -1033,11 +823,14 @@
             </div>
         </nav>
 
-        <div style="padding: 20px; display: flex; align-items: center; gap: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
-            <div style="width: 32px; height: 32px; background: var(--primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem; color: white;">L</div>
-            <div style="font-size: 0.8rem; color: white;">
-                <div style="font-weight: 600;">Lawmadi</div>
-                <div style="font-size: 0.6rem; color: #10b981;">● Active</div>
+        <div style="padding: 24px; display: flex; align-items: center; gap: 14px; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02);">
+            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1rem; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);">L</div>
+            <div style="font-size: 0.9rem; color: white;">
+                <div style="font-weight: 700;">Lawmadi</div>
+                <div style="font-size: 0.7rem; color: #10b981; display: flex; align-items: center; gap: 6px;">
+                    <span style="width: 6px; height: 6px; background: #10b981; border-radius: 50%; box-shadow: 0 0 6px #10b981;"></span>
+                    Active
+                </div>
             </div>
         </div>
     </aside>
@@ -1045,27 +838,38 @@
     <main class="main-canvas">
         <header class="top-status">
             <div class="header-left">
-                <button id="menuToggle" style="background:none; border:none; color:var(--text-muted); cursor:pointer; display:flex;">
+                <button id="menuToggle" style="background:none; border:none; color:var(--text-muted); cursor:pointer; display:flex; padding: 8px; border-radius: 8px; transition: all 0.2s;">
                     <span class="material-symbols-outlined">menu</span>
                 </button>
-                <div class="badge-base system-badge">System: Healthy</div>
+                <div class="badge-base system-badge">
+                    <span class="material-symbols-outlined" style="font-size: 1.2rem;">check_circle</span>
+                    System: Healthy
+                </div>
             </div>
             <div class="header-right">
-                <div style="font-size: 0.9rem; color: var(--text-muted);">
-                    <span class="material-symbols-outlined" style="font-size: 1rem; vertical-align: middle;">diamond</span>
+                <div style="font-size: 0.95rem; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-outlined" style="font-size: 1.3rem; vertical-align: middle; color: var(--primary);">diamond</span>
                     Powered by Gemini 2.0
                 </div>
             </div>
         </header>
 
-        <!-- Landing Page Content (초기 화면) -->
+        <!-- Landing Page Content -->
         <div id="landing-content" class="content-viewport">
             <!-- Hero Section -->
             <div class="hero-section">
-                <h1 class="hero-title">불안을 행동으로 바꾸는<br>Lawmadi OS</h1>
+                <div class="hero-badge">
+                    <span class="material-symbols-outlined">auto_awesome</span>
+                    AI 기반 법률 의사결정 시스템
+                </div>
+
+                <h1 class="hero-title">
+                    불안을 행동으로<br>
+                    바꾸는 법률 AI
+                </h1>
+
                 <p class="hero-subtitle">
-                    법률 문제로 인한 불안,<br>
-                    60명의 전문 리더가 협업하여<br>
+                    법률 문제로 인한 불안, 60명의 전문 리더가 협업하여<br>
                     구체적인 행동 계획으로 바꿔드립니다
                 </p>
 
@@ -1082,10 +886,16 @@
                         <span class="icon">⚡</span>
                         5단계 구조화 응답
                     </div>
+                    <div class="feature-badge">
+                        <span class="icon">🛡️</span>
+                        Claude 자동 검증
+                    </div>
                 </div>
 
                 <div class="cta-section">
-                    <button class="cta-primary" id="startChatBtn">지금 무료로 체험하기</button>
+                    <button class="cta-primary" id="startChatBtn">
+                        <span style="position: relative; z-index: 1;">지금 무료로 체험하기</span>
+                    </button>
                     <p class="cta-subtext">법률 질문을 입력하시면 즉시 분석을 시작합니다</p>
                 </div>
             </div>
@@ -1108,13 +918,13 @@
 
             <!-- Core Features -->
             <div class="core-features-section">
-                <h2>Lawmadi OS만의 특별함</h2>
+                <h2>✨ Lawmadi OS만의 특별함</h2>
 
                 <div class="feature-cards">
                     <div class="feature-card">
                         <div class="feature-icon">🐝</div>
                         <h3>60 Leader Swarm</h3>
-                        <p>60명의 전문 분야 리더가<br>복합 법률 사안을 동시에 분석합니다</p>
+                        <p>60명의 전문 분야 리더가 복합 법률 사안을 동시에 분석합니다</p>
                         <ul>
                             <li>민사, 형사, 행정, 노동 등 60개 전문 분야</li>
                             <li>최대 3명 동시 협업 분석</li>
@@ -1123,26 +933,26 @@
                     </div>
 
                     <div class="feature-card">
-                        <div class="feature-icon">👔</div>
-                        <h3>C-Level 전문가</h3>
-                        <p>전략, 기술, 콘텐츠 최고 임원이<br>메타 질문에 답변합니다</p>
+                        <div class="feature-icon">🛡️</div>
+                        <h3>Claude 자동 검증</h3>
+                        <p>모든 응답을 Claude가 자동으로 검증하여 SSOT 원칙 준수를 보장합니다</p>
                         <ul>
-                            <li>서연 (CSO): 전략 컨설팅</li>
-                            <li>지유 (CTO): 기술 아키텍처</li>
-                            <li>유나 (CCO): UX 설계</li>
+                            <li>DRF API 사용 여부 확인</li>
+                            <li>환각(hallucination) 감지</li>
+                            <li>SSOT 준수 점수 산출</li>
                         </ul>
                     </div>
 
                     <div class="feature-card">
                         <div class="feature-icon">📋</div>
                         <h3>5단계 구조화 응답</h3>
-                        <p>판단을 돕는 구조로<br>명확하게 정리해드립니다</p>
+                        <p>감정수용부터 동행마무리까지 체계적인 응답 프레임워크</p>
                         <ul>
-                            <li>1. 요약 (Quick Insight)</li>
-                            <li>2. 법률 근거</li>
-                            <li>3. 시간축 분석</li>
-                            <li>4. 절차 안내</li>
-                            <li>5. 참고 정보</li>
+                            <li>1. 감정 수용 (Acknowledge)</li>
+                            <li>2. 상황 진단 (Diagnose)</li>
+                            <li>3. 행동 로드맵 (Roadmap)</li>
+                            <li>4. 안전망 안내 (Safety Net)</li>
+                            <li>5. 동행 마무리 (Closing)</li>
                         </ul>
                     </div>
                 </div>
@@ -1156,12 +966,12 @@
                         <div class="stat-label">전문 분야 리더</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number">3명</div>
-                        <div class="stat-label">C-Level 임원</div>
+                        <div class="stat-number">9개</div>
+                        <div class="stat-label">SSOT 데이터 소스</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-number">100%</div>
-                        <div class="stat-label">복합 사안 인식률</div>
+                        <div class="stat-label">응답 검증률</div>
                     </div>
                     <div class="stat-item">
                         <div class="stat-number">5단계</div>
@@ -1178,14 +988,23 @@
                 </div>
 
                 <div class="verification">
-                    <p>✅ law.go.kr 법령 실시간 검증</p>
-                    <p>✅ DRF API 공식 연동</p>
-                    <p>✅ 판단 흐름 지원 철학</p>
+                    <p>
+                        <span class="material-symbols-outlined">verified</span>
+                        law.go.kr 법령 실시간 검증
+                    </p>
+                    <p>
+                        <span class="material-symbols-outlined">api</span>
+                        DRF API 공식 연동
+                    </p>
+                    <p>
+                        <span class="material-symbols-outlined">psychology</span>
+                        판단 흐름 지원 철학
+                    </p>
                 </div>
             </div>
         </div>
 
-        <!-- Chat Conversation (채팅 모드, 처음엔 숨김) -->
+        <!-- Chat Conversation -->
         <div id="conversation-area" class="conversation-viewport hidden"></div>
 
         <!-- Input Area -->
@@ -1193,11 +1012,11 @@
             <div class="input-container">
                 <textarea id="userInput" placeholder="법률 질문을 입력하세요..." rows="1"></textarea>
                 <button id="sendBtn" class="send-action">
-                    <span class="material-symbols-outlined" style="font-size: 1.2rem;">arrow_upward</span>
+                    <span class="material-symbols-outlined" style="font-size: 1.4rem;">arrow_upward</span>
                 </button>
             </div>
-            <div style="text-align: center; font-size: 0.65rem; color: #94a3b8; margin-top: 8px;">
-                Powered by Lawmadi v50.2.4-HARDENED
+            <div style="text-align: center; font-size: 0.7rem; color: #94a3b8; margin-top: 12px; font-weight: 600;">
+                Powered by Lawmadi v50.3.0-VERIFIED
             </div>
         </div>
     </main>
@@ -1214,23 +1033,19 @@
         landingContent: document.getElementById('landing-content'),
         convArea: document.getElementById('conversation-area'),
         API_URL: 'https://lawmadi-os-v50-938146962157.asia-northeast3.run.app/ask',
-        STREAM_URL: 'https://lawmadi-os-v50-938146962157.asia-northeast3.run.app/ask/stream',
         BASE_URL: 'https://lawmadi-os-v50-938146962157.asia-northeast3.run.app',
-        USE_STREAMING: false,  // 백엔드 스트리밍 비활성화
-        USE_TYPING_EFFECT: false,  // 타이핑 효과 비활성화 (포맷팅 우선)
+        USE_STREAMING: false,
+        USE_TYPING_EFFECT: false,
 
         init() {
-            // Menu toggle
             this.menuToggle.onclick = (e) => { e.stopPropagation(); this.toggleSidebar(true); };
             this.overlay.onclick = () => this.toggleSidebar(false);
 
-            // Textarea auto-resize
             this.userInput.addEventListener('input', () => {
                 this.userInput.style.height = 'auto';
                 this.userInput.style.height = this.userInput.scrollHeight + 'px';
             });
 
-            // Send message
             this.sendBtn.onclick = () => this.dispatchPacket();
             this.userInput.onkeydown = (e) => {
                 if(e.key === 'Enter' && !e.shiftKey) {
@@ -1239,10 +1054,8 @@
                 }
             };
 
-            // Start chat button
             this.startChatBtn.onclick = () => this.switchToChatMode();
 
-            // Example question buttons
             document.querySelectorAll('.example-btn').forEach(btn => {
                 btn.onclick = () => {
                     const question = btn.getAttribute('data-question');
@@ -1252,29 +1065,30 @@
                 };
             });
 
-            // 방문자 추적 및 통계 로드
             this.initVisitorTracking();
+
+            // Hover effects for menu toggle
+            this.menuToggle.onmouseenter = () => {
+                this.menuToggle.style.background = 'rgba(0,0,0,0.05)';
+            };
+            this.menuToggle.onmouseleave = () => {
+                this.menuToggle.style.background = 'none';
+            };
         },
 
-        // 방문자 추적 초기화 (IP 기반 자동 식별)
         async initVisitorTracking() {
             try {
-                // 서버에서 IP를 자동으로 추출하므로 빈 객체 전송
                 await fetch(`${this.BASE_URL}/api/visit`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({})
                 });
-
-                // 통계 로드
                 this.loadVisitorStats();
-
             } catch (error) {
                 console.error('방문자 추적 실패:', error);
             }
         },
 
-        // 방문자 통계 로드
         async loadVisitorStats() {
             try {
                 const response = await fetch(`${this.BASE_URL}/api/visitor-stats`);
@@ -1285,17 +1099,29 @@
                     const totalEl = document.getElementById('totalVisitors');
 
                     if (todayEl) {
-                        todayEl.textContent = data.today_visitors.toLocaleString();
+                        this.animateNumber(todayEl, data.today_visitors);
                     }
                     if (totalEl) {
-                        totalEl.textContent = data.total_visitors.toLocaleString();
+                        this.animateNumber(totalEl, data.total_visitors);
                     }
                 }
-
             } catch (error) {
                 console.error('통계 로드 실패:', error);
-                // 실패 시 기본값 유지 ("-")
             }
+        },
+
+        animateNumber(element, target) {
+            let current = 0;
+            const increment = target / 50;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    element.textContent = target.toLocaleString();
+                    clearInterval(timer);
+                } else {
+                    element.textContent = Math.floor(current).toLocaleString();
+                }
+            }, 20);
         },
 
         toggleSidebar(state) {
@@ -1310,12 +1136,6 @@
         },
 
         async dispatchPacket() {
-            // 스트리밍 활성화 시 스트리밍 방식 사용
-            if (this.USE_STREAMING) {
-                return this.dispatchPacketStream();
-            }
-
-            // 기존 방식 (비스트리밍)
             const query = this.userInput.value.trim();
             if(!query) return;
 
@@ -1326,7 +1146,7 @@
             this.userInput.style.height = 'auto';
 
             const loadingId = 'ai-loading-' + Date.now();
-            this.appendMessage('ai', '<p>지금 담당 리더님이 <b>슈퍼 컴퓨터급 두뇌</b>를 풀가동해 답변 생성 중! 서버 로딩이 살짝 느려도 너그럽게 봐주실 거죠? 😊⭐</p><p>저희 안테나는 <b>365일 24시간 풀가동 중!</b> 소중한 이야기에 초고속 접속해 대기할 테니 조금만 기다려주세요오~ 히히. 💕</p>', loadingId);
+            this.appendMessage('ai', '<p>🚀 <b>60명의 법률 전문가</b>가 지금 당신의 질문을 분석하고 있습니다...</p><p>💫 최고의 답변을 준비하고 있으니 잠시만 기다려주세요!</p>', loadingId);
 
             try {
                 const response = await fetch(this.API_URL, {
@@ -1339,164 +1159,9 @@
                 const data = await response.json();
 
                 const formattedHtml = this.formatReport(data.response);
-
-                // 타이핑 효과 적용
-                if (this.USE_TYPING_EFFECT) {
-                    await this.typewriterEffect(loadingId, formattedHtml);
-                } else {
-                    this.updateMessage(loadingId, formattedHtml);
-                }
+                this.updateMessage(loadingId, formattedHtml);
 
             } catch (error) {
-                this.updateMessage(loadingId, "<div style='color:red;'>⚠️ 시스템 통신 장애가 발생했습니다. 잠시 후 다시 시도해 주세요.</div>");
-            }
-        },
-
-        // 타이핑 효과 함수 (HTML 포맷 유지)
-        async typewriterEffect(elementId, finalHtml) {
-            const msgDiv = document.getElementById(elementId);
-            if (!msgDiv) return;
-
-            // HTML 문자열을 작은 단위로 분할 (단어 또는 태그 단위)
-            const chunks = this.splitHtmlIntoChunks(finalHtml);
-
-            msgDiv.innerHTML = '';
-            const speed = 20; // 밀리초당 청크 속도
-
-            for (let i = 0; i < chunks.length; i++) {
-                msgDiv.innerHTML += chunks[i];
-
-                // 스크롤 유지
-                this.convArea.scrollTo({ top: this.convArea.scrollHeight, behavior: 'smooth' });
-
-                // 속도 조절
-                await new Promise(resolve => setTimeout(resolve, speed));
-            }
-        },
-
-        // HTML을 작은 청크로 분할 (태그와 텍스트를 구분)
-        splitHtmlIntoChunks(html) {
-            const chunks = [];
-            let buffer = '';
-            let inTag = false;
-
-            for (let i = 0; i < html.length; i++) {
-                const char = html[i];
-
-                if (char === '<') {
-                    // 태그 시작 - 이전 텍스트 버퍼를 청크로 추가
-                    if (buffer && !inTag) {
-                        // 텍스트를 단어 단위로 분할
-                        const words = buffer.split(/(\s+)/);
-                        words.forEach(word => {
-                            if (word) chunks.push(word);
-                        });
-                        buffer = '';
-                    }
-                    inTag = true;
-                    buffer += char;
-                } else if (char === '>') {
-                    // 태그 끝 - 태그 전체를 한 청크로
-                    buffer += char;
-                    chunks.push(buffer);
-                    buffer = '';
-                    inTag = false;
-                } else {
-                    buffer += char;
-                }
-            }
-
-            // 남은 버퍼 처리
-            if (buffer) {
-                if (inTag) {
-                    chunks.push(buffer);
-                } else {
-                    const words = buffer.split(/(\s+)/);
-                    words.forEach(word => {
-                        if (word) chunks.push(word);
-                    });
-                }
-            }
-
-            return chunks;
-        },
-
-        async dispatchPacketStream() {
-            const query = this.userInput.value.trim();
-            if(!query) return;
-
-            this.switchToChatMode();
-
-            this.appendMessage('user', query);
-            this.userInput.value = "";
-            this.userInput.style.height = 'auto';
-
-            const loadingId = 'ai-loading-' + Date.now();
-            this.appendMessage('ai', '<p>지금 담당 리더님이 <b>슈퍼 컴퓨터급 두뇌</b>를 풀가동해 답변 생성 중! 서버 로딩이 살짝 느려도 너그럽게 봐주실 거죠? 😊⭐</p><p>저희 안테나는 <b>365일 24시간 풀가동 중!</b> 소중한 이야기에 초고속 접속해 대기할 테니 조금만 기다려주세요오~ 히히. 💕</p>', loadingId);
-
-            let fullText = '';
-            let startTime = Date.now();
-
-            try {
-                const response = await fetch(this.STREAM_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query: query })
-                });
-
-                if (!response.ok) throw new Error('Stream Error');
-
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
-
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            try {
-                                const data = JSON.parse(line.substring(6));
-
-                                if (data.type === 'start') {
-                                    // 시작 - 타임스탬프 기록
-                                    startTime = Date.now();
-                                }
-                                else if (data.type === 'chunk') {
-                                    // 청크 수신 - 점진적 업데이트
-                                    fullText += data.text;
-
-                                    // 매 청크마다 formatReport 적용 (라이브 렌더링)
-                                    const formattedHtml = this.formatReport(fullText);
-                                    this.updateMessage(loadingId, formattedHtml);
-                                }
-                                else if (data.type === 'done') {
-                                    // 완료 - 최종 포맷 적용
-                                    const formattedHtml = this.formatReport(fullText);
-                                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-
-                                    // 리더 정보 추가
-                                    const footer = `<div style="margin-top:16px;padding-top:12px;border-top:1px solid #e2e8f0;color:#718096;font-size:0.9em;">` +
-                                        `📊 리더: ${data.leader} | ⏱️ ${elapsed}초 | 💬 ${data.chunks || 0}개 청크` +
-                                        `</div>`;
-
-                                    this.updateMessage(loadingId, formattedHtml + footer);
-                                }
-                                else if (data.type === 'error') {
-                                    throw new Error(data.message);
-                                }
-                            } catch (parseError) {
-                                console.warn('JSON 파싱 오류:', parseError);
-                            }
-                        }
-                    }
-                }
-
-            } catch (error) {
-                console.error('스트리밍 에러:', error);
                 this.updateMessage(loadingId, "<div style='color:red;'>⚠️ 시스템 통신 장애가 발생했습니다. 잠시 후 다시 시도해 주세요.</div>");
             }
         },
@@ -1504,74 +1169,23 @@
         formatReport(text) {
             if (!text) return "응답 데이터를 수신하지 못했습니다.";
 
-            // 간단하고 확실한 방식으로 변환
             let lines = text.split('\n');
             let html = [];
             let inList = false;
             let inOrderedList = false;
-            let inTable = false;
-            let tableLines = [];
 
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i];
                 let trimmed = line.trim();
 
-                // 빈 줄
                 if (!trimmed) {
                     if (inList) { html.push('</ul>'); inList = false; }
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
-                    if (inTable) {
-                        html.push(this.convertMarkdownTables(tableLines.join('\n')));
-                        tableLines = [];
-                        inTable = false;
-                    }
                     html.push('<p></p>');
                     continue;
                 }
 
-                // 테이블 감지
-                if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
-                    if (!inTable) {
-                        if (inList) { html.push('</ul>'); inList = false; }
-                        if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
-                        inTable = true;
-                    }
-                    tableLines.push(line);
-                    continue;
-                } else if (inTable) {
-                    html.push(this.convertMarkdownTables(tableLines.join('\n')));
-                    tableLines = [];
-                    inTable = false;
-                }
-
-                // 5단계 구조 헤더
-                if (trimmed.includes('1. 요약 (Quick Insight)')) {
-                    if (inList) { html.push('</ul>'); inList = false; }
-                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
-                    html.push('<h3>💡 1. 요약 (Quick Insight)</h3>');
-                }
-                else if (trimmed.includes('2. 📚 법률 근거')) {
-                    if (inList) { html.push('</ul>'); inList = false; }
-                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
-                    html.push('<h3>📚 2. 법률 근거 (Verified Evidence)</h3>');
-                }
-                else if (trimmed.includes('3. 🕐 시간축 분석')) {
-                    if (inList) { html.push('</ul>'); inList = false; }
-                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
-                    html.push('<h3>🕐 3. 시간축 분석 (Timeline Analysis)</h3>');
-                }
-                else if (trimmed.includes('4. 절차 안내')) {
-                    if (inList) { html.push('</ul>'); inList = false; }
-                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
-                    html.push('<h3>📋 4. 절차 안내 (Action Plan)</h3>');
-                }
-                else if (trimmed.includes('5. 🔍 참고 정보')) {
-                    if (inList) { html.push('</ul>'); inList = false; }
-                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
-                    html.push('<h3>🔍 5. 참고 정보 (Additional Context)</h3>');
-                }
-                // 마크다운 헤더
-                else if (trimmed.startsWith('### ')) {
+                if (trimmed.startsWith('### ')) {
                     if (inList) { html.push('</ul>'); inList = false; }
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
                     html.push('<h3>' + trimmed.substring(4) + '</h3>');
@@ -1581,12 +1195,6 @@
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
                     html.push('<h2>' + trimmed.substring(3) + '</h2>');
                 }
-                else if (trimmed.startsWith('# ')) {
-                    if (inList) { html.push('</ul>'); inList = false; }
-                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
-                    html.push('<h1>' + trimmed.substring(2) + '</h1>');
-                }
-                // 불릿 리스트
                 else if (/^[-•*✓✅▪◦]\s+/.test(trimmed)) {
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
                     if (!inList) { html.push('<ul>'); inList = true; }
@@ -1594,7 +1202,6 @@
                     content = this.formatInline(content);
                     html.push('<li>' + content + '</li>');
                 }
-                // 번호 리스트
                 else if (/^\d+\.\s+/.test(trimmed)) {
                     if (inList) { html.push('</ul>'); inList = false; }
                     if (!inOrderedList) { html.push('<ol>'); inOrderedList = true; }
@@ -1602,20 +1209,6 @@
                     content = this.formatInline(content);
                     html.push('<li>' + content + '</li>');
                 }
-                // 인용구
-                else if (trimmed.startsWith('> ')) {
-                    if (inList) { html.push('</ul>'); inList = false; }
-                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
-                    let content = this.formatInline(trimmed.substring(2));
-                    html.push('<blockquote>' + content + '</blockquote>');
-                }
-                // 수평선
-                else if (trimmed === '---' || trimmed === '***') {
-                    if (inList) { html.push('</ul>'); inList = false; }
-                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
-                    html.push('<hr>');
-                }
-                // 일반 텍스트
                 else {
                     if (inList) { html.push('</ul>'); inList = false; }
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
@@ -1624,101 +1217,19 @@
                 }
             }
 
-            // 열린 리스트 닫기
             if (inList) html.push('</ul>');
             if (inOrderedList) html.push('</ol>');
-            if (inTable && tableLines.length > 0) {
-                html.push(this.convertMarkdownTables(tableLines.join('\n')));
-            }
 
             return html.join('\n');
         },
 
         formatInline(text) {
-            // 인라인 포맷팅 (볼드, 이탤릭, 코드)
             let result = text;
-
-            // 코드 블록 (먼저 처리하여 내부 마크다운 무시)
-            result = result.replace(/```([\s\S]+?)```/g, (match, code) => {
-                return '<pre><code>' + this.escapeHtml(code.trim()) + '</code></pre>';
-            });
-
-            // 인라인 코드 (먼저 처리하여 내부 ** 무시)
             result = result.replace(/`([^`]+?)`/g, '<code>$1</code>');
-
-            // 볼드/이탤릭 (개선된 패턴)
             result = result.replace(/\*\*\*([^*]+?)\*\*\*/g, '<strong><em>$1</em></strong>');
             result = result.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>');
             result = result.replace(/\*([^*\n]+?)\*/g, '<em>$1</em>');
-
-            // 하이라이트
-            result = result.replace(/(⚠️[^<\n]+)/g, '<span class="highlight-warning">$1</span>');
-            result = result.replace(/(✅[^<\n]+)/g, '<span class="highlight-success">$1</span>');
-            result = result.replace(/(❌[^<\n]+)/g, '<span class="highlight-error">$1</span>');
-
             return result;
-        },
-
-        escapeHtml(text) {
-            const map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            };
-            return text.replace(/[&<>"']/g, m => map[m]);
-        },
-
-        convertMarkdownTables(text) {
-            // Markdown 테이블 감지 및 HTML 테이블로 변환
-            const tableRegex = /(\|.+\|\n)+/g;
-
-            return text.replace(tableRegex, (match) => {
-                const rows = match.trim().split('\n');
-                if (rows.length < 2) return match;
-
-                // 헤더 분리선 (|---|---|) 찾기
-                const separatorIndex = rows.findIndex(row => /^\|[\s:-]+\|/.test(row));
-                if (separatorIndex === -1) return match;
-
-                const headerRows = rows.slice(0, separatorIndex);
-                const bodyRows = rows.slice(separatorIndex + 1);
-
-                let tableHtml = '<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:0.95em;">';
-
-                // 헤더
-                if (headerRows.length > 0) {
-                    tableHtml += '<thead style="background:#edf2f7;">';
-                    headerRows.forEach(row => {
-                        const cells = row.split('|').filter(c => c.trim());
-                        tableHtml += '<tr>';
-                        cells.forEach(cell => {
-                            tableHtml += `<th style="border:1px solid #cbd5e0;padding:10px;text-align:left;font-weight:600;">${cell.trim()}</th>`;
-                        });
-                        tableHtml += '</tr>';
-                    });
-                    tableHtml += '</thead>';
-                }
-
-                // 바디
-                if (bodyRows.length > 0) {
-                    tableHtml += '<tbody>';
-                    bodyRows.forEach((row, idx) => {
-                        const cells = row.split('|').filter(c => c.trim());
-                        const bgColor = idx % 2 === 0 ? '#ffffff' : '#f7fafc';
-                        tableHtml += `<tr style="background:${bgColor};">`;
-                        cells.forEach(cell => {
-                            tableHtml += `<td style="border:1px solid #cbd5e0;padding:10px;">${cell.trim()}</td>`;
-                        });
-                        tableHtml += '</tr>';
-                    });
-                    tableHtml += '</tbody>';
-                }
-
-                tableHtml += '</table>';
-                return tableHtml;
-            });
         },
 
         appendMessage(sender, text, id = null) {
