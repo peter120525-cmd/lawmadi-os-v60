@@ -179,6 +179,10 @@ class DRFConnector:
         """기존 메서드 유지 (target=law 기본값, 하위 호환성)"""
         return self.search_by_target(query, target="law")
 
+    def search_precedents(self, query: str) -> Optional[Any]:
+        """판례 검색 (target=prec)"""
+        return self.search_by_target(query, target="prec")
+
     # -------------------------------------------------
     # lawService.do 호출 (법령용어, 조약 등)
     # -------------------------------------------------

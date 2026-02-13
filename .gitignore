@@ -19,3 +19,30 @@ main_20260211.py
 
 # Duplicate project folder
 lawmadi-os-v50/
+
+# v60 - Temporary and Upload directories
+uploads/
+temp/
+logs/
+*.log
+
+# v60 - Large media files (use Git LFS or external storage)
+static/leaders/images/profiles/*.jpg
+static/leaders/images/profiles/*.png
+static/leaders/images/thumbnails/*.jpg
+static/leaders/videos/**/*.mp4
+static/leaders/videos/**/*.webm
+
+# Cache files
+cache/
+*.cache
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

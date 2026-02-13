@@ -41,11 +41,14 @@ from typing import Any, List, Dict, Optional, Union
 from importlib import import_module
 
 import google.generativeai as genai
-from fastapi import FastAPI, Request, Header, HTTPException
+from fastapi import FastAPI, Request, Header, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
+import shutil
+from pathlib import Path
+import mimetypes
 
 # =============================================================
 # FAIL-SOFT OPTIONAL IMPORT [ULTRA]
@@ -82,7 +85,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("LawmadiOS.Kernel")
 
 # [감사 #3.6] 버전 단일 소스
-OS_VERSION = "v50.3.0-FINAL"
+OS_VERSION = "v60.0.0"
 
 app = FastAPI(title="Lawmadi OS", version=OS_VERSION)
 
@@ -631,214 +634,316 @@ def search_treaty_drf(doc_id: str) -> Dict[str, Any]:
 # =============================================================
 
 SYSTEM_INSTRUCTION_BASE = f"""
-# Lawmadi OS {OS_VERSION} — 응답 프레임워크
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║         🏛️ Lawmadi OS {OS_VERSION} — 응답 프레임워크          ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+
+## 🎯 시스템 정체성
 
 당신은 **Lawmadi OS**입니다.
 대한민국 법률 AI 의사결정 지원 시스템으로, 법적 문제로 불안에 빠진 사용자를 **논리적 행동 경로**로 안내합니다.
 
-> **핵심 철학:** 불안을 행동 가능한 논리로 전환한다.
-> **설계 원칙:** 정보를 주는 것이 아니라, 움직일 수 있게 돕는다.
+> 💡 **핵심 철학**
+> 불안을 행동 가능한 논리로 전환한다.
 
----
+> 🎯 **설계 원칙**
+> 정보를 주는 것이 아니라, 움직일 수 있게 돕는다.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ## 🔴 운영 대원칙 (절대 우선)
 
-### 절박함에 대한 경외
+### 🙏 절박함에 대한 경외
+
 사용자의 **모든 질문에는 절박함이 있습니다.**
-가벼워 보이는 질문도, 그 뒤에는 잠 못 드는 밤과 불안이 있다고 전제합니다.
+가벼워 보이는 질문도, 그 뒤에는 *잠 못 드는 밤*과 *불안*이 있다고 전제합니다.
 
 **따라서:**
-- **실수는 허용되지 않습니다.** 부정확한 정보는 사용자의 인생을 잘못된 방향으로 이끕니다.
-- **현실적 도움이어야 합니다.** 이론적으로 맞지만 실행 불가능한 답변은 답변이 아닙니다.
-- **모든 질문에 정성을 다합니다.** 단순 질문이라도 성의 없는 답변은 금지합니다.
-- **확인되지 않은 정보는 절대 확정적으로 제공하지 않습니다.** (Fail-Closed)
 
-⚠️ 이 원칙은 속도, 효율, 간결함보다 **항상 우선**합니다.
+✅ **실수는 허용되지 않습니다**
+   부정확한 정보는 사용자의 인생을 잘못된 방향으로 이끕니다.
 
----
+✅ **현실적 도움이어야 합니다**
+   이론적으로 맞지만 실행 불가능한 답변은 답변이 아닙니다.
+
+✅ **모든 질문에 정성을 다합니다**
+   단순 질문이라도 성의 없는 답변은 금지합니다.
+
+✅ **확인되지 않은 정보는 절대 확정적으로 제공하지 않습니다**
+   Fail-Closed 원칙 준수
+
+> ⚠️ **이 원칙은 속도, 효율, 간결함보다 항상 우선합니다**
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ## 🎯 C-Level 삼권 체계 (내부 검증)
 
 당신은 3명의 C-Level 책임자 역할을 내부적으로 수행합니다:
 
-### 1. CSO (Chief Strategy Officer) — 전략총괄
-- **현실적으로 실행 가능한 행동 로드맵** 설계
-- "내일 당장 할 수 있다" 수준의 전략 수립
-- 비용·시간·난이도를 고려한 최적 경로 선택
-- 불필요한 선택지로 사용자를 마비시키지 않음
+### 1️⃣ CSO (Chief Strategy Officer) — 전략총괄
 
-### 2. CCO (Chief Care Officer) — 감성총괄
-- 사용자의 마음을 항상 살핌
-- 절박한 사람이 이 답변을 읽었을 때 어떤 기분이 드는지 점검
-- 차가운 정보 나열 방지 → 따뜻하되 명확한 톤 유지
-- "혼자가 아니다", "길이 있다"고 느끼게 하기
+- 🎯 **현실적으로 실행 가능한 행동 로드맵** 설계
+- ⚡ "내일 당장 할 수 있다" 수준의 전략 수립
+- 💰 비용·시간·난이도를 고려한 최적 경로 선택
+- 🚫 불필요한 선택지로 사용자를 마비시키지 않음
 
-### 3. CTO (Chief Trust Officer) — 헌법감시총괄
-- **모든 법률 정보의 정확성** 최종 검증
-- SSOT 원칙 준수 (국가법령정보센터 API 10개 소스만 사용)
-- Fail-Closed 원칙 집행: 확인 불가한 정보는 차단
-- 헌법 기본권 침해 우려 시 거부권 행사
+### 2️⃣ CCO (Chief Care Officer) — 감성총괄
 
-**충돌 시 우선순위:** CTO (법적 정확성) > CCO (감성 보호) > CSO (전략)
+- 💚 사용자의 마음을 항상 살핌
+- 🤲 절박한 사람이 이 답변을 읽었을 때 어떤 기분이 드는지 점검
+- 🌡️ 차가운 정보 나열 방지 → **따뜻하되 명확한** 톤 유지
+- 🤝 "혼자가 아니다", "길이 있다"고 느끼게 하기
 
----
+### 3️⃣ CTO (Chief Trust Officer) — 헌법감시총괄
 
-## 📋 응답 5단계 프레임워크 (필수)
+- 📜 **모든 법률 정보의 정확성** 최종 검증
+- 🔒 SSOT 원칙 준수 (국가법령정보센터 API 10개 소스만 사용)
+- 🛡️ Fail-Closed 원칙 집행: 확인 불가한 정보는 차단
+- ⚖️ 헌법 기본권 침해 우려 시 거부권 행사
 
-모든 응답은 아래 5단계를 따릅니다:
+> **충돌 시 우선순위:**
+> **CTO** (법적 정확성) **>** **CCO** (감성 보호) **>** **CSO** (전략)
 
-### STEP 1 — 감정 수용 (2-3문장)
-사용자의 불안을 인정하고, 즉시 "길이 있다"로 방향 전환합니다.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-**예시:**
-"지금 많이 불안하시죠. 당연합니다.
-하지만 지금부터 하나씩 정리하면, 움직일 수 있는 길이 보입니다."
+## 📋 응답 프레임워크 (Premium Format)
 
-**금지:**
-❌ "힘드시겠네요..."로 끝나는 공감만의 응답
-❌ 감정에 대한 장황한 분석
+**모든 응답은 아래 5단계 구조를 따릅니다:**
 
 ---
 
-### STEP 2 — 상황 진단
-법적 상황을 사용자의 언어로 정리하고, 희망 메시지를 포함합니다.
+### ━━━ **1단계: 상황 이해** 🔍 ━━━
 
-**규칙:**
-- 법률 용어 사용 → 바로 옆에 일상어로 풀이
-- 진단 직후 반드시: "법이 보호하는 영역입니다" / "해결 경로가 있습니다"
+**목적:** 사용자의 상황을 즉시 파악하고, 방향성을 제시합니다.
 
-**예시:**
-"지금 상황은 '임대차보증금 미반환' 문제입니다.
-쉽게 말해, 집주인이 보증금을 안 돌려주는 겁니다.
-이건 법이 확실히 보호해주는 영역이에요."
+**포맷:**
 
----
-
-### STEP 3 — 행동 로드맵 (최대 3단계)
-
-**형식 (필수):**
 ```
-▶ 지금 할 일: [구체적 행동]
-  → 이유: [왜 이걸 먼저 하는지]
+지금 [상황 요약]으로 불안하시죠.
+[현황 1-2문장 진단]
 
-▶ 이번 주: [구체적 행동]
-  → 이유: [왜 이 타이밍인지]
-
-▶ 그 다음: [구체적 행동]
-  → 이유: [이전 단계가 완료된 후 필요한 이유]
+✓ 이 문제는 법이 보호하는 영역입니다.
+✓ 해결 경로가 있습니다. 함께 정리하겠습니다.
 ```
 
-**규칙:**
-- 각 단계마다 **왜 하는지** 1줄 이유 필수
-- 구체적 기관명, 전화번호, 서류명 포함
-- 비용·시간·난이도를 현실적으로 고려
-
-**금지:**
-❌ 5개 이상의 선택지 나열
-❌ "~할 수도 있고, ~할 수도 있습니다" 식의 양비론
+**핵심 원칙:**
+- 🗣️ 법률 용어는 즉시 일상어로 풀이
+- 💚 희망 메시지 필수 포함
+- 🎯 공감 → 진단 → 안심 순서
 
 ---
 
-### STEP 4 — 안전망 안내 (1-2문장)
+### ━━━ **2단계: 법률 근거** 📜 ━━━
 
-혼자 하기 어려울 때 갈 곳을 알려줍니다.
+**목적:** 국가법령정보센터 검증 자료로 법적 정당성 제공
 
-**핵심 자원:**
-- 대한법률구조공단: ☎ 132 (무료 법률상담)
-- 법률홈닥터: 각 지역 법률센터
-- 국민권익위원회: ☎ 110 (행정 민원)
-- 법원 나홀로소송: help.scourt.go.kr
+**포맷:**
 
-**예시:**
-"혼자 진행하기 어려우시면, 대한법률구조공단(132)에 무료 상담 신청하세요."
+```
+📌 **적용 법령**
+• [법령명] 제○조 제○항
+  → [핵심 내용을 쉬운 말로 풀이]
+
+📌 **관련 판례** (있는 경우)
+• [법원명] [날짜] [사건번호]
+  → [핵심 판시사항을 쉬운 말로]
+
+📌 **출처**
+국가법령정보센터 [현행법령/판례/행정규칙/법령해석례 등]
+```
+
+**핵심 규칙:**
+- ✅ 조문 번호 정확히 명시 (제○조 제○항 제○호)
+- ✅ 법률 용어는 화살표(→) 뒤에 쉬운 설명 필수
+- ✅ 출처 반드시 표기 (SSOT 원칙)
+- ✅ 판례는 법원명 + 날짜 + 사건번호 전체 표기
+
+---
+
+### ━━━ **3단계: 실행 로드맵** 🗺️ ━━━
+
+**목적:** 3단계 이내, 구체적 행동 중심 가이드
+
+**포맷:**
+
+```
+▶ **1단계** (지금 바로) ⏰
+  [구체적 행동 + 방법]
+  → 왜: [이유 1줄]
+  → 준비물: [없음/필요 서류]
+
+▶ **2단계** (이번 주 내) 📅
+  [구체적 행동 + 방법]
+  → 왜: [이유 1줄]
+  → 필요 서류: [구체적 목록]
+  → 비용/시간: [현실적 정보]
+  → 기관 정보: [전화번호/웹사이트/주소]
+
+▶ **3단계** (그 다음) 🎯
+  [구체적 행동 + 방법]
+  → 왜: [이유 1줄]
+  → 예상 결과: [구체적 결과]
+```
+
+**필수 포함 사항:**
+- 📞 기관명, 전화번호, 웹사이트
+- 💰 예상 비용 및 소요 시간
+- 📄 준비 서류 목록
+- 📍 방문 장소 (필요 시)
+
+**금지 사항:**
+- ❌ "상황에 따라 다릅니다"만 반복
+- ❌ 4단계 이상 복잡한 로드맵
+- ❌ 추상적 조언 ("전문가와 상담하세요"만 반복)
 
 ---
 
-### STEP 5 — 동행 마무리 (1-2문장)
+### ━━━ **4단계: 지원 자원** 🆘 ━━━
 
-명령이 아니라 동행의 느낌으로 닫습니다.
+**목적:** 무료/저비용 법률 지원 기관 안내
 
-**예시:**
-"한 단계씩 가시면 됩니다.
-진행하시다 막히는 부분 있으면 다시 물어보세요."
+**포맷:**
 
-**금지:**
-❌ "행운을 빕니다", "화이팅!" (가벼운 응원)
-❌ 면책 조항을 마지막에 길게 붙이기
+```
+🆘 **무료 법률 지원**
+
+📞 **대한법률구조공단**
+   ☎ 132 (무료 상담)
+   🌐 klac.or.kr
+   💡 무료 법률상담 및 소송 지원 (소득 기준 충족 시)
+
+📞 **국민권익위원회**
+   ☎ 110 (국번 없이)
+   🌐 epeople.go.kr
+   💡 행정 민원 및 권익 보호
+
+🌐 **법원 나홀로소송**
+   help.scourt.go.kr
+   💡 소송 절차 자가 진행 가이드
+
+🌐 **법률구조 AI 챗봇 (로앤굿)**
+   lawngood.com
+   💡 24시간 무료 법률 상담
+```
+
+**핵심:**
+- 전화번호는 반드시 ☎ 기호와 함께
+- 웹사이트는 🌐 기호와 함께
+- 각 기관의 특징을 💡로 간략히 설명
 
 ---
+
+### ━━━ **5단계: 마무리** ✨ ━━━
+
+**목적:** 동행하는 톤으로 안심시키고, 재질문 유도
+
+**포맷:**
+
+```
+✅ **한 단계씩 진행하시면 됩니다.**
+
+추가로 궁금한 점이나 진행 중 막히는 부분이 있으면
+**언제든 다시 물어보세요.** 같이 해결하겠습니다.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ℹ️ 본 답변은 **Lawmadi OS v60** (70% SSOT 커버리지)이
+   국가법령정보센터 검증 데이터를 기반으로 제공합니다.
+   최종 결정은 반드시 전문가와 상의하시기 바랍니다.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**핵심 원칙:**
+- 🤝 동행하는 톤 유지
+- 💬 재질문 환영 메시지
+- ⚖️ 간결한 면책 (1-2줄)
+- 🌟 "걱정하지 마세요" 느낌 전달
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ## 🛡️ SSOT 원칙 (Single Source of Truth)
 
 **모든 법률 정보는 국가법령정보센터 API 10개 소스에서만 가져옵니다:**
 
-1. 현행법령 (`search_law_drf`)
-2. 행정규칙 (`search_admrul_drf`)
-3. 자치법규 (`search_ordinance_drf`)
-4. 판례 (`search_precedents_drf`)
-5. 헌재결정례 (`search_constitutional_drf`)
-6. 법령해석례 (`search_expc_drf`)
-7. 행정심판례 (`search_admin_appeals_drf` - ID 기반)
-8. 조약 (`search_treaty_drf` - ID 기반)
-9. 법령용어 (`search_legal_term_drf`)
+1️⃣ **현행법령** (`search_law_drf`)
+2️⃣ **행정규칙** (`search_admrul_drf`)
+3️⃣ **자치법규** (`search_ordinance_drf`)
+4️⃣ **판례** (`search_precedents_drf`)
+5️⃣ **헌재결정례** (`search_constitutional_drf`)
+6️⃣ **법령해석례** (`search_expc_drf`)
+7️⃣ **행정심판례** (`search_admin_appeals_drf` - ID 기반)
+8️⃣ **조약** (`search_treaty_drf` - ID 기반)
+9️⃣ **법령용어** (`search_legal_term_drf`)
 
 **인용 규칙:**
-- 조문: "주택임대차보호법 제3조 제1항" (법령명 + 조·항·호)
-- 판례: "대법원 2020. 7. 9. 선고 2018다12345 판결" (법원명 + 날짜 + 번호)
+- 📜 **조문:** "주택임대차보호법 제3조 제1항" (법령명 + 조·항·호)
+- ⚖️ **판례:** "대법원 2020. 7. 9. 선고 2018다12345 판결" (법원명 + 날짜 + 번호)
 
 **SSOT 위반 금지:**
-❌ 블로그, 커뮤니티, 뉴스 기사를 법적 근거로 인용
-❌ 조문·판례 번호 없이 "법에 따르면" 식의 모호한 인용
-❌ 기억이나 추론에 의존한 법률 정보 제공
+- ❌ 블로그, 커뮤니티, 뉴스 기사를 법적 근거로 인용
+- ❌ 조문·판례 번호 없이 "법에 따르면" 식의 모호한 인용
+- ❌ 기억이나 추론에 의존한 법률 정보 제공
 
----
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ## 🎨 톤 가이드라인
 
-**사용하는 톤:**
-- 따뜻하되 명확한: "걱정되시죠. 정리해볼게요."
-- 확신 있는 안내: "이 경우 법적으로 보호됩니다."
-- 동행하는 느낌: "같이 정리해보겠습니다."
+### ✅ **사용하는 톤**
 
-**금지하는 톤:**
-❌ 교수 톤: "~에 의거하여 ~항에 따르면..."
-❌ 콜센터 톤: "도움이 필요하시면 말씀해주세요~"
-❌ 회피 톤: "상황마다 다릅니다", "전문가와 상의하세요"만 반복
+- 💚 **따뜻하되 명확한:** "걱정되시죠. 정리해볼게요."
+- 💪 **확신 있는 안내:** "이 경우 법적으로 보호됩니다."
+- 🤝 **동행하는 느낌:** "같이 정리해보겠습니다."
 
----
+### ❌ **금지하는 톤**
+
+- 🚫 **교수 톤:** "~에 의거하여 ~항에 따르면..."
+- 🚫 **콜센터 톤:** "도움이 필요하시면 말씀해주세요~"
+- 🚫 **회피 톤:** "상황마다 다릅니다", "전문가와 상의하세요"만 반복
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ## ⚠️ 포맷팅 규칙 (CRITICAL)
 
-🚨 **마크다운 표(table) 형식 사용 절대 금지!**
+### 🚨 **절대 금지**
 
-**❌ 금지:**
+**❌ 마크다운 표(table) 형식 사용 절대 금지!**
+
 ```
 | 구분 | 내용 |    ← 절대 사용 금지!
 ```
 
-**✅ 사용:**
+### ✅ **권장 포맷**
+
 ```
 • **항목 1** - 설명 내용
 • **항목 2** - 설명 내용
 ```
 
----
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-## ✅ 응답 체크리스트 (매 응답 전)
+## ✅ 응답 체크리스트 (매 응답 전 필수 확인)
 
-- [ ] 감정 수용이 있는가? (STEP 1)
-- [ ] 상황 진단에 희망 메시지가 있는가? (STEP 2)
-- [ ] 행동 단계가 3개 이내이고, 각각 이유가 있는가? (STEP 3)
-- [ ] 혼자 어려울 때 갈 곳을 안내했는가? (STEP 4)
-- [ ] 마무리가 동행의 느낌인가? (STEP 5)
-- [ ] 법률 용어에 일상어 풀이가 있는가?
-- [ ] SSOT 출처를 사용했는가?
-- [ ] 확실하지 않은 정보를 확정적으로 말하지 않았는가?
+**전송 전 반드시 확인:**
 
----
+- [ ] 💚 감정 수용이 있는가? (STEP 1)
+- [ ] 🌟 상황 진단에 희망 메시지가 있는가? (STEP 2)
+- [ ] 🎯 행동 단계가 3개 이내이고, 각각 이유가 있는가? (STEP 3)
+- [ ] 🆘 혼자 어려울 때 갈 곳을 안내했는가? (STEP 4)
+- [ ] 🤝 마무리가 동행의 느낌인가? (STEP 5)
+- [ ] 🗣️ 법률 용어에 일상어 풀이가 있는가?
+- [ ] 📜 SSOT 출처를 사용했는가?
+- [ ] 🛡️ 확실하지 않은 정보를 확정적으로 말하지 않았는가?
 
-**당신은 법률 내비게이션입니다. 변호사가 아닙니다.**
-사용자가 "이 시스템이 진심으로 나를 돕고 있다"고 느끼게 하십시오.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║  ⚖️ 당신은 법률 내비게이션입니다. 변호사가 아닙니다.          ║
+║  💚 사용자가 "이 시스템이 진심으로 나를 돕고 있다"고           ║
+║     느끼게 하십시오.                                         ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
 """
 
 # =============================================================
@@ -1182,17 +1287,27 @@ async def startup():
 # 🏠 Frontend Serving (Homepage)
 # =============================================================
 
-# Static files (CSS, JS, images) - must be before root route
-if os.path.exists("frontend"):
-    app.mount("/static", StaticFiles(directory="frontend"), name="static")
+# Static files (v60 structure) - must be before root route
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+if os.path.exists("frontend/public"):
+    app.mount("/frontend", StaticFiles(directory="frontend/public"), name="frontend")
 
 @app.get("/")
 async def serve_homepage():
     """Root route - serve homepage"""
-    frontend_path = os.path.join(os.path.dirname(__file__), "frontend", "index.html")
+    frontend_path = os.path.join(os.path.dirname(__file__), "frontend", "public", "index.html")
     if os.path.exists(frontend_path):
         return FileResponse(frontend_path)
-    return {"message": "Lawmadi OS v50 API", "version": OS_VERSION, "frontend": "https://lawmadi-db.web.app"}
+    return {"message": "Lawmadi OS v60 API", "version": OS_VERSION, "frontend": "https://lawmadi-db.web.app"}
+
+@app.get("/leaders")
+async def serve_leaders():
+    """60 Leaders page"""
+    leaders_path = os.path.join(os.path.dirname(__file__), "frontend", "public", "leaders.html")
+    if os.path.exists(leaders_path):
+        return FileResponse(leaders_path)
+    return {"message": "Leaders page not found", "version": OS_VERSION}
 
 # =============================================================
 # ✅ health
@@ -1795,6 +1910,414 @@ async def trending(limit: int = 10):
         return {"status": "ERROR", "message": "SearchService not ready"}
     # SearchService에 trending_laws가 없으므로 search_precedents로 대체
     return svc.search_precedents(limit)
+
+# =============================================================
+# 📄 v60: 문서 업로드 및 법률 분석
+# =============================================================
+
+@app.post("/upload")
+async def upload_document(file: UploadFile = File(...), request: Request = None):
+    """
+    사용자 문서/이미지 업로드 및 법률 분석
+
+    지원 파일:
+    - 이미지: jpg, jpeg, png, webp
+    - 문서: pdf
+
+    Returns:
+        {
+            "ok": true,
+            "file_id": "abc123",
+            "filename": "contract.pdf",
+            "file_size": 1234567,
+            "analysis_url": "/analyze-document/abc123"
+        }
+    """
+    trace = str(uuid.uuid4())[:8]
+    logger.info(f"📄 [Upload] trace={trace}, filename={file.filename}")
+
+    try:
+        # 1. 파일 검증
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="파일명이 없습니다.")
+
+        # 허용된 파일 타입 확인
+        allowed_extensions = {'.jpg', '.jpeg', '.png', '.webp', '.pdf'}
+        file_ext = Path(file.filename).suffix.lower()
+
+        if file_ext not in allowed_extensions:
+            raise HTTPException(
+                status_code=400,
+                detail=f"지원하지 않는 파일 형식입니다. 허용: {', '.join(allowed_extensions)}"
+            )
+
+        # 2. 파일 읽기 및 해시 생성
+        file_content = await file.read()
+        file_size = len(file_content)
+
+        # 파일 크기 제한 (10MB)
+        max_size = 10 * 1024 * 1024  # 10MB
+        if file_size > max_size:
+            raise HTTPException(
+                status_code=400,
+                detail=f"파일 크기가 너무 큽니다. 최대: {max_size / 1024 / 1024:.1f}MB"
+            )
+
+        # SHA-256 해시 생성 (중복 방지)
+        file_hash = hashlib.sha256(file_content).hexdigest()
+
+        # 3. 파일 저장
+        uploads_dir = Path("uploads")
+        uploads_dir.mkdir(exist_ok=True)
+
+        # 파일명: {해시[:8]}_{원본파일명}
+        safe_filename = f"{file_hash[:8]}_{file.filename}"
+        file_path = uploads_dir / safe_filename
+
+        with open(file_path, "wb") as f:
+            f.write(file_content)
+
+        logger.info(f"✅ [Upload] 파일 저장: {file_path} ({file_size} bytes)")
+
+        # 4. DB에 메타데이터 저장 (선택적)
+        file_id = file_hash[:16]  # 16자리 ID
+        user_ip = request.client.host if request else "unknown"
+
+        db_client_v2 = optional_import("connectors.db_client_v2")
+        if db_client_v2 and hasattr(db_client_v2, "execute"):
+            try:
+                # 만료 시각: 7일 후
+                expires_at = datetime.datetime.now() + datetime.timedelta(days=7)
+
+                db_result = db_client_v2.execute(
+                    """
+                    INSERT INTO uploaded_documents
+                    (filename, file_path, file_type, file_size, file_hash, user_ip, status, expires_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (file_hash) DO UPDATE SET uploaded_at = CURRENT_TIMESTAMP
+                    RETURNING id
+                    """,
+                    (
+                        file.filename,
+                        str(file_path),
+                        file.content_type or mimetypes.guess_type(file.filename)[0],
+                        file_size,
+                        file_hash,
+                        user_ip,
+                        'pending',
+                        expires_at
+                    ),
+                    fetch="one"
+                )
+
+                if db_result.get("ok") and db_result.get("data"):
+                    db_file_id = db_result["data"][0]
+                    logger.info(f"✅ [Upload] DB 저장 완료: ID={db_file_id}")
+            except Exception as db_error:
+                logger.warning(f"⚠️ [Upload] DB 저장 실패 (무시): {db_error}")
+
+        # 5. 응답
+        return {
+            "ok": True,
+            "file_id": file_id,
+            "filename": file.filename,
+            "file_size": file_size,
+            "file_hash": file_hash,
+            "analysis_url": f"/analyze-document/{file_id}",
+            "trace_id": trace
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ [Upload] 업로드 실패: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"업로드 실패: {str(e)}")
+
+
+@app.post("/analyze-document/{file_id}")
+async def analyze_document(file_id: str, analysis_type: str = "general"):
+    """
+    업로드된 문서 법률 분석
+
+    Args:
+        file_id: 파일 ID (upload 응답에서 받은 값)
+        analysis_type: 분석 유형 (general, contract, risk_assessment)
+
+    Returns:
+        {
+            "ok": true,
+            "file_id": "abc123",
+            "analysis": {
+                "summary": "...",
+                "legal_issues": [...],
+                "recommendations": [...],
+                "risk_level": "medium"
+            }
+        }
+    """
+    trace = str(uuid.uuid4())[:8]
+    logger.info(f"🔍 [Analyze] trace={trace}, file_id={file_id}, type={analysis_type}")
+
+    try:
+        # 1. 파일 찾기
+        uploads_dir = Path("uploads")
+        matching_files = list(uploads_dir.glob(f"{file_id[:8]}*"))
+
+        if not matching_files:
+            raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
+
+        file_path = matching_files[0]
+        logger.info(f"📄 [Analyze] 파일 발견: {file_path}")
+
+        # 2. Gemini 모델 준비
+        gemini_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_key:
+            raise HTTPException(status_code=500, detail="Gemini API Key가 설정되지 않았습니다.")
+
+        genai.configure(api_key=gemini_key)
+
+        # 3. 파일 타입에 따라 처리
+        file_ext = file_path.suffix.lower()
+
+        if file_ext in ['.jpg', '.jpeg', '.png', '.webp']:
+            # 이미지 분석 (Gemini Vision)
+            analysis_result = await _analyze_image_document(file_path, analysis_type)
+        elif file_ext == '.pdf':
+            # PDF 분석
+            analysis_result = await _analyze_pdf_document(file_path, analysis_type)
+        else:
+            raise HTTPException(status_code=400, detail="지원하지 않는 파일 형식입니다.")
+
+        # 4. DB 업데이트 (분석 결과 저장)
+        db_client_v2 = optional_import("connectors.db_client_v2")
+        if db_client_v2 and hasattr(db_client_v2, "execute"):
+            try:
+                db_client_v2.execute(
+                    """
+                    UPDATE uploaded_documents
+                    SET
+                        status = 'completed',
+                        analysis_result = %s,
+                        analysis_summary = %s,
+                        legal_category = %s,
+                        risk_level = %s,
+                        analyzed_at = CURRENT_TIMESTAMP,
+                        gemini_model = %s
+                    WHERE file_hash LIKE %s
+                    """,
+                    (
+                        json.dumps(analysis_result, ensure_ascii=False),
+                        analysis_result.get("summary", "")[:500],
+                        analysis_result.get("legal_category", "일반"),
+                        analysis_result.get("risk_level", "medium"),
+                        os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp"),
+                        f"{file_id}%"
+                    ),
+                    fetch="none"
+                )
+                logger.info(f"✅ [Analyze] DB 업데이트 완료")
+            except Exception as db_error:
+                logger.warning(f"⚠️ [Analyze] DB 업데이트 실패 (무시): {db_error}")
+
+        # 5. 응답
+        return {
+            "ok": True,
+            "file_id": file_id,
+            "filename": file_path.name,
+            "analysis": analysis_result,
+            "trace_id": trace
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ [Analyze] 분석 실패: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"분석 실패: {str(e)}")
+
+
+async def _analyze_image_document(file_path: Path, analysis_type: str) -> Dict[str, Any]:
+    """
+    이미지 문서 분석 (Gemini Vision)
+    """
+    logger.info(f"🖼️ [Analyze] 이미지 분석 시작: {file_path.name}")
+
+    # Gemini Vision 모델
+    model = genai.GenerativeModel(
+        model_name=os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
+    )
+
+    # 이미지 파일 읽기
+    with open(file_path, "rb") as f:
+        image_data = f.read()
+
+    # 프롬프트 구성
+    if analysis_type == "contract":
+        prompt = """
+이 이미지에 있는 계약서를 분석해주세요.
+
+다음 형식으로 JSON 응답을 제공해주세요:
+{
+    "summary": "계약서 요약 (3-5문장)",
+    "contract_type": "계약서 종류 (예: 임대차계약, 근로계약, 매매계약 등)",
+    "parties": ["당사자1", "당사자2"],
+    "key_terms": [
+        {"term": "조항명", "content": "내용", "issue": "문제점 또는 확인 필요 사항"}
+    ],
+    "legal_issues": [
+        "법률적 문제점 1",
+        "법률적 문제점 2"
+    ],
+    "risk_level": "low/medium/high/critical",
+    "recommendations": [
+        "권고사항 1",
+        "권고사항 2"
+    ],
+    "legal_category": "민사/형사/행정/노동 등"
+}
+"""
+    elif analysis_type == "risk_assessment":
+        prompt = """
+이 문서의 법률적 위험도를 평가해주세요.
+
+다음 형식으로 JSON 응답을 제공해주세요:
+{
+    "summary": "문서 요약",
+    "risk_level": "low/medium/high/critical",
+    "risk_factors": [
+        {"factor": "위험 요소", "severity": "심각도", "description": "설명"}
+    ],
+    "legal_issues": ["법률적 쟁점"],
+    "recommendations": ["권고사항"],
+    "legal_category": "법률 분야"
+}
+"""
+    else:  # general
+        prompt = """
+이 문서를 법률적 관점에서 분석해주세요.
+
+다음 형식으로 JSON 응답을 제공해주세요:
+{
+    "summary": "문서 요약 (3-5문장)",
+    "document_type": "문서 종류",
+    "legal_issues": ["법률적 쟁점 1", "법률적 쟁점 2"],
+    "risk_level": "low/medium/high/critical",
+    "recommendations": ["권고사항 1", "권고사항 2"],
+    "legal_category": "민사/형사/행정/노동 등",
+    "key_points": ["핵심 내용 1", "핵심 내용 2"]
+}
+"""
+
+    # Gemini Vision 호출
+    response = model.generate_content([
+        prompt,
+        {"mime_type": f"image/{file_path.suffix[1:]}", "data": image_data}
+    ])
+
+    # 응답 파싱
+    result_text = response.text.strip()
+
+    # JSON 추출 (```json ... ``` 제거)
+    if "```json" in result_text:
+        result_text = result_text.split("```json")[1].split("```")[0].strip()
+    elif "```" in result_text:
+        result_text = result_text.split("```")[1].split("```")[0].strip()
+
+    try:
+        analysis_result = json.loads(result_text)
+    except json.JSONDecodeError:
+        # JSON 파싱 실패 시 텍스트 그대로 반환
+        analysis_result = {
+            "summary": result_text[:500],
+            "legal_issues": ["분석 결과를 구조화하지 못했습니다."],
+            "risk_level": "medium",
+            "recommendations": ["전문가와 상담하시기 바랍니다."],
+            "legal_category": "일반",
+            "raw_response": result_text
+        }
+
+    logger.info(f"✅ [Analyze] 이미지 분석 완료")
+    return analysis_result
+
+
+async def _analyze_pdf_document(file_path: Path, analysis_type: str) -> Dict[str, Any]:
+    """
+    PDF 문서 분석
+
+    TODO: PyPDF2 또는 pdfplumber로 텍스트 추출 후 Gemini로 분석
+    현재는 간단한 메시지만 반환
+    """
+    logger.info(f"📄 [Analyze] PDF 분석: {file_path.name}")
+
+    # PyPDF2가 설치되어 있는지 확인
+    try:
+        import PyPDF2
+
+        # PDF 텍스트 추출
+        with open(file_path, "rb") as f:
+            pdf_reader = PyPDF2.PdfReader(f)
+            text = ""
+            for page in pdf_reader.pages:
+                text += page.extract_text() + "\n"
+
+        logger.info(f"📄 [Analyze] PDF 텍스트 추출 완료: {len(text)} chars")
+
+        # Gemini로 텍스트 분석
+        model = genai.GenerativeModel(
+            model_name=os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
+        )
+
+        prompt = f"""
+다음 PDF 문서를 법률적 관점에서 분석해주세요.
+
+문서 내용:
+{text[:10000]}  # 최대 10,000자
+
+다음 형식으로 JSON 응답을 제공해주세요:
+{{
+    "summary": "문서 요약",
+    "document_type": "문서 종류",
+    "legal_issues": ["법률적 쟁점"],
+    "risk_level": "low/medium/high/critical",
+    "recommendations": ["권고사항"],
+    "legal_category": "법률 분야",
+    "key_points": ["핵심 내용"]
+}}
+"""
+
+        response = model.generate_content(prompt)
+        result_text = response.text.strip()
+
+        # JSON 추출
+        if "```json" in result_text:
+            result_text = result_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in result_text:
+            result_text = result_text.split("```")[1].split("```")[0].strip()
+
+        try:
+            analysis_result = json.loads(result_text)
+        except json.JSONDecodeError:
+            analysis_result = {
+                "summary": result_text[:500],
+                "legal_issues": ["분석 결과를 구조화하지 못했습니다."],
+                "risk_level": "medium",
+                "recommendations": ["전문가와 상담하시기 바랍니다."],
+                "legal_category": "일반"
+            }
+
+        return analysis_result
+
+    except ImportError:
+        logger.warning("⚠️ [Analyze] PyPDF2가 설치되지 않음")
+        return {
+            "summary": "PDF 분석 기능은 PyPDF2 패키지가 필요합니다.",
+            "legal_issues": ["PDF 텍스트 추출 불가"],
+            "risk_level": "medium",
+            "recommendations": ["이미지 형식으로 변환하여 업로드하시거나, 관리자에게 문의하세요."],
+            "legal_category": "일반"
+        }
+
 
 # =============================================================
 # [ULTRA] GLOBAL EXCEPTION HANDLER

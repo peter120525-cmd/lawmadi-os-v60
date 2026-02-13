@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚖️ Lawmadi OS v50.3.0-FINAL
+# ⚖️ Lawmadi OS v60.0.0
 
 ### **불안을 행동으로 바꾸는 법률 AI 운영체제**
 
@@ -303,7 +303,7 @@ params = {"type": "XML"}  # HTML 에러 페이지 반환됨
 ```
 lawmadi-os-v50/
 │
-├── 📄 main.py                      # FastAPI 커널 (v50.3.0-FINAL)
+├── 📄 main.py                      # FastAPI 커널 (v60.0.0)
 ├── ⚙️ config.json                  # 시스템 설정 SSOT
 ├── 👥 leaders.json                 # 60명 리더 레지스트리
 ├── 📜 claude.md                    # 헌법적 정의 & 개발 가이드
@@ -464,14 +464,14 @@ git push origin main
 
 ```bash
 # 1. Docker 이미지 빌드
-docker build -t gcr.io/lawmadi-db/lawmadi-os:v50.3.0 .
+docker build -t gcr.io/lawmadi-db/lawmadi-os:v60.0.0 .
 
 # 2. 이미지 푸시
-docker push gcr.io/lawmadi-db/lawmadi-os:v50.3.0
+docker push gcr.io/lawmadi-db/lawmadi-os:v60.0.0
 
 # 3. Cloud Run 배포
 gcloud run deploy lawmadi-os-v50 \
-  --image gcr.io/lawmadi-db/lawmadi-os:v50.3.0 \
+  --image gcr.io/lawmadi-db/lawmadi-os:v60.0.0 \
   --platform managed \
   --region asia-northeast3 \
   --memory 2Gi \
@@ -591,7 +591,7 @@ GitHub에서 Pull Request를 생성하세요!
 
 ## 🎯 로드맵
 
-### v50.4.0 (2026 Q2)
+### v60.1.0 (2026 Q2)
 
 - [ ] 🔗 법령 API 연결 강화 (실시간 법령 조회 완벽 구현)
 - [ ] 📚 판례 검색 정확도 향상 (대법원 API 통합)
@@ -684,8 +684,8 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 
 **Powered by 60 AI Leaders | Built with FastAPI | Secured by DRF**
 
-*최종 업데이트: 2026-02-13 | v50.3.0-FINAL*
+*최종 업데이트: 2026-02-13 | v60.0.0*
 
-[⬆️ 맨 위로](#️-lawmadi-os-v5030-final)
+[⬆️ 맨 위로](#️-lawmadi-os-v6000)
 
 </div>

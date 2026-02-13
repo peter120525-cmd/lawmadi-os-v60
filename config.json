@@ -1,6 +1,6 @@
 {
   "system_metadata": {
-    "os_version": "v50.3.0-FINAL",
+    "os_version": "v60.0.0",
     "organization": "Lawmadi Legion (63 Personas)",
     "last_updated": "2026-02-13"
   },
@@ -179,6 +179,19 @@
     }
   },
   "dual_ssot": {
+    "enabled": true,
+    "retry_sequence": ["DRF-1", "DATA-1", "DRF-2"],
+    "cache_ttl_seconds": 3600,
+    "drf": {
+      "base_url": "https://www.law.go.kr/DRF/lawSearch.do",
+      "api_key_env": "LAWGO_DRF_OC",
+      "timeout_ms": 5000
+    },
+    "data_go_kr": {
+      "base_url": "https://apis.data.go.kr/1170000/LawService",
+      "api_key_env": "DATA_GO_KR_API_KEY",
+      "timeout_ms": 5000
+    },
     "primary": {
       "type": "LAW_GO_KR",
       "base_url": "https://www.law.go.kr/DRF"
@@ -187,6 +200,17 @@
       "type": "OPEN_DATA_GO_KR",
       "base_url": "https://apis.data.go.kr/1170000/LawService"
     }
+  },
+  "article1": {
+    "drf_type_json_required": true,
+    "description": "DRF API 호출 시 type=JSON 필수",
+    "enforcement": "STRICT"
+  },
+  "failclosed_principle": {
+    "enabled": true,
+    "description": "검증 실패 시 응답 차단",
+    "block_html_responses": true,
+    "block_invalid_json": true
   },
   "ssot_registry": {
     "SSOT_01": {
@@ -202,8 +226,8 @@
       "target": "admrul",
       "endpoint": "lawSearch.do",
       "enabled": true,
-      "response_key": "LawSearch",
-      "items_key": "law"
+      "response_key": "AdmRulSearch",
+      "items_key": "admrul"
     },
     "SSOT_05": {
       "name": "판례",
@@ -227,8 +251,8 @@
       "target": "expc",
       "endpoint": "lawSearch.do",
       "enabled": true,
-      "response_key": "LawSearch",
-      "items_key": "law"
+      "response_key": "Expc",
+      "items_key": "expc"
     },
     "SSOT_03": {
       "name": "학칙공단",
@@ -268,9 +292,10 @@
     "SSOT_10": {
       "name": "법령용어",
       "target": "lstrm",
-      "endpoint": "lawService.do",
+      "endpoint": "lawSearch.do",
       "enabled": true,
-      "response_key": "LsTrmService",
+      "response_key": "LsTrmSearch",
+      "items_key": "lstrm",
       "fields": ["법령용어명_한글", "법령용어명_한자", "법령용어정의", "법령용어코드", "출처"]
     }
   }
