@@ -498,6 +498,42 @@ def search_ordinance_drf(query: str) -> Dict[str, Any]:
         logger.error(f"🛠️ 자치법규 검색 실패: {e}")
         return {"result": "ERROR", "message": str(e)}
 
+def search_legal_term_drf(query: str) -> Dict[str, Any]:
+    """법령용어 검색 - 법령용어 정의 및 설명 검색 (SSOT #10)"""
+    logger.info(f"🛠️ [L3 Strike] 법령용어 검색 호출: '{query}'")
+    try:
+        svc = RUNTIME.get("search_service")
+        if not svc:
+            return {"result": "ERROR", "message": "SearchService 미초기화."}
+
+        raw = svc.search_legal_term(query)
+        if not raw:
+            return {"result": "NO_DATA", "message": "해당 키워드와 일치하는 법령용어가 없습니다."}
+
+        # 응답 구조 확인 및 정리
+        if isinstance(raw, dict) and "LsTrmService" in raw:
+            term_data = raw["LsTrmService"]
+            # 용어 정보 추출
+            term_name_ko = term_data.get("법령용어명_한글", "")
+            term_name_cn = term_data.get("법령용어명_한자", "")
+            term_def = term_data.get("법령용어정의", "")
+            term_source = term_data.get("출처", "")
+
+            # 정리된 형식으로 반환
+            formatted = f"【{term_name_ko}】"
+            if term_name_cn:
+                formatted += f" ({term_name_cn})"
+            formatted += f"\n\n정의: {term_def}"
+            if term_source:
+                formatted += f"\n출처: {term_source}"
+
+            return {"result": "FOUND", "content": formatted, "source": "국가법령정보센터(법령용어)", "raw": raw}
+
+        return {"result": "FOUND", "content": raw, "source": "국가법령정보센터(법령용어)"}
+    except Exception as e:
+        logger.error(f"🛠️ 법령용어 검색 실패: {e}")
+        return {"result": "ERROR", "message": str(e)}
+
 # =============================================================
 # 📜 [L0 CONSTITUTION] 표준 응답 규격 및 절대 원칙
 # =============================================================
@@ -1212,7 +1248,8 @@ async def ask(req: Request):
                 search_admrul_drf,        # SSOT #2: 행정규칙
                 search_expc_drf,          # SSOT #7: 법령해석례
                 search_constitutional_drf,# SSOT #6: 헌재결정례
-                search_ordinance_drf      # SSOT #4: 자치법규
+                search_ordinance_drf,     # SSOT #4: 자치법규
+                search_legal_term_drf     # SSOT #10: 법령용어
             ]
 
         now_kst = _now_iso()
