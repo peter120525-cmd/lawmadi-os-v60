@@ -1,8 +1,8 @@
 # 1. 가볍고 안정적인 Python 3.10 이미지 사용
 FROM python:3.10-slim
 
-# 캐시 무효화를 위한 빌드 인자 (v50.2.6-SWARM)
-ARG CACHEBUST=2
+# 캐시 무효화를 위한 빌드 인자 (v60.0.0)
+ARG CACHEBUST=3
 
 # 2. 작업 디렉토리 설정
 WORKDIR /app
@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 5. Lawmadi OS v50.0.0 소스 코드 및 설정 파일 복사
+# 5. Lawmadi OS v60.0.0 소스 코드 및 설정 파일 복사
 # (사장님의 폴더 구조를 유지합니다)
 COPY core/ ./core/
 COPY connectors/ ./connectors/
