@@ -1,0 +1,44 @@
+[
+  {
+    "target": "law",
+    "description": "법령",
+    "status": "success",
+    "total": "9",
+    "response_key": "LawSearch",
+    "items_key": "law"
+  },
+  {
+    "target": "prec",
+    "description": "판례",
+    "status": "success",
+    "total": "365",
+    "response_key": "PrecSearch",
+    "items_key": "prec"
+  },
+  {
+    "target": "expc",
+    "description": "법령해석례",
+    "status": "success",
+    "total": "15",
+    "response_key": "Expc",
+    "items_key": "expc"
+  },
+  {
+    "target": "admrul",
+    "description": "행정규칙",
+    "status": "success",
+    "total": "802",
+    "response_key": "AdmRulSearch",
+    "items_key": "admrul"
+  },
+  {
+    "target": "anar",
+    "description": "자치법규",
+    "status": "unknown_type"
+  },
+  {
+    "target": "jooyak",
+    "description": "조약",
+    "status": "unknown_type"
+  }
+]
