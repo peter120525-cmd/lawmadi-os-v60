@@ -128,3 +128,25 @@ class SearchService:
         except Exception as e:
             logger.warning(f"⚠️ search_legal_term failed: {e}")
             return None
+
+    def search_admin_appeals(self, doc_id: str) -> Optional[Any]:
+        """행정심판례 검색 (SSOT #8) - ID 기반"""
+        if not self.ready or not self.drf:
+            logger.warning("⚠️ SearchService not ready (admin_appeals)")
+            return None
+        try:
+            return self.drf.search_admin_appeals(doc_id)
+        except Exception as e:
+            logger.warning(f"⚠️ search_admin_appeals failed: {e}")
+            return None
+
+    def search_treaty(self, doc_id: str) -> Optional[Any]:
+        """조약 검색 (SSOT #9) - ID 기반"""
+        if not self.ready or not self.drf:
+            logger.warning("⚠️ SearchService not ready (treaty)")
+            return None
+        try:
+            return self.drf.search_treaty(doc_id)
+        except Exception as e:
+            logger.warning(f"⚠️ search_treaty failed: {e}")
+            return None

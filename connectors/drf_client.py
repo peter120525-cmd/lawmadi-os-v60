@@ -215,6 +215,45 @@ class DRFConnector:
         except Exception as e:
             raise RuntimeError(f"lawService JSON parse error: {e}")
 
+    def _call_law_service_by_id(self, target: str, doc_id: str) -> Any:
+        """
+        lawService.do ID 기반 조회
+
+        Args:
+            target: lawService target (decc, trty, etc.)
+            doc_id: 문서 ID
+
+        Returns:
+            JSON dict
+
+        Raises:
+            RuntimeError: API 호출 실패 시
+        """
+        if not self.drf_key:
+            raise RuntimeError("DRF not available")
+
+        params = {
+            "OC": self.drf_key,
+            "target": target,
+            "type": "JSON",
+            "ID": doc_id
+        }
+
+        r = requests.get(_LAW_SERVICE_URL, params=params, timeout=self.timeout_sec)
+
+        if r.status_code != 200:
+            raise RuntimeError(f"lawService HTTP {r.status_code}")
+
+        content_type = r.headers.get("Content-Type", "")
+        if "json" not in content_type.lower():
+            raise RuntimeError(f"lawService unexpected Content-Type: {content_type}")
+
+        # JSON 파싱
+        try:
+            return r.json()
+        except Exception as e:
+            raise RuntimeError(f"lawService JSON parse error: {e}")
+
     def search_legal_term(self, query: str) -> Optional[Any]:
         """
         법령용어 검색 (SSOT #10)
@@ -259,4 +298,108 @@ class DRFConnector:
             logger.warning(f"[lawService] lstrm failed: {str(e)}")
 
         logger.error(f"[lawService] Failed for target=lstrm")
+        return None
+
+    def search_admin_appeals(self, doc_id: str) -> Optional[Any]:
+        """
+        행정심판례 검색 (SSOT #8) - ID 기반 조회
+
+        ⚠️ 주의: 키워드 검색 미지원, 정확한 심판례 ID 필요
+
+        Args:
+            doc_id: 행정심판례 ID (예: "223311", "223310")
+
+        Returns:
+            JSON dict 또는 None
+
+        Example:
+            >>> drf.search_admin_appeals("223311")
+            {"PrecService": {"사건명": "...", ...}}
+        """
+        _init_cache()
+
+        # ID 기반 캐시 키
+        cache_key = f"drf:v2:decc:{hashlib.md5(doc_id.encode('utf-8')).hexdigest()}"
+
+        try:
+            cached_data = _cache_get(cache_key)
+            if cached_data and cached_data.get("data"):
+                logger.info(f"🎯 [Cache HIT] target=decc, ID={doc_id}")
+                return cached_data["data"]
+        except Exception as e:
+            logger.warning(f"⚠️ [Cache] 조회 실패: {e}")
+
+        logger.info(f"🔍 [Cache MISS] target=decc, ID={doc_id}")
+
+        # lawService.do ID 기반 호출
+        try:
+            result = self._call_law_service_by_id(target="decc", doc_id=doc_id)
+            if result is not None:
+                logger.info(f"[lawService] SUCCESS (target=decc, ID={doc_id})")
+                try:
+                    _cache_set(
+                        cache_key,
+                        {"data": result, "doc_id": doc_id, "target": "decc"},
+                        ttl_seconds=3600
+                    )
+                    logger.info(f"💾 [Cache SET] {cache_key[:24]}... (TTL: 1h)")
+                except Exception as e:
+                    logger.warning(f"⚠️ [Cache] 저장 실패: {e}")
+                return result
+        except Exception as e:
+            logger.warning(f"[lawService] decc failed for ID={doc_id}: {str(e)}")
+
+        logger.error(f"[lawService] Failed for target=decc, ID={doc_id}")
+        return None
+
+    def search_treaty(self, doc_id: str) -> Optional[Any]:
+        """
+        조약 검색 (SSOT #9) - ID 기반 조회
+
+        ⚠️ 주의: 키워드 검색 미지원, 정확한 조약 ID 필요
+
+        Args:
+            doc_id: 조약 ID (예: "983", "2120", "1000")
+
+        Returns:
+            JSON dict 또는 None
+
+        Example:
+            >>> drf.search_treaty("983")
+            {"BothTrtyService": {"조약한글명": "...", ...}}
+        """
+        _init_cache()
+
+        # ID 기반 캐시 키
+        cache_key = f"drf:v2:trty:{hashlib.md5(doc_id.encode('utf-8')).hexdigest()}"
+
+        try:
+            cached_data = _cache_get(cache_key)
+            if cached_data and cached_data.get("data"):
+                logger.info(f"🎯 [Cache HIT] target=trty, ID={doc_id}")
+                return cached_data["data"]
+        except Exception as e:
+            logger.warning(f"⚠️ [Cache] 조회 실패: {e}")
+
+        logger.info(f"🔍 [Cache MISS] target=trty, ID={doc_id}")
+
+        # lawService.do ID 기반 호출
+        try:
+            result = self._call_law_service_by_id(target="trty", doc_id=doc_id)
+            if result is not None:
+                logger.info(f"[lawService] SUCCESS (target=trty, ID={doc_id})")
+                try:
+                    _cache_set(
+                        cache_key,
+                        {"data": result, "doc_id": doc_id, "target": "trty"},
+                        ttl_seconds=3600
+                    )
+                    logger.info(f"💾 [Cache SET] {cache_key[:24]}... (TTL: 1h)")
+                except Exception as e:
+                    logger.warning(f"⚠️ [Cache] 저장 실패: {e}")
+                return result
+        except Exception as e:
+            logger.warning(f"[lawService] trty failed for ID={doc_id}: {str(e)}")
+
+        logger.error(f"[lawService] Failed for target=trty, ID={doc_id}")
         return None

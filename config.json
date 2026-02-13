@@ -247,17 +247,23 @@
     },
     "SSOT_08": {
       "name": "행정심판례",
-      "target": "adprec",
-      "endpoint": "lawSearch.do",
-      "enabled": false,
-      "note": "DRF API 미지원 확인 (2026-02-13)"
+      "target": "decc",
+      "endpoint": "lawService.do",
+      "enabled": true,
+      "access_type": "ID_ONLY",
+      "response_key": "PrecService",
+      "note": "⚠️ 키워드 검색 미지원, ID 파라미터 필수 (예: ID=223311)",
+      "sample_ids": ["223311", "223310", "223312"]
     },
     "SSOT_09": {
       "name": "조약",
       "target": "trty",
       "endpoint": "lawService.do",
-      "enabled": false,
-      "note": "lawService.do target=trty 작동하나 데이터 없음 (2026-02-13) - 추가 파라미터 조사 필요"
+      "enabled": true,
+      "access_type": "ID_ONLY",
+      "response_key": "BothTrtyService/MultTrtyService",
+      "note": "⚠️ 키워드 검색 미지원, ID 파라미터 필수 (예: ID=983, ID=2120)",
+      "sample_ids": ["983", "2120", "1000", "2000"]
     },
     "SSOT_10": {
       "name": "법령용어",
