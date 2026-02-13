@@ -202,8 +202,8 @@
       "target": "admrul",
       "endpoint": "lawSearch.do",
       "enabled": true,
-      "response_key": "LawSearch",
-      "items_key": "law"
+      "response_key": "AdmRulSearch",
+      "items_key": "admrul"
     },
     "SSOT_05": {
       "name": "판례",
@@ -227,8 +227,8 @@
       "target": "expc",
       "endpoint": "lawSearch.do",
       "enabled": true,
-      "response_key": "LawSearch",
-      "items_key": "law"
+      "response_key": "Expc",
+      "items_key": "expc"
     },
     "SSOT_03": {
       "name": "학칙공단",
@@ -268,9 +268,10 @@
     "SSOT_10": {
       "name": "법령용어",
       "target": "lstrm",
-      "endpoint": "lawService.do",
+      "endpoint": "lawSearch.do",
       "enabled": true,
-      "response_key": "LsTrmService",
+      "response_key": "LsTrmSearch",
+      "items_key": "lstrm",
       "fields": ["법령용어명_한글", "법령용어명_한자", "법령용어정의", "법령용어코드", "출처"]
     }
   }
