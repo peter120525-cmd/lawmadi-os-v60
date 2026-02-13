@@ -26,6 +26,7 @@ def _init_cache():
             _cache_set = lambda k, v, t: None
 
 _DEFAULT_DRF_URL = "https://www.law.go.kr/DRF/lawSearch.do"
+_LAW_SERVICE_URL = "http://www.law.go.kr/DRF/lawService.do"
 
 
 class DRFConnector:
@@ -177,3 +178,85 @@ class DRFConnector:
     def law_search(self, query: str) -> Optional[Any]:
         """기존 메서드 유지 (target=law 기본값, 하위 호환성)"""
         return self.search_by_target(query, target="law")
+
+    # -------------------------------------------------
+    # lawService.do 호출 (법령용어, 조약 등)
+    # -------------------------------------------------
+    def _call_law_service(self, query, target):
+        """
+        lawService.do API 호출
+
+        Args:
+            query: 검색어
+            target: lawService target (lstrm, trty, etc.)
+        """
+        if not self.drf_key:
+            raise RuntimeError("DRF not available")
+
+        params = {
+            "OC": self.drf_key,
+            "target": target,
+            "type": "JSON",
+            "query": query
+        }
+
+        r = requests.get(_LAW_SERVICE_URL, params=params, timeout=self.timeout_sec)
+
+        if r.status_code != 200:
+            raise RuntimeError(f"lawService HTTP {r.status_code}")
+
+        content_type = r.headers.get("Content-Type", "")
+        if "json" not in content_type.lower():
+            raise RuntimeError(f"lawService unexpected Content-Type: {content_type}")
+
+        # JSON 파싱
+        try:
+            return r.json()
+        except Exception as e:
+            raise RuntimeError(f"lawService JSON parse error: {e}")
+
+    def search_legal_term(self, query: str) -> Optional[Any]:
+        """
+        법령용어 검색 (SSOT #10)
+
+        Args:
+            query: 검색어
+
+        Returns:
+            JSON dict 또는 None
+        """
+        _init_cache()
+
+        # 법령용어 전용 캐시 키
+        cache_key = f"drf:v2:lstrm:{hashlib.md5(query.encode('utf-8')).hexdigest()}"
+
+        try:
+            cached_data = _cache_get(cache_key)
+            if cached_data and cached_data.get("data"):
+                logger.info(f"🎯 [Cache HIT] target=lstrm, query={query[:30]}")
+                return cached_data["data"]
+        except Exception as e:
+            logger.warning(f"⚠️ [Cache] 조회 실패: {e}")
+
+        logger.info(f"🔍 [Cache MISS] target=lstrm, query={query[:30]}")
+
+        # lawService.do 호출 (재시도 없음, 단일 엔드포인트)
+        try:
+            result = self._call_law_service(query, target="lstrm")
+            if result is not None:
+                logger.info(f"[lawService] SUCCESS (target=lstrm)")
+                try:
+                    _cache_set(
+                        cache_key,
+                        {"data": result, "query": query[:200], "target": "lstrm"},
+                        ttl_seconds=3600
+                    )
+                    logger.info(f"💾 [Cache SET] {cache_key[:24]}... (TTL: 1h)")
+                except Exception as e:
+                    logger.warning(f"⚠️ [Cache] 저장 실패: {e}")
+                return result
+        except Exception as e:
+            logger.warning(f"[lawService] lstrm failed: {str(e)}")
+
+        logger.error(f"[lawService] Failed for target=lstrm")
+        return None

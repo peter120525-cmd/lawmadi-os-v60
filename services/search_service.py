@@ -117,3 +117,14 @@ class SearchService:
         except Exception as e:
             logger.warning(f"⚠️ search_ordinance failed: {e}")
             return None
+
+    def search_legal_term(self, query: str) -> Optional[Any]:
+        """법령용어 검색 (SSOT #10)"""
+        if not self.ready or not self.drf:
+            logger.warning("⚠️ SearchService not ready (legal_term)")
+            return None
+        try:
+            return self.drf.search_legal_term(query)
+        except Exception as e:
+            logger.warning(f"⚠️ search_legal_term failed: {e}")
+            return None
