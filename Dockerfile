@@ -17,7 +17,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 5. Lawmadi OS v60.0.0 소스 코드 및 설정 파일 복사
-# (사장님의 폴더 구조를 유지합니다)
 COPY core/ ./core/
 COPY connectors/ ./connectors/
 COPY main.py .
@@ -28,7 +27,11 @@ COPY engines/ ./engines/
 COPY services/ ./services/
 COPY prompts/ ./prompts/
 COPY frontend/ ./frontend/
+COPY static/ ./static/
 
-# 6. 포트 설정 및 실행
+# 6. 업로드 폴더 생성 (v60)
+RUN mkdir -p uploads
+
+# 7. 포트 설정 및 실행
 EXPOSE 8080
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
