@@ -82,7 +82,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("LawmadiOS.Kernel")
 
 # [감사 #3.6] 버전 단일 소스
-OS_VERSION = "v50.3.0-FINAL"
+OS_VERSION = "v60.0.0"
 
 app = FastAPI(title="Lawmadi OS", version=OS_VERSION)
 
@@ -1192,7 +1192,7 @@ async def serve_homepage():
     frontend_path = os.path.join(os.path.dirname(__file__), "frontend", "index.html")
     if os.path.exists(frontend_path):
         return FileResponse(frontend_path)
-    return {"message": "Lawmadi OS v50 API", "version": OS_VERSION, "frontend": "https://lawmadi-db.web.app"}
+    return {"message": "Lawmadi OS v60 API", "version": OS_VERSION, "frontend": "https://lawmadi-db.web.app"}
 
 # =============================================================
 # ✅ health

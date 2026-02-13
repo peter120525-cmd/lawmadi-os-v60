@@ -12,7 +12,7 @@ from .db_client import (
 )
 
 # ⚠️ SYNC: main.py:85의 OS_VERSION과 동기화 필요
-_ENV_VERSION = "v50.3.0-FINAL"
+_ENV_VERSION = "v60.0.0"
 
 
 def execute(query: str, params=None, fetch="all"):
