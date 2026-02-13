@@ -1182,17 +1182,27 @@ async def startup():
 # 🏠 Frontend Serving (Homepage)
 # =============================================================
 
-# Static files (CSS, JS, images) - must be before root route
-if os.path.exists("frontend"):
-    app.mount("/static", StaticFiles(directory="frontend"), name="static")
+# Static files (v60 structure) - must be before root route
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+if os.path.exists("frontend/public"):
+    app.mount("/frontend", StaticFiles(directory="frontend/public"), name="frontend")
 
 @app.get("/")
 async def serve_homepage():
     """Root route - serve homepage"""
-    frontend_path = os.path.join(os.path.dirname(__file__), "frontend", "index.html")
+    frontend_path = os.path.join(os.path.dirname(__file__), "frontend", "public", "index.html")
     if os.path.exists(frontend_path):
         return FileResponse(frontend_path)
     return {"message": "Lawmadi OS v60 API", "version": OS_VERSION, "frontend": "https://lawmadi-db.web.app"}
+
+@app.get("/leaders")
+async def serve_leaders():
+    """60 Leaders page"""
+    leaders_path = os.path.join(os.path.dirname(__file__), "frontend", "public", "leaders.html")
+    if os.path.exists(leaders_path):
+        return FileResponse(leaders_path)
+    return {"message": "Leaders page not found", "version": OS_VERSION}
 
 # =============================================================
 # ✅ health
