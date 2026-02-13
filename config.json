@@ -1,8 +1,8 @@
 {
   "system_metadata": {
-    "os_version": "v50.2.4-HARDENED",
+    "os_version": "v50.3.0-FINAL",
     "organization": "Lawmadi Legion (63 Personas)",
-    "last_updated": "2026-02-04"
+    "last_updated": "2026-02-13"
   },
   "required_env_vars": [
     "LAWGO_DRF_OC",
@@ -186,6 +186,85 @@
     "fallback": {
       "type": "OPEN_DATA_GO_KR",
       "base_url": "https://apis.data.go.kr/1170000/LawService"
+    }
+  },
+  "ssot_registry": {
+    "SSOT_01": {
+      "name": "현행법령",
+      "target": "law",
+      "endpoint": "lawSearch.do",
+      "enabled": true,
+      "response_key": "LawSearch",
+      "items_key": "law"
+    },
+    "SSOT_02": {
+      "name": "행정규칙",
+      "target": "admrul",
+      "endpoint": "lawSearch.do",
+      "enabled": true,
+      "response_key": "LawSearch",
+      "items_key": "law"
+    },
+    "SSOT_05": {
+      "name": "판례",
+      "target": "prec",
+      "endpoint": "lawSearch.do",
+      "enabled": true,
+      "response_key": "PrecSearch",
+      "items_key": "prec"
+    },
+    "SSOT_06": {
+      "name": "헌재결정례",
+      "target": "prec",
+      "endpoint": "lawSearch.do",
+      "enabled": true,
+      "filter_keyword": "헌법재판소",
+      "response_key": "PrecSearch",
+      "items_key": "prec"
+    },
+    "SSOT_07": {
+      "name": "법령해석례",
+      "target": "expc",
+      "endpoint": "lawSearch.do",
+      "enabled": true,
+      "response_key": "LawSearch",
+      "items_key": "law"
+    },
+    "SSOT_03": {
+      "name": "학칙공단",
+      "target": "edulaw",
+      "endpoint": "lawSearch.do",
+      "enabled": false,
+      "note": "DRF API 미지원 확인 (2026-02-13)"
+    },
+    "SSOT_04": {
+      "name": "자치법규",
+      "target": "ordin",
+      "endpoint": "lawSearch.do",
+      "enabled": true,
+      "response_key": "OrdinSearch",
+      "items_key": "law"
+    },
+    "SSOT_08": {
+      "name": "행정심판례",
+      "target": "adprec",
+      "endpoint": "lawSearch.do",
+      "enabled": false,
+      "note": "DRF API 미지원 확인 (2026-02-13)"
+    },
+    "SSOT_09": {
+      "name": "조약",
+      "target": "treaty",
+      "endpoint": "lawSearch.do",
+      "enabled": false,
+      "note": "DRF API 미지원 확인 (2026-02-13)"
+    },
+    "SSOT_10": {
+      "name": "법령용어",
+      "target": "lword",
+      "endpoint": "lawService.do",
+      "enabled": false,
+      "note": "DRF API 미지원 확인 (2026-02-13) - lawService 404, lword 빈응답. 외부 API 또는 스크래핑 필요"
     }
   }
 }

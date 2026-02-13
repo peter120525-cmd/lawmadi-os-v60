@@ -4,7 +4,7 @@ import requests
 import xml.etree.ElementTree as ET
 import logging
 import hashlib
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
 
@@ -57,15 +57,21 @@ class DRFConnector:
     # -------------------------------------------------
     # DRF 호출
     # -------------------------------------------------
-    def _call_drf(self, query):
+    def _call_drf(self, query, target="law"):
+        """
+        DRF API 호출 (target 파라미터 지원)
 
+        Args:
+            query: 검색어
+            target: DRF target (law, prec, admrul, expc, adrule, edulaw, etc.)
+        """
         if not self.drf_key or not self.drf_url:
             raise RuntimeError("DRF not available")
 
         params = {
             "OC": self.drf_key,
-            "target": "law",
-            "type": "XML",
+            "target": target,  # 동적 target
+            "type": "JSON",  # DRF는 JSON 형식 사용
             "query": query
         }
 
@@ -75,12 +81,14 @@ class DRFConnector:
             raise RuntimeError(f"DRF HTTP {r.status_code}")
 
         content_type = r.headers.get("Content-Type", "")
-        if "xml" not in content_type and "json" not in content_type:
+        if "json" not in content_type.lower():
             raise RuntimeError(f"DRF unexpected Content-Type: {content_type}")
 
-        validate_drf_xml(r.text)
-
-        return ET.fromstring(r.text)
+        # JSON 파싱
+        try:
+            return r.json()
+        except Exception as e:
+            raise RuntimeError(f"DRF JSON parse error: {e}")
 
     # -------------------------------------------------
     # data.go.kr 호출
@@ -110,62 +118,62 @@ class DRFConnector:
         return ET.fromstring(r.text)
 
     # -------------------------------------------------
-    # 🔥 교차 재시도 Dual SSOT (+ 캐싱)
+    # 🔥 교차 재시도 Dual SSOT (+ 캐싱) - Target별 독립 검색
     # -------------------------------------------------
-    def law_search(self, query):
-        # 캐싱 초기화 (최초 1회)
+    def search_by_target(self, query: str, target: str = "law") -> Optional[Any]:
+        """
+        특정 target으로 DRF 검색 (캐싱 포함)
+
+        Args:
+            query: 검색어
+            target: DRF target 값
+
+        Returns:
+            JSON dict 또는 None
+        """
         _init_cache()
 
-        # 1) 캐시 조회 (query 기반 MD5 해시)
-        cache_key = f"drf:v2:{hashlib.md5(query.encode('utf-8')).hexdigest()}"
+        # Target별 독립 캐시 키
+        cache_key = f"drf:v2:{target}:{hashlib.md5(query.encode('utf-8')).hexdigest()}"
 
         try:
             cached_data = _cache_get(cache_key)
-            if cached_data and cached_data.get("xml_text"):
-                logger.info(f"🎯 [Cache HIT] {query[:50]}...")
-                # 캐시된 XML 텍스트를 ElementTree로 파싱
-                return ET.fromstring(cached_data["xml_text"])
+            if cached_data and cached_data.get("data"):
+                logger.info(f"🎯 [Cache HIT] target={target}, query={query[:30]}")
+                return cached_data["data"]
         except Exception as e:
             logger.warning(f"⚠️ [Cache] 조회 실패: {e}")
 
-        # 2) 캐시 미스 - API 호출 (기존 Dual SSOT 로직)
-        logger.info(f"🔍 [Cache MISS] {query[:50]}... (API 호출)")
+        logger.info(f"🔍 [Cache MISS] target={target}, query={query[:30]}")
 
+        # Dual SSOT 재시도 로직
         attempts = [
-            ("DRF-1", self._call_drf),
-            ("DATA-1", self._call_data_go),
-            ("DRF-2", self._call_drf),
-            ("DATA-2", self._call_data_go),
+            ("DRF-1", lambda q: self._call_drf(q, target=target)),
+            ("DATA-1", self._call_data_go),  # fallback (target 미지원일 수 있음)
+            ("DRF-2", lambda q: self._call_drf(q, target=target)),
         ]
 
         for label, fn in attempts:
             try:
-                logger.info(f"[DualSSOT] Attempt {label}")
                 result = fn(query)
-
                 if result is not None:
-                    logger.info(f"[DualSSOT] SUCCESS via {label}")
-
-                    # 3) 캐시 저장 (XML 텍스트로 변환하여 저장)
+                    logger.info(f"[DualSSOT] SUCCESS via {label} (target={target})")
                     try:
-                        xml_text = ET.tostring(result, encoding='unicode')
                         _cache_set(
                             cache_key,
-                            {
-                                "xml_text": xml_text,
-                                "query": query[:200],  # 디버깅용
-                                "source": label
-                            },
-                            ttl_seconds=3600  # 1시간 캐시
+                            {"data": result, "query": query[:200], "target": target},
+                            ttl_seconds=3600
                         )
-                        logger.info(f"💾 [Cache SET] {cache_key[:16]}... (TTL: 1h)")
+                        logger.info(f"💾 [Cache SET] {cache_key[:24]}... (TTL: 1h)")
                     except Exception as e:
                         logger.warning(f"⚠️ [Cache] 저장 실패: {e}")
-
                     return result
-
             except Exception as e:
                 logger.warning(f"[DualSSOT] {label} failed: {str(e)}")
 
-        logger.error("[DualSSOT] All attempts failed. Returning None.")
+        logger.error(f"[DualSSOT] All attempts failed for target={target}")
         return None
+
+    def law_search(self, query: str) -> Optional[Any]:
+        """기존 메서드 유지 (target=law 기본값, 하위 호환성)"""
+        return self.search_by_target(query, target="law")

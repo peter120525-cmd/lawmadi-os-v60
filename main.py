@@ -415,6 +415,89 @@ def search_precedents_drf(query: str) -> Dict[str, Any]:
         logger.error(f"🛠️ 판례 검색 실패: {e}")
         return {"result": "ERROR", "message": str(e)}
 
+def search_admrul_drf(query: str) -> Dict[str, Any]:
+    """행정규칙 검색 - DRF를 통해 훈령·예규·고시·지침 검색 (SSOT #2)"""
+    logger.info(f"🛠️ [L3 Strike] 행정규칙 검색 호출: '{query}'")
+    try:
+        svc = RUNTIME.get("search_service")
+        if not svc:
+            return {"result": "ERROR", "message": "SearchService 미초기화."}
+
+        raw = svc.search_admrul(query)
+        if not raw:
+            return {"result": "NO_DATA", "message": "해당 키워드와 일치하는 행정규칙이 없습니다."}
+
+        return {"result": "FOUND", "content": raw, "source": "국가법령정보센터(행정규칙)"}
+    except Exception as e:
+        logger.error(f"🛠️ 행정규칙 검색 실패: {e}")
+        return {"result": "ERROR", "message": str(e)}
+
+def search_expc_drf(query: str) -> Dict[str, Any]:
+    """법령해석례 검색 - 법제처 법령 해석 검색 (SSOT #7)"""
+    logger.info(f"🛠️ [L3 Strike] 법령해석례 검색 호출: '{query}'")
+    try:
+        svc = RUNTIME.get("search_service")
+        if not svc:
+            return {"result": "ERROR", "message": "SearchService 미초기화."}
+
+        raw = svc.search_expc(query)
+        if not raw:
+            return {"result": "NO_DATA", "message": "해당 키워드와 일치하는 법령해석례가 없습니다."}
+
+        return {"result": "FOUND", "content": raw, "source": "국가법령정보센터(법령해석례)"}
+    except Exception as e:
+        logger.error(f"🛠️ 법령해석례 검색 실패: {e}")
+        return {"result": "ERROR", "message": str(e)}
+
+def search_constitutional_drf(query: str) -> Dict[str, Any]:
+    """헌재결정례 검색 - 헌법재판소 결정례 검색 (SSOT #6)"""
+    logger.info(f"🛠️ [L3 Strike] 헌재결정례 검색 호출: '{query}'")
+    try:
+        svc = RUNTIME.get("search_service")
+        if not svc:
+            return {"result": "ERROR", "message": "SearchService 미초기화."}
+
+        raw = svc.search_constitutional(query)
+        if not raw:
+            return {"result": "NO_DATA", "message": "해당 키워드와 일치하는 헌재결정례가 없습니다."}
+
+        # 판례와 동일한 포맷으로 정리
+        items = _extract_best_dict_list(raw)
+        if not items:
+            return {"result": "NO_DATA", "message": "헌재결정례를 찾을 수 없습니다."}
+
+        summary_list = []
+        for it in items[:3]:
+            title = it.get("사건명", "제목 없음")
+            case_no = it.get("사건번호", "번호 없음")
+            content_keys = ["판시사항", "결정요지", "이유"]
+            texts = _collect_texts_by_keys(it, content_keys)
+            summary = "\n".join(_dedup_keep_order(texts))[:1000]
+            summary_list.append(f"【사건명: {title} ({case_no})】\n{summary}")
+
+        combined_content = "\n\n".join(summary_list)
+        return {"result": "FOUND", "content": combined_content, "source": "국가법령정보센터(헌재결정례)"}
+    except Exception as e:
+        logger.error(f"🛠️ 헌재결정례 검색 실패: {e}")
+        return {"result": "ERROR", "message": str(e)}
+
+def search_ordinance_drf(query: str) -> Dict[str, Any]:
+    """자치법규 검색 - 지방자치단체 조례·규칙 검색 (SSOT #4)"""
+    logger.info(f"🛠️ [L3 Strike] 자치법규 검색 호출: '{query}'")
+    try:
+        svc = RUNTIME.get("search_service")
+        if not svc:
+            return {"result": "ERROR", "message": "SearchService 미초기화."}
+
+        raw = svc.search_ordinance(query)
+        if not raw:
+            return {"result": "NO_DATA", "message": "해당 키워드와 일치하는 자치법규가 없습니다."}
+
+        return {"result": "FOUND", "content": raw, "source": "국가법령정보센터(자치법규)"}
+    except Exception as e:
+        logger.error(f"🛠️ 자치법규 검색 실패: {e}")
+        return {"result": "ERROR", "message": str(e)}
+
 # =============================================================
 # 📜 [L0 CONSTITUTION] 표준 응답 규격 및 절대 원칙
 # =============================================================
@@ -1123,7 +1206,14 @@ async def ask(req: Request):
         # -------------------------------------------------
         tools = []
         if ssot_available:
-            tools = [search_law_drf, search_precedents_drf]
+            tools = [
+                search_law_drf,           # SSOT #1: 현행법령
+                search_precedents_drf,    # SSOT #5: 판례
+                search_admrul_drf,        # SSOT #2: 행정규칙
+                search_expc_drf,          # SSOT #7: 법령해석례
+                search_constitutional_drf,# SSOT #6: 헌재결정례
+                search_ordinance_drf      # SSOT #4: 자치법규
+            ]
 
         now_kst = _now_iso()
         model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-preview-09-2025")
