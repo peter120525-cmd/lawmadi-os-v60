@@ -63,7 +63,7 @@ jobs:
             --timeout=300 \
             --concurrency=80 \
             --max-instances=10 \
-            --set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest,LAWGO_DRF_OC=LAWGO_DRF_OC:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,DATABASE_URL=DATABASE_URL:latest"
+            --set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest,LAWGO_DRF_OC=LAWGO_DRF_OC:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,CLOUD_SQL_INSTANCE=CLOUD_SQL_INSTANCE:latest"
 
       - name: Get Cloud Run URL
         id: deploy
