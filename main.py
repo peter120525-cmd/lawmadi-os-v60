@@ -82,7 +82,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("LawmadiOS.Kernel")
 
 # [감사 #3.6] 버전 단일 소스
-OS_VERSION = "v50.2.4-HARDENED"
+OS_VERSION = "v50.3.0-FINAL"
 
 app = FastAPI(title="Lawmadi OS", version=OS_VERSION)
 
@@ -158,7 +158,10 @@ def _get_client_ip(request: Request) -> str:
     return "unknown"
 
 def _now_iso() -> str:
-    return datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    """한국 시간(KST, UTC+9) 기준 ISO 형식 반환"""
+    utc_now = datetime.datetime.utcnow()
+    kst_now = utc_now + datetime.timedelta(hours=9)
+    return kst_now.replace(microsecond=0).isoformat() + "+09:00"
 
 def _trace_id() -> str:
     """[ULTRA] 요청별 고유 추적 ID"""
@@ -255,6 +258,84 @@ def _dedup_keep_order(texts: List[str]) -> List[str]:
 # 🛡️ [L6 GOVERNANCE] 헌법 준수 루프 (Constitutional Loop)
 # =============================================================
 
+def _safe_extract_gemini_text(response) -> str:
+    """
+    Gemini 응답에서 안전하게 텍스트 추출
+    빈 응답이나 오류 시 빈 문자열 반환
+    """
+    try:
+        if hasattr(response, 'text') and response.text:
+            return response.text.strip()
+    except Exception as e:
+        logger.warning(f"⚠️ Gemini 응답 추출 실패: {e}")
+
+        # finish_reason 로깅
+        try:
+            if hasattr(response, 'candidates') and response.candidates:
+                finish_reason = response.candidates[0].finish_reason
+                safety_ratings = getattr(response.candidates[0], 'safety_ratings', None)
+                logger.warning(f"finish_reason: {finish_reason}, safety_ratings: {safety_ratings}")
+        except:
+            pass
+
+    return ""
+
+def _remove_markdown_tables(text: str) -> str:
+    """
+    마크다운 표 형식을 글머리 기호 형식으로 변환
+
+    예: | 항목 | 설명 | → • **항목** - 설명
+    """
+    import re
+
+    lines = text.split('\n')
+    result = []
+    in_table = False
+    table_headers = []
+
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+
+        # 표 시작 감지 (| 로 시작하고 | 로 끝남)
+        if line.startswith('|') and line.endswith('|'):
+            # 표 구분선인지 확인 (| :--- | :--- | 형식)
+            if re.match(r'^\|\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|$', line):
+                # 구분선은 건너뜀
+                i += 1
+                in_table = True
+                continue
+
+            # 표 행 파싱
+            cells = [cell.strip() for cell in line.split('|')[1:-1]]  # 양 끝 빈 셀 제거
+
+            if not in_table:
+                # 첫 번째 행 (헤더)
+                table_headers = cells
+                in_table = True
+            else:
+                # 데이터 행 - 글머리 기호로 변환
+                if len(cells) >= 2:
+                    # 첫 번째 셀을 제목, 나머지를 설명으로
+                    title = cells[0].replace('**', '').strip()
+                    description = ' - '.join(cells[1:]).strip()
+                    result.append(f"• **{title}** - {description}")
+                elif len(cells) == 1:
+                    result.append(f"• {cells[0]}")
+        else:
+            # 표가 아닌 일반 텍스트
+            if in_table:
+                # 표 종료 - 빈 줄 추가
+                result.append('')
+                in_table = False
+                table_headers = []
+
+            result.append(lines[i])
+
+        i += 1
+
+    return '\n'.join(result)
+
 def validate_constitutional_compliance(response_text: str) -> bool:
     if not response_text or len(response_text.strip()) < 10:
         return False
@@ -345,8 +426,23 @@ SYSTEM_INSTRUCTION_BASE = f"""
 --- [표준 응답 5단계 구조] ---
 1. 요약 (Quick Insight)
 2. 📚 법률 근거 (Verified Evidence): `search_law_drf` 또는 `search_precedents_drf`로 실시간 검증된 데이터만 표시.
-3. 🕐 시간축 분석 (Timeline Analysis): 사용자 제공 날짜 또는 now_utc만 사용. 불명확하면 "시간 정보 부족으로 생략".
-4. 절차 안내 (Action Plan)
+3. 🕐 시간축 분석 (Timeline Analysis): 사용자 제공 날짜 또는 now_kst(한국시간)만 사용. 불명확하면 "시간 정보 부족으로 생략".
+4. 📋 절차 안내 (Action Plan) - 아래 형식 필수 준수:
+
+**[각 단계마다 반드시 포함]**
+• ✅ **구체적 행동** - 무엇을 해야 하는가
+• 💡 **대응 전략** - 어떻게 하면 유리한가
+• ⚠️ **주의사항** - 이것만은 피하세요
+• 📋 **필요 서류** - 준비해야 할 문서
+• 💰 **예상 비용** - 인지대, 수수료 등
+• ⏱️ **예상 기간** - 소요 시간
+
+**[분기 시나리오 표시]**
+각 단계 후 예상되는 상황별 대응:
+• ✅ 긍정적 결과 시 → 다음 단계
+• ❌ 부정적 결과 시 → 대안 경로
+• ⚠️ 무응답/거부 시 → 강제 절차
+
 5. 🔍 참고 정보 (Additional Context)
 
 --- [6대 절대 원칙] ---
@@ -354,7 +450,42 @@ SYSTEM_INSTRUCTION_BASE = f"""
 2. ZERO_INFERENCE
 3. FAIL_CLOSED
 4. IDENTITY: 변호사 아님
-5. TIMELINE_RULE: now_utc 외 임의 날짜 금지
+5. TIMELINE_RULE: now_kst(한국시간) 외 임의 날짜 금지
+
+--- [포맷팅 절대 규칙 - CRITICAL] ---
+🚨 **CRITICAL RULE**: 마크다운 표(table) 형식 사용 절대 금지 (NEVER USE TABLES)
+
+**❌ 절대 사용 금지 형식**:
+```
+| 구분 | 내용 |           ← 이런 형식 절대 사용 금지!
+| :--- | :--- |          ← 이런 형식 절대 사용 금지!
+| 항목 | 설명 |           ← 이런 형식 절대 사용 금지!
+```
+
+**✅ 반드시 사용해야 할 형식**:
+```
+**[섹션 제목]**
+
+• **항목 1** - 설명 내용
+• **항목 2** - 설명 내용
+• **항목 3** - 설명 내용
+
+또는
+
+1. **첫 번째** - 설명
+2. **두 번째** - 설명
+3. **세 번째** - 설명
+```
+
+**올바른 예시**:
+**[불법행위 성립 요건]**
+• **가해행위** - 타인에게 손해를 가한 작위 또는 부작위
+• **손해 발생** - 재산적 또는 정신적 손해의 현실적 발생
+• **인과관계** - 가해행위와 손해 발생 간의 상당인과관계
+• **위법성** - 법질서 전체 관점에서 허용되지 않는 행위
+• **고의·과실** - 가해자의 주관적 귀책사유
+
+절대로 파이프(|) 기호를 사용한 표 형식을 만들지 마세요!
 """
 
 # =============================================================
@@ -994,7 +1125,7 @@ async def ask(req: Request):
         if ssot_available:
             tools = [search_law_drf, search_precedents_drf]
 
-        now_utc = _now_iso()
+        now_kst = _now_iso()
         model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-preview-09-2025")
 
         # -------------------------------------------------
@@ -1016,12 +1147,12 @@ async def ask(req: Request):
 
             chat = model.start_chat(enable_automatic_function_calling=True)
             resp = chat.send_message(
-                f"now_utc={now_utc}\n"
+                f"now_kst={now_kst}\n"
                 f"ssot_available={ssot_available}\n"
                 f"사용자 질문: {query}"
             )
 
-            final_text = (resp.text or "").strip()
+            final_text = _safe_extract_gemini_text(resp)
             leader_name = clevel.executives.get(exec_id, {}).get("name", exec_id)
             swarm_mode = False
 
@@ -1079,12 +1210,12 @@ async def ask(req: Request):
                 chat = model.start_chat(enable_automatic_function_calling=True)
 
                 resp = chat.send_message(
-                    f"now_utc={now_utc}\n"
+                    f"now_kst={now_kst}\n"
                     f"ssot_available={ssot_available}\n"
                     f"사용자 질문: {query}"
                 )
 
-                final_text = (resp.text or "").strip()
+                final_text = _safe_extract_gemini_text(resp)
 
         # -------------------------------------------------
         # 5) Governance 검증
@@ -1152,9 +1283,12 @@ async def ask(req: Request):
         except Exception as log_error:
             logger.warning(f"⚠️ [ChatHistory] 저장 실패 (무시): {log_error}")
 
+        # 표 제거 후처리
+        final_text_clean = _remove_markdown_tables(final_text)
+
         return {
             "trace_id": trace,
-            "response": final_text,
+            "response": final_text_clean,
             "leader": leader_name,
             "status": "SUCCESS",
             "latency_ms": latency_ms,
