@@ -1,0 +1,2500 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Lawmadi OS - 불안을 행동으로 바꾸는 법률 의사결정 지원 시스템</title>
+    <meta name="description" content="법률 문제로 인한 불안, 60명의 전문 리더가 협업하여 구체적인 행동 계획으로 바꿔드립니다.">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #eff6ff;
+            --accent-gold: #f59e0b;
+            --success: #10b981;
+            --sidebar-bg: #0f172a;
+            --surface: #ffffff;
+            --bg: #f8fafc;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --sidebar-width: 280px;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Pretendard', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            height: 100dvh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .layout-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            z-index: 1000;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 4px 0 24px rgba(0,0,0,0.12);
+        }
+
+        .brand {
+            padding: 28px 24px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.02);
+        }
+
+        .brand .icon {
+            color: var(--primary);
+            font-size: 28px;
+            filter: drop-shadow(0 0 8px rgba(37, 99, 235, 0.6));
+        }
+
+        .brand .text {
+            font-weight: 900;
+            font-size: 1.25rem;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .menu {
+            flex: 1;
+            padding: 20px 16px;
+            overflow-y: auto;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            color: #94a3b8;
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .menu-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 3px;
+            height: 100%;
+            background: var(--primary);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .menu-item:hover {
+            background: rgba(255,255,255,0.08);
+            color: white;
+            transform: translateX(4px);
+        }
+
+        .menu-item.active {
+            background: rgba(37, 99, 235, 0.15);
+            color: white;
+        }
+
+        .menu-item.active::before {
+            transform: scaleY(1);
+        }
+
+        /* Main Canvas */
+        .main-canvas {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+            min-width: 0;
+            height: 100%;
+        }
+
+        header.top-status {
+            flex: 0 0 auto;
+            height: 72px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 28px;
+            z-index: 900;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .badge-base {
+            font-size: 0.9rem;
+            font-weight: 700;
+            padding: 8px 16px;
+            border-radius: 30px;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .system-badge {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            color: #065f46;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+        }
+
+        /* Content Area */
+        .content-viewport {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            padding: 20px;
+            scroll-behavior: smooth;
+        }
+
+        /* ✨ Hero Section - PREMIUM */
+        .hero-section {
+            max-width: 1100px;
+            margin: 60px auto;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            color: var(--primary);
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .hero-title {
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 900;
+            line-height: 1.15;
+            letter-spacing: -0.03em;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+            line-height: 1.7;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            animation: fadeInUp 0.8s ease-out 0.4s both;
+        }
+
+        /* Feature Badges */
+        .hero-features {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin: 3rem 0;
+            animation: fadeInUp 0.8s ease-out 0.6s both;
+        }
+
+        .feature-badge {
+            background: white;
+            border: 2px solid var(--border);
+            padding: 12px 24px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-main);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .feature-badge:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.15);
+            border-color: var(--primary);
+        }
+
+        .feature-badge .icon {
+            font-size: 1.4rem;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            margin: 3rem 0;
+            animation: scaleIn 0.8s ease-out 0.8s both;
+        }
+
+        .cta-primary {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            padding: 20px 48px;
+            border-radius: 16px;
+            font-size: 1.2rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-primary::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.5s, height 0.5s;
+        }
+
+        .cta-primary:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .cta-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 28px rgba(37, 99, 235, 0.45);
+        }
+
+        .cta-primary:active {
+            transform: translateY(-1px);
+        }
+
+        .cta-subtext {
+            margin-top: 16px;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        /* Example Questions */
+        .example-questions {
+            max-width: 900px;
+            margin: 5rem auto;
+            text-align: center;
+        }
+
+        .example-questions h3 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin-bottom: 2rem;
+            color: var(--text-main);
+        }
+
+        .example-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .example-btn {
+            background: white;
+            border: 2px solid var(--border);
+            padding: 20px 24px;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: left;
+            font-size: 1rem;
+            color: var(--text-main);
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .example-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .example-btn:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.12);
+        }
+
+        .example-btn:hover::before {
+            transform: scaleY(1);
+        }
+
+        /* Core Features Section - PREMIUM */
+        .core-features-section {
+            max-width: 1200px;
+            margin: 6rem auto;
+            padding: 4rem 28px;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 32px;
+            border: 1px solid var(--border);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.08);
+        }
+
+        .core-features-section h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin-bottom: 4rem;
+            background: linear-gradient(135deg, #1e293b 0%, #475569 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .feature-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 32px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            border: 2px solid var(--border);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--accent-gold) 100%);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+            border-color: var(--primary);
+        }
+
+        .feature-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .feature-icon {
+            font-size: 4rem;
+            margin-bottom: 1.5rem;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            color: var(--text-main);
+        }
+
+        .feature-card p {
+            color: var(--text-muted);
+            line-height: 1.7;
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+        }
+
+        .feature-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .feature-card li {
+            padding: 10px 0;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .feature-card li:before {
+            content: "✓";
+            color: var(--success);
+            font-weight: 900;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        /* Trust Section - PREMIUM */
+        .trust-section {
+            max-width: 1100px;
+            margin: 6rem auto;
+            text-align: center;
+            padding: 4rem 28px;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-radius: 32px;
+            border: 2px solid rgba(37, 99, 235, 0.2);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 32px;
+            margin-bottom: 3rem;
+        }
+
+        .stat-item {
+            padding: 24px;
+            background: white;
+            border-radius: 20px;
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .stat-item:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+        }
+
+        .stat-label {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .verification {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            flex-wrap: wrap;
+            margin-top: 3rem;
+        }
+
+        .verification p {
+            color: var(--success);
+            font-weight: 700;
+            margin: 0;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Input Section */
+        .input-pipeline-wrapper {
+            flex: 0 0 auto;
+            padding: 20px;
+            background: white;
+            border-top: 1px solid var(--border);
+        }
+
+        .input-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 24px;
+            padding: 10px 14px 10px 22px;
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+
+        .input-container:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.2);
+        }
+
+        #userInput {
+            flex: 1;
+            border: none;
+            outline: none;
+            background: transparent;
+            padding: 12px 0;
+            font-size: 1.05rem;
+            line-height: 1.6;
+            max-height: 140px;
+            overflow-y: auto;
+            resize: none;
+        }
+
+        .send-action {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .send-action:hover {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, #1e40af 100%);
+            transform: scale(1.08);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+        }
+
+        .send-action:active {
+            transform: scale(0.98);
+        }
+
+        /* Overlay */
+        .overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(8px);
+            z-index: 950;
+        }
+
+        /* Hidden class */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Chat Messages */
+        .conversation-viewport {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            padding: 32px 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+            background: #f9fafb;
+        }
+
+        /* 스크롤바 스타일 */
+        .conversation-viewport::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .conversation-viewport::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .conversation-viewport::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        .conversation-viewport::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* AI 답변 메시지 - Ultra Premium 스타일 */
+        .ai-msg {
+            align-self: flex-start;
+            background: linear-gradient(145deg, #d6e4ff 0%, #d0d9ff 45%, #ddd0ff 100%);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            padding: 44px 40px 36px;
+            border-radius: 20px;
+            max-width: 90%;
+            box-shadow:
+                0 2px 4px rgba(99, 102, 241, 0.06),
+                0 8px 24px rgba(99, 102, 241, 0.10),
+                0 20px 40px rgba(99, 102, 241, 0.07),
+                inset 0 1px 0 rgba(255,255,255,0.9);
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 17px;
+            line-height: 1.85;
+            color: #1e293b;
+            letter-spacing: -0.01em;
+            position: relative;
+            overflow: visible;
+            animation: messageSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            transform-origin: left top;
+            transition: box-shadow 0.3s ease, transform 0.2s ease;
+        }
+
+        /* AI 답변 상단 그라데이션 액센트 바 */
+        .ai-msg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #2563eb 0%, #7c3aed 50%, #2563eb 100%);
+            border-radius: 20px 20px 0 0;
+        }
+
+        /* AI 브랜드 탭 */
+        .ai-msg::after {
+            content: '⚖ Lawmadi AI';
+            position: absolute;
+            top: 4px;
+            left: 24px;
+            font-size: 0.68rem;
+            font-weight: 800;
+            color: white;
+            background: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%);
+            padding: 3px 12px 4px;
+            border-radius: 0 0 8px 8px;
+            letter-spacing: 0.04em;
+            box-shadow: 0 3px 10px rgba(37, 99, 235, 0.4);
+        }
+
+        .ai-msg:hover {
+            box-shadow:
+                0 4px 8px rgba(99, 102, 241, 0.12),
+                0 12px 28px rgba(99, 102, 241, 0.16),
+                0 24px 48px rgba(99, 102, 241, 0.10),
+                inset 0 1px 0 rgba(255,255,255,0.95);
+            transform: translateY(-2px);
+        }
+
+        @keyframes messageSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(16px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* 헤딩 스타일 - Ultra Premium Box */
+        .ai-msg h1, .ai-msg h2, .ai-msg h3 {
+            margin-top: 36px;
+            margin-bottom: 18px;
+            font-weight: 800;
+            line-height: 1.3;
+            letter-spacing: -0.025em;
+            position: relative;
+        }
+
+        /* H1 - 최상위 제목 박스 */
+        .ai-msg h1 {
+            font-size: 1.6rem;
+            color: white;
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #1d4ed8 100%);
+            padding: 18px 28px;
+            border-radius: 14px;
+            margin-left: -40px;
+            margin-right: -40px;
+            box-shadow:
+                0 4px 16px rgba(15, 23, 42, 0.25),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+            animation: slideInLeft 0.4s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .ai-msg h1::before {
+            content: '⚖';
+            font-size: 1.3em;
+            flex-shrink: 0;
+        }
+
+        /* H2 - 섹션 제목 박스 (★ 핵심 업그레이드) */
+        .ai-msg h2 {
+            font-size: 1.1rem;
+            color: white;
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 60%, #4f46e5 100%);
+            padding: 13px 22px;
+            border-radius: 12px;
+            box-shadow:
+                0 4px 14px rgba(37, 99, 235, 0.4),
+                0 1px 3px rgba(37, 99, 235, 0.15),
+                inset 0 1px 0 rgba(255,255,255,0.15),
+                inset 0 -1px 0 rgba(0,0,0,0.1);
+            animation: slideInLeft 0.4s ease;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.15);
+            letter-spacing: -0.01em;
+        }
+
+        .ai-msg h2::before {
+            content: '';
+            width: 3px;
+            height: 18px;
+            background: rgba(255,255,255,0.55);
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        /* H3 - 서브 제목 박스 */
+        .ai-msg h3 {
+            font-size: 1.02rem;
+            color: #1e40af;
+            font-weight: 700;
+            background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+            padding: 10px 18px;
+            border-radius: 10px;
+            border-left: 4px solid #2563eb;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow:
+                0 2px 8px rgba(37, 99, 235, 0.1),
+                inset 0 1px 0 rgba(255,255,255,0.8);
+            margin-left: -4px;
+        }
+
+        .ai-msg h3::before {
+            content: '';
+            width: 7px;
+            height: 7px;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(37, 99, 235, 0.6);
+            flex-shrink: 0;
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .ai-msg h1:first-child,
+        .ai-msg h2:first-child,
+        .ai-msg h3:first-child {
+            margin-top: 4px;
+        }
+
+        /* 문단 스타일 - 배경 대비 최적화 */
+        .ai-msg p {
+            margin: 18px 0;
+            line-height: 1.85;
+            color: #1e293b;
+        }
+
+        .ai-msg p:first-child {
+            margin-top: 0;
+        }
+
+        .ai-msg p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* 리스트 스타일 - Ultra Premium (배경 대비 최적화) */
+        .ai-msg ul, .ai-msg ol {
+            margin: 20px 0;
+            padding-left: 12px;
+        }
+
+        .ai-msg ul {
+            list-style-type: none;
+        }
+
+        .ai-msg ol {
+            list-style-type: none;
+            counter-reset: item;
+        }
+
+        .ai-msg ul li, .ai-msg ol li {
+            margin: 10px 0;
+            padding: 10px 16px 10px 40px;
+            line-height: 1.75;
+            color: #1e293b;
+            position: relative;
+            background: rgba(255,255,255,0.55);
+            border-radius: 10px;
+            border: 1px solid rgba(99, 102, 241, 0.1);
+            transition: all 0.2s ease;
+            backdrop-filter: blur(4px);
+        }
+
+        .ai-msg ul li:hover, .ai-msg ol li:hover {
+            transform: translateX(5px);
+            background: rgba(255,255,255,0.8);
+            border-color: rgba(37, 99, 235, 0.2);
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
+        }
+
+        .ai-msg ul li::before {
+            content: '';
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 8px;
+            height: 8px;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+        }
+
+        .ai-msg ol li::before {
+            counter-increment: item;
+            content: counter(item);
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 22px;
+            height: 22px;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            border-radius: 6px;
+            color: white;
+            font-size: 0.78em;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+        }
+
+        /* 강조 텍스트 - Ultra Premium (배경 대비 강화) */
+        .ai-msg strong, .ai-msg b {
+            font-weight: 800;
+            color: #1e40af;
+            background: linear-gradient(135deg, rgba(219, 234, 254, 0.8) 0%, rgba(199, 210, 254, 0.6) 100%);
+            padding: 2px 7px;
+            border-radius: 5px;
+            border: 1px solid rgba(37, 99, 235, 0.15);
+            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
+        }
+
+        .ai-msg em, .ai-msg i {
+            font-style: italic;
+            color: #6d28d9;
+            position: relative;
+            padding-left: 5px;
+        }
+
+        .ai-msg em::before, .ai-msg i::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 2px;
+            height: 80%;
+            background: linear-gradient(180deg, #7c3aed 0%, #a78bfa 100%);
+            border-radius: 2px;
+        }
+
+        /* 코드 스타일 */
+        .ai-msg code {
+            background: #f3f4f6;
+            color: #e11d48;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.9em;
+            border: 1px solid #e5e7eb;
+        }
+
+        .ai-msg pre {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: #e2e8f0;
+            padding: 20px 24px;
+            border-radius: 12px;
+            overflow-x: auto;
+            margin: 20px 0;
+            border: 1px solid #334155;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        .ai-msg pre::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px 12px 0 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .ai-msg pre code {
+            background: transparent;
+            color: #e2e8f0;
+            padding: 0;
+            border: none;
+            font-size: 0.9em;
+            line-height: 1.6;
+            display: block;
+            padding-top: 32px;
+        }
+
+        /* 링크 스타일 - Premium */
+        .ai-msg a {
+            color: #2563eb;
+            text-decoration: none;
+            border-bottom: 2px solid #bfdbfe;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            font-weight: 500;
+        }
+
+        .ai-msg a::after {
+            content: ' 🔗';
+            font-size: 0.85em;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .ai-msg a:hover {
+            color: #1d4ed8;
+            border-bottom-color: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        .ai-msg a:hover::after {
+            opacity: 1;
+        }
+
+        /* 인용구 스타일 - Ultra Premium (법률 강조 박스) */
+        .ai-msg blockquote {
+            border-left: 5px solid #2563eb;
+            padding: 20px 28px;
+            margin: 24px 0;
+            color: #1e3a8a;
+            font-style: normal;
+            background: linear-gradient(135deg, rgba(255,255,255,0.85) 0%, rgba(219,234,254,0.7) 100%);
+            border-radius: 0 16px 16px 0;
+            box-shadow:
+                0 4px 16px rgba(37, 99, 235, 0.12),
+                inset 0 1px 0 rgba(255,255,255,0.9);
+            position: relative;
+            backdrop-filter: blur(4px);
+        }
+
+        .ai-msg blockquote::before {
+            content: '📌 법률 요점';
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: white;
+            background: linear-gradient(90deg, #2563eb, #7c3aed);
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-style: normal;
+            letter-spacing: 0.02em;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+        }
+
+        /* 구분선 (기본) */
+        .ai-msg hr {
+            border: none;
+            height: 1px;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                #e5e7eb 20%,
+                #cbd5e1 50%,
+                #e5e7eb 80%,
+                transparent 100%
+            );
+            margin: 36px 0;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+
+        /* 표 스타일 - Premium */
+        .ai-msg table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 24px 0;
+            font-size: 0.95em;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+        }
+
+        .ai-msg table th,
+        .ai-msg table td {
+            padding: 14px 18px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .ai-msg table th {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            font-weight: 700;
+            color: #0f172a;
+            border-bottom: 2px solid #2563eb;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 0.05em;
+        }
+
+        .ai-msg table tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .ai-msg table tbody tr:hover {
+            background: #f0f9ff;
+            transform: scale(1.01);
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
+        }
+
+        .ai-msg table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* 사용자 메시지 - Ultra Premium 다크 배경 스타일 */
+        .user-msg {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #7c3aed 100%);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 20px 20px 4px 20px;
+            max-width: 80%;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            line-height: 1.65;
+            box-shadow:
+                0 4px 12px rgba(37, 99, 235, 0.4),
+                0 8px 24px rgba(124, 58, 237, 0.25),
+                0 16px 32px rgba(37, 99, 235, 0.15),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+            letter-spacing: -0.01em;
+            animation: messageSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .user-msg::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 20px 20px 4px 20px;
+            padding: 1px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.25), transparent 60%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+            opacity: 0.6;
+        }
+
+        /* 타이핑 인디케이터 - 다크 배경 최적화 */
+        .typing-indicator {
+            align-self: flex-start;
+            background: linear-gradient(145deg, #f0f4ff 0%, #e8f0fe 40%, #ede9fe 100%);
+            border: 1px solid rgba(99, 102, 241, 0.18);
+            padding: 24px 32px;
+            border-radius: 20px;
+            box-shadow:
+                0 4px 16px rgba(99, 102, 241, 0.15),
+                0 8px 24px rgba(99, 102, 241, 0.1),
+                inset 0 1px 0 rgba(255,255,255,0.9);
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            max-width: 90%;
+            position: relative;
+            animation: messageSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow: hidden;
+        }
+
+        .typing-indicator::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #2563eb 0%, #7c3aed 50%, #2563eb 100%);
+            border-radius: 20px 20px 0 0;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .typing-dots span {
+            width: 10px;
+            height: 10px;
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            border-radius: 50%;
+            animation: typingDot 1.4s infinite ease-in-out;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+        }
+
+        .typing-dots span:nth-child(1) { animation-delay: 0s; }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        .typing-text {
+            font-size: 15px;
+            color: #1e40af;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+            line-height: 1.7;
+            max-width: 600px;
+        }
+
+        .typing-text p {
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        @keyframes typingDot {
+            0%, 60%, 100% {
+                transform: translateY(0) scale(1);
+                opacity: 0.5;
+            }
+            30% {
+                transform: translateY(-12px) scale(1.2);
+                opacity: 1;
+            }
+        }
+
+        /* 법률 특화 UI 요소 */
+
+        /* 법령 인용 스타일 */
+        .ai-msg .law-reference {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-left: 4px solid #2563eb;
+            padding: 16px 20px;
+            margin: 20px 0;
+            border-radius: 0 12px 12px 0;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+        }
+
+        .ai-msg .law-reference strong {
+            color: #1e40af;
+            font-size: 0.95em;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        /* 판례 카드 */
+        .ai-msg .case-card {
+            background: white;
+            border: 2px solid #e0e7ff;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 12px rgba(99, 102, 241, 0.08);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .ai-msg .case-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.12);
+        }
+
+        .ai-msg .case-card .case-title {
+            font-weight: 700;
+            color: #4338ca;
+            font-size: 1.05em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ai-msg .case-card .case-title::before {
+            content: '⚖️';
+            font-size: 1.1em;
+        }
+
+        /* 알림 박스 */
+        .ai-msg .alert-box {
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            font-size: 0.95em;
+            line-height: 1.6;
+            backdrop-filter: blur(8px);
+        }
+
+        .ai-msg .alert-box::before {
+            font-size: 1.3em;
+            flex-shrink: 0;
+        }
+
+        .ai-msg .alert-box.info {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 1px solid #93c5fd;
+            color: #1e40af;
+        }
+
+        .ai-msg .alert-box.info::before {
+            content: 'ℹ️';
+        }
+
+        .ai-msg .alert-box.warning {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1px solid #fbbf24;
+            color: #92400e;
+        }
+
+        .ai-msg .alert-box.warning::before {
+            content: '⚠️';
+        }
+
+        .ai-msg .alert-box.danger {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 1px solid #f87171;
+            color: #991b1b;
+        }
+
+        .ai-msg .alert-box.danger::before {
+            content: '🚨';
+        }
+
+        .ai-msg .alert-box.success {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border: 1px solid #6ee7b7;
+            color: #065f46;
+        }
+
+        .ai-msg .alert-box.success::before {
+            content: '✅';
+        }
+
+        /* 체크리스트 스타일 */
+        .ai-msg .checklist-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .ai-msg .checklist-item:last-child {
+            border-bottom: none;
+        }
+
+        .ai-msg .checklist-item::before {
+            content: '☑️';
+            font-size: 1.2em;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .ai-msg .checklist-item.unchecked::before {
+            content: '⬜';
+        }
+
+        /* 통계 배지 */
+        .ai-msg .stat-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border: 1px solid #86efac;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #166534;
+            margin: 0 4px;
+        }
+
+        .ai-msg .stat-badge::before {
+            content: '📊';
+        }
+
+        /* 강조 텍스트 업그레이드 */
+        .ai-msg .highlight {
+            background: linear-gradient(135deg, #fef08a 0%, #fde047 100%);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            color: #713f12;
+            box-shadow: 0 1px 3px rgba(234, 179, 8, 0.2);
+        }
+
+        /* 구분선 - 모던 미니멀 디자인 (C-Level 스타일) */
+        .ai-msg hr.fancy {
+            border: none;
+            height: 1px;
+            margin: 48px 0;
+            position: relative;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                rgba(226, 232, 240, 0.3) 20%,
+                rgba(203, 213, 225, 0.5) 50%,
+                rgba(226, 232, 240, 0.3) 80%,
+                transparent 100%
+            );
+        }
+
+        /* 중앙 포인트 */
+        .ai-msg hr.fancy::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            border-radius: 50%;
+            box-shadow:
+                0 0 0 4px rgba(255, 255, 255, 1),
+                0 0 0 5px rgba(226, 232, 240, 0.5),
+                0 2px 8px rgba(37, 99, 235, 0.15);
+            animation: dividerPulseMinimal 3s ease-in-out infinite;
+        }
+
+        /* 좌우 장식선 */
+        .ai-msg hr.fancy::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 120px;
+            height: 1px;
+            background: linear-gradient(90deg,
+                rgba(37, 99, 235, 0.1) 0%,
+                rgba(37, 99, 235, 0.05) 100%
+            );
+            opacity: 0;
+            animation: dividerLineExpand 3s ease-in-out infinite;
+        }
+
+        @keyframes dividerPulseMinimal {
+            0%, 100% {
+                transform: translate(-50%, -50%) scale(1);
+                box-shadow:
+                    0 0 0 4px rgba(255, 255, 255, 1),
+                    0 0 0 5px rgba(226, 232, 240, 0.5),
+                    0 2px 8px rgba(37, 99, 235, 0.15);
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.2);
+                box-shadow:
+                    0 0 0 4px rgba(255, 255, 255, 1),
+                    0 0 0 6px rgba(226, 232, 240, 0.6),
+                    0 2px 12px rgba(37, 99, 235, 0.25);
+            }
+        }
+
+        @keyframes dividerLineExpand {
+            0%, 100% {
+                opacity: 0;
+                width: 120px;
+            }
+            50% {
+                opacity: 0.3;
+                width: 160px;
+            }
+        }
+
+        /* 코드 블록 업그레이드 (문법 강조 색상) */
+        .ai-msg pre code .keyword {
+            color: #c678dd;
+        }
+
+        .ai-msg pre code .string {
+            color: #98c379;
+        }
+
+        .ai-msg pre code .number {
+            color: #d19a66;
+        }
+
+        .ai-msg pre code .comment {
+            color: #5c6370;
+            font-style: italic;
+        }
+
+        /* 스무스 스크롤 */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .conversation-viewport {
+            scroll-behavior: smooth;
+        }
+
+        /* 포커스 상태 개선 */
+        *:focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+
+        /* 선택 텍스트 스타일 */
+        ::selection {
+            background: #bfdbfe;
+            color: #1e40af;
+        }
+
+        ::-moz-selection {
+            background: #bfdbfe;
+            color: #1e40af;
+        }
+
+        /* 입력창 업그레이드 */
+        .input-frame {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 20px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .input-frame:focus-within {
+            border-color: #2563eb;
+            box-shadow:
+                0 0 0 4px rgba(37, 99, 235, 0.1),
+                0 4px 12px rgba(37, 99, 235, 0.15);
+            transform: translateY(-1px);
+        }
+
+        /* 버튼 업그레이드 */
+        .send-action {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .send-action::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .send-action:active::before {
+            width: 200px;
+            height: 200px;
+        }
+
+        .send-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(37, 99, 235, 0.25);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: absolute;
+                transform: translateX(-100%);
+                height: 100vh;
+                height: 100dvh;
+            }
+
+            .sidebar.active { transform: translateX(0); }
+            .overlay.active { display: block; }
+
+            header.top-status {
+                height: 64px;
+                padding: 0 16px;
+            }
+
+            .hero-section {
+                margin: 32px auto;
+            }
+
+            .hero-title {
+                font-size: 2rem;
+            }
+
+            .core-features-section {
+                padding: 3rem 20px;
+            }
+
+            .feature-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="overlay" class="overlay"></div>
+
+<div class="layout-container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="brand">
+            <span class="material-symbols-outlined icon">verified_user</span>
+            <span class="text">Lawmadi OS</span>
+        </div>
+        <nav class="menu">
+            <div class="menu-item active">
+                <span class="material-symbols-outlined">chat_bubble</span>
+                <span>법률 분석</span>
+            </div>
+            <div class="menu-item" onclick="window.location.href='leaders.html'" style="cursor: pointer;">
+                <span class="material-symbols-outlined">account_tree</span>
+                <span>60 Leaders</span>
+            </div>
+            <div class="menu-item" onclick="window.location.href='clevel.html'" style="cursor: pointer;">
+                <span class="material-symbols-outlined">groups</span>
+                <span>C-Level 임원</span>
+            </div>
+        </nav>
+
+        <div style="padding: 24px; display: flex; align-items: center; gap: 14px; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02);">
+            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1rem; color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);">L</div>
+            <div style="font-size: 0.9rem; color: white;">
+                <div style="font-weight: 700;">Lawmadi</div>
+                <div style="font-size: 0.7rem; color: #10b981; display: flex; align-items: center; gap: 6px;">
+                    <span style="width: 6px; height: 6px; background: #10b981; border-radius: 50%; box-shadow: 0 0 6px #10b981;"></span>
+                    Active
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-canvas">
+        <header class="top-status">
+            <div class="header-left">
+                <button id="menuToggle" style="background:none; border:none; color:var(--text-muted); cursor:pointer; display:flex; padding: 8px; border-radius: 8px; transition: all 0.2s;">
+                    <span class="material-symbols-outlined">menu</span>
+                </button>
+                <div class="badge-base system-badge">
+                    <span class="material-symbols-outlined" style="font-size: 1.2rem;">check_circle</span>
+                    System: Healthy
+                </div>
+            </div>
+            <div class="header-right">
+                <div style="font-size: 0.95rem; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-outlined" style="font-size: 1.3rem; vertical-align: middle; color: var(--primary);">diamond</span>
+                    Powered by Gemini 2.0
+                </div>
+            </div>
+        </header>
+
+        <!-- Landing Page Content -->
+        <div id="landing-content" class="content-viewport">
+            <!-- Hero Section -->
+            <div class="hero-section">
+                <div class="hero-badge">
+                    <span class="material-symbols-outlined">auto_awesome</span>
+                    AI 기반 법률 의사결정 시스템
+                </div>
+
+                <h1 class="hero-title">
+                    불안을 행동으로 바꾸는<br>
+                    Lawmadi OS
+                </h1>
+
+                <p class="hero-subtitle">
+                    법률 문제로 인한 불안, 60명의 전문 리더가 협업하여<br>
+                    구체적인 행동 계획으로 바꿔드립니다
+                </p>
+
+                <div class="hero-features">
+                    <div class="feature-badge">
+                        <span class="icon">👥</span>
+                        60명 전문 리더
+                    </div>
+                    <div class="feature-badge">
+                        <span class="icon">🔄</span>
+                        실시간 협업 분석
+                    </div>
+                    <div class="feature-badge">
+                        <span class="icon">⚡</span>
+                        5단계 구조화 응답
+                    </div>
+                    <div class="feature-badge">
+                        <span class="icon">🛡️</span>
+                        Claude 자동 검증
+                    </div>
+                </div>
+
+                <div class="cta-section">
+                    <button class="cta-primary" id="startChatBtn">
+                        <span style="position: relative; z-index: 1;">지금 무료로 체험하기</span>
+                    </button>
+                    <p class="cta-subtext">법률 질문을 입력하시면 즉시 분석을 시작합니다</p>
+                </div>
+            </div>
+
+            <!-- Example Questions -->
+            <div class="example-questions">
+                <h3>💬 이런 질문을 해보세요</h3>
+                <div class="example-grid">
+                    <button class="example-btn" data-question="2년 전인 2024년 3월에 전세 계약을 했습니다. 보증금은 3억원이고, 2026년 3월이 만기입니다. 그런데 집주인이 갑자기 집을 팔겠다고 하면서 2개월 뒤에 나가달라고 합니다.">
+                        💬 전세 보증금 분쟁
+                    </button>
+                    <button class="example-btn" data-question="아버지께서 2020년 1월에 제 명의로 아파트를 구입하셨습니다. 실제 돈은 아버지가 내셨고, 저는 그냥 명의만 빌려드린 것입니다. 그런데 지금 제 빚 때문에 경매가 진행 중입니다.">
+                        💬 복합 법률 사안
+                    </button>
+                    <button class="example-btn" data-question="회사에서 갑자기 해고 통보를 받았습니다. 제가 3번이나 지각을 했다는 이유인데, 사실 그 날들은 모두 지하철 고장 때문이었습니다.">
+                        💬 노동 문제
+                    </button>
+                </div>
+            </div>
+
+            <!-- Core Features -->
+            <div class="core-features-section">
+                <h2>✨ Lawmadi OS만의 특별함</h2>
+
+                <div class="feature-cards">
+                    <div class="feature-card">
+                        <div class="feature-icon">🐝</div>
+                        <h3>60 Leader Swarm</h3>
+                        <p>60명의 전문 분야 리더가 복합 법률 사안을 동시에 분석합니다</p>
+                        <ul>
+                            <li>민사, 형사, 행정, 노동 등 60개 전문 분야</li>
+                            <li>최대 3명 동시 협업 분석</li>
+                            <li>종합 판단 자동 생성</li>
+                        </ul>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">🛡️</div>
+                        <h3>Claude 자동 검증</h3>
+                        <p>모든 응답을 Claude가 자동으로 검증하여 SSOT 원칙 준수를 보장합니다</p>
+                        <ul>
+                            <li>DRF API 사용 여부 확인</li>
+                            <li>환각(hallucination) 감지</li>
+                            <li>SSOT 준수 점수 산출</li>
+                        </ul>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon">📋</div>
+                        <h3>5단계 구조화 응답</h3>
+                        <p>감정수용부터 동행마무리까지 체계적인 응답 프레임워크</p>
+                        <ul>
+                            <li>1. 감정 수용 (Acknowledge)</li>
+                            <li>2. 상황 진단 (Diagnose)</li>
+                            <li>3. 행동 로드맵 (Roadmap)</li>
+                            <li>4. 안전망 안내 (Safety Net)</li>
+                            <li>5. 동행 마무리 (Closing)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trust Section -->
+            <div class="trust-section">
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-number">60명</div>
+                        <div class="stat-label">전문 분야 리더</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">9개</div>
+                        <div class="stat-label">SSOT 데이터 소스</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">100%</div>
+                        <div class="stat-label">응답 검증률</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">5단계</div>
+                        <div class="stat-label">구조화 응답</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="todayVisitors">-</div>
+                        <div class="stat-label">오늘 방문자</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="totalVisitors">-</div>
+                        <div class="stat-label">총 방문자</div>
+                    </div>
+                </div>
+
+                <div class="verification">
+                    <p>
+                        <span class="material-symbols-outlined">verified</span>
+                        law.go.kr 법령 실시간 검증
+                    </p>
+                    <p>
+                        <span class="material-symbols-outlined">api</span>
+                        DRF API 공식 연동
+                    </p>
+                    <p>
+                        <span class="material-symbols-outlined">psychology</span>
+                        판단 흐름 지원 철학
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Conversation -->
+        <div id="conversation-area" class="conversation-viewport hidden"></div>
+
+        <!-- Input Area -->
+        <div class="input-pipeline-wrapper">
+            <div class="input-container">
+                <!-- 파일 업로드 버튼 (v60) -->
+                <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.webp,.pdf" style="display: none;" />
+                <button id="uploadBtn" class="send-action" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);" title="문서/이미지 업로드">
+                    <span class="material-symbols-outlined" style="font-size: 1.4rem;">upload_file</span>
+                </button>
+
+                <textarea id="userInput" placeholder="법률 질문을 입력하거나 문서를 업로드하세요..." rows="1"></textarea>
+
+                <button id="sendBtn" class="send-action">
+                    <span class="material-symbols-outlined" style="font-size: 1.4rem;">arrow_upward</span>
+                </button>
+            </div>
+
+            <!-- 업로드된 파일 미리보기 (v60) -->
+            <div id="uploadedFilePreview" style="display: none; margin-top: 12px; padding: 12px; background: white; border-radius: 12px; border: 2px solid #10b981; max-width: 900px; margin-left: auto; margin-right: auto;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span class="material-symbols-outlined" style="color: #10b981; font-size: 2rem;">description</span>
+                        <div>
+                            <div id="uploadedFileName" style="font-weight: 700; color: #1e293b; font-size: 0.95rem;"></div>
+                            <div id="uploadedFileSize" style="font-size: 0.8rem; color: #64748b;"></div>
+                        </div>
+                    </div>
+                    <button id="removeFileBtn" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 8px; border-radius: 8px; transition: all 0.2s;">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+            </div>
+
+            <div style="text-align: center; font-size: 0.7rem; color: #94a3b8; margin-top: 12px; font-weight: 600;">
+                Powered by Lawmadi v60.0.0 | 📄 문서 분석 기능 추가
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    const UI = {
+        sidebar: document.getElementById('sidebar'),
+        overlay: document.getElementById('overlay'),
+        menuToggle: document.getElementById('menuToggle'),
+        userInput: document.getElementById('userInput'),
+        sendBtn: document.getElementById('sendBtn'),
+        startChatBtn: document.getElementById('startChatBtn'),
+        landingContent: document.getElementById('landing-content'),
+        convArea: document.getElementById('conversation-area'),
+        uploadBtn: document.getElementById('uploadBtn'),
+        fileInput: document.getElementById('fileInput'),
+        uploadedFilePreview: document.getElementById('uploadedFilePreview'),
+        uploadedFileName: document.getElementById('uploadedFileName'),
+        uploadedFileSize: document.getElementById('uploadedFileSize'),
+        removeFileBtn: document.getElementById('removeFileBtn'),
+        API_URL: 'https://lawmadi-os-v50-938146962157.asia-northeast3.run.app/ask',
+        BASE_URL: 'https://lawmadi-os-v50-938146962157.asia-northeast3.run.app',
+        USE_STREAMING: false,
+        USE_TYPING_EFFECT: false,
+        uploadedFile: null,
+
+        init() {
+            this.menuToggle.onclick = (e) => { e.stopPropagation(); this.toggleSidebar(true); };
+            this.overlay.onclick = () => this.toggleSidebar(false);
+
+            this.userInput.addEventListener('input', () => {
+                this.userInput.style.height = 'auto';
+                this.userInput.style.height = this.userInput.scrollHeight + 'px';
+            });
+
+            this.sendBtn.onclick = () => this.dispatchPacket();
+            this.userInput.onkeydown = (e) => {
+                if(e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.dispatchPacket();
+                }
+            };
+
+            this.startChatBtn.onclick = () => this.switchToChatMode();
+
+            document.querySelectorAll('.example-btn').forEach(btn => {
+                btn.onclick = () => {
+                    const question = btn.getAttribute('data-question');
+                    this.userInput.value = question;
+                    this.switchToChatMode();
+                    this.dispatchPacket();
+                };
+            });
+
+            this.initVisitorTracking();
+
+            // v60: 파일 업로드 이벤트 핸들러
+            this.uploadBtn.onclick = () => this.fileInput.click();
+            this.fileInput.onchange = (e) => this.handleFileSelect(e);
+            this.removeFileBtn.onclick = () => this.clearUploadedFile();
+
+            // Hover effects for menu toggle
+            this.menuToggle.onmouseenter = () => {
+                this.menuToggle.style.background = 'rgba(0,0,0,0.05)';
+            };
+            this.menuToggle.onmouseleave = () => {
+                this.menuToggle.style.background = 'none';
+            };
+        },
+
+        handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // 파일 크기 체크 (10MB)
+            const maxSize = 10 * 1024 * 1024;
+            if (file.size > maxSize) {
+                alert(`파일 크기가 너무 큽니다. 최대 ${maxSize / 1024 / 1024}MB까지 업로드 가능합니다.`);
+                return;
+            }
+
+            // 파일 타입 체크
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+            if (!allowedTypes.includes(file.type)) {
+                alert('지원하지 않는 파일 형식입니다. JPG, PNG, WEBP, PDF 파일만 업로드 가능합니다.');
+                return;
+            }
+
+            this.uploadedFile = file;
+
+            // 미리보기 표시
+            this.uploadedFileName.textContent = file.name;
+            this.uploadedFileSize.textContent = this.formatFileSize(file.size);
+            this.uploadedFilePreview.style.display = 'block';
+
+            console.log('파일 선택됨:', file.name, this.formatFileSize(file.size));
+        },
+
+        clearUploadedFile() {
+            this.uploadedFile = null;
+            this.fileInput.value = '';
+            this.uploadedFilePreview.style.display = 'none';
+            console.log('파일 제거됨');
+        },
+
+        formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        },
+
+        async initVisitorTracking() {
+            try {
+                await fetch(`${this.BASE_URL}/api/visit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                this.loadVisitorStats();
+            } catch (error) {
+                console.error('방문자 추적 실패:', error);
+            }
+        },
+
+        async loadVisitorStats() {
+            try {
+                const response = await fetch(`${this.BASE_URL}/api/visitor-stats`);
+                const data = await response.json();
+
+                if (data.ok) {
+                    const todayEl = document.getElementById('todayVisitors');
+                    const totalEl = document.getElementById('totalVisitors');
+
+                    if (todayEl) {
+                        this.animateNumber(todayEl, data.today_visitors);
+                    }
+                    if (totalEl) {
+                        this.animateNumber(totalEl, data.total_visitors);
+                    }
+                }
+            } catch (error) {
+                console.error('통계 로드 실패:', error);
+            }
+        },
+
+        animateNumber(element, target) {
+            let current = 0;
+            const increment = target / 50;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    element.textContent = target.toLocaleString();
+                    clearInterval(timer);
+                } else {
+                    element.textContent = Math.floor(current).toLocaleString();
+                }
+            }, 20);
+        },
+
+        toggleSidebar(state) {
+            this.sidebar.classList.toggle('active', state);
+            this.overlay.classList.toggle('active', state);
+        },
+
+        switchToChatMode() {
+            this.landingContent.classList.add('hidden');
+            this.convArea.classList.remove('hidden');
+            this.userInput.focus();
+        },
+
+        async dispatchPacket() {
+            const query = this.userInput.value.trim();
+            const hasFile = this.uploadedFile !== null;
+
+            // 질문도 없고 파일도 없으면 리턴
+            if (!query && !hasFile) return;
+
+            this.switchToChatMode();
+
+            // v60: 파일이 있는 경우
+            if (hasFile) {
+                await this.handleFileUploadAndAnalysis(query);
+                return;
+            }
+
+            // 기존 텍스트 질문 처리
+            this.appendMessage('user', query);
+            this.userInput.value = "";
+            this.userInput.style.height = 'auto';
+
+            // 타이핑 인디케이터 표시
+            this.showTypingIndicator();
+
+            try {
+                const response = await fetch(this.API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query })
+                });
+
+                if (!response.ok) throw new Error('Communication Error');
+                const data = await response.json();
+
+                // 타이핑 인디케이터 제거
+                this.hideTypingIndicator();
+
+                const formattedHtml = this.formatReport(data.response);
+                this.appendMessage('ai', formattedHtml);
+
+            } catch (error) {
+                this.hideTypingIndicator();
+                this.appendMessage('ai', "<div style='color:red;'>⚠️ 시스템 통신 장애가 발생했습니다. 잠시 후 다시 시도해 주세요.</div>");
+            }
+        },
+
+        async handleFileUploadAndAnalysis(additionalQuery) {
+            const file = this.uploadedFile;
+
+            // 사용자 메시지 표시
+            const userMsg = additionalQuery
+                ? `📄 ${file.name} (${this.formatFileSize(file.size)})<br>${additionalQuery}`
+                : `📄 ${file.name} (${this.formatFileSize(file.size)})`;
+
+            this.appendMessage('user', userMsg);
+            this.userInput.value = "";
+            this.userInput.style.height = 'auto';
+
+            // 타이핑 인디케이터 표시
+            const statusId = 'upload-status-' + Date.now();
+            const statusDiv = document.createElement('div');
+            statusDiv.id = statusId;
+            statusDiv.className = 'ai-msg';
+            statusDiv.innerHTML = '<p>📤 <b>파일 업로드 중...</b> (1/2)</p>';
+            this.convArea.appendChild(statusDiv);
+            this.convArea.scrollTo({ top: this.convArea.scrollHeight, behavior: 'smooth' });
+
+            try {
+                // 1. 파일 업로드
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const uploadResponse = await fetch(`${this.BASE_URL}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!uploadResponse.ok) {
+                    const errorData = await uploadResponse.json();
+                    throw new Error(errorData.detail || '파일 업로드 실패');
+                }
+
+                const uploadData = await uploadResponse.json();
+                console.log('업로드 성공:', uploadData);
+
+                // 2. 문서 분석
+                this.updateMessage(statusId, '<p>🔍 <b>문서 분석 중...</b> (2/2)</p><p>AI가 문서를 법률적 관점에서 분석하고 있습니다... 💫</p>');
+
+                const analysisType = this.detectAnalysisType(file.name, additionalQuery);
+
+                const analyzeResponse = await fetch(`${this.BASE_URL}/analyze-document/${uploadData.file_id}?analysis_type=${analysisType}`, {
+                    method: 'POST'
+                });
+
+                if (!analyzeResponse.ok) {
+                    const errorData = await analyzeResponse.json();
+                    throw new Error(errorData.detail || '문서 분석 실패');
+                }
+
+                const analyzeData = await analyzeResponse.json();
+                console.log('분석 성공:', analyzeData);
+
+                // 3. 결과 표시
+                const resultHtml = this.formatDocumentAnalysis(analyzeData.analysis, file.name);
+                this.updateMessage(statusId, resultHtml);
+
+                // 파일 업로드 상태 초기화
+                this.clearUploadedFile();
+
+            } catch (error) {
+                console.error('파일 처리 오류:', error);
+                this.updateMessage(statusId, `<div style='color:red;'>⚠️ 파일 처리 중 오류 발생: ${error.message}</div>`);
+                this.clearUploadedFile();
+            }
+        },
+
+        detectAnalysisType(filename, query) {
+            const lowerFilename = filename.toLowerCase();
+            const lowerQuery = (query || '').toLowerCase();
+
+            if (lowerFilename.includes('contract') || lowerFilename.includes('계약') ||
+                lowerQuery.includes('계약')) {
+                return 'contract';
+            }
+
+            if (lowerQuery.includes('위험') || lowerQuery.includes('리스크') || lowerQuery.includes('risk')) {
+                return 'risk_assessment';
+            }
+
+            return 'general';
+        },
+
+        formatDocumentAnalysis(analysis, filename) {
+            let html = `<h3>📄 문서 분석 결과: ${filename}</h3>`;
+
+            // 요약
+            if (analysis.summary) {
+                html += `<h3>💡 요약</h3><p>${analysis.summary}</p>`;
+            }
+
+            // 문서 종류
+            if (analysis.document_type || analysis.contract_type) {
+                const docType = analysis.document_type || analysis.contract_type;
+                html += `<p><strong>📋 문서 종류:</strong> ${docType}</p>`;
+            }
+
+            // 위험도
+            if (analysis.risk_level) {
+                const riskEmoji = {
+                    'low': '🟢',
+                    'medium': '🟡',
+                    'high': '🟠',
+                    'critical': '🔴'
+                }[analysis.risk_level] || '⚪';
+
+                const riskText = {
+                    'low': '낮음',
+                    'medium': '중간',
+                    'high': '높음',
+                    'critical': '매우 높음'
+                }[analysis.risk_level] || analysis.risk_level;
+
+                html += `<p><strong>⚠️ 위험도:</strong> ${riskEmoji} ${riskText}</p>`;
+            }
+
+            // 법률 카테고리
+            if (analysis.legal_category) {
+                html += `<p><strong>⚖️ 법률 분야:</strong> ${analysis.legal_category}</p>`;
+            }
+
+            // 법률적 쟁점
+            if (analysis.legal_issues && analysis.legal_issues.length > 0) {
+                html += `<h3>⚖️ 법률적 쟁점</h3><ul>`;
+                analysis.legal_issues.forEach(issue => {
+                    html += `<li>${issue}</li>`;
+                });
+                html += `</ul>`;
+            }
+
+            // 주요 조항 (계약서인 경우)
+            if (analysis.key_terms && analysis.key_terms.length > 0) {
+                html += `<h3>📋 주요 조항</h3>`;
+                analysis.key_terms.forEach((term, idx) => {
+                    html += `<p><strong>${idx + 1}. ${term.term}</strong></p>`;
+                    html += `<p>${term.content}</p>`;
+                    if (term.issue) {
+                        html += `<p style="color: #f59e0b;">⚠️ ${term.issue}</p>`;
+                    }
+                });
+            }
+
+            // 핵심 내용
+            if (analysis.key_points && analysis.key_points.length > 0) {
+                html += `<h3>🔑 핵심 내용</h3><ul>`;
+                analysis.key_points.forEach(point => {
+                    html += `<li>${point}</li>`;
+                });
+                html += `</ul>`;
+            }
+
+            // 권고사항
+            if (analysis.recommendations && analysis.recommendations.length > 0) {
+                html += `<h3>💡 권고사항</h3><ul>`;
+                analysis.recommendations.forEach(rec => {
+                    html += `<li>${rec}</li>`;
+                });
+                html += `</ul>`;
+            }
+
+            html += `<p style="margin-top: 24px; padding-top: 16px; border-top: 2px solid #e2e8f0; color: #64748b; font-size: 0.9rem;">
+                💡 이 분석 결과는 AI에 의해 자동 생성되었습니다. 최종 결정은 반드시 법률 전문가와 상의하시기 바랍니다.
+            </p>`;
+
+            return html;
+        },
+
+        formatReport(text) {
+            if (!text) return "응답 데이터를 수신하지 못했습니다.";
+
+            let lines = text.split('\n');
+            let html = [];
+            let inList = false;
+            let inOrderedList = false;
+            let lastWasH2 = false;
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i];
+                let trimmed = line.trim();
+
+                if (!trimmed) {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    html.push('<p></p>');
+                    lastWasH2 = false;
+                    continue;
+                }
+
+                // 마크다운 구분선 (---, ***, ___) → <hr class="fancy">
+                if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    html.push('<hr class="fancy">');
+                    lastWasH2 = false;
+                    continue;
+                }
+
+                // ## 헤딩 - 구분선 추가
+                if (trimmed.startsWith('## ')) {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+
+                    // 첫 번째 H2가 아니면 구분선 추가
+                    if (html.length > 0 && !lastWasH2) {
+                        html.push('<hr class="fancy">');
+                    }
+
+                    html.push('<h2>' + trimmed.substring(3) + '</h2>');
+                    lastWasH2 = true;
+                }
+                // ### 헤딩
+                else if (trimmed.startsWith('### ')) {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    html.push('<h3>' + trimmed.substring(4) + '</h3>');
+                    lastWasH2 = false;
+                }
+                // 순서 있는 리스트 (1. 2. 3.)
+                else if (/^\d+\.\s+/.test(trimmed)) {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (!inOrderedList) { html.push('<ol>'); inOrderedList = true; }
+                    let content = trimmed.replace(/^\d+\.\s+/, '');
+                    content = this.formatInline(content);
+                    html.push('<li>' + content + '</li>');
+                    lastWasH2 = false;
+                }
+                // 순서 없는 리스트 (-, •, *, ✓, ✅)
+                else if (/^[-•*✓✅▪◦]\s+/.test(trimmed)) {
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    if (!inList) { html.push('<ul>'); inList = true; }
+                    let content = trimmed.replace(/^[-•*✓✅▪◦]\s+/, '');
+                    content = this.formatInline(content);
+                    html.push('<li>' + content + '</li>');
+                    lastWasH2 = false;
+                }
+                // 일반 문단
+                else {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    let content = this.formatInline(trimmed);
+                    html.push('<p>' + content + '</p>');
+                    lastWasH2 = false;
+                }
+            }
+
+            if (inList) html.push('</ul>');
+            if (inOrderedList) html.push('</ol>');
+
+            return html.join('\n');
+        },
+
+        formatInline(text) {
+            let result = text;
+            result = result.replace(/`([^`]+?)`/g, '<code>$1</code>');
+            result = result.replace(/\*\*\*([^*]+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+            result = result.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>');
+            result = result.replace(/\*([^*\n]+?)\*/g, '<em>$1</em>');
+            return result;
+        },
+
+        appendMessage(sender, text, id = null) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = sender === 'user' ? 'user-msg' : 'ai-msg';
+            if (id) msgDiv.id = id;
+            msgDiv.innerHTML = text;
+
+            // AI 메시지에 복사 버튼 추가
+            if (sender === 'ai' && !id) {
+                this.addCopyButton(msgDiv);
+            }
+
+            this.convArea.appendChild(msgDiv);
+            this.convArea.scrollTo({ top: this.convArea.scrollHeight, behavior: 'smooth' });
+        },
+
+        updateMessage(id, html) {
+            const msgDiv = document.getElementById(id);
+            if (msgDiv) {
+                msgDiv.innerHTML = html;
+                // 최종 메시지로 업데이트될 때 복사 버튼 추가
+                this.addCopyButton(msgDiv);
+                this.convArea.scrollTo({ top: this.convArea.scrollHeight, behavior: 'smooth' });
+            }
+        },
+
+        addCopyButton(msgDiv) {
+            // 이미 복사 버튼이 있으면 제거
+            const existingBtn = msgDiv.querySelector('.copy-btn');
+            if (existingBtn) existingBtn.remove();
+
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-btn';
+            copyBtn.innerHTML = `
+                <span class="material-symbols-outlined" style="font-size: 18px;">content_copy</span>
+            `;
+            copyBtn.style.cssText = `
+                position: absolute;
+                top: 12px;
+                right: 12px;
+                background: rgba(255, 255, 255, 0.9);
+                backdrop-filter: blur(8px);
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 8px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                transition: all 0.2s ease;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                z-index: 10;
+            `;
+
+            copyBtn.onmouseenter = () => {
+                copyBtn.style.background = 'rgba(37, 99, 235, 0.1)';
+                copyBtn.style.borderColor = '#2563eb';
+            };
+
+            copyBtn.onmouseleave = () => {
+                copyBtn.style.background = 'rgba(255, 255, 255, 0.9)';
+                copyBtn.style.borderColor = '#e5e7eb';
+            };
+
+            copyBtn.onclick = async () => {
+                const textContent = msgDiv.innerText;
+                try {
+                    await navigator.clipboard.writeText(textContent);
+                    copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px; color: #10b981;">check</span>';
+                    setTimeout(() => {
+                        copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">content_copy</span>';
+                    }, 2000);
+                } catch (err) {
+                    console.error('복사 실패:', err);
+                }
+            };
+
+            msgDiv.style.position = 'relative';
+            msgDiv.appendChild(copyBtn);
+
+            // 호버 시 버튼 표시
+            msgDiv.onmouseenter = () => {
+                copyBtn.style.opacity = '1';
+            };
+            msgDiv.onmouseleave = () => {
+                copyBtn.style.opacity = '0';
+            };
+        },
+
+        showTypingIndicator() {
+            const typingId = 'typing-indicator';
+            const existingTyping = document.getElementById(typingId);
+            if (existingTyping) return typingId;
+
+            const typingDiv = document.createElement('div');
+            typingDiv.id = typingId;
+            typingDiv.className = 'typing-indicator';
+            typingDiv.innerHTML = `
+                <div class="typing-dots">
+                    <span></span><span></span><span></span>
+                </div>
+                <div class="typing-text">
+                    <p style="margin: 0 0 8px 0;">지금 담당 리더님이 <b>슈퍼 컴퓨터급 두뇌</b>를 풀가동해 답변 생성 중! 서버 로딩이 살짝 느려도 너그럽게 봐주실 거죠? 🥺✨</p>
+                    <p style="margin: 0;">저희 안테나는 <b>365일 24시간 풀가동 중!</b> 소중한 이야기에 초고속 접속해 대기할 테니 조금만 기다려주세요오~ 히히. 💕</p>
+                </div>
+            `;
+            this.convArea.appendChild(typingDiv);
+            this.convArea.scrollTo({ top: this.convArea.scrollHeight, behavior: 'smooth' });
+            return typingId;
+        },
+
+        hideTypingIndicator() {
+            const typingDiv = document.getElementById('typing-indicator');
+            if (typingDiv) typingDiv.remove();
+        }
+    };
+
+    window.onload = () => UI.init();
+</script>
+</body>
+</html>

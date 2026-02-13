@@ -1,4 +1,4 @@
-# Lawmadi OS v50 — 법률 AI 의사결정 운영체제
+# Lawmadi OS v60 — 법률 AI 의사결정 운영체제
 
 대한민국 법률 AI 시스템. FastAPI 백엔드 + Google Gemini LLM + 국가법령정보센터(DRF) API.
 60개 전문가 페르소나(Swarm Leader)가 법률 질문을 분석하고, DRF에서 실시간 검증된 법령·판례만으로 답변합니다.
@@ -112,8 +112,17 @@ services/
   search_service.py      ← DRF 법령/판례 검색 서비스 래퍼
 
 frontend/                ← HTML/CSS/JS 프론트엔드 (Firebase 배포)
+  public/
+    index.html           ← 메인 페이지 (프리미엄 UI)
+    leaders.html         ← 60 Leaders 페이지
+    clevel.html          ← C-Level 임원 페이지
+    leaders.json         ← 리더 데이터
+
 .github/workflows/
-  deploy.yml             ← CI/CD: main push → Docker Build → Cloud Run 배포
+  deploy.yml             ← CI/CD: main push → Docker Build → Cloud Run + Firebase 배포
+                            - Job 1: Backend (Cloud Run)
+                            - Job 2: Frontend (Firebase Hosting)
+                            - Job 3: Notification
 ```
 
 ## 핵심 아키텍처 흐름 (/ask 엔드포인트)

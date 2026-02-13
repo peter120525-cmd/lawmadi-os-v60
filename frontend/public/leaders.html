@@ -637,8 +637,14 @@
                 }
                 const data = await response.json();
 
-                // Extract leaders from simplified structure
-                allLeaders = data.leaders || [];
+                // Extract leaders from leader_registry
+                const leaderRegistry = data.swarm_engine_config?.leader_registry || {};
+
+                // Convert object to array with code as property
+                allLeaders = Object.entries(leaderRegistry).map(([code, leader]) => ({
+                    code,
+                    ...leader
+                }));
 
                 if (allLeaders.length === 0) {
                     throw new Error('리더 데이터가 비어있습니다.');
