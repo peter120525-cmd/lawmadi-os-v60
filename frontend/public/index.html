@@ -2122,14 +2122,6 @@
                         <div class="stat-label">구조화 응답</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number" id="todayVisitors">—</div>
-                        <div class="stat-label">오늘 방문자</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number" id="totalVisitors">—</div>
-                        <div class="stat-label">총 방문자</div>
-                    </div>
-                    <div class="stat-item">
                         <div class="stat-number">3.2초</div>
                         <div class="stat-label">평균 응답 속도</div>
                     </div>
@@ -2138,12 +2130,20 @@
                         <div class="stat-label">검토 법령 수</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number">24시간</div>
-                        <div class="stat-label">연중무휴 운영</div>
-                    </div>
-                    <div class="stat-item">
                         <div class="stat-number">무료</div>
                         <div class="stat-label">서비스 이용료</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="todayVisitors">—</div>
+                        <div class="stat-label">오늘 방문자</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="totalVisitors">—</div>
+                        <div class="stat-label">총 방문자</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">실시간</div>
+                        <div class="stat-label">법령·판례 동기화</div>
                     </div>
                 </div>
 
@@ -2176,7 +2176,7 @@
                     <span class="material-symbols-outlined" style="font-size: 1.4rem;">upload_file</span>
                 </button>
 
-                <textarea id="userInput" placeholder="법률 질문을 입력하거나 문서를 업로드하세요..." rows="1"></textarea>
+                <textarea id="userInput" placeholder="Ask me..." rows="1"></textarea>
 
                 <button id="sendBtn" class="send-action">
                     <span class="material-symbols-outlined" style="font-size: 1.4rem;">arrow_upward</span>
@@ -2322,37 +2322,38 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({})
                 });
-                this.loadVisitorStats();
             } catch (error) {
                 console.error('방문자 추적 실패:', error);
             }
+            this.loadVisitorStats();
         },
 
         async loadVisitorStats() {
+            const todayEl = document.getElementById('todayVisitors');
+            const totalEl = document.getElementById('totalVisitors');
             try {
                 const response = await fetch(`${this.BASE_URL}/api/visitor-stats`);
                 const data = await response.json();
 
-                const todayEl = document.getElementById('todayVisitors');
-                const totalEl = document.getElementById('totalVisitors');
-
                 if (data.ok) {
-                    if (todayEl) this.animateNumber(todayEl, data.today_visitors);
-                    if (totalEl) this.animateNumber(totalEl, data.total_visitors);
+                    if (todayEl) this.animateNumber(todayEl, data.today_visitors || 0);
+                    if (totalEl) this.animateNumber(totalEl, data.total_visitors || 0);
                 } else {
                     if (todayEl) todayEl.textContent = '준비중';
                     if (totalEl) totalEl.textContent = '준비중';
                 }
             } catch (error) {
                 console.error('통계 로드 실패:', error);
-                const todayEl = document.getElementById('todayVisitors');
-                const totalEl = document.getElementById('totalVisitors');
                 if (todayEl) todayEl.textContent = '준비중';
                 if (totalEl) totalEl.textContent = '준비중';
             }
         },
 
         animateNumber(element, target) {
+            if (target === 0) {
+                element.textContent = '0';
+                return;
+            }
             let current = 0;
             const increment = target / 50;
             const timer = setInterval(() => {

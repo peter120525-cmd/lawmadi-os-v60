@@ -1301,6 +1301,35 @@ async def serve_homepage():
         return FileResponse(frontend_path)
     return {"message": "Lawmadi OS v60 API", "version": OS_VERSION, "frontend": "https://lawmadi-db.web.app"}
 
+# =============================================================
+# 📄 LLM-readable reference files (no homepage link)
+# lawmadi.com/llms.txt | /README.md | /license
+# =============================================================
+
+@app.get("/llms.txt")
+async def serve_llms_txt():
+    """llms.txt — machine-readable AI system specification"""
+    for candidate in ["llms.txt", "frontend/public/llms.txt"]:
+        if os.path.exists(candidate):
+            return FileResponse(candidate, media_type="text/plain; charset=utf-8")
+    return JSONResponse(status_code=404, content={"error": "llms.txt not found"})
+
+@app.get("/README.md")
+async def serve_readme():
+    """README.md — public system documentation"""
+    for candidate in ["README.md", "frontend/public/README.md"]:
+        if os.path.exists(candidate):
+            return FileResponse(candidate, media_type="text/plain; charset=utf-8")
+    return JSONResponse(status_code=404, content={"error": "README.md not found"})
+
+@app.get("/license")
+async def serve_license():
+    """license — proprietary license terms"""
+    for candidate in ["license", "frontend/public/license"]:
+        if os.path.exists(candidate):
+            return FileResponse(candidate, media_type="text/plain; charset=utf-8")
+    return JSONResponse(status_code=404, content={"error": "license not found"})
+
 @app.get("/leaders")
 async def serve_leaders():
     """60 Leaders page"""

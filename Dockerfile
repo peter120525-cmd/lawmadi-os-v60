@@ -29,6 +29,11 @@ COPY prompts/ ./prompts/
 COPY frontend/ ./frontend/
 COPY static/ ./static/
 
+# 6-a. LLM-readable reference files (served at /llms.txt, /README.md, /license)
+COPY llms.txt .
+COPY README.md .
+COPY license .
+
 # 6. 업로드 폴더 생성 (v60)
 RUN mkdir -p uploads
 
