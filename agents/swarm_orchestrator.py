@@ -108,6 +108,26 @@ class SwarmOrchestrator:
             "L60": ["시스템", "통합", "총괄", "법률", "조문", "판례"],  # 시스템 총괄
         }
 
+    def detect_name_call(self, query: str) -> Optional[str]:
+        """
+        Query에서 리더 이름 직접 호출 감지
+
+        "휘율아 계약 해지 방법" → "L01"
+        "무결아 사기죄 질문" → "L22"
+
+        Returns:
+            매칭된 leader_id 또는 None
+        """
+        for leader_id, info in self.leaders.items():
+            name = info.get("name", "")
+            if not name:
+                continue
+            # "이름" 또는 "이름아" 패턴 매칭
+            if name in query:
+                logger.info(f"🎯 이름 호출 감지: '{name}' → {leader_id}")
+                return leader_id
+        return None
+
     def detect_domains(self, query: str) -> List[Tuple[str, int]]:
         """
         Query에서 관련 법률 도메인 탐지
@@ -152,6 +172,15 @@ class SwarmOrchestrator:
         if not self.swarm_enabled:
             # Swarm 비활성화 시 기본 리더(L60)만 반환
             return [self.leaders.get("L60", {"name": "마디", "role": "시스템 총괄", "specialty": "통합"})]
+
+        # 이름 호출 감지 (도메인 매칭보다 우선)
+        named_leader_id = self.detect_name_call(query)
+        if named_leader_id:
+            leader_info = self.leaders.get(named_leader_id, {})
+            leader_info["_id"] = named_leader_id
+            leader_info["_score"] = 100  # 이름 호출은 최고 우선순위
+            logger.info(f"✅ 이름 호출 리더 단독 선택: {leader_info.get('name', '?')}({named_leader_id})")
+            return [leader_info]
 
         if detected_domains is None:
             detected_domains = self.detect_domains(query)

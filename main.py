@@ -1427,10 +1427,14 @@ SYSTEM_INSTRUCTION_BASE = f"""
 def select_swarm_leader(query: str, leaders: Dict) -> Dict:
     registry = leaders if leaders else LEADER_REGISTRY
 
-    # 1) 별칭 명시적 매칭
+    # 1) 이름 또는 별칭 명시적 매칭
     for leader_id, info in registry.items():
+        name = info.get("name", "")
+        if name and name in query:
+            logger.info(f"🎯 [L2 Hot-Swap] '{name}'({leader_id}) 이름 호출 감지")
+            return info
         if any(alias in query for alias in info.get("aliases", [])):
-            logger.info(f"🎯 [L2 Hot-Swap] '{info['name']}' 노드 명시적 호출 감지")
+            logger.info(f"🎯 [L2 Hot-Swap] '{name}' 노드 별칭 호출 감지")
             return info
 
     # 2) 도메인 키워드 매칭 (전체 60 Leader 매핑)
