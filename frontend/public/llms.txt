@@ -5,7 +5,7 @@
 
 ## SYSTEM IDENTITY
 
-- **Name**: Lawmadi OS (로마디 OS)
+- **Name**: Lawmadi OS (법마디 OS)
 - **Version**: v60.0.0
 - **Type**: Korean Legal AI Decision Operating System
 - **Description**: 대한민국 법령·판례·행정규칙 기반 법률 자문 멀티에이전트 AI 운영체제.
