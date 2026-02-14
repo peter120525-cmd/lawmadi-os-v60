@@ -34,8 +34,8 @@ COPY llms.txt .
 COPY README.md .
 COPY license .
 
-# 6. 업로드 폴더 생성 (v60)
-RUN mkdir -p uploads
+# 6. 필수 디렉토리 생성 (v60: temp, logs, uploads)
+RUN mkdir -p temp logs uploads
 
 # 7. 포트 설정 및 실행
 EXPOSE 8080

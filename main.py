@@ -84,6 +84,11 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("LawmadiOS.Kernel")
 
+# [v60] 필수 디렉토리 자동 생성 (temp, logs, uploads)
+for directory in ["temp", "logs", "uploads"]:
+    Path(directory).mkdir(exist_ok=True)
+logger.info("✅ 필수 디렉토리 확인 완료: temp/, logs/, uploads/")
+
 # [감사 #3.6] 버전 단일 소스
 OS_VERSION = "v60.0.0"
 
