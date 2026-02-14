@@ -13,7 +13,9 @@ const netStatus = document.getElementById('netStatus');
 
 // [IT 인프라: 백엔드 API 게이트웨이 설정]
 // Cloud Run 서비스의 고유 엔드포인트입니다.
-const API_URL = 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app/ask';
+const API_BASE = 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app';
+const API_URL = `${API_BASE}/ask`;
+const PDF_URL = `${API_BASE}/export-pdf`;
 const SYSTEM_VERSION = 'v60.0.0';
 
 /**
@@ -127,6 +129,54 @@ const execute = async () => {
             `;
             
             aiDiv.innerHTML = leaderBadge + formattedResponse;
+
+            // 법률문서 감지: 코드블록(```) 안에 법률문서 키워드가 있으면 PDF 다운로드 버튼 추가
+            const docKeywords = ['고 소 장', '고소장', '소    장', '소장', '답 변 서', '답변서', '내 용 증 명', '내용증명', '고소취하서', '고 소 취 하 서'];
+            const hasCodeBlock = responseText.includes('```');
+            const hasDocKeyword = docKeywords.some(kw => responseText.includes(kw));
+
+            if (hasCodeBlock && hasDocKeyword) {
+                // 코드블록 내용 추출
+                const codeMatch = responseText.match(/```[\s\S]*?\n([\s\S]*?)```/);
+                if (codeMatch) {
+                    const docContent = codeMatch[1].trim();
+                    // 문서 제목 추출
+                    const titleMatch = docContent.match(/^(고\s*소\s*장|소\s+장|답\s*변\s*서|내\s*용\s*증\s*명|고소취하서)/m);
+                    const docTitle = titleMatch ? titleMatch[1].replace(/\s+/g, '') : '법률문서';
+
+                    const pdfBtn = document.createElement('button');
+                    pdfBtn.textContent = '📥 PDF 다운로드';
+                    pdfBtn.style.cssText = 'margin-top:12px;padding:10px 20px;background:#1e40af;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.9rem;font-weight:bold;display:block;';
+                    pdfBtn.onmouseover = () => pdfBtn.style.background = '#1e3a8a';
+                    pdfBtn.onmouseout = () => pdfBtn.style.background = '#1e40af';
+                    pdfBtn.onclick = async () => {
+                        pdfBtn.textContent = '⏳ 생성 중...';
+                        pdfBtn.disabled = true;
+                        try {
+                            const pdfRes = await fetch(PDF_URL, {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({ title: docTitle, content: docContent })
+                            });
+                            if (!pdfRes.ok) throw new Error('PDF 생성 실패');
+                            const blob = await pdfRes.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `${docTitle}.pdf`;
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            pdfBtn.textContent = '✅ 다운로드 완료';
+                            setTimeout(() => { pdfBtn.textContent = '📥 PDF 다운로드'; pdfBtn.disabled = false; }, 2000);
+                        } catch (e) {
+                            pdfBtn.textContent = '❌ 실패 - 다시 시도';
+                            pdfBtn.disabled = false;
+                        }
+                    };
+                    aiDiv.appendChild(pdfBtn);
+                }
+            }
+
             conversationArea.appendChild(aiDiv);
             
             // 뷰포트 자동 하단 포커싱
