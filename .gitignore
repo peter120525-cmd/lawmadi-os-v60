@@ -20,10 +20,13 @@ main_20260211.py
 # Duplicate project folder
 lawmadi-os-v50/
 
-# v60 - Temporary and Upload directories
-uploads/
-temp/
-logs/
+# v60 - Temporary and Upload directories (keep structure but ignore contents)
+uploads/*
+!uploads/.gitkeep
+temp/*
+!temp/.gitkeep
+logs/*
+!logs/.gitkeep
 *.log
 
 # v60 - Large media files (use Git LFS or external storage)
