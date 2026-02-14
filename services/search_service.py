@@ -50,7 +50,7 @@ class SearchService:
             logger.warning("⚠️ SearchService not ready (precedent)")
             return None
         try:
-            return self.drf.law_search(query)
+            return self.drf.search_precedents(query)
         except Exception as e:
             logger.warning(f"⚠️ search_precedent failed: {e}")
             return None

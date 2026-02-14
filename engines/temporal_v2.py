@@ -175,5 +175,11 @@ class AddendaParser:
         if amendment_dates:
             for d in amendment_dates:
                 tl.append(f"   |── [개정] {d}")
-        tl.append(f"   └────────────▶ [오늘] {today} (v50.2.4)")
+        tl.append(f"   └────────────▶ [오늘] {today} (v60.0.0)")
         return "\n".join(tl)
+
+
+def timeline_analyze(text: str, config: Optional[Dict] = None) -> Dict[str, Any]:
+    """main.py에서 호출하는 타임라인 분석 진입점"""
+    parser = AddendaParser(config)
+    return parser.parse_addenda(text)
