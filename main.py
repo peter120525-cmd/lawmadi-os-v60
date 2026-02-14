@@ -2808,7 +2808,7 @@ async def export_pdf(req: Request):
 
         from fpdf import FPDF
 
-        FONT_PATH = os.path.join(os.path.dirname(__file__), "fonts", "NotoSansKR-Regular.ttf")
+        FONT_PATH = os.path.join(os.path.dirname(__file__), "fonts", "NanumGothic.ttf")
         if not os.path.exists(FONT_PATH):
             raise HTTPException(status_code=500, detail="PDF 폰트 파일이 없습니다. 관리자에게 문의하세요.")
 
@@ -2825,7 +2825,15 @@ async def export_pdf(req: Request):
         # 본문
         pdf.set_font("NotoSansKR", "", 11)
         for line in content.split("\n"):
-            pdf.multi_cell(0, 7, line)
+            if line.strip() == "":
+                pdf.ln(7)
+            else:
+                line_width = pdf.get_string_width(line)
+                usable_width = pdf.w - pdf.l_margin - pdf.r_margin
+                if line_width <= usable_width:
+                    pdf.cell(0, 7, line, new_x="LMARGIN", new_y="NEXT")
+                else:
+                    pdf.multi_cell(0, 7, line.strip())
 
         # 면책 고지
         pdf.ln(10)
