@@ -13,8 +13,8 @@ const netStatus = document.getElementById('netStatus');
 
 // [IT 인프라: 백엔드 API 게이트웨이 설정]
 // Cloud Run 서비스의 고유 엔드포인트입니다.
-const API_URL = 'https://lawmadi-os-v50-938146962157.asia-northeast3.run.app/ask';
-const SYSTEM_VERSION = 'v50.2.3-HARDENED';
+const API_URL = 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app/ask';
+const SYSTEM_VERSION = 'v60.0.0';
 
 /**
  * L7 RENDERER: 시스템 로그 터미널 출력 함수
