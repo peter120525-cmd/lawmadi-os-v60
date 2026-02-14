@@ -102,6 +102,7 @@ _cors_origins = [
     "https://lawmadi-os.web.app",
     "https://lawmadi-db.web.app",  # Firebase Hosting (current)
     "http://localhost:3000",  # lawmadi-os-pwa 로컬 개발
+    "https://lawmadi-os-ee38lfjfg-choe-jainams-projects.vercel.app",  # lawmadi-os-pwa Vercel
 ]
 _extra_cors = os.getenv("CORS_EXTRA_ORIGINS", "")
 if _extra_cors:
