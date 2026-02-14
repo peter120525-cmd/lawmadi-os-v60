@@ -7,6 +7,14 @@
     <meta name="description" content="법률 문제로 인한 불안, 60명의 전문 리더가 협업하여 구체적인 행동 계획으로 바꿔드립니다.">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
+    <!-- Google Analytics (GA4) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-XXXXXXXXXX');
+    </script>
     <style>
         :root {
             --primary: #2563eb;
@@ -1870,6 +1878,47 @@
             .ai-msg .arrow-section-box {
                 padding: 10px 14px 10px 12px;
             }
+
+            /* ── v60.1: 헤더 버튼 모바일 최적화 ── */
+            .header-right > div:first-child {
+                display: none;
+            }
+
+            .dark-toggle {
+                padding: 6px;
+            }
+
+            /* ── 즐겨찾기 패널 모바일 ── */
+            .favorites-panel {
+                width: 100vw;
+                right: -100vw;
+            }
+
+            /* ── 코드블록 모바일 ── */
+            .ai-msg pre {
+                font-size: 0.78rem;
+                padding: 12px;
+            }
+
+            /* ── PDF/즐겨찾기 버튼 모바일 ── */
+            .pdf-download-btn {
+                font-size: 0.82rem;
+                padding: 8px 14px;
+            }
+
+            .fav-btn {
+                font-size: 0.75rem;
+            }
+
+            /* ── 로딩 스텝 모바일 ── */
+            .typing-progress {
+                font-size: 0.75rem;
+            }
+
+            /* ── safe area padding (노치 폰) ── */
+            .input-pipeline-wrapper {
+                padding-bottom: max(10px, env(safe-area-inset-bottom));
+            }
         }
 
         /* ═══════════════════════════════════════════════════
@@ -1986,6 +2035,390 @@
         }
 
         /* ═══════════════════════════════════════════════════
+           Dark Mode
+        ═══════════════════════════════════════════════════ */
+        body.dark-mode {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --primary-light: #1e3a5f;
+        }
+
+        body.dark-mode header.top-status {
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom-color: #334155;
+        }
+
+        body.dark-mode .system-badge {
+            background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+            color: #6ee7b7;
+        }
+
+        body.dark-mode .ai-msg {
+            background: #1e293b;
+            border-color: #334155;
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .ai-msg h1,
+        body.dark-mode .ai-msg h2,
+        body.dark-mode .ai-msg h3 {
+            color: #f1f5f9;
+        }
+
+        body.dark-mode .ai-msg::after {
+            background: #334155;
+            color: #94a3b8;
+        }
+
+        body.dark-mode .user-msg {
+            background: #2563eb;
+        }
+
+        body.dark-mode .input-pipeline-wrapper {
+            background: rgba(15, 23, 42, 0.95);
+            border-top-color: #334155;
+        }
+
+        body.dark-mode .input-container {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        body.dark-mode #userInput {
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .sidebar {
+            background: linear-gradient(180deg, #020617 0%, #0f172a 100%);
+        }
+
+        body.dark-mode .content-viewport {
+            background: #0f172a;
+        }
+
+        body.dark-mode .hero-title {
+            background: linear-gradient(135deg, #93c5fd 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+        }
+
+        body.dark-mode .hero-subtitle { color: #94a3b8; }
+
+        body.dark-mode .feature-card {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        body.dark-mode .example-btn {
+            background: #1e293b;
+            border-color: #334155;
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .stat-item {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        body.dark-mode .copy-btn {
+            background: rgba(30, 41, 59, 0.9) !important;
+            border-color: #475569 !important;
+        }
+
+        body.dark-mode .madi-analysis-header {
+            background: linear-gradient(135deg, #1e3a5f 0%, #172554 100%) !important;
+        }
+
+        body.dark-mode .arrow-section-box {
+            background: #1e293b !important;
+            border-color: #334155 !important;
+        }
+
+        .dark-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .dark-toggle:hover {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        /* ═══════════════════════════════════════════════════
+           Code Block Styling
+        ═══════════════════════════════════════════════════ */
+        .ai-msg pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 16px;
+            border-radius: 10px;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            margin: 12px 0;
+            border: 1px solid #334155;
+            position: relative;
+        }
+
+        body.dark-mode .ai-msg pre {
+            background: #0f172a;
+            border-color: #475569;
+        }
+
+        .ai-msg pre code {
+            background: none;
+            padding: 0;
+            font-size: inherit;
+        }
+
+        .code-copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #94a3b8;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .code-copy-btn:hover {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        /* ═══════════════════════════════════════════════════
+           Favorites Panel
+        ═══════════════════════════════════════════════════ */
+        .favorites-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 380px;
+            max-width: 90vw;
+            height: 100dvh;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            z-index: 1200;
+            transition: right 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+        }
+
+        .favorites-panel.active {
+            right: 0;
+        }
+
+        .favorites-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .favorites-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .favorites-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .fav-item {
+            padding: 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .fav-item:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .fav-item .fav-query {
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+            color: var(--text-main);
+        }
+
+        .fav-item .fav-preview {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .fav-item .fav-date {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        .fav-item .fav-delete {
+            float: right;
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            padding: 2px;
+            font-size: 0.8rem;
+        }
+
+        .fav-empty {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 40px 20px;
+        }
+
+        /* ═══════════════════════════════════════════════════
+           Enhanced Loading Animation
+        ═══════════════════════════════════════════════════ */
+        .typing-indicator {
+            align-self: flex-start;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 20px 24px;
+            max-width: 480px;
+            animation: fadeInUp 0.3s ease;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border-radius: 50%;
+            animation: typingBounce 1.4s infinite;
+        }
+
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typingBounce {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-8px); opacity: 1; }
+        }
+
+        .typing-progress {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .typing-step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .typing-step.active { color: var(--primary); font-weight: 600; }
+        .typing-step.done { color: var(--success); }
+
+        .typing-step .step-icon {
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+        }
+
+        /* ═══════════════════════════════════════════════════
+           Error Retry Button
+        ═══════════════════════════════════════════════════ */
+        .retry-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .retry-btn:hover { background: var(--primary-dark); transform: translateY(-1px); }
+
+        /* PDF Download Button */
+        .pdf-download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+            padding: 10px 20px;
+            background: #1e40af;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        .pdf-download-btn:hover { background: #1e3a8a; }
+
+        /* Favorite Button in AI Message */
+        .fav-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+            margin-right: 8px;
+            transition: all 0.2s;
+        }
+
+        .fav-btn:hover { border-color: #f59e0b; color: #f59e0b; }
+
+        /* ═══════════════════════════════════════════════════
            Responsive — 360px (Extra Small Mobile)
         ═══════════════════════════════════════════════════ */
         @media (max-width: 360px) {
@@ -2019,6 +2452,19 @@
 <body>
 
 <div id="overlay" class="overlay"></div>
+
+<!-- Favorites Panel -->
+<div id="favoritesPanel" class="favorites-panel">
+    <div class="favorites-header">
+        <h3>&#11088; 저장된 답변</h3>
+        <button onclick="UI.toggleFavorites()" style="background:none; border:none; cursor:pointer; color:var(--text-muted); padding:4px;">
+            <span class="material-symbols-outlined">close</span>
+        </button>
+    </div>
+    <div id="favoritesList" class="favorites-list">
+        <div class="fav-empty">저장된 답변이 없습니다.</div>
+    </div>
+</div>
 
 <div class="layout-container">
     <!-- Sidebar -->
@@ -2070,6 +2516,12 @@
                     <span class="material-symbols-outlined" style="font-size: 1.3rem; vertical-align: middle; color: var(--primary);">diamond</span>
                     Powered by Gemini 2.0
                 </div>
+                <button id="favToggle" class="dark-toggle" title="즐겨찾기">
+                    <span class="material-symbols-outlined" style="font-size: 1.2rem;">bookmark</span>
+                </button>
+                <button id="darkToggle" class="dark-toggle" title="다크모드 전환">
+                    <span class="material-symbols-outlined" style="font-size: 1.2rem;">dark_mode</span>
+                </button>
             </div>
         </header>
 
@@ -2297,11 +2749,18 @@
         uploadedFileName: document.getElementById('uploadedFileName'),
         uploadedFileSize: document.getElementById('uploadedFileSize'),
         removeFileBtn: document.getElementById('removeFileBtn'),
+        favoritesPanel: document.getElementById('favoritesPanel'),
+        favoritesList: document.getElementById('favoritesList'),
         API_URL: 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app/ask',
         BASE_URL: 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app',
         USE_STREAMING: false,
         USE_TYPING_EFFECT: false,
         uploadedFile: null,
+        conversationHistory: [],
+        lastQuery: null,
+        lastRawResponse: null,
+        darkMode: false,
+        MAX_RETRY: 2,
 
         init() {
             this.menuToggle.onclick = (e) => { e.stopPropagation(); this.toggleSidebar(true); };
@@ -2338,6 +2797,19 @@
             this.fileInput.onchange = (e) => this.handleFileSelect(e);
             this.removeFileBtn.onclick = () => this.clearUploadedFile();
 
+            // 다크모드 초기화
+            const darkToggle = document.getElementById('darkToggle');
+            if (darkToggle) darkToggle.onclick = () => this.toggleDarkMode();
+            if (localStorage.getItem('lawmadi-dark-mode') === 'true') {
+                this.darkMode = true;
+                document.body.classList.add('dark-mode');
+                if (darkToggle) darkToggle.querySelector('.material-symbols-outlined').textContent = 'light_mode';
+            }
+
+            // 즐겨찾기 초기화
+            const favToggle = document.getElementById('favToggle');
+            if (favToggle) favToggle.onclick = () => this.toggleFavorites();
+
             // Hover effects for menu toggle
             this.menuToggle.onmouseenter = () => {
                 this.menuToggle.style.background = 'rgba(0,0,0,0.05)';
@@ -2347,18 +2819,88 @@
             };
         },
 
+        // ═══ 다크모드 ═══
+        toggleDarkMode() {
+            this.darkMode = !this.darkMode;
+            document.body.classList.toggle('dark-mode', this.darkMode);
+            localStorage.setItem('lawmadi-dark-mode', this.darkMode);
+            const icon = document.querySelector('#darkToggle .material-symbols-outlined');
+            if (icon) icon.textContent = this.darkMode ? 'light_mode' : 'dark_mode';
+        },
+
+        // ═══ 즐겨찾기 ═══
+        toggleFavorites() {
+            const panel = this.favoritesPanel;
+            if (!panel) return;
+            const isActive = panel.classList.toggle('active');
+            if (isActive) this.renderFavorites();
+        },
+
+        saveFavorite(query, response) {
+            const favs = JSON.parse(localStorage.getItem('lawmadi-favorites') || '[]');
+            favs.unshift({
+                id: Date.now(),
+                query: query,
+                response: response,
+                date: new Date().toLocaleDateString('ko-KR')
+            });
+            if (favs.length > 50) favs.pop();
+            localStorage.setItem('lawmadi-favorites', JSON.stringify(favs));
+        },
+
+        deleteFavorite(id) {
+            let favs = JSON.parse(localStorage.getItem('lawmadi-favorites') || '[]');
+            favs = favs.filter(f => f.id !== id);
+            localStorage.setItem('lawmadi-favorites', JSON.stringify(favs));
+            this.renderFavorites();
+        },
+
+        renderFavorites() {
+            const list = this.favoritesList;
+            if (!list) return;
+            const favs = JSON.parse(localStorage.getItem('lawmadi-favorites') || '[]');
+            if (favs.length === 0) {
+                list.innerHTML = '<div class="fav-empty">저장된 답변이 없습니다.</div>';
+                return;
+            }
+            list.innerHTML = favs.map(f => `
+                <div class="fav-item" data-id="${f.id}">
+                    <button class="fav-delete" onclick="event.stopPropagation(); UI.deleteFavorite(${f.id})">삭제</button>
+                    <div class="fav-query">${this.escapeHtml(f.query)}</div>
+                    <div class="fav-preview">${this.escapeHtml(f.response).substring(0, 100)}...</div>
+                    <div class="fav-date">${f.date}</div>
+                </div>
+            `).join('');
+
+            list.querySelectorAll('.fav-item').forEach(item => {
+                item.onclick = () => {
+                    const fav = favs.find(f => f.id === parseInt(item.dataset.id));
+                    if (fav) {
+                        this.switchToChatMode();
+                        this.appendMessage('user', this.escapeHtml(fav.query));
+                        this.appendMessage('ai', this.formatReport(fav.response));
+                        this.toggleFavorites();
+                    }
+                };
+            });
+        },
+
+        escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        },
+
         handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
 
-            // 파일 크기 체크 (10MB)
             const maxSize = 10 * 1024 * 1024;
             if (file.size > maxSize) {
                 alert(`파일 크기가 너무 큽니다. 최대 ${maxSize / 1024 / 1024}MB까지 업로드 가능합니다.`);
                 return;
             }
 
-            // 파일 타입 체크
             const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
             if (!allowedTypes.includes(file.type)) {
                 alert('지원하지 않는 파일 형식입니다. JPG, PNG, WEBP, PDF 파일만 업로드 가능합니다.');
@@ -2366,20 +2908,15 @@
             }
 
             this.uploadedFile = file;
-
-            // 미리보기 표시
             this.uploadedFileName.textContent = file.name;
             this.uploadedFileSize.textContent = this.formatFileSize(file.size);
             this.uploadedFilePreview.style.display = 'block';
-
-            console.log('파일 선택됨:', file.name, this.formatFileSize(file.size));
         },
 
         clearUploadedFile() {
             this.uploadedFile = null;
             this.fileInput.value = '';
             this.uploadedFilePreview.style.display = 'none';
-            console.log('파일 제거됨');
         },
 
         formatFileSize(bytes) {
@@ -2453,64 +2990,109 @@
             this.userInput.focus();
         },
 
-        async dispatchPacket() {
-            const query = this.userInput.value.trim();
+        // ═══ 메인 디스패치 (대화 이력 + 에러 재시도) ═══
+        async dispatchPacket(retryCount = 0) {
+            const query = retryCount > 0 ? this.lastQuery : this.userInput.value.trim();
             const hasFile = this.uploadedFile !== null;
 
-            // 질문도 없고 파일도 없으면 리턴
             if (!query && !hasFile) return;
 
             this.switchToChatMode();
 
-            // v60: 파일이 있는 경우
             if (hasFile) {
                 await this.handleFileUploadAndAnalysis(query);
                 return;
             }
 
-            // 기존 텍스트 질문 처리
-            this.appendMessage('user', query);
-            this.userInput.value = "";
-            this.userInput.style.height = 'auto';
+            if (retryCount === 0) {
+                this.appendMessage('user', this.escapeHtml(query));
+                this.userInput.value = "";
+                this.userInput.style.height = 'auto';
+                this.lastQuery = query;
+            }
 
-            // 타이핑 인디케이터 표시
             this.showTypingIndicator();
 
             try {
                 const response = await fetch(this.API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query: query })
+                    body: JSON.stringify({
+                        query: query,
+                        history: this.conversationHistory.slice(-10)
+                    })
                 });
 
-                if (!response.ok) throw new Error('Communication Error');
+                if (!response.ok) throw new Error(`서버 오류 (${response.status})`);
                 const data = await response.json();
 
-                // 타이핑 인디케이터 제거
                 this.hideTypingIndicator();
 
+                // 대화 이력 저장
+                this.conversationHistory.push(
+                    { role: 'user', content: query },
+                    { role: 'assistant', content: data.response || '' }
+                );
+                if (this.conversationHistory.length > 20) {
+                    this.conversationHistory = this.conversationHistory.slice(-20);
+                }
+
+                this.lastRawResponse = data.response;
                 const formattedHtml = this.formatReport(data.response);
-                this.appendMessage('ai', formattedHtml);
+                this.appendMessage('ai', formattedHtml, null, query, data.response);
+
+                // GA4 이벤트 추적
+                if (typeof gtag === 'function') {
+                    gtag('event', 'query_sent', { query_length: query.length });
+                }
 
             } catch (error) {
                 this.hideTypingIndicator();
-                this.appendMessage('ai', "<div style='color:red;'>⚠️ 시스템 통신 장애가 발생했습니다. 잠시 후 다시 시도해 주세요.</div>");
+
+                // 자동 재시도
+                if (retryCount < this.MAX_RETRY) {
+                    const waitSec = (retryCount + 1) * 2;
+                    this.appendMessage('ai', `<p style="color: #f59e0b;">네트워크 오류 발생. ${waitSec}초 후 자동 재시도합니다... (${retryCount + 1}/${this.MAX_RETRY})</p>`);
+                    await new Promise(r => setTimeout(r, waitSec * 1000));
+                    // 재시도 메시지 제거
+                    const lastMsg = this.convArea.lastElementChild;
+                    if (lastMsg && lastMsg.classList.contains('ai-msg')) lastMsg.remove();
+                    return this.dispatchPacket(retryCount + 1);
+                }
+
+                // 최종 실패: 재시도 버튼 포함
+                this.appendMessage('ai', `
+                    <div style="color: #ef4444;">
+                        <p><strong>통신 오류가 발생했습니다.</strong></p>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);">${this.escapeHtml(error.message)}</p>
+                        <button class="retry-btn" onclick="UI.retryLastQuery()">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
+                            다시 시도
+                        </button>
+                    </div>
+                `);
             }
+        },
+
+        retryLastQuery() {
+            if (!this.lastQuery) return;
+            // 에러 메시지 제거
+            const lastMsg = this.convArea.lastElementChild;
+            if (lastMsg && lastMsg.classList.contains('ai-msg')) lastMsg.remove();
+            this.dispatchPacket(0);
         },
 
         async handleFileUploadAndAnalysis(additionalQuery) {
             const file = this.uploadedFile;
 
-            // 사용자 메시지 표시
             const userMsg = additionalQuery
-                ? `📄 ${file.name} (${this.formatFileSize(file.size)})<br>${additionalQuery}`
+                ? `📄 ${file.name} (${this.formatFileSize(file.size)})<br>${this.escapeHtml(additionalQuery)}`
                 : `📄 ${file.name} (${this.formatFileSize(file.size)})`;
 
             this.appendMessage('user', userMsg);
             this.userInput.value = "";
             this.userInput.style.height = 'auto';
 
-            // 타이핑 인디케이터 표시
             const statusId = 'upload-status-' + Date.now();
             const statusDiv = document.createElement('div');
             statusDiv.id = statusId;
@@ -2520,7 +3102,6 @@
             this.convArea.scrollTo({ top: this.convArea.scrollHeight, behavior: 'smooth' });
 
             try {
-                // 1. 파일 업로드
                 const formData = new FormData();
                 formData.append('file', file);
 
@@ -2535,10 +3116,8 @@
                 }
 
                 const uploadData = await uploadResponse.json();
-                console.log('업로드 성공:', uploadData);
 
-                // 2. 문서 분석
-                this.updateMessage(statusId, '<p>🔍 <b>문서 분석 중...</b> (2/2)</p><p>AI가 문서를 법률적 관점에서 분석하고 있습니다... 💫</p>');
+                this.updateMessage(statusId, '<p>🔍 <b>문서 분석 중...</b> (2/2)</p><p>AI가 문서를 법률적 관점에서 분석하고 있습니다...</p>');
 
                 const analysisType = this.detectAnalysisType(file.name, additionalQuery);
 
@@ -2552,18 +3131,14 @@
                 }
 
                 const analyzeData = await analyzeResponse.json();
-                console.log('분석 성공:', analyzeData);
 
-                // 3. 결과 표시
                 const resultHtml = this.formatDocumentAnalysis(analyzeData.analysis, file.name);
                 this.updateMessage(statusId, resultHtml);
-
-                // 파일 업로드 상태 초기화
                 this.clearUploadedFile();
 
             } catch (error) {
                 console.error('파일 처리 오류:', error);
-                this.updateMessage(statusId, `<div style='color:red;'>⚠️ 파일 처리 중 오류 발생: ${error.message}</div>`);
+                this.updateMessage(statusId, `<div style='color:red;'>파일 처리 중 오류 발생: ${this.escapeHtml(error.message)}</div>`);
                 this.clearUploadedFile();
             }
         },
@@ -2572,106 +3147,83 @@
             const lowerFilename = filename.toLowerCase();
             const lowerQuery = (query || '').toLowerCase();
 
-            if (lowerFilename.includes('contract') || lowerFilename.includes('계약') ||
-                lowerQuery.includes('계약')) {
+            if (lowerFilename.includes('contract') || lowerFilename.includes('계약') || lowerQuery.includes('계약')) {
                 return 'contract';
             }
-
             if (lowerQuery.includes('위험') || lowerQuery.includes('리스크') || lowerQuery.includes('risk')) {
                 return 'risk_assessment';
             }
-
             return 'general';
         },
 
         formatDocumentAnalysis(analysis, filename) {
-            let html = `<h3>📄 문서 분석 결과: ${filename}</h3>`;
+            let html = `<h3>📄 문서 분석 결과: ${this.escapeHtml(filename)}</h3>`;
 
-            // 요약
             if (analysis.summary) {
-                html += `<h3>💡 요약</h3><p>${analysis.summary}</p>`;
+                html += `<h3>요약</h3><p>${analysis.summary}</p>`;
             }
 
-            // 문서 종류
             if (analysis.document_type || analysis.contract_type) {
                 const docType = analysis.document_type || analysis.contract_type;
                 html += `<p><strong>📋 문서 종류:</strong> ${docType}</p>`;
             }
 
-            // 위험도
             if (analysis.risk_level) {
-                const riskEmoji = {
-                    'low': '🟢',
-                    'medium': '🟡',
-                    'high': '🟠',
-                    'critical': '🔴'
-                }[analysis.risk_level] || '⚪';
-
-                const riskText = {
-                    'low': '낮음',
-                    'medium': '중간',
-                    'high': '높음',
-                    'critical': '매우 높음'
-                }[analysis.risk_level] || analysis.risk_level;
-
-                html += `<p><strong>⚠️ 위험도:</strong> ${riskEmoji} ${riskText}</p>`;
+                const riskEmoji = { 'low': '🟢', 'medium': '🟡', 'high': '🟠', 'critical': '🔴' }[analysis.risk_level] || '⚪';
+                const riskText = { 'low': '낮음', 'medium': '중간', 'high': '높음', 'critical': '매우 높음' }[analysis.risk_level] || analysis.risk_level;
+                html += `<p><strong>위험도:</strong> ${riskEmoji} ${riskText}</p>`;
             }
 
-            // 법률 카테고리
             if (analysis.legal_category) {
-                html += `<p><strong>⚖️ 법률 분야:</strong> ${analysis.legal_category}</p>`;
+                html += `<p><strong>법률 분야:</strong> ${analysis.legal_category}</p>`;
             }
 
-            // 법률적 쟁점
             if (analysis.legal_issues && analysis.legal_issues.length > 0) {
-                html += `<h3>⚖️ 법률적 쟁점</h3><ul>`;
-                analysis.legal_issues.forEach(issue => {
-                    html += `<li>${issue}</li>`;
-                });
+                html += `<h3>법률적 쟁점</h3><ul>`;
+                analysis.legal_issues.forEach(issue => { html += `<li>${issue}</li>`; });
                 html += `</ul>`;
             }
 
-            // 주요 조항 (계약서인 경우)
             if (analysis.key_terms && analysis.key_terms.length > 0) {
                 html += `<h3>📋 주요 조항</h3>`;
                 analysis.key_terms.forEach((term, idx) => {
-                    html += `<p><strong>${idx + 1}. ${term.term}</strong></p>`;
-                    html += `<p>${term.content}</p>`;
-                    if (term.issue) {
-                        html += `<p style="color: #f59e0b;">⚠️ ${term.issue}</p>`;
-                    }
+                    html += `<p><strong>${idx + 1}. ${term.term}</strong></p><p>${term.content}</p>`;
+                    if (term.issue) html += `<p style="color: #f59e0b;">${term.issue}</p>`;
                 });
             }
 
-            // 핵심 내용
             if (analysis.key_points && analysis.key_points.length > 0) {
-                html += `<h3>🔑 핵심 내용</h3><ul>`;
-                analysis.key_points.forEach(point => {
-                    html += `<li>${point}</li>`;
-                });
+                html += `<h3>핵심 내용</h3><ul>`;
+                analysis.key_points.forEach(point => { html += `<li>${point}</li>`; });
                 html += `</ul>`;
             }
 
-            // 권고사항
             if (analysis.recommendations && analysis.recommendations.length > 0) {
-                html += `<h3>💡 권고사항</h3><ul>`;
-                analysis.recommendations.forEach(rec => {
-                    html += `<li>${rec}</li>`;
-                });
+                html += `<h3>권고사항</h3><ul>`;
+                analysis.recommendations.forEach(rec => { html += `<li>${rec}</li>`; });
                 html += `</ul>`;
             }
 
-            html += `<p style="margin-top: 24px; padding-top: 16px; border-top: 2px solid #e2e8f0; color: #64748b; font-size: 0.9rem;">
-                💡 이 분석 결과는 AI에 의해 자동 생성되었습니다. 최종 결정은 반드시 법률 전문가와 상의하시기 바랍니다.
+            html += `<p style="margin-top: 24px; padding-top: 16px; border-top: 2px solid var(--border); color: var(--text-muted); font-size: 0.9rem;">
+                이 분석 결과는 AI에 의해 자동 생성되었습니다. 최종 결정은 반드시 법률 전문가와 상의하시기 바랍니다.
             </p>`;
 
             return html;
         },
 
+        // ═══ 마크다운 렌더링 (코드블록 지원 추가) ═══
         formatReport(text) {
             if (!text) return "응답 데이터를 수신하지 못했습니다.";
 
-            let lines = text.split('\n');
+            // 코드블록 사전 처리: ```로 감싼 블록을 플레이스홀더로 치환
+            const codeBlocks = [];
+            let processed = text.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+                const idx = codeBlocks.length;
+                codeBlocks.push({ lang, code: code.trimEnd() });
+                return `%%CODEBLOCK_${idx}%%`;
+            });
+
+            let lines = processed.split('\n');
             let html = [];
             let inList = false;
             let inOrderedList = false;
@@ -2681,6 +3233,18 @@
                 let line = lines[i];
                 let trimmed = line.trim();
 
+                // 코드블록 플레이스홀더 복원
+                if (/^%%CODEBLOCK_\d+%%$/.test(trimmed)) {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    const idx = parseInt(trimmed.match(/\d+/)[0]);
+                    const block = codeBlocks[idx];
+                    const escapedCode = this.escapeHtml(block.code);
+                    html.push(`<pre><code>${escapedCode}</code></pre>`);
+                    lastWasH2 = false;
+                    continue;
+                }
+
                 if (!trimmed) {
                     if (inList) { html.push('</ul>'); inList = false; }
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
@@ -2689,7 +3253,6 @@
                     continue;
                 }
 
-                // [마디 (시스템 총괄) 분석] 특수 헤더 박스
                 if (/^\[마디/.test(trimmed)) {
                     if (inList) { html.push('</ul>'); inList = false; }
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
@@ -2705,7 +3268,6 @@
                     continue;
                 }
 
-                // #### ▶ 섹션 화살표 박스 (## 헤딩 대신 고퀄 박스로 처리)
                 if (trimmed.startsWith('#### ')) {
                     if (inList) { html.push('</ul>'); inList = false; }
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
@@ -2718,7 +3280,6 @@
                     continue;
                 }
 
-                // 마크다운 구분선 (---, ***, ___) → <hr class="fancy">
                 if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
                     if (inList) { html.push('</ul>'); inList = false; }
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
@@ -2727,50 +3288,37 @@
                     continue;
                 }
 
-                // ## 헤딩 - 구분선 추가
                 if (trimmed.startsWith('## ')) {
                     if (inList) { html.push('</ul>'); inList = false; }
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
-
-                    // 첫 번째 H2가 아니면 구분선 추가
-                    if (html.length > 0 && !lastWasH2) {
-                        html.push('<hr class="fancy">');
-                    }
-
+                    if (html.length > 0 && !lastWasH2) html.push('<hr class="fancy">');
                     html.push('<h2>' + trimmed.substring(3) + '</h2>');
                     lastWasH2 = true;
                 }
-                // ### 헤딩
                 else if (trimmed.startsWith('### ')) {
                     if (inList) { html.push('</ul>'); inList = false; }
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
                     html.push('<h3>' + trimmed.substring(4) + '</h3>');
                     lastWasH2 = false;
                 }
-                // 순서 있는 리스트 (1. 2. 3.)
                 else if (/^\d+\.\s+/.test(trimmed)) {
                     if (inList) { html.push('</ul>'); inList = false; }
                     if (!inOrderedList) { html.push('<ol>'); inOrderedList = true; }
                     let content = trimmed.replace(/^\d+\.\s+/, '');
-                    content = this.formatInline(content);
-                    html.push('<li>' + content + '</li>');
+                    html.push('<li>' + this.formatInline(content) + '</li>');
                     lastWasH2 = false;
                 }
-                // 순서 없는 리스트 (-, •, *, ✓, ✅)
                 else if (/^[-•*✓✅▪◦]\s+/.test(trimmed)) {
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
                     if (!inList) { html.push('<ul>'); inList = true; }
                     let content = trimmed.replace(/^[-•*✓✅▪◦]\s+/, '');
-                    content = this.formatInline(content);
-                    html.push('<li>' + content + '</li>');
+                    html.push('<li>' + this.formatInline(content) + '</li>');
                     lastWasH2 = false;
                 }
-                // 일반 문단
                 else {
                     if (inList) { html.push('</ul>'); inList = false; }
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
-                    let content = this.formatInline(trimmed);
-                    html.push('<p>' + content + '</p>');
+                    html.push('<p>' + this.formatInline(trimmed) + '</p>');
                     lastWasH2 = false;
                 }
             }
@@ -2790,15 +3338,77 @@
             return result;
         },
 
-        appendMessage(sender, text, id = null) {
+        // ═══ 메시지 렌더링 (즐겨찾기 + PDF 버튼 추가) ═══
+        appendMessage(sender, text, id = null, originalQuery = null, rawResponse = null) {
             const msgDiv = document.createElement('div');
             msgDiv.className = sender === 'user' ? 'user-msg' : 'ai-msg';
             if (id) msgDiv.id = id;
             msgDiv.innerHTML = text;
 
-            // AI 메시지에 복사 버튼 추가
             if (sender === 'ai' && !id) {
                 this.addCopyButton(msgDiv);
+
+                // 즐겨찾기 버튼
+                if (originalQuery && rawResponse) {
+                    const favBtn = document.createElement('button');
+                    favBtn.className = 'fav-btn';
+                    favBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px;">bookmark_add</span> 저장';
+                    favBtn.onclick = () => {
+                        this.saveFavorite(originalQuery, rawResponse);
+                        favBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px; color: #f59e0b;">bookmark_added</span> 저장됨';
+                        favBtn.style.borderColor = '#f59e0b';
+                        favBtn.style.color = '#f59e0b';
+                    };
+                    msgDiv.appendChild(favBtn);
+                }
+
+                // PDF 다운로드 버튼 (법률문서 코드블록 감지)
+                if (rawResponse) {
+                    const docKeywords = ['고소장', '소장', '답변서', '내용증명', '고소취하서'];
+                    const hasCodeBlock = rawResponse.includes('```');
+                    const hasDocKeyword = docKeywords.some(kw => rawResponse.includes(kw));
+
+                    if (hasCodeBlock && hasDocKeyword) {
+                        const codeMatch = rawResponse.match(/```[\s\S]*?\n([\s\S]*?)```/);
+                        if (codeMatch) {
+                            const docContent = codeMatch[1].trim();
+                            const titleMatch = docContent.match(/^(고\s*소\s*장|소\s+장|답\s*변\s*서|내\s*용\s*증\s*명|고소취하서)/m);
+                            const docTitle = titleMatch ? titleMatch[1].replace(/\s+/g, '') : '법률문서';
+
+                            const pdfBtn = document.createElement('button');
+                            pdfBtn.className = 'pdf-download-btn';
+                            pdfBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">picture_as_pdf</span> PDF 다운로드';
+                            pdfBtn.onclick = async () => {
+                                pdfBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">hourglass_top</span> 생성 중...';
+                                pdfBtn.disabled = true;
+                                try {
+                                    const pdfRes = await fetch(`${this.BASE_URL}/export-pdf`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ title: docTitle, content: docContent })
+                                    });
+                                    if (!pdfRes.ok) throw new Error('PDF 생성 실패');
+                                    const blob = await pdfRes.blob();
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `${docTitle}.pdf`;
+                                    a.click();
+                                    window.URL.revokeObjectURL(url);
+                                    pdfBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">check_circle</span> 다운로드 완료';
+                                    setTimeout(() => {
+                                        pdfBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">picture_as_pdf</span> PDF 다운로드';
+                                        pdfBtn.disabled = false;
+                                    }, 2000);
+                                } catch (e) {
+                                    pdfBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">error</span> 실패 - 다시 시도';
+                                    pdfBtn.disabled = false;
+                                }
+                            };
+                            msgDiv.appendChild(pdfBtn);
+                        }
+                    }
+                }
             }
 
             this.convArea.appendChild(msgDiv);
@@ -2809,80 +3419,49 @@
             const msgDiv = document.getElementById(id);
             if (msgDiv) {
                 msgDiv.innerHTML = html;
-                // 최종 메시지로 업데이트될 때 복사 버튼 추가
                 this.addCopyButton(msgDiv);
                 this.convArea.scrollTo({ top: this.convArea.scrollHeight, behavior: 'smooth' });
             }
         },
 
         addCopyButton(msgDiv) {
-            // 이미 복사 버튼이 있으면 제거
             const existingBtn = msgDiv.querySelector('.copy-btn');
             if (existingBtn) existingBtn.remove();
 
             const copyBtn = document.createElement('button');
             copyBtn.className = 'copy-btn';
-            copyBtn.innerHTML = `
-                <span class="material-symbols-outlined" style="font-size: 18px;">content_copy</span>
-            `;
+            copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">content_copy</span>';
             copyBtn.style.cssText = `
-                position: absolute;
-                top: 12px;
-                right: 12px;
-                background: rgba(255, 255, 255, 0.9);
-                backdrop-filter: blur(8px);
-                border: 1px solid #e5e7eb;
-                border-radius: 8px;
-                padding: 8px;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                opacity: 0;
-                transition: all 0.2s ease;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                z-index: 10;
+                position: absolute; top: 12px; right: 12px;
+                background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px);
+                border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px;
+                cursor: pointer; display: flex; align-items: center; justify-content: center;
+                opacity: 0; transition: all 0.2s ease;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 10;
             `;
 
-            copyBtn.onmouseenter = () => {
-                copyBtn.style.background = 'rgba(37, 99, 235, 0.1)';
-                copyBtn.style.borderColor = '#2563eb';
-            };
-
-            copyBtn.onmouseleave = () => {
-                copyBtn.style.background = 'rgba(255, 255, 255, 0.9)';
-                copyBtn.style.borderColor = '#e5e7eb';
-            };
+            copyBtn.onmouseenter = () => { copyBtn.style.background = 'rgba(37, 99, 235, 0.1)'; copyBtn.style.borderColor = '#2563eb'; };
+            copyBtn.onmouseleave = () => { copyBtn.style.background = 'rgba(255, 255, 255, 0.9)'; copyBtn.style.borderColor = '#e5e7eb'; };
 
             copyBtn.onclick = async () => {
-                const textContent = msgDiv.innerText;
                 try {
-                    await navigator.clipboard.writeText(textContent);
+                    await navigator.clipboard.writeText(msgDiv.innerText);
                     copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px; color: #10b981;">check</span>';
-                    setTimeout(() => {
-                        copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">content_copy</span>';
-                    }, 2000);
-                } catch (err) {
-                    console.error('복사 실패:', err);
-                }
+                    setTimeout(() => { copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">content_copy</span>'; }, 2000);
+                } catch (err) { console.error('복사 실패:', err); }
             };
 
             msgDiv.style.position = 'relative';
             msgDiv.appendChild(copyBtn);
 
-            // 호버 시 버튼 표시
-            msgDiv.onmouseenter = () => {
-                copyBtn.style.opacity = '1';
-            };
-            msgDiv.onmouseleave = () => {
-                copyBtn.style.opacity = '0';
-            };
+            msgDiv.onmouseenter = () => { copyBtn.style.opacity = '1'; };
+            msgDiv.onmouseleave = () => { copyBtn.style.opacity = '0'; };
         },
 
+        // ═══ 향상된 로딩 애니메이션 ═══
         showTypingIndicator() {
             const typingId = 'typing-indicator';
-            const existingTyping = document.getElementById(typingId);
-            if (existingTyping) return typingId;
+            if (document.getElementById(typingId)) return typingId;
 
             const typingDiv = document.createElement('div');
             typingDiv.id = typingId;
@@ -2891,17 +3470,55 @@
                 <div class="typing-dots">
                     <span></span><span></span><span></span>
                 </div>
-                <div class="typing-text">
-                    <p style="margin: 0 0 8px 0;">지금 담당 리더님이 <b>슈퍼 컴퓨터급 두뇌</b>를 풀가동해 답변 생성 중! 서버 로딩이 살짝 느려도 너그럽게 봐주실 거죠? 🥺✨</p>
-                    <p style="margin: 0;">저희 안테나는 <b>365일 24시간 풀가동 중!</b> 소중한 이야기에 초고속 접속해 대기할 테니 조금만 기다려주세요오~ 히히. 💕</p>
+                <div class="typing-progress">
+                    <div class="typing-step active" id="step-1">
+                        <span class="step-icon">🔍</span> 질문 분석 중...
+                    </div>
+                    <div class="typing-step" id="step-2">
+                        <span class="step-icon">👥</span> 전문 리더 배정 중...
+                    </div>
+                    <div class="typing-step" id="step-3">
+                        <span class="step-icon">⚖️</span> 법령·판례 검색 중...
+                    </div>
+                    <div class="typing-step" id="step-4">
+                        <span class="step-icon">✍️</span> 답변 생성 중...
+                    </div>
                 </div>
             `;
             this.convArea.appendChild(typingDiv);
             this.convArea.scrollTo({ top: this.convArea.scrollHeight, behavior: 'smooth' });
+
+            // 단계별 진행 애니메이션
+            this._typingStepTimers = [];
+            const steps = [
+                { id: 'step-1', delay: 0 },
+                { id: 'step-2', delay: 2000 },
+                { id: 'step-3', delay: 5000 },
+                { id: 'step-4', delay: 9000 }
+            ];
+            steps.forEach((step, idx) => {
+                const timer = setTimeout(() => {
+                    const el = document.getElementById(step.id);
+                    if (el) {
+                        el.classList.add('active');
+                        // 이전 단계를 done 상태로
+                        if (idx > 0) {
+                            const prev = document.getElementById(steps[idx - 1].id);
+                            if (prev) { prev.classList.remove('active'); prev.classList.add('done'); }
+                        }
+                    }
+                }, step.delay);
+                this._typingStepTimers.push(timer);
+            });
+
             return typingId;
         },
 
         hideTypingIndicator() {
+            if (this._typingStepTimers) {
+                this._typingStepTimers.forEach(t => clearTimeout(t));
+                this._typingStepTimers = [];
+            }
             const typingDiv = document.getElementById('typing-indicator');
             if (typingDiv) typingDiv.remove();
         }
