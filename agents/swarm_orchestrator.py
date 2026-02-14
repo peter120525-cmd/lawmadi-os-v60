@@ -118,15 +118,24 @@ class SwarmOrchestrator:
         Returns:
             매칭된 leader_id 또는 None
         """
+        # 모든 매칭 후보를 수집한 뒤, 긴 이름 우선 + 같은 길이면 앞쪽 위치 우선
+        matches = []
         for leader_id, info in self.leaders.items():
             name = info.get("name", "")
             if not name:
                 continue
-            # "이름" 또는 "이름아" 패턴 매칭
-            if name in query:
-                logger.info(f"🎯 이름 호출 감지: '{name}' → {leader_id}")
-                return leader_id
-        return None
+            pos = query.find(name)
+            if pos >= 0:
+                matches.append((leader_id, name, pos))
+
+        if not matches:
+            return None
+
+        # 정렬: ① 이름 길이 내림차순 ② 출현 위치 오름차순
+        matches.sort(key=lambda x: (-len(x[1]), x[2]))
+        best_id, best_name, _ = matches[0]
+        logger.info(f"🎯 이름 호출 감지: '{best_name}' → {best_id}")
+        return best_id
 
     def detect_domains(self, query: str) -> List[Tuple[str, int]]:
         """
