@@ -20,6 +20,10 @@ main_20260211.py
 # Duplicate project folder
 lawmadi-os-v50/
 
+# Copyright submission files
+copyright_submission/
+package_copyright.sh
+
 # v60 - Temporary and Upload directories (keep structure but ignore contents)
 uploads/*
 !uploads/.gitkeep
