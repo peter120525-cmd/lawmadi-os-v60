@@ -28,6 +28,7 @@ COPY services/ ./services/
 COPY prompts/ ./prompts/
 COPY frontend/ ./frontend/
 COPY static/ ./static/
+COPY fonts/ ./fonts/
 
 # 6-a. LLM-readable reference files (served at /llms.txt, /README.md, /license)
 COPY llms.txt .
