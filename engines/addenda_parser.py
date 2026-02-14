@@ -38,7 +38,7 @@ class AddendaParser:
             "has_interim_measures": False,
             "specific_clauses": [],
             "integrity_status": "VERIFIED",
-            "analysis_version": "v50.2.4-HARDENED"
+            "analysis_version": "v60.0.0"
         }
 
         # 조 단위 분리 (IT 기술: 계층적 파싱)

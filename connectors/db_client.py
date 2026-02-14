@@ -24,7 +24,7 @@ _pool: Optional[queue.Queue] = None
 _pool_lock = threading.Lock()
 _MIN_CONN = 2
 _MAX_CONN = 10
-_ENV_VERSION = 'v50.2.4-HARDENED'
+_ENV_VERSION = 'v60.0.0'
 
 def _env(name: str) -> Optional[str]:
     v = os.getenv(name)

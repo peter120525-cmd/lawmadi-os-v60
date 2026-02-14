@@ -1,6 +1,6 @@
 """
-Lawmadi OS v50.2.4-HARDENED — Patched Kernel
-Based on v50.2.3-HARDENED original main.py
+Lawmadi OS v60.0.0 — Patched Kernel
+Based on v60.0.0 main.py
 
 [패치 내역 — 원본 대비 변경사항]
 🔴 감사 #2.1  .env.cloudrun 시크릿 노출 → .env.example로 교체 (파일 수준)
