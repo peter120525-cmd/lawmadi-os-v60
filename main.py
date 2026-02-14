@@ -101,6 +101,7 @@ _cors_origins = [
     "https://www.lawmadi.com",
     "https://lawmadi-os.web.app",
     "https://lawmadi-db.web.app",  # Firebase Hosting (current)
+    "http://localhost:3000",  # lawmadi-os-pwa 로컬 개발
 ]
 _extra_cors = os.getenv("CORS_EXTRA_ORIGINS", "")
 if _extra_cors:
