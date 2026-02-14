@@ -1613,33 +1613,151 @@
             box-shadow: 0 8px 16px rgba(37, 99, 235, 0.25);
         }
 
-        /* Responsive */
+        /* ═══════════════════════════════════════════════════
+           [마디 (시스템 총괄) 분석] 특수 헤더 박스
+        ═══════════════════════════════════════════════════ */
+        .ai-msg .madi-analysis-header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #312e81 100%);
+            color: white;
+            padding: 15px 22px;
+            border-radius: 14px;
+            margin: 22px 0 8px;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            box-shadow:
+                0 4px 20px rgba(49, 46, 129, 0.45),
+                0 2px 6px rgba(0, 0, 0, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(129, 140, 248, 0.22);
+            position: relative;
+            overflow: hidden;
+            animation: slideInLeft 0.4s ease;
+        }
+
+        .ai-msg .madi-analysis-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #818cf8 0%, #c084fc 50%, #818cf8 100%);
+            border-radius: 14px 14px 0 0;
+        }
+
+        .ai-msg .madi-analysis-header::after {
+            content: '⚙';
+            font-size: 4rem;
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0.06;
+            line-height: 1;
+            pointer-events: none;
+        }
+
+        .ai-msg .madi-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(129, 140, 248, 0.28);
+            border: 1px solid rgba(165, 180, 252, 0.35);
+            color: #c7d2fe;
+            font-size: 0.67rem;
+            font-weight: 800;
+            padding: 4px 11px;
+            border-radius: 20px;
+            letter-spacing: 0.07em;
+            white-space: nowrap;
+            flex-shrink: 0;
+            text-transform: uppercase;
+        }
+
+        .ai-msg .madi-tag::before {
+            content: '⚙';
+            font-size: 0.75em;
+        }
+
+        .ai-msg .madi-content {
+            font-size: 1rem;
+            font-weight: 700;
+            color: white;
+            letter-spacing: -0.01em;
+            line-height: 1.45;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+            flex: 1;
+        }
+
+        /* ═══════════════════════════════════════════════════
+           #### ▶ 섹션 화살표 박스
+        ═══════════════════════════════════════════════════ */
+        .ai-msg .arrow-section-box {
+            background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 55%, #ede9fe 100%);
+            border: 1px solid rgba(99, 102, 241, 0.18);
+            border-left: 4px solid #4f46e5;
+            padding: 11px 18px 11px 16px;
+            border-radius: 0 12px 12px 0;
+            margin: 18px 0 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow:
+                0 2px 10px rgba(79, 70, 229, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.85);
+            animation: slideInLeft 0.35s ease;
+        }
+
+        .ai-msg .arrow-section-box .arrow-icon {
+            color: #4f46e5;
+            font-size: 0.85rem;
+            font-weight: 900;
+            flex-shrink: 0;
+            filter: drop-shadow(0 0 5px rgba(79, 70, 229, 0.5));
+            line-height: 1;
+        }
+
+        .ai-msg .arrow-section-box .arrow-text {
+            font-size: 0.97rem;
+            font-weight: 700;
+            color: #312e81;
+            letter-spacing: -0.01em;
+            line-height: 1.5;
+        }
+
+        /* ═══════════════════════════════════════════════════
+           Responsive — 768px (Mobile)
+        ═══════════════════════════════════════════════════ */
         @media (max-width: 768px) {
             .sidebar {
                 position: absolute;
                 transform: translateX(-100%);
                 height: 100vh;
                 height: 100dvh;
+                z-index: 1000;
             }
 
             .sidebar.active { transform: translateX(0); }
             .overlay.active { display: block; }
 
             header.top-status {
-                height: 64px;
-                padding: 0 16px;
+                height: 56px;
+                padding: 0 12px;
             }
 
             .hero-section {
-                margin: 32px auto;
+                margin: 24px auto;
+                padding: 0 16px;
             }
 
             .hero-title {
-                font-size: 2rem;
+                font-size: 1.85rem;
             }
 
             .core-features-section {
-                padding: 3rem 20px;
+                padding: 2.5rem 16px;
             }
 
             .feature-cards {
@@ -1648,6 +1766,177 @@
 
             .stats {
                 grid-template-columns: repeat(2, 1fr);
+            }
+
+            /* ── 대화 영역 ── */
+            .conversation-viewport {
+                padding: 16px 10px;
+                gap: 16px;
+            }
+
+            /* ── AI 메시지 ── */
+            .ai-msg {
+                max-width: 98%;
+                padding: 36px 16px 20px;
+                border-radius: 16px;
+                font-size: 15px;
+                line-height: 1.78;
+            }
+
+            .ai-msg h1 {
+                margin-left: -16px;
+                margin-right: -16px;
+                font-size: 1.25rem;
+                padding: 14px 18px;
+                border-radius: 0;
+            }
+
+            .ai-msg h2 {
+                font-size: 1rem;
+                padding: 10px 15px;
+            }
+
+            .ai-msg h3 {
+                font-size: 0.93rem;
+                padding: 9px 13px;
+            }
+
+            .ai-msg::after {
+                font-size: 0.62rem;
+                left: 16px;
+                padding: 2px 10px 3px;
+            }
+
+            /* ── 사용자 메시지 ── */
+            .user-msg {
+                max-width: 92%;
+                padding: 12px 18px;
+                font-size: 15px;
+            }
+
+            /* ── 타이핑 인디케이터 ── */
+            .typing-indicator {
+                max-width: 98%;
+                padding: 16px 20px;
+            }
+
+            /* ── 입력창 ── */
+            .input-pipeline-wrapper {
+                padding: 10px 12px;
+            }
+
+            .input-container {
+                border-radius: 18px;
+                padding: 8px 10px 8px 16px;
+            }
+
+            #userInput {
+                font-size: 0.95rem;
+                max-height: 120px;
+            }
+
+            .send-action {
+                width: 42px;
+                height: 42px;
+                border-radius: 12px;
+            }
+
+            /* ── 새 박스 요소 모바일 ── */
+            .ai-msg .madi-analysis-header {
+                padding: 12px 15px;
+                border-radius: 10px;
+                gap: 8px;
+            }
+
+            .ai-msg .arrow-section-box {
+                padding: 10px 14px 10px 12px;
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════
+           Responsive — 480px (Small Mobile)
+        ═══════════════════════════════════════════════════ */
+        @media (max-width: 480px) {
+            .ai-msg {
+                max-width: 100%;
+                padding: 32px 12px 16px;
+                font-size: 14px;
+                border-radius: 14px;
+            }
+
+            .ai-msg h1 {
+                margin-left: -12px;
+                margin-right: -12px;
+                font-size: 1.1rem;
+                padding: 12px 15px;
+            }
+
+            .ai-msg h2 {
+                font-size: 0.93rem;
+                padding: 9px 12px;
+            }
+
+            .ai-msg h3 {
+                font-size: 0.88rem;
+                padding: 8px 11px;
+            }
+
+            .ai-msg::after {
+                font-size: 0.58rem;
+                left: 12px;
+                padding: 2px 8px 3px;
+            }
+
+            .user-msg {
+                max-width: 96%;
+                padding: 10px 14px;
+                font-size: 14px;
+            }
+
+            .input-pipeline-wrapper {
+                padding: 8px;
+            }
+
+            .input-container {
+                padding: 6px 8px 6px 13px;
+                border-radius: 16px;
+            }
+
+            #userInput {
+                font-size: 0.9rem;
+            }
+
+            .send-action {
+                width: 40px;
+                height: 40px;
+                border-radius: 11px;
+            }
+
+            header.top-status {
+                height: 50px;
+                padding: 0 10px;
+            }
+
+            .conversation-viewport {
+                padding: 12px 8px;
+                gap: 12px;
+            }
+
+            .ai-msg .madi-analysis-header {
+                padding: 10px 12px;
+                gap: 7px;
+            }
+
+            .ai-msg .madi-content {
+                font-size: 0.93rem;
+            }
+
+            .ai-msg .arrow-section-box {
+                padding: 9px 12px 9px 10px;
+            }
+
+            .ai-msg .arrow-section-box .arrow-text {
+                font-size: 0.9rem;
             }
         }
     </style>
@@ -1833,12 +2122,28 @@
                         <div class="stat-label">구조화 응답</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number" id="todayVisitors">-</div>
+                        <div class="stat-number" id="todayVisitors">—</div>
                         <div class="stat-label">오늘 방문자</div>
                     </div>
                     <div class="stat-item">
-                        <div class="stat-number" id="totalVisitors">-</div>
+                        <div class="stat-number" id="totalVisitors">—</div>
                         <div class="stat-label">총 방문자</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">3.2초</div>
+                        <div class="stat-label">평균 응답 속도</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">2,400+</div>
+                        <div class="stat-label">검토 법령 수</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">24시간</div>
+                        <div class="stat-label">연중무휴 운영</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">무료</div>
+                        <div class="stat-label">서비스 이용료</div>
                     </div>
                 </div>
 
@@ -2028,19 +2333,22 @@
                 const response = await fetch(`${this.BASE_URL}/api/visitor-stats`);
                 const data = await response.json();
 
-                if (data.ok) {
-                    const todayEl = document.getElementById('todayVisitors');
-                    const totalEl = document.getElementById('totalVisitors');
+                const todayEl = document.getElementById('todayVisitors');
+                const totalEl = document.getElementById('totalVisitors');
 
-                    if (todayEl) {
-                        this.animateNumber(todayEl, data.today_visitors);
-                    }
-                    if (totalEl) {
-                        this.animateNumber(totalEl, data.total_visitors);
-                    }
+                if (data.ok) {
+                    if (todayEl) this.animateNumber(todayEl, data.today_visitors);
+                    if (totalEl) this.animateNumber(totalEl, data.total_visitors);
+                } else {
+                    if (todayEl) todayEl.textContent = '준비중';
+                    if (totalEl) totalEl.textContent = '준비중';
                 }
             } catch (error) {
                 console.error('통계 로드 실패:', error);
+                const todayEl = document.getElementById('todayVisitors');
+                const totalEl = document.getElementById('totalVisitors');
+                if (todayEl) todayEl.textContent = '준비중';
+                if (totalEl) totalEl.textContent = '준비중';
             }
         },
 
@@ -2301,6 +2609,35 @@
                     if (inList) { html.push('</ul>'); inList = false; }
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
                     html.push('<p></p>');
+                    lastWasH2 = false;
+                    continue;
+                }
+
+                // [마디 (시스템 총괄) 분석] 특수 헤더 박스
+                if (/^\[마디/.test(trimmed)) {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    const tagEnd = trimmed.indexOf(']');
+                    const tagText = tagEnd > 0 ? trimmed.substring(1, tagEnd) : '마디 분석';
+                    const rest = tagEnd > 0 ? trimmed.substring(tagEnd + 1).replace(/^[\s:：]+/, '') : '';
+                    if (rest) {
+                        html.push(`<div class="madi-analysis-header"><span class="madi-tag">${tagText}</span><span class="madi-content">${this.formatInline(rest)}</span></div>`);
+                    } else {
+                        html.push(`<div class="madi-analysis-header"><span class="madi-tag">${tagText}</span></div>`);
+                    }
+                    lastWasH2 = false;
+                    continue;
+                }
+
+                // #### ▶ 섹션 화살표 박스 (## 헤딩 대신 고퀄 박스로 처리)
+                if (trimmed.startsWith('#### ')) {
+                    if (inList) { html.push('</ul>'); inList = false; }
+                    if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
+                    let raw = trimmed.substring(5).trim();
+                    const hasArrow = raw.startsWith('▶');
+                    const arrowIcon = hasArrow ? '▶' : '▸';
+                    const content = raw.replace(/^▶\s*/, '').trim();
+                    html.push(`<div class="arrow-section-box"><span class="arrow-icon">${arrowIcon}</span><span class="arrow-text">${this.formatInline(content)}</span></div>`);
                     lastWasH2 = false;
                     continue;
                 }
