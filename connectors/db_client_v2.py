@@ -280,9 +280,13 @@ def init_visitor_stats_table():
     if not _db_enabled():
         return
 
-    conn = get_connection()
+    conn = None
     cur = None
     try:
+        conn = get_connection()
+        if conn is None:
+            logger.warning("⚠️ [Visitor] DB 연결 실패로 테이블 초기화 스킵")
+            return
         cur = conn.cursor()
         cur.execute("""
             CREATE TABLE IF NOT EXISTS visitor_stats (
@@ -322,9 +326,12 @@ def record_visit(visitor_id: str) -> Dict[str, Any]:
     if not _db_enabled():
         return {"ok": False, "error": "DB_DISABLED"}
 
-    conn = get_connection()
+    conn = None
     cur = None
     try:
+        conn = get_connection()
+        if conn is None:
+            return {"ok": False, "error": "DB_CONN_FAIL"}
         cur = conn.cursor()
         now = datetime.now(timezone.utc)
         today = now.date()
@@ -836,9 +843,12 @@ def get_visitor_stats() -> Dict[str, Any]:
             "error": "DB_DISABLED"
         }
 
-    conn = get_connection()
+    conn = None
     cur = None
     try:
+        conn = get_connection()
+        if conn is None:
+            return {"ok": False, "today_visitors": 0, "total_visitors": 0, "error": "DB_CONN_FAIL"}
         cur = conn.cursor()
         today = datetime.now(timezone.utc).date()
 
