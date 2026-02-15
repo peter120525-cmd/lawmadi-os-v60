@@ -1,0 +1,19 @@
+{
+  "name": "lawmadi-os",
+  "version": "1.0.0",
+  "description": "Lawmadi OS - Korean Legal AI Assistant for Zapier",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest --testTimeout 10000"
+  },
+  "dependencies": {
+    "zapier-platform-core": "15.*"
+  },
+  "devDependencies": {
+    "jest": "29.*"
+  },
+  "zapier": {
+    "id": 0,
+    "key": "lawmadi-os"
+  }
+}
