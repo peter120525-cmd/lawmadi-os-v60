@@ -2602,6 +2602,31 @@
                 font-size: 0.8rem;
             }
         }
+
+        /* 리더 응답 프로필 헤더 */
+        .leader-response-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(99, 102, 241, 0.15);
+        }
+        .leader-response-header img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            object-position: center top;
+            border: 2px solid rgba(99, 102, 241, 0.3);
+        }
+        .leader-response-header span {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #4338ca;
+        }
+        body.dark-mode .leader-response-header { border-bottom-color: rgba(99, 102, 241, 0.25); }
+        body.dark-mode .leader-response-header span { color: #a5b4fc; }
     </style>
 </head>
 <body>
@@ -2932,6 +2957,42 @@
 </div>
 
 <script>
+    // 리더/C-Level 프로필 이미지 매핑 (이름 → 경로)
+    const leaderProfileImages = {
+        '휘율': 'images/leaders/L01-hwiyul.jpg',
+        '보늬': 'images/leaders/L02-bonui.jpg',
+        '담슬': 'images/leaders/L03-damseul.jpg',
+        '아키': 'images/leaders/L04-aki.jpg',
+        '연우': 'images/leaders/L05-yeonwoo.jpg',
+        '벼리': 'images/leaders/L06-byeori.jpg',
+        '하늬': 'images/leaders/L07-hanui.jpg',
+        '온유': 'images/leaders/L08-onyu.jpg',
+        '한울': 'images/leaders/L09-hanul.jpg',
+        '결휘': 'images/leaders/L10-gyeolhwi.jpg',
+        '오름': 'images/leaders/L11-oreum.jpg',
+        '아슬': 'images/leaders/L12-aseul.jpg',
+        '누리': 'images/leaders/L13-nuri.jpg',
+        '다솜': 'images/leaders/L14-dasom.jpg',
+        '별하': 'images/leaders/L15-byeolha.jpg',
+        '슬아': 'images/leaders/L16-seula.jpg',
+        '미르': 'images/leaders/L17-mir.jpg',
+        '다온': 'images/leaders/L18-daon.jpg',
+        '슬옹': 'images/leaders/L19-selong.jpg',
+        '찬솔': 'images/leaders/L20-chansol.jpg',
+        '휘윤': 'images/leaders/L21-sebin.jpg',
+        '무결': 'images/leaders/L22-gaon.jpg',
+        '가비': 'images/leaders/L23-seoun.jpg',
+        '도울': 'images/leaders/L24-doul.jpg',
+        '강무': 'images/leaders/L25-damwoo.jpg',
+        '루다': 'images/leaders/L26-jinu.jpg',
+        '수림': 'images/leaders/L27-ruda.jpg',
+        '해슬': 'images/leaders/L28-haeseul.jpg',
+        '로운': 'images/leaders/L31-roun.jpg',
+        '서연': 'images/clevel/cso-seoyeon.jpg',
+        '지유': 'images/clevel/cto-jiyu.jpg',
+        '유나': 'images/clevel/cco-yuna.jpg',
+    };
+
     const UI = {
         sidebar: document.getElementById('sidebar'),
         overlay: document.getElementById('overlay'),
@@ -3270,7 +3331,7 @@
 
                 this.lastRawResponse = data.response;
                 const formattedHtml = this.formatReport(data.response);
-                this.appendMessage('ai', formattedHtml, null, query, data.response);
+                this.appendMessage('ai', formattedHtml, null, query, data.response, data.leader);
 
                 // GA4 이벤트 추적
                 if (typeof gtag === 'function') {
@@ -3570,11 +3631,21 @@
         },
 
         // ═══ 메시지 렌더링 (즐겨찾기 + PDF 버튼 추가) ═══
-        appendMessage(sender, text, id = null, originalQuery = null, rawResponse = null) {
+        appendMessage(sender, text, id = null, originalQuery = null, rawResponse = null, leaderName = null) {
             const msgDiv = document.createElement('div');
             msgDiv.className = sender === 'user' ? 'user-msg' : 'ai-msg';
             if (id) msgDiv.id = id;
             msgDiv.innerHTML = text;
+
+            if (sender === 'ai' && leaderName) {
+                const imgPath = leaderProfileImages[leaderName];
+                if (imgPath) {
+                    const header = document.createElement('div');
+                    header.className = 'leader-response-header';
+                    header.innerHTML = `<img src="${imgPath}" alt="${leaderName}"><span>${leaderName}</span>`;
+                    msgDiv.insertBefore(header, msgDiv.firstChild);
+                }
+            }
 
             if (sender === 'ai' && !id) {
                 this.addCopyButton(msgDiv);
