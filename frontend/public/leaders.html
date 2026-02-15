@@ -278,6 +278,20 @@
         .clevel-card:active, .leader-card:active {
             transform: scale(0.97);
             transition: transform 0.1s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .clevel-card::after, .leader-card::after {
+            content: '\01F4AC  대화하기';
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.3);
+            transition: all 0.3s;
+        }
+        .clevel-card:hover::after, .leader-card:hover::after {
+            color: rgba(255,255,255,0.8);
         }
 
         .clevel-card.cso { --clevel-color: #3b82f6; }
@@ -340,6 +354,7 @@
         }
 
         .leader-card {
+            position: relative;
             background: rgba(30, 41, 59, 0.6);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -353,7 +368,7 @@
             background: rgba(30, 41, 59, 0.9);
             border-color: var(--primary);
             transform: translateY(-4px);
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.2), 0 0 0 1px rgba(59,130,246,0.2);
         }
 
         .leader-header {
