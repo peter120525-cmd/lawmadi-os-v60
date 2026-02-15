@@ -2607,26 +2607,48 @@
         .leader-response-header {
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid rgba(99, 102, 241, 0.15);
+            gap: 14px;
+            margin-bottom: 20px;
+            padding: 12px 16px;
+            background: rgba(99, 102, 241, 0.06);
+            border-radius: 14px;
+            border: 1px solid rgba(99, 102, 241, 0.12);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
         }
         .leader-response-header img {
-            width: 40px;
-            height: 40px;
+            width: 52px;
+            height: 52px;
             border-radius: 50%;
             object-fit: cover;
             object-position: center top;
-            border: 2px solid rgba(99, 102, 241, 0.3);
+            border: 2.5px solid rgba(99, 102, 241, 0.35);
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+            flex-shrink: 0;
         }
-        .leader-response-header span {
+        .leader-response-header .leader-name {
             font-weight: 700;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             color: #4338ca;
         }
-        body.dark-mode .leader-response-header { border-bottom-color: rgba(99, 102, 241, 0.25); }
-        body.dark-mode .leader-response-header span { color: #a5b4fc; }
+        .leader-response-header .leader-avatars {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .leader-response-header .leader-avatar-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        body.dark-mode .leader-response-header {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: rgba(99, 102, 241, 0.2);
+        }
+        body.dark-mode .leader-response-header .leader-name { color: #a5b4fc; }
     </style>
 </head>
 <body>
@@ -3638,11 +3660,18 @@
             msgDiv.innerHTML = text;
 
             if (sender === 'ai' && leaderName) {
-                const imgPath = leaderProfileImages[leaderName];
-                if (imgPath) {
+                const names = leaderName.split(',').map(n => n.trim()).filter(Boolean);
+                const avatarItems = names.map(name => {
+                    const imgPath = leaderProfileImages[name];
+                    if (imgPath) {
+                        return `<div class="leader-avatar-item"><img src="${imgPath}" alt="${name}"><span class="leader-name">${name}</span></div>`;
+                    }
+                    return `<div class="leader-avatar-item"><span class="leader-name">${name}</span></div>`;
+                }).join('');
+                if (avatarItems) {
                     const header = document.createElement('div');
                     header.className = 'leader-response-header';
-                    header.innerHTML = `<img src="${imgPath}" alt="${leaderName}"><span>${leaderName}</span>`;
+                    header.innerHTML = `<div class="leader-avatars">${avatarItems}</div>`;
                     msgDiv.insertBefore(header, msgDiv.firstChild);
                 }
             }
