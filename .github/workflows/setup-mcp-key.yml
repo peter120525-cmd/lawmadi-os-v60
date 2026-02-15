@@ -5,6 +5,8 @@ on:
 
 env:
   PROJECT_ID: lawmadi-db
+  REGION: asia-northeast3
+  SERVICE_NAME: lawmadi-os-v60
 
 jobs:
   create-secret:
@@ -26,7 +28,6 @@ jobs:
 
       - name: Create MCP_API_KEY secret
         run: |
-          # 시크릿이 이미 존재하면 새 버전 추가, 없으면 생성
           if gcloud secrets describe MCP_API_KEY --project=${{ env.PROJECT_ID }} 2>/dev/null; then
             echo "eGjMr9jAKKNzwfLjzlTmyPo5HVklyZ1BlrzJ_139jDw" | \
               gcloud secrets versions add MCP_API_KEY --data-file=- --project=${{ env.PROJECT_ID }}
@@ -39,10 +40,46 @@ jobs:
 
       - name: Grant Cloud Run access
         run: |
-          # Cloud Run 서비스 계정에 시크릿 접근 권한 부여
           PROJECT_NUMBER=$(gcloud projects describe ${{ env.PROJECT_ID }} --format='value(projectNumber)')
           gcloud secrets add-iam-policy-binding MCP_API_KEY \
             --project=${{ env.PROJECT_ID }} \
             --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
             --role="roles/secretmanager.secretAccessor" || true
           echo "✅ Secret access granted to Cloud Run service account"
+
+      - name: Update Cloud Run with MCP_API_KEY
+        run: |
+          gcloud run services update ${{ env.SERVICE_NAME }} \
+            --region=${{ env.REGION }} \
+            --update-secrets="MCP_API_KEY=MCP_API_KEY:latest"
+          echo "✅ Cloud Run updated with MCP_API_KEY"
+
+      - name: Verify MCP auth
+        run: |
+          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region=${{ env.REGION }} \
+            --format='value(status.url)')
+
+          # 인증 없이 접근 → 401 확인
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$SERVICE_URL/mcp" \
+            -H "Content-Type: application/json" -H "Accept: application/json" \
+            -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}')
+          echo "No auth → HTTP $HTTP_CODE"
+          if [ "$HTTP_CODE" = "401" ]; then
+            echo "✅ MCP auth enforcement working"
+          else
+            echo "⚠️ Expected 401, got $HTTP_CODE"
+          fi
+
+          # Bearer 토큰으로 접근 → 200 확인
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$SERVICE_URL/mcp" \
+            -H "Content-Type: application/json" -H "Accept: application/json" \
+            -H "Authorization: Bearer eGjMr9jAKKNzwfLjzlTmyPo5HVklyZ1BlrzJ_139jDw" \
+            -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}')
+          echo "With auth → HTTP $HTTP_CODE"
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ MCP auth with valid key working"
+          else
+            echo "❌ Expected 200, got $HTTP_CODE"
+            exit 1
+          fi
