@@ -3123,6 +3123,16 @@
             this.menuToggle.onmouseleave = () => {
                 this.menuToggle.style.background = 'none';
             };
+
+            // URL 파라미터로 리더 자동 질문 (leaders.html에서 카드 클릭 시)
+            const urlParams = new URLSearchParams(window.location.search);
+            const leaderParam = urlParams.get('leader');
+            if (leaderParam) {
+                this.userInput.value = `${leaderParam}아, 안녕하세요. 자기소개 부탁드려요.`;
+                this.switchToChatMode();
+                this.dispatchPacket();
+                history.replaceState(null, '', window.location.pathname);
+            }
         },
 
         // ═══ 다크모드 ═══
