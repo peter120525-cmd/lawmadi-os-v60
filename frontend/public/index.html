@@ -2573,6 +2573,24 @@
 
         .fav-btn:hover { border-color: #f59e0b; color: #f59e0b; }
 
+        /* Share Button in AI Message */
+        .share-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+            margin-right: 8px;
+            transition: all 0.2s;
+        }
+        .share-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+
         /* ═══════════════════════════════════════════════════
            Responsive — 360px (Extra Small Mobile)
         ═══════════════════════════════════════════════════ */
@@ -3032,7 +3050,38 @@
         '루다': 'images/leaders/L26-jinu.jpg',
         '수림': 'images/leaders/L27-ruda.jpg',
         '해슬': 'images/leaders/L28-haeseul.jpg',
+        '라온': 'images/leaders/L29-raon.jpg',
+        '담우': 'images/leaders/L30-damwoo.jpg',
         '로운': 'images/leaders/L31-roun.jpg',
+        '바름': 'images/leaders/L32-bareum.jpg',
+        '별이': 'images/leaders/L33-byeoli.jpg',
+        '지누': 'images/leaders/L34-jinu.jpg',
+        '마루': 'images/leaders/L35-maru.jpg',
+        '단아': 'images/leaders/L36-dana.jpg',
+        '예솔': 'images/leaders/L37-yesol.jpg',
+        '슬비': 'images/leaders/L38-seulbi.jpg',
+        '가온': 'images/leaders/L39-gaon.jpg',
+        '한결': 'images/leaders/L40-hangyeol.jpg',
+        '산들': 'images/leaders/L41-sandeul.jpg',
+        '하람': 'images/leaders/L42-haram.jpg',
+        '해나': 'images/leaders/L43-haena.jpg',
+        '보람': 'images/leaders/L44-boram.jpg',
+        '이룸': 'images/leaders/L45-ireum.jpg',
+        '다올': 'images/leaders/L46-daol.jpg',
+        '새론': 'images/leaders/L47-saeron.jpg',
+        '나래': 'images/leaders/L48-narae.jpg',
+        '가람': 'images/leaders/L49-garam.jpg',
+        '빛나': 'images/leaders/L50-bitna.jpg',
+        '소울': 'images/leaders/L51-soul.jpg',
+        '미소': 'images/leaders/L52-miso.jpg',
+        '늘솔': 'images/leaders/L53-neulsol.jpg',
+        '이서': 'images/leaders/L54-iseo.jpg',
+        '윤빛': 'images/leaders/L55-yunbit.jpg',
+        '다인': 'images/leaders/L56-dain.jpg',
+        '세움': 'images/leaders/L57-seum.jpg',
+        '예온': 'images/leaders/L58-yeon.jpg',
+        '한빛': 'images/leaders/L59-hanbit.jpg',
+        '마디': 'images/leaders/L60-madi.jpg',
         '서연': 'images/clevel/cso-seoyeon.jpg',
         '지유': 'images/clevel/cto-jiyu.jpg',
         '유나': 'images/clevel/cco-yuna.jpg',
@@ -3737,6 +3786,37 @@
                         favBtn.style.color = '#f59e0b';
                     };
                     msgDiv.appendChild(favBtn);
+
+                    // 공유 버튼
+                    const shareBtn = document.createElement('button');
+                    shareBtn.className = 'share-btn';
+                    shareBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px;">share</span> 공유';
+                    shareBtn.onclick = async () => {
+                        const shareText = rawResponse.substring(0, 500) + (rawResponse.length > 500 ? '...' : '');
+                        const shareData = {
+                            title: 'Lawmadi OS - AI 법률 분석',
+                            text: shareText,
+                            url: window.location.origin
+                        };
+                        try {
+                            if (navigator.share) {
+                                await navigator.share(shareData);
+                            } else {
+                                await navigator.clipboard.writeText(shareText + '\n\n' + window.location.origin);
+                                shareBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px; color: #3b82f6;">check</span> 복사됨';
+                                shareBtn.style.borderColor = '#3b82f6';
+                                shareBtn.style.color = '#3b82f6';
+                                setTimeout(() => {
+                                    shareBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px;">share</span> 공유';
+                                    shareBtn.style.borderColor = '';
+                                    shareBtn.style.color = '';
+                                }, 2000);
+                            }
+                        } catch (e) {
+                            if (e.name !== 'AbortError') console.warn('Share failed:', e);
+                        }
+                    };
+                    msgDiv.appendChild(shareBtn);
                 }
 
                 // PDF 다운로드 버튼 (법률문서 코드블록 감지)
@@ -3900,6 +3980,11 @@
     };
 
     window.onload = () => UI.init();
+
+    // Service Worker 등록
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
 </script>
 </body>
 </html>
