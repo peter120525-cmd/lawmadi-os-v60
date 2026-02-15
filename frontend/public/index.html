@@ -2620,8 +2620,8 @@
             -webkit-backdrop-filter: blur(8px);
         }
         .leader-response-header img {
-            width: 120px;
-            height: 120px;
+            width: 100px;
+            height: 100px;
             border-radius: 16px;
             object-fit: cover;
             object-position: center 20%;
@@ -2633,11 +2633,14 @@
             font-weight: 700;
             font-size: 3rem;
             color: #4338ca;
+            word-break: keep-all;
+            white-space: nowrap;
         }
         .leader-response-header .leader-avatars {
             display: flex;
             gap: 8px;
             align-items: center;
+            flex-wrap: wrap;
         }
         .leader-response-header .leader-avatar-item {
             display: flex;
@@ -2649,6 +2652,23 @@
             border-color: rgba(99, 102, 241, 0.2);
         }
         body.dark-mode .leader-response-header .leader-name { color: #a5b4fc; }
+
+        /* 모바일 리더 프로필 헤더 최적화 */
+        @media (max-width: 768px) {
+            .leader-response-header .leader-avatar-item {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+            .leader-response-header img {
+                width: 72px;
+                height: 72px;
+                border-radius: 12px;
+            }
+            .leader-response-header .leader-name {
+                font-size: 1.4rem;
+            }
+        }
     </style>
 </head>
 <body>
