@@ -51,7 +51,7 @@ jobs:
           # config.json 무결성
           with open('config.json') as f:
               cfg = json.load(f)
-              assert 'article_1' in cfg, 'Missing article_1'
+              assert 'article1' in cfg, 'Missing article1'
               assert 'security_layer' in cfg, 'Missing security_layer'
               print('✅ config.json: valid')
 
