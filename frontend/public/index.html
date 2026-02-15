@@ -86,8 +86,13 @@
             flex-direction: column;
             position: relative;
             z-index: 1000;
-            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: 4px 0 24px rgba(0,0,0,0.12);
+            flex-shrink: 0;
+        }
+
+        .sidebar.collapsed {
+            margin-left: calc(-1 * var(--sidebar-width));
         }
 
         .brand {
@@ -2957,7 +2962,15 @@
         currentAbortController: null,  // AbortController (항목 #12)
 
         init() {
-            this.menuToggle.onclick = (e) => { e.stopPropagation(); this.toggleSidebar(true); };
+            this.menuToggle.onclick = (e) => {
+                e.stopPropagation();
+                const isMobile = window.innerWidth <= 768;
+                if (isMobile) {
+                    this.toggleSidebar(!this.sidebar.classList.contains('active'));
+                } else {
+                    this.sidebar.classList.toggle('collapsed');
+                }
+            };
             this.overlay.onclick = () => this.toggleSidebar(false);
 
             this.userInput.addEventListener('input', () => {
