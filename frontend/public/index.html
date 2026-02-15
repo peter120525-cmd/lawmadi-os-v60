@@ -570,6 +570,110 @@
             flex-shrink: 0;
         }
 
+        /* C-Level Executives Section */
+        .clevel-section {
+            max-width: 1100px;
+            margin: 4rem auto;
+            padding: 0 28px;
+        }
+
+        .clevel-section h2 {
+            text-align: center;
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 2rem;
+        }
+
+        .clevel-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .clevel-card {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+            aspect-ratio: auto;
+        }
+
+        .clevel-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .clevel-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.4s ease;
+        }
+
+        .clevel-card:hover img {
+            transform: scale(1.03);
+        }
+
+        .clevel-card-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            background: linear-gradient(transparent 0%, rgba(0, 0, 0, 0.75) 100%);
+            color: white;
+            transition: padding-bottom 0.3s ease;
+        }
+
+        .clevel-card:hover .clevel-card-overlay {
+            padding-bottom: 28px;
+        }
+
+        .clevel-card-name {
+            font-size: 1.3rem;
+            font-weight: 800;
+            margin-bottom: 2px;
+        }
+
+        .clevel-card-role {
+            font-size: 0.8rem;
+            font-weight: 600;
+            opacity: 0.85;
+            letter-spacing: 0.5px;
+        }
+
+        .clevel-card-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: rgba(255,255,255,0.9);
+            opacity: 0;
+            transform: translateY(8px);
+            transition: all 0.3s ease;
+        }
+
+        .clevel-card:hover .clevel-card-cta {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
+            .clevel-cards {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            .clevel-card {
+                max-height: 280px;
+            }
+        }
+
         /* Trust Section - PREMIUM */
         .trust-section {
             max-width: 1100px;
@@ -2159,6 +2263,10 @@
             border-color: #334155 !important;
         }
 
+        body.dark-mode .clevel-section h2 {
+            color: #e2e8f0;
+        }
+
         .dark-toggle {
             background: none;
             border: 1px solid var(--border);
@@ -2654,6 +2762,46 @@
                 </div>
             </div>
 
+            <!-- C-Level Executives -->
+            <div class="clevel-section">
+                <h2>🏛️ 최고 경영진에게 직접 물어보세요</h2>
+                <div class="clevel-cards">
+                    <div class="clevel-card" data-clevel="서연" title="서연 CSO에게 질문하기">
+                        <img src="images/clevel/cso-seoyeon-banner.png" alt="서연 CSO">
+                        <div class="clevel-card-overlay">
+                            <div class="clevel-card-name">서연</div>
+                            <div class="clevel-card-role">CSO · Chief Strategy Officer</div>
+                            <div class="clevel-card-cta">
+                                <span class="material-symbols-outlined" style="font-size: 1rem;">chat</span>
+                                클릭하여 대화하기
+                            </div>
+                        </div>
+                    </div>
+                    <div class="clevel-card" data-clevel="지유" title="지유 CTO에게 질문하기">
+                        <img src="images/clevel/cto-jiyu-banner.png" alt="지유 CTO">
+                        <div class="clevel-card-overlay">
+                            <div class="clevel-card-name">지유</div>
+                            <div class="clevel-card-role">CTO · Chief Technology Officer</div>
+                            <div class="clevel-card-cta">
+                                <span class="material-symbols-outlined" style="font-size: 1rem;">chat</span>
+                                클릭하여 대화하기
+                            </div>
+                        </div>
+                    </div>
+                    <div class="clevel-card" data-clevel="유나" title="유나 CCO에게 질문하기">
+                        <img src="images/clevel/cco-yuna-banner.png" alt="유나 CCO">
+                        <div class="clevel-card-overlay">
+                            <div class="clevel-card-name">유나</div>
+                            <div class="clevel-card-role">CCO · Chief Content Officer</div>
+                            <div class="clevel-card-cta">
+                                <span class="material-symbols-outlined" style="font-size: 1rem;">chat</span>
+                                클릭하여 대화하기
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Trust Section -->
             <div class="trust-section">
                 <div class="stats">
@@ -2811,6 +2959,16 @@
                 btn.onclick = () => {
                     const question = btn.getAttribute('data-question');
                     this.userInput.value = question;
+                    this.switchToChatMode();
+                    this.dispatchPacket();
+                };
+            });
+
+            // C-Level 임원 클릭 → 해당 임원에게 인사 질문 전송
+            document.querySelectorAll('.clevel-card').forEach(card => {
+                card.onclick = () => {
+                    const name = card.getAttribute('data-clevel');
+                    this.userInput.value = `${name}아, 안녕하세요. 자기소개 부탁드려요.`;
                     this.switchToChatMode();
                     this.dispatchPacket();
                 };
