@@ -40,12 +40,17 @@ import traceback
 from typing import Any, List, Dict, Optional, Union
 from importlib import import_module
 
+import asyncio
 import google.generativeai as genai
 from fastapi import FastAPI, Request, Header, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+import aiofiles
 import shutil
 from pathlib import Path
 import mimetypes
@@ -92,7 +97,21 @@ logger.info("✅ 필수 디렉토리 확인 완료: temp/, logs/, uploads/")
 # [감사 #3.6] 버전 단일 소스
 OS_VERSION = "v60.0.0"
 
+# Gemini 모델명 통일 상수 (항목 #6)
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025"
+
+# Rate Limiter 설정 (항목 #2)
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(title="Lawmadi OS", version=OS_VERSION)
+app.state.limiter = limiter
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"error": "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.", "retry_after": str(exc.detail)}
+    )
 
 # [감사 #2.2] CORS 도메인 제한 (원본: allow_origins=["*"])
 # 개발 환경에서 localhost 필요 시 CORS_EXTRA_ORIGINS 환경변수로 추가
@@ -182,6 +201,41 @@ def _trace_id() -> str:
 # [감사 #3.2] db_client_v2.add_audit_log 실제 시그니처에 맞춤:
 #   add_audit_log(query, response, leader, status, latency_ms)
 # =============================================================
+
+# =============================================================
+# Circuit Breaker (항목 #14) — DRF API 장애 전파 차단
+# =============================================================
+
+class CircuitBreaker:
+    """외부 API 호출용 Circuit Breaker"""
+    def __init__(self, failure_threshold: int = 3, reset_timeout_s: int = 30):
+        self.failure_threshold = failure_threshold
+        self.reset_timeout_s = reset_timeout_s
+        self.failures = 0
+        self.last_failure_time = 0.0
+        self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
+
+    def is_open(self) -> bool:
+        if self.state == "OPEN":
+            if time.time() - self.last_failure_time > self.reset_timeout_s:
+                self.state = "HALF_OPEN"
+                return False
+            return True
+        return False
+
+    def record_success(self):
+        self.failures = 0
+        self.state = "CLOSED"
+
+    def record_failure(self):
+        self.failures += 1
+        self.last_failure_time = time.time()
+        if self.failures >= self.failure_threshold:
+            self.state = "OPEN"
+            logger.warning(f"🔴 [CircuitBreaker] OPEN — {self.failures}회 연속 실패")
+
+# DRF API용 Circuit Breaker 인스턴스
+_drf_circuit_breaker = CircuitBreaker(failure_threshold=3, reset_timeout_s=30)
 
 def _audit(event_type: str, payload: dict) -> None:
     try:
@@ -2045,6 +2099,7 @@ async def get_leader_queries_api(
 # =============================================================
 
 @app.post("/ask")
+@limiter.limit("15/minute")
 async def ask(req: Request):
 
     trace = _trace_id()  # [ULTRA]
@@ -2156,7 +2211,7 @@ async def ask(req: Request):
             ]
 
         now_kst = _now_iso()
-        model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-preview-09-2025")
+        model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
 
         # -------------------------------------------------
         # 4) C-Level 직접 호출 처리
@@ -2263,6 +2318,10 @@ async def ask(req: Request):
             }
 
         latency_ms = int((time.time() - start_time) * 1000)
+
+        # 느린 쿼리 로깅 (항목 #15)
+        if latency_ms > 10000:
+            logger.warning(f"🐌 [SLOW_REQUEST] {latency_ms}ms | query={query[:80]} | leader={leader_name}")
 
         # -------------------------------------------------
         # 6) Metrics [ULTRA]
@@ -2457,14 +2516,22 @@ async def upload_document(file: UploadFile = File(...), request: Request = None)
         if not file.filename:
             raise HTTPException(status_code=400, detail="파일명이 없습니다.")
 
-        # 허용된 파일 타입 확인
+        # 허용된 파일 타입 확인 (확장자 + MIME 타입 이중 검증)
         allowed_extensions = {'.jpg', '.jpeg', '.png', '.webp', '.pdf'}
+        allowed_mimes = {'image/jpeg', 'image/png', 'image/webp', 'application/pdf'}
         file_ext = Path(file.filename).suffix.lower()
 
         if file_ext not in allowed_extensions:
             raise HTTPException(
                 status_code=400,
                 detail=f"지원하지 않는 파일 형식입니다. 허용: {', '.join(allowed_extensions)}"
+            )
+
+        # MIME 타입 검증 (항목 #5)
+        if file.content_type and file.content_type not in allowed_mimes:
+            raise HTTPException(
+                status_code=400,
+                detail=f"지원하지 않는 MIME 타입입니다: {file.content_type}"
             )
 
         # 2. 파일 읽기 및 해시 생성
@@ -2490,8 +2557,8 @@ async def upload_document(file: UploadFile = File(...), request: Request = None)
         safe_filename = f"{file_hash[:8]}_{file.filename}"
         file_path = uploads_dir / safe_filename
 
-        with open(file_path, "wb") as f:
-            f.write(file_content)
+        async with aiofiles.open(file_path, "wb") as f:
+            await f.write(file_content)
 
         logger.info(f"✅ [Upload] 파일 저장: {file_path} ({file_size} bytes)")
 
@@ -2627,7 +2694,7 @@ async def analyze_document(file_id: str, analysis_type: str = "general"):
                         analysis_result.get("summary", "")[:500],
                         analysis_result.get("legal_category", "일반"),
                         analysis_result.get("risk_level", "medium"),
-                        os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp"),
+                        os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
                         f"{file_id}%"
                     ),
                     fetch="none"
@@ -2661,7 +2728,7 @@ async def _analyze_image_document(file_path: Path, analysis_type: str) -> Dict[s
 
     # Gemini Vision 모델
     model = genai.GenerativeModel(
-        model_name=os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
+        model_name=os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
     )
 
     # 이미지 파일 읽기
@@ -2781,7 +2848,7 @@ async def _analyze_pdf_document(file_path: Path, analysis_type: str) -> Dict[str
 
         # Gemini로 텍스트 분석
         model = genai.GenerativeModel(
-            model_name=os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
+            model_name=os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
         )
 
         prompt = f"""

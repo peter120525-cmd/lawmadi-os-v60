@@ -9,10 +9,11 @@ echo "======================================"
 echo ""
 
 # 1. 환경 설정
-PROJECT_ID="lawmadi-os"
+PROJECT_ID="lawmadi-db"
 REGION="asia-northeast3"
 SERVICE_NAME="lawmadi-os-v60"
-IMAGE_NAME="gcr.io/${PROJECT_ID}/${SERVICE_NAME}"
+REPOSITORY="lawmadi-repo"
+IMAGE_NAME="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE_NAME}"
 
 echo "📋 배포 설정:"
 echo "  프로젝트: ${PROJECT_ID}"
@@ -34,10 +35,11 @@ echo ""
 echo "🔧 gcloud 프로젝트 설정..."
 gcloud config set project ${PROJECT_ID}
 
-# 4. Cloud Build로 이미지 빌드
+# 4. Artifact Registry 인증 및 이미지 빌드
 echo ""
 echo "🏗️  Docker 이미지 빌드 중..."
 echo "  (Cloud Build 사용 - 약 2-3분 소요)"
+gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
 gcloud builds submit --tag ${IMAGE_NAME} .
 
 # 5. Cloud Run 배포
