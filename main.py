@@ -106,18 +106,6 @@ limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="Lawmadi OS", version=OS_VERSION)
 app.state.limiter = limiter
 
-# MCP (Model Context Protocol) 서버 마운트
-from fastapi_mcp import FastApiMCP
-
-mcp = FastApiMCP(
-    app,
-    name="Lawmadi OS",
-    description="한국 법률 AI 상담 시스템. 60명의 전문 리더와 3명의 C-Level 임원이 법률 질문에 답변합니다.",
-    describe_all_responses=True,
-    describe_full_response_schema=True,
-)
-mcp.mount_http()
-
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     return JSONResponse(
@@ -3020,6 +3008,20 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.on_event("shutdown")
 async def shutdown():
     logger.info(f"🛑 Lawmadi OS {OS_VERSION} Shutdown")
+
+# =============================================================
+# MCP (Model Context Protocol) 서버 — 모든 라우트 등록 후 마운트
+# =============================================================
+from fastapi_mcp import FastApiMCP
+
+mcp = FastApiMCP(
+    app,
+    name="Lawmadi OS",
+    description="한국 법률 AI 상담 시스템. 60명의 전문 리더와 3명의 C-Level 임원이 법률 질문에 답변합니다.",
+    describe_all_responses=True,
+    describe_full_response_schema=True,
+)
+mcp.mount_http()
 
 # =============================================================
 # MAIN
