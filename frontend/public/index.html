@@ -2512,9 +2512,12 @@
                 </div>
             </div>
             <div class="header-right">
-                <div style="font-size: 0.95rem; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                    <span class="material-symbols-outlined" style="font-size: 1.3rem; vertical-align: middle; color: var(--primary);">diamond</span>
-                    Powered by Gemini 2.0
+                <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                    <span class="material-symbols-outlined" style="font-size: 1.1rem; color: #4285F4;">auto_awesome</span>
+                    Gemini 분석
+                    <span style="color: var(--border); margin: 0 2px;">|</span>
+                    <span class="material-symbols-outlined" style="font-size: 1.1rem; color: #D97706;">verified</span>
+                    Claude 검증
                 </div>
                 <button id="favToggle" class="dark-toggle" title="즐겨찾기">
                     <span class="material-symbols-outlined" style="font-size: 1.2rem;">bookmark</span>
@@ -3436,26 +3439,24 @@
                 background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px);
                 border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px;
                 cursor: pointer; display: flex; align-items: center; justify-content: center;
-                opacity: 0; transition: all 0.2s ease;
+                opacity: 0.7; transition: all 0.2s ease;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 10;
             `;
 
-            copyBtn.onmouseenter = () => { copyBtn.style.background = 'rgba(37, 99, 235, 0.1)'; copyBtn.style.borderColor = '#2563eb'; };
-            copyBtn.onmouseleave = () => { copyBtn.style.background = 'rgba(255, 255, 255, 0.9)'; copyBtn.style.borderColor = '#e5e7eb'; };
+            copyBtn.onmouseenter = () => { copyBtn.style.opacity = '1'; copyBtn.style.background = 'rgba(37, 99, 235, 0.1)'; copyBtn.style.borderColor = '#2563eb'; };
+            copyBtn.onmouseleave = () => { copyBtn.style.opacity = '0.7'; copyBtn.style.background = 'rgba(255, 255, 255, 0.9)'; copyBtn.style.borderColor = '#e5e7eb'; };
 
             copyBtn.onclick = async () => {
                 try {
                     await navigator.clipboard.writeText(msgDiv.innerText);
                     copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px; color: #10b981;">check</span>';
-                    setTimeout(() => { copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">content_copy</span>'; }, 2000);
+                    copyBtn.style.opacity = '1';
+                    setTimeout(() => { copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">content_copy</span>'; copyBtn.style.opacity = '0.7'; }, 2000);
                 } catch (err) { console.error('복사 실패:', err); }
             };
 
             msgDiv.style.position = 'relative';
             msgDiv.appendChild(copyBtn);
-
-            msgDiv.onmouseenter = () => { copyBtn.style.opacity = '1'; };
-            msgDiv.onmouseleave = () => { copyBtn.style.opacity = '0'; };
         },
 
         // ═══ 향상된 로딩 애니메이션 ═══
