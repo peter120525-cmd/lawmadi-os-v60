@@ -2100,17 +2100,17 @@ async def get_leader_queries_api(
 
 @app.post("/ask")
 @limiter.limit("15/minute")
-async def ask(req: Request):
+async def ask(request: Request):
 
     trace = _trace_id()  # [ULTRA]
     start_time = time.time()
 
     try:
-        data = await req.json()
+        data = await request.json()
         query = (data.get("query", "") or "").strip()
 
         # IP 주소를 사용자 ID로 사용 (자동 추출)
-        visitor_id = _get_client_ip(req)
+        visitor_id = _get_client_ip(request)
         logger.info(f"🔍 Request from IP: {visitor_id}")
 
         config = RUNTIME.get("config", {})
