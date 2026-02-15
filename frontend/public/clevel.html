@@ -194,9 +194,13 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            object-position: center top;
+            object-position: center center;
             transition: transform 0.4s ease;
         }
+
+        .executive-card.cso .executive-avatar img { object-position: 25% center; }
+        .executive-card.cto .executive-avatar img { object-position: 30% center; }
+        .executive-card.cco .executive-avatar img { object-position: 35% center; }
 
         .executive-avatar:hover img {
             transform: scale(1.05);
