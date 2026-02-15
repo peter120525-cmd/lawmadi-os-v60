@@ -44,9 +44,9 @@ jobs:
           # leaders.json 무결성
           with open('leaders.json') as f:
               data = json.load(f)
-              leaders = data.get('leaders', [])
-              assert len(leaders) >= 60, f'Leaders count: {len(leaders)} < 60'
-              print(f'✅ leaders.json: {len(leaders)} leaders')
+              registry = data.get('swarm_engine_config', {}).get('leader_registry', {})
+              assert len(registry) >= 60, f'Leaders count: {len(registry)} < 60'
+              print(f'✅ leaders.json: {len(registry)} leaders')
 
           # config.json 무결성
           with open('config.json') as f:
