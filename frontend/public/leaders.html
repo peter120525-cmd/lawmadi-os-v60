@@ -361,6 +361,14 @@
             font-weight: 900;
             color: white;
             flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .leader-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center top;
         }
 
         .leader-name-group {
@@ -628,6 +636,15 @@
         let allLeaders = [];
         let currentFilter = 'all';
 
+        // 리더 프로필 이미지 매핑
+        const leaderImages = {
+            'L01': { profile: 'images/leaders/L01-hwiyul.jpg', banner: 'images/leaders/L01-hwiyul-banner.jpg' },
+            'L02': { profile: 'images/leaders/L02-bonui.jpg', banner: 'images/leaders/L02-bonui-banner.jpg' },
+            'L03': { profile: 'images/leaders/L03-damseul.jpg', banner: 'images/leaders/L03-damseul-banner.jpg' },
+            'L04': { profile: 'images/leaders/L04-aki.jpg', banner: 'images/leaders/L04-aki-banner.jpg' },
+            'L05': { profile: 'images/leaders/L05-yeonwoo.jpg', banner: 'images/leaders/L05-yeonwoo-banner.jpg' },
+        };
+
         // Load leaders data
         async function loadLeaders() {
             try {
@@ -694,10 +711,15 @@
             grid.style.display = 'grid';
             noResults.style.display = 'none';
 
-            grid.innerHTML = filteredLeaders.map((leader, index) => `
+            grid.innerHTML = filteredLeaders.map((leader, index) => {
+                const img = leaderImages[leader.code];
+                const avatarContent = img
+                    ? `<img src="${img.profile}" alt="${leader.name}" loading="lazy">`
+                    : leader.name.charAt(0);
+                return `
                 <div class="leader-card" style="animation-delay: ${index * 0.02}s">
                     <div class="leader-header">
-                        <div class="leader-avatar">${leader.name.charAt(0)}</div>
+                        <div class="leader-avatar">${avatarContent}</div>
                         <div class="leader-name-group">
                             <div class="leader-name">${leader.name}</div>
                             <div class="leader-code">${leader.code}</div>
@@ -706,8 +728,8 @@
                     <div class="leader-specialty">${leader.specialty}</div>
                     <div class="leader-role">${leader.role}</div>
                     <div class="leader-profile">${leader.profile}</div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
         // Search functionality
