@@ -274,6 +274,12 @@
             border-color: var(--clevel-color);
         }
 
+        .clevel-card, .leader-card { cursor: pointer; }
+        .clevel-card:active, .leader-card:active {
+            transform: scale(0.97);
+            transition: transform 0.1s;
+        }
+
         .clevel-card.cso { --clevel-color: #3b82f6; }
         .clevel-card.cto { --clevel-color: #f59e0b; }
         .clevel-card.cco { --clevel-color: #8b5cf6; }
@@ -586,7 +592,7 @@
         <div class="clevel-section">
             <h2 class="section-title">C-Level 임원진</h2>
             <div class="clevel-grid" id="clevelGrid">
-                <div class="clevel-card cso">
+                <div class="clevel-card cso" data-name="서연">
                     <div class="clevel-header">
                         <div class="clevel-avatar"><img src="images/clevel/cso-seoyeon.jpg" alt="서연 CSO"></div>
                         <div class="clevel-info">
@@ -597,7 +603,7 @@
                     <p class="clevel-profile">미국 연방대법원 로클럭 출신급 / 글로벌 Top3 전략 컨설팅 파트너급</p>
                 </div>
 
-                <div class="clevel-card cto">
+                <div class="clevel-card cto" data-name="지유">
                     <div class="clevel-header">
                         <div class="clevel-avatar"><img src="images/clevel/cto-jiyu.jpg" alt="지유 CTO"></div>
                         <div class="clevel-info">
@@ -608,7 +614,7 @@
                     <p class="clevel-profile">실리콘밸리 유니콘 창업 멤버급 / AI 무결성 검증 분야 세계적 석학급</p>
                 </div>
 
-                <div class="clevel-card cco">
+                <div class="clevel-card cco" data-name="유나">
                     <div class="clevel-header">
                         <div class="clevel-avatar"><img src="images/clevel/cco-yuna.jpg" alt="유나 CCO"></div>
                         <div class="clevel-info">
@@ -766,7 +772,7 @@
                     ? `<div class="leader-banner"><img src="${img.banner}" alt="${leader.name}" loading="lazy"></div>`
                     : '';
                 return `
-                <div class="leader-card" style="animation-delay: ${index * 0.02}s">
+                <div class="leader-card" data-name="${leader.name}" style="animation-delay: ${index * 0.02}s">
                     <div class="leader-header">
                         <div class="leader-avatar">${avatarContent}</div>
                         <div class="leader-name-group">
@@ -799,6 +805,21 @@
 
         // Load leaders on page load
         loadLeaders();
+
+        // C-Level 카드 클릭 → 채팅 이동
+        document.querySelectorAll('.clevel-card').forEach(card => {
+            card.addEventListener('click', () => {
+                window.location.href = `index.html?leader=${encodeURIComponent(card.dataset.name)}`;
+            });
+        });
+
+        // 리더 카드 클릭 → 채팅 이동 (이벤트 위임)
+        document.getElementById('leadersGrid').addEventListener('click', (e) => {
+            const card = e.target.closest('.leader-card');
+            if (card && card.dataset.name) {
+                window.location.href = `index.html?leader=${encodeURIComponent(card.dataset.name)}`;
+            }
+        });
 
         // Page load animation
         window.addEventListener('load', () => {
