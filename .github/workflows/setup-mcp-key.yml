@@ -1,0 +1,48 @@
+name: Setup MCP API Key
+
+on:
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: lawmadi-db
+
+jobs:
+  create-secret:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_JSON }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Create MCP_API_KEY secret
+        run: |
+          # 시크릿이 이미 존재하면 새 버전 추가, 없으면 생성
+          if gcloud secrets describe MCP_API_KEY --project=${{ env.PROJECT_ID }} 2>/dev/null; then
+            echo "eGjMr9jAKKNzwfLjzlTmyPo5HVklyZ1BlrzJ_139jDw" | \
+              gcloud secrets versions add MCP_API_KEY --data-file=- --project=${{ env.PROJECT_ID }}
+            echo "✅ MCP_API_KEY secret version added"
+          else
+            echo "eGjMr9jAKKNzwfLjzlTmyPo5HVklyZ1BlrzJ_139jDw" | \
+              gcloud secrets create MCP_API_KEY --data-file=- --project=${{ env.PROJECT_ID }}
+            echo "✅ MCP_API_KEY secret created"
+          fi
+
+      - name: Grant Cloud Run access
+        run: |
+          # Cloud Run 서비스 계정에 시크릿 접근 권한 부여
+          PROJECT_NUMBER=$(gcloud projects describe ${{ env.PROJECT_ID }} --format='value(projectNumber)')
+          gcloud secrets add-iam-policy-binding MCP_API_KEY \
+            --project=${{ env.PROJECT_ID }} \
+            --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+            --role="roles/secretmanager.secretAccessor" || true
+          echo "✅ Secret access granted to Cloud Run service account"
