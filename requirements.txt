@@ -1,4 +1,4 @@
-# Lawmadi OS v60.0.0 Dependencies (문서 업로드 기능 추가)
+# Lawmadi OS v60.0.0 Dependencies
 fastapi==0.128.0
 uvicorn==0.40.0
 google-generativeai==0.8.6
@@ -11,3 +11,5 @@ pg8000==1.31.5
 PyPDF2==3.0.1
 python-multipart==0.0.9  # FastAPI 파일 업로드 지원
 fpdf2==2.8.3  # PDF 법률문서 내보내기
+slowapi==0.1.9  # Rate limiting
+aiofiles==24.1.0  # 비동기 파일 I/O

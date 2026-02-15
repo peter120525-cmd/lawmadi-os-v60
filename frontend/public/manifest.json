@@ -1,0 +1,22 @@
+{
+  "name": "Lawmadi OS - AI 법률 의사결정 지원",
+  "short_name": "Lawmadi",
+  "description": "60명의 전문 리더가 협업하여 법률 문제를 구체적인 행동 계획으로 바꿔드립니다.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
