@@ -297,6 +297,14 @@
             font-weight: 900;
             color: white;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .clevel-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center 20%;
         }
 
         .clevel-info h3 {
@@ -369,6 +377,20 @@
             height: 100%;
             object-fit: cover;
             object-position: center top;
+        }
+
+        .leader-banner {
+            margin-top: 16px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .leader-banner img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 12px;
         }
 
         .leader-name-group {
@@ -566,7 +588,7 @@
             <div class="clevel-grid" id="clevelGrid">
                 <div class="clevel-card cso">
                     <div class="clevel-header">
-                        <div class="clevel-avatar">서</div>
+                        <div class="clevel-avatar"><img src="images/clevel/cso-seoyeon.jpg" alt="서연 CSO"></div>
                         <div class="clevel-info">
                             <h3>서연 (CSO)</h3>
                             <div class="clevel-role">Chief Strategy Officer</div>
@@ -577,7 +599,7 @@
 
                 <div class="clevel-card cto">
                     <div class="clevel-header">
-                        <div class="clevel-avatar">지</div>
+                        <div class="clevel-avatar"><img src="images/clevel/cto-jiyu.jpg" alt="지유 CTO"></div>
                         <div class="clevel-info">
                             <h3>지유 (CTO)</h3>
                             <div class="clevel-role">Chief Technology Officer</div>
@@ -588,7 +610,7 @@
 
                 <div class="clevel-card cco">
                     <div class="clevel-header">
-                        <div class="clevel-avatar">유</div>
+                        <div class="clevel-avatar"><img src="images/clevel/cco-yuna.jpg" alt="유나 CCO"></div>
                         <div class="clevel-info">
                             <h3>유나 (CCO)</h3>
                             <div class="clevel-role">Chief Content Officer</div>
@@ -716,6 +738,9 @@
                 const avatarContent = img
                     ? `<img src="${img.profile}" alt="${leader.name}" loading="lazy">`
                     : leader.name.charAt(0);
+                const bannerHtml = img
+                    ? `<div class="leader-banner"><img src="${img.banner}" alt="${leader.name}" loading="lazy"></div>`
+                    : '';
                 return `
                 <div class="leader-card" style="animation-delay: ${index * 0.02}s">
                     <div class="leader-header">
@@ -728,6 +753,7 @@
                     <div class="leader-specialty">${leader.specialty}</div>
                     <div class="leader-role">${leader.role}</div>
                     <div class="leader-profile">${leader.profile}</div>
+                    ${bannerHtml}
                 </div>`;
             }).join('');
         }
