@@ -33,12 +33,13 @@
 7. [API 엔드포인트](#-api-엔드포인트)
 8. [기술 스택](#-기술-스택)
 9. [프로젝트 구조](#-프로젝트-구조)
-10. [로컬 실행 (평가 전용)](#-로컬-실행-평가-전용)
-11. [배포 파이프라인](#-배포-파이프라인)
-12. [데이터베이스 스키마](#-데이터베이스-스키마)
-13. [보안 정책](#-보안-정책)
-14. [라이선스](#-라이선스)
-15. [문의](#-문의)
+10. [MCP 서버 (Model Context Protocol)](#-mcp-서버-model-context-protocol)
+11. [로컬 실행 (평가 전용)](#-로컬-실행-평가-전용)
+12. [배포 파이프라인](#-배포-파이프라인)
+13. [데이터베이스 스키마](#-데이터베이스-스키마)
+14. [보안 정책](#-보안-정책)
+15. [라이선스](#-라이선스)
+16. [문의](#-문의)
 
 ---
 
@@ -502,6 +503,63 @@ lawmadi-os-v50/
 ├── firebase.json                   # Firebase Hosting 설정
 ├── .firebaserc                     # Firebase 프로젝트 (lawmadi-db)
 └── claude.md                       # 개발 헌법 (6대 원칙, 기술 스택, 보안 규칙)
+```
+
+---
+
+## 🔗 MCP 서버 (Model Context Protocol)
+
+Lawmadi OS는 [MCP(Model Context Protocol)](https://modelcontextprotocol.io/) 서버를 내장하고 있어, Claude Desktop, ChatGPT, Gemini 등 MCP 지원 LLM 클라이언트에서 직접 연결하여 한국 법률 질문을 할 수 있습니다.
+
+**MCP 엔드포인트**: `https://lawmadi-os-v60-uzqkp6kadq-du.a.run.app/mcp`
+
+### 클라이언트 설정
+
+**Claude Desktop** (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "lawmadi": {
+      "url": "https://lawmadi-os-v60-uzqkp6kadq-du.a.run.app/mcp"
+    }
+  }
+}
+```
+
+### 노출 도구 (20개)
+
+MCP를 통해 Lawmadi OS의 모든 API 엔드포인트가 도구로 노출됩니다.
+
+| 도구 | 설명 |
+|:---|:---|
+| `ask_ask_post` | 법률 질문 답변 (핵심 도구) |
+| `search_search_get` | 법령 검색 |
+| `trending_trending_get` | 인기 질문 트렌드 |
+| `upload_document_upload_post` | 문서/이미지 업로드 및 법률 분석 |
+| `export_pdf_export_pdf_post` | 법률문서 PDF 내보내기 |
+| `health_health_get` | 시스템 헬스체크 |
+| 기타 14개 | 방문자 통계, 리더 통계, 진단 등 |
+
+### 연결 테스트 결과
+
+```
+┌──────────────────────┬─────────────────────────────────────────────┐
+│  단계                 │  결과                                       │
+├──────────────────────┼─────────────────────────────────────────────┤
+│  initialize          │  ✅ 핸드셰이크 성공, 세션 ID 발급              │
+│  tools/list          │  ✅ 20개 도구 노출 확인                       │
+│  tools/call (ask)    │  ✅ 법률 질문 응답 성공                       │
+│                      │     리더 온유(임대차)가 보증금 반환 절차 답변    │
+└──────────────────────┴─────────────────────────────────────────────┘
+```
+
+```bash
+# MCP 연결 테스트 예시
+curl -X POST https://lawmadi-os-v60-uzqkp6kadq-du.a.run.app/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
 ```
 
 ---
