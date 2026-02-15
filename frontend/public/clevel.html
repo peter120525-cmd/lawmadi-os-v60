@@ -181,19 +181,25 @@
 
         .executive-avatar {
             flex-shrink: 0;
-            width: 160px;
-            height: 160px;
+            width: 200px;
+            height: 200px;
             border-radius: 20px;
             background: linear-gradient(135deg, var(--accent-color) 0%, rgba(255, 255, 255, 0.1) 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 4rem;
-            font-weight: 900;
-            color: white;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
             position: relative;
             overflow: hidden;
+        }
+
+        .executive-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center top;
+            transition: transform 0.4s ease;
+        }
+
+        .executive-avatar:hover img {
+            transform: scale(1.05);
         }
 
         .executive-avatar::before {
@@ -203,8 +209,9 @@
             left: -50%;
             width: 200%;
             height: 200%;
-            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.15), transparent);
             animation: shine 3s infinite;
+            z-index: 1;
         }
 
         @keyframes shine {
@@ -396,9 +403,8 @@
             }
 
             .executive-avatar {
-                width: 120px;
-                height: 120px;
-                font-size: 3rem;
+                width: 140px;
+                height: 140px;
             }
 
             .executive-name {
@@ -447,7 +453,7 @@
             <!-- CSO Card -->
             <div class="executive-card cso">
                 <div class="executive-header">
-                    <div class="executive-avatar">서</div>
+                    <div class="executive-avatar"><img src="images/clevel/cso-seoyeon.png" alt="서연 CSO"></div>
                     <div class="executive-info">
                         <div class="executive-name-group">
                             <h2 class="executive-name">서연</h2>
@@ -482,7 +488,7 @@
             <!-- CTO Card -->
             <div class="executive-card cto">
                 <div class="executive-header">
-                    <div class="executive-avatar">지</div>
+                    <div class="executive-avatar"><img src="images/clevel/cto-jiyu.png" alt="지유 CTO"></div>
                     <div class="executive-info">
                         <div class="executive-name-group">
                             <h2 class="executive-name">지유</h2>
@@ -517,7 +523,7 @@
             <!-- CCO Card -->
             <div class="executive-card cco">
                 <div class="executive-header">
-                    <div class="executive-avatar">유</div>
+                    <div class="executive-avatar"><img src="images/clevel/cco-yuna.png" alt="유나 CCO"></div>
                     <div class="executive-info">
                         <div class="executive-name-group">
                             <h2 class="executive-name">유나</h2>
@@ -593,14 +599,16 @@
             observer.observe(card);
         });
 
-        // Particle effect on hover
+        // Hover effect on avatar
         document.querySelectorAll('.executive-avatar').forEach(avatar => {
             avatar.addEventListener('mouseenter', function() {
-                this.style.transform = 'scale(1.05) rotate(5deg)';
+                this.style.transform = 'scale(1.05)';
+                this.style.boxShadow = '0 25px 50px rgba(0, 0, 0, 0.4)';
             });
 
             avatar.addEventListener('mouseleave', function() {
-                this.style.transform = 'scale(1) rotate(0deg)';
+                this.style.transform = 'scale(1)';
+                this.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.3)';
             });
         });
 
