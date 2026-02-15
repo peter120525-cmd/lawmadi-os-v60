@@ -237,6 +237,7 @@
             margin: 60px auto;
             text-align: center;
             position: relative;
+            overflow: hidden;
         }
 
         .hero-section::before {
@@ -480,6 +481,7 @@
             border-radius: 32px;
             border: 1px solid var(--border);
             box-shadow: 0 20px 50px rgba(0,0,0,0.08);
+            overflow: hidden;
         }
 
         .core-features-section h2 {
@@ -580,6 +582,7 @@
             max-width: 1100px;
             margin: 4rem auto;
             padding: 0 28px;
+            overflow: hidden;
         }
 
         .clevel-section h2 {
@@ -688,6 +691,7 @@
             background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
             border-radius: 32px;
             border: 2px solid rgba(37, 99, 235, 0.2);
+            overflow: hidden;
         }
 
         .stats {
@@ -872,7 +876,8 @@
             color: #1e293b;
             letter-spacing: -0.01em;
             position: relative;
-            overflow: hidden;
+            overflow: visible;
+            overflow-x: clip;
             word-break: break-word;
             overflow-wrap: break-word;
             animation: messageSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1873,9 +1878,11 @@
            Responsive — 768px (Mobile)
         ═══════════════════════════════════════════════════ */
         @media (max-width: 768px) {
-            /* ── 가로 스크롤 방지 ── */
-            body, .layout-container, .main-canvas {
-                max-width: 100vw;
+            /* ── 가로 스크롤 방지 (layout/main-canvas는 건드리지 않음 — overflow-y 스크롤 보존) ── */
+            .content-viewport {
+                overflow-x: hidden;
+            }
+            .conversation-viewport {
                 overflow-x: hidden;
             }
 
