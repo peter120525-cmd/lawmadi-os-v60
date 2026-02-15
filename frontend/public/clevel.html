@@ -310,6 +310,38 @@
             font-weight: 700;
         }
 
+        /* Video Section */
+        .executive-video {
+            margin-top: 30px;
+        }
+
+        .video-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+        }
+
+        .video-wrapper {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #000;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .video-wrapper video {
+            width: 100%;
+            display: block;
+            border-radius: 16px;
+        }
+
         /* Stats Section */
         .stats-section {
             display: grid;
@@ -483,6 +515,17 @@
                         <div class="detail-value">Top3 컨설팅 파트너급</div>
                     </div>
                 </div>
+                <div class="executive-video">
+                    <div class="video-label">
+                        <span class="material-symbols-outlined">play_circle</span>
+                        소개 영상
+                    </div>
+                    <div class="video-wrapper">
+                        <video controls preload="metadata" poster="images/clevel/cso-seoyeon.png">
+                            <source src="images/clevel/cso-seoyeon.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                </div>
             </div>
 
             <!-- CTO Card -->
@@ -518,6 +561,17 @@
                         <div class="detail-value">유니콘 창업 멤버급</div>
                     </div>
                 </div>
+                <div class="executive-video">
+                    <div class="video-label">
+                        <span class="material-symbols-outlined">play_circle</span>
+                        소개 영상
+                    </div>
+                    <div class="video-wrapper">
+                        <video controls preload="metadata" poster="images/clevel/cto-jiyu.png">
+                            <source src="images/clevel/cto-jiyu.mp4" type="video/mp4">
+                        </video>
+                    </div>
+                </div>
             </div>
 
             <!-- CCO Card -->
@@ -551,6 +605,17 @@
                         <div class="detail-icon">🍎</div>
                         <div class="detail-title">경력</div>
                         <div class="detail-value">애플 HI 그룹 리드급</div>
+                    </div>
+                </div>
+                <div class="executive-video">
+                    <div class="video-label">
+                        <span class="material-symbols-outlined">play_circle</span>
+                        소개 영상
+                    </div>
+                    <div class="video-wrapper">
+                        <video controls preload="metadata" poster="images/clevel/cco-yuna.png">
+                            <source src="images/clevel/cco-yuna.mp4" type="video/mp4">
+                        </video>
                     </div>
                 </div>
             </div>
