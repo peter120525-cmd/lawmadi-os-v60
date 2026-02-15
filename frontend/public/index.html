@@ -3200,7 +3200,10 @@
             const urlParams = new URLSearchParams(window.location.search);
             const leaderParam = urlParams.get('leader');
             if (leaderParam) {
-                this.userInput.value = `${leaderParam}아, 안녕하세요. 자기소개 부탁드려요.`;
+                const clevelTitles = { '서연': 'CSO', '지유': 'CTO', '유나': 'CCO' };
+                const title = clevelTitles[leaderParam];
+                const honorific = title ? `${leaderParam} ${title}님` : `${leaderParam} 리더님`;
+                this.userInput.value = `${honorific}, 안녕하세요. 자기소개 부탁드려요.`;
                 this.switchToChatMode();
                 this.dispatchPacket();
                 history.replaceState(null, '', window.location.pathname);
