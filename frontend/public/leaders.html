@@ -517,11 +517,45 @@
 
         @media (max-width: 768px) {
             .container {
-                padding: 20px 16px;
+                padding: 20px 12px;
+            }
+
+            /* ── 헤더 모바일: 세로 배치 ── */
+            .header {
+                padding: 12px 0;
+                margin-bottom: 20px;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 10px;
+                padding: 0 12px;
+            }
+
+            .back-button {
+                align-self: flex-start;
+                padding: 8px 16px;
+                font-size: 0.85rem;
+            }
+
+            .header-title {
+                text-align: center;
+            }
+
+            .header-badge {
+                font-size: 0.75rem;
+                padding: 6px 14px;
+                margin-bottom: 8px;
             }
 
             .header h1 {
-                font-size: 1.8rem;
+                font-size: 1.5rem;
+                letter-spacing: -0.5px;
+            }
+
+            /* spacer 숨기기 */
+            .header-content > div:last-child {
+                display: none;
             }
 
             .leaders-grid,
