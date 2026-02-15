@@ -45,6 +45,9 @@ static/leaders/videos/**/*.webm
 cache/
 *.cache
 
+# Node modules
+node_modules/
+
 # IDE
 .vscode/
 .idea/
