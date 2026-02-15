@@ -42,7 +42,7 @@ from importlib import import_module
 
 import asyncio
 import google.generativeai as genai
-from fastapi import FastAPI, Request, Header, HTTPException, File, UploadFile
+from fastapi import FastAPI, Request, Header, HTTPException, File, UploadFile, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -126,6 +126,9 @@ _cors_origins = [
 _extra_cors = os.getenv("CORS_EXTRA_ORIGINS", "")
 if _extra_cors:
     _cors_origins.extend([o.strip() for o in _extra_cors.split(",") if o.strip()])
+_mcp_cors = os.getenv("MCP_CORS_ORIGINS", "")
+if _mcp_cors:
+    _cors_origins.extend([o.strip() for o in _mcp_cors.split(",") if o.strip()])
 
 app.add_middleware(
     CORSMiddleware,
@@ -143,7 +146,15 @@ METRICS: Dict[str, Any] = {
     "errors": 0,
     "avg_latency_ms": 0,
     "boot_time": None,
+    "mcp_requests": 0,
 }
+
+@app.middleware("http")
+async def mcp_monitor_middleware(request: Request, call_next):
+    if request.url.path.startswith("/mcp"):
+        METRICS["mcp_requests"] += 1
+        logger.info(f"[MCP] {request.method} {request.url.path}")
+    return await call_next(request)
 
 # =============================================================
 # 🐝 [L2 SWARM DATA] Leader Registry (Hot-Swap JSON SSOT)
@@ -3010,9 +3021,54 @@ async def shutdown():
     logger.info(f"🛑 Lawmadi OS {OS_VERSION} Shutdown")
 
 # =============================================================
+# 🔑 Zapier / 외부 API 키 인증 시스템
+# =============================================================
+
+_API_KEYS = set(k.strip() for k in os.getenv("API_KEYS", "").split(",") if k.strip())
+
+def _verify_api_key(authorization: str = Header(default="")) -> None:
+    """Zapier/외부 API 키 검증 (Bearer token)"""
+    if not _API_KEYS:
+        return  # 키 미설정 시 기존처럼 오픈 (하위 호환)
+    token = authorization.removeprefix("Bearer ").strip()
+    if token not in _API_KEYS:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
+@app.get("/api/v1/me")
+async def api_v1_me(authorization: str = Header(default="")):
+    """API 키 검증 테스트 (Zapier auth test)"""
+    _verify_api_key(authorization)
+    return {"status": "OK", "version": OS_VERSION, "authenticated": True}
+
+@app.post("/api/v1/ask")
+@limiter.limit("15/minute")
+async def api_v1_ask(request: Request, authorization: str = Header(default="")):
+    """법률 질문 (API 키 필수) — Zapier 연동용"""
+    _verify_api_key(authorization)
+    # 기존 /ask 로직 재활용
+    return await ask(request)
+
+@app.get("/api/v1/search")
+async def api_v1_search(q: str, limit: int = 10, authorization: str = Header(default="")):
+    """법령 검색 (API 키 필수) — Zapier 연동용"""
+    _verify_api_key(authorization)
+    # 기존 /search 로직 재활용
+    return await search(q, limit)
+
+# =============================================================
 # MCP (Model Context Protocol) 서버 — 모든 라우트 등록 후 마운트
 # =============================================================
-from fastapi_mcp import FastApiMCP
+from fastapi_mcp import FastApiMCP, AuthConfig
+
+_MCP_API_KEY = os.getenv("MCP_API_KEY", "")
+
+def _verify_mcp_auth(authorization: str = Header(default="")) -> None:
+    """MCP 엔드포인트 인증 (MCP_API_KEY 설정 시 Bearer 토큰 필수)"""
+    if not _MCP_API_KEY:
+        return
+    token = authorization.removeprefix("Bearer ").strip()
+    if token != _MCP_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid MCP API key")
 
 mcp = FastApiMCP(
     app,
@@ -3020,6 +3076,9 @@ mcp = FastApiMCP(
     description="한국 법률 AI 상담 시스템. 60명의 전문 리더와 3명의 C-Level 임원이 법률 질문에 답변합니다.",
     describe_all_responses=True,
     describe_full_response_schema=True,
+    auth_config=AuthConfig(
+        dependencies=[Depends(_verify_mcp_auth)],
+    ) if _MCP_API_KEY else None,
 )
 mcp.mount_http()
 
