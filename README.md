@@ -34,12 +34,13 @@
 8. [기술 스택](#-기술-스택)
 9. [프로젝트 구조](#-프로젝트-구조)
 10. [MCP 서버 (Model Context Protocol)](#-mcp-서버-model-context-protocol)
-11. [로컬 실행 (평가 전용)](#-로컬-실행-평가-전용)
-12. [배포 파이프라인](#-배포-파이프라인)
-13. [데이터베이스 스키마](#-데이터베이스-스키마)
-14. [보안 정책](#-보안-정책)
-15. [라이선스](#-라이선스)
-16. [문의](#-문의)
+11. [Zapier 연동 (외부 API)](#-zapier-연동-외부-api)
+12. [로컬 실행 (평가 전용)](#-로컬-실행-평가-전용)
+13. [배포 파이프라인](#-배포-파이프라인)
+14. [데이터베이스 스키마](#-데이터베이스-스키마)
+15. [보안 정책](#-보안-정책)
+16. [라이선스](#-라이선스)
+17. [문의](#-문의)
 
 ---
 
@@ -591,6 +592,63 @@ curl -X POST https://lawmadi-os-v60-uzqkp6kadq-du.a.run.app/mcp \
   -H "Accept: application/json" \
   -H "Authorization: Bearer <MCP_API_KEY>" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
+```
+
+---
+
+## 🤖 Zapier 연동 (외부 API)
+
+Zapier를 통해 Lawmadi OS의 법률 AI를 자동화 워크플로에 통합할 수 있습니다.
+
+### API 엔드포인트
+
+**Base URL**: `https://lawmadi-os-v60-uzqkp6kadq-du.a.run.app`
+
+| 메서드 | 경로 | 설명 |
+|:---:|:---|:---|
+| `GET` | `/api/v1/me` | 인증 테스트 (API 키 검증) |
+| `POST` | `/api/v1/ask` | 법률 질문 답변 |
+| `GET` | `/api/v1/search?q=키워드&limit=10` | 법령 검색 |
+
+### 인증
+
+모든 `/api/v1/*` 엔드포인트는 **Bearer 토큰** 인증이 필요합니다.
+
+```
+Authorization: Bearer <API_KEY>
+```
+
+인증 없이 접근 시 `401 Unauthorized`가 반환됩니다.
+
+### 사용 예시
+
+```bash
+# 인증 테스트
+curl https://lawmadi-os-v60-uzqkp6kadq-du.a.run.app/api/v1/me \
+  -H "Authorization: Bearer YOUR_API_KEY"
+
+# 법률 질문
+curl -X POST https://lawmadi-os-v60-uzqkp6kadq-du.a.run.app/api/v1/ask \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{"query": "전세 보증금 반환 절차를 알려주세요"}'
+
+# 법령 검색
+curl "https://lawmadi-os-v60-uzqkp6kadq-du.a.run.app/api/v1/search?q=민법&limit=5" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### Zapier 앱 설정
+
+Zapier 앱 코드는 `zapier/` 디렉토리에 있습니다.
+
+1. **Authentication**: Custom Auth 방식 — `API Key`와 `API URL` 입력
+2. **Trigger**: 없음 (Action 전용)
+3. **Action**: `Ask Legal Question` (법률 질문), `Search Law` (법령 검색)
+
+```bash
+# 로컬 테스트
+cd zapier && npm test
 ```
 
 ---
