@@ -3423,7 +3423,7 @@
             statusDiv.className = 'ai-msg';
             statusDiv.innerHTML = '<p>📤 <b>파일 업로드 중...</b> (1/2)</p>';
             this.convArea.appendChild(statusDiv);
-            this.convArea.scrollTo({ top: this.convArea.scrollHeight, behavior: 'smooth' });
+            this._smartScroll(true);
 
             try {
                 const formData = new FormData();
@@ -3662,6 +3662,17 @@
             return result;
         },
 
+        // ═══ 스마트 스크롤 (하단 근처일 때만 자동 스크롤) ═══
+        _isNearBottom() {
+            const el = this.convArea;
+            return el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+        },
+        _smartScroll(force = false) {
+            if (force || this._isNearBottom()) {
+                this.convArea.scrollTo({ top: this.convArea.scrollHeight, behavior: 'smooth' });
+            }
+        },
+
         // ═══ 메시지 렌더링 (즐겨찾기 + PDF 버튼 추가) ═══
         appendMessage(sender, text, id = null, originalQuery = null, rawResponse = null, leaderName = null) {
             const msgDiv = document.createElement('div');
@@ -3670,13 +3681,15 @@
             msgDiv.innerHTML = text;
 
             if (sender === 'ai' && leaderName) {
+                const clevelTitles = { '서연': 'CSO', '지유': 'CTO', '유나': 'CCO' };
                 const names = leaderName.split(',').map(n => n.trim()).filter(Boolean);
                 const avatarItems = names.map(name => {
                     const imgPath = leaderProfileImages[name];
+                    const displayName = clevelTitles[name] ? `${clevelTitles[name]} ${name}` : `${name} 리더`;
                     if (imgPath) {
-                        return `<div class="leader-avatar-item"><img src="${imgPath}" alt="${name}"><span class="leader-name">${name}</span></div>`;
+                        return `<div class="leader-avatar-item"><img src="${imgPath}" alt="${name}"><span class="leader-name">${displayName}</span></div>`;
                     }
-                    return `<div class="leader-avatar-item"><span class="leader-name">${name}</span></div>`;
+                    return `<div class="leader-avatar-item"><span class="leader-name">${displayName}</span></div>`;
                 }).join('');
                 if (avatarItems) {
                     const header = document.createElement('div');
@@ -3753,7 +3766,7 @@
             }
 
             this.convArea.appendChild(msgDiv);
-            this.convArea.scrollTo({ top: this.convArea.scrollHeight, behavior: 'smooth' });
+            this._smartScroll(sender === 'user');
         },
 
         updateMessage(id, html) {
@@ -3761,7 +3774,7 @@
             if (msgDiv) {
                 msgDiv.innerHTML = html;
                 this.addCopyButton(msgDiv);
-                this.convArea.scrollTo({ top: this.convArea.scrollHeight, behavior: 'smooth' });
+                this._smartScroll();
             }
         },
 
@@ -3825,7 +3838,7 @@
                 </div>
             `;
             this.convArea.appendChild(typingDiv);
-            this.convArea.scrollTo({ top: this.convArea.scrollHeight, behavior: 'smooth' });
+            this._smartScroll(true);
 
             // 단계별 진행 애니메이션
             this._typingStepTimers = [];
