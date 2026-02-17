@@ -919,11 +919,7 @@ SYSTEM_INSTRUCTION_BASE = f"""
 추가로 궁금한 점이나 진행 중 막히는 부분이 있으면
 **언제든 다시 물어보세요.** 같이 해결하겠습니다.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ℹ️ 본 답변은 **Lawmadi OS v60** (70% SSOT 커버리지)이
-   국가법령정보센터 검증 데이터를 기반으로 제공합니다.
-   최종 결정은 반드시 전문가와 상의하시기 바랍니다.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+> ℹ️ 본 답변은 Lawmadi OS v60이 법령정보 검증 데이터를 기반으로 제공하며, 최종 결정은 반드시 전문가와 상의하세요.
 ```
 
 **핵심 원칙:**
@@ -1600,9 +1596,9 @@ def select_swarm_leader(query: str, leaders: Dict) -> Dict:
         logger.info(f"🎯 [L2] {selected_leader} 리더 자동 배정 (키워드 {max_score}개 매칭)")
         return registry.get(selected_leader, registry.get("L60", {"name": "마디 통합 리더", "role": "시스템 기본 분석"}))
 
-    # 3) Fallback
-    logger.warning(f"⚠️ [L2] 전문 리더 미매칭, L60 (마디 통합 리더) 사용")
-    return registry.get("L60", {"name": "마디 통합 리더", "role": "시스템 기본 법리 분석 노드"})
+    # 3) Fallback → 유나(CCO)가 따뜻하게 맞이
+    logger.info(f"🎯 [L2] 전문 리더 미매칭 → 유나(CCO) 응대")
+    return {"name": "유나", "role": "Chief Content Officer", "specialty": "콘텐츠 설계", "_clevel": "CCO"}
 
 # =============================================================
 # ⚙️ [CONFIG] load
@@ -1774,6 +1770,14 @@ async def startup():
                     timeout_ms=int(os.getenv("DRF_TIMEOUT_MS", "5000")),
                 )
                 logger.info("✅ DRFConnector initialized")
+                # startup 시 DRF 가용성 1회 확인 (매 요청 검사 제거 → ~2초 절약)
+                try:
+                    _test = drf_conn.law_search("민법")
+                    RUNTIME["drf_healthy"] = bool(_test)
+                    logger.info(f"✅ DRF SSOT 가용: {RUNTIME['drf_healthy']}")
+                except Exception:
+                    RUNTIME["drf_healthy"] = False
+                    logger.warning("⚠️ DRF SSOT 비가용 (startup 점검 실패)")
             except Exception as e:
                 logger.warning(f"🟡 DRFConnector degraded: {e}")
         else:
@@ -2119,6 +2123,17 @@ async def ask(request: Request):
     try:
         data = await request.json()
         query = (data.get("query", "") or "").strip()
+        raw_history = data.get("history", [])
+
+        # 대화 히스토리 → Gemini Content 형식 변환 (최근 6턴)
+        gemini_history = []
+        for msg in raw_history[-6:]:
+            role = msg.get("role", "")
+            content = msg.get("content", "")
+            if role == "user" and content:
+                gemini_history.append({"role": "user", "parts": [content]})
+            elif role == "assistant" and content:
+                gemini_history.append({"role": "model", "parts": [content[:2000]]})
 
         # IP 주소를 사용자 ID로 사용 (자동 추출)
         visitor_id = _get_client_ip(request)
@@ -2131,22 +2146,18 @@ async def ask(request: Request):
         # -------------------------------------------------
         if _is_low_signal(query):
             msg = (
-                "[마디 통합 리더 답변]\n\n"
-                "1. 요약 (Quick Insight):\n"
-                "서버는 정상 동작 중입니다. ✅ (테스트 입력 감지)\n\n"
-                "2. 📚 법률 근거 (Verified Evidence):\n"
-                "구체 사안이 없어 근거 검색을 수행하지 않았습니다.\n\n"
-                "3. 🕐 시간축 분석 (Timeline Analysis):\n"
-                "시간 정보 부족으로 생략합니다.\n\n"
-                "4. 절차 안내 (Action Plan):\n"
-                "- 사건 개요\n"
-                "- 날짜/당사자/증빙\n"
-                "- 원하는 결과\n\n"
-                "5. 🔍 참고 정보:\n"
-                "본 시스템은 법률 자문이 아닌 정보 제공 시스템입니다.\n"
+                "[유나 (CCO) 안내]\n\n"
+                "안녕하세요! 유나입니다. 😊\n\n"
+                "테스트 입력이 감지되었습니다. 서버는 정상 동작 중이에요.\n\n"
+                "더 정확한 답변을 드리기 위해 다음 정보를 알려주시면 좋겠어요:\n"
+                "- 사건 개요 (어떤 상황인지)\n"
+                "- 날짜/당사자/증빙 자료\n"
+                "- 원하시는 결과\n\n"
+                "법률 문제로 걱정이 있으시다면, 구체적으로 질문해 주세요.\n"
+                "60명의 전문 리더가 함께 도와드릴게요!\n"
             )
             _audit("ask_low_signal", {"query": query, "status": "SKIPPED", "latency_ms": 0})
-            return {"trace_id": trace, "response": msg, "leader": "마디 통합 리더", "status": "SUCCESS"}
+            return {"trace_id": trace, "response": msg, "leader": "유나", "leader_specialty": "콘텐츠 설계", "status": "SUCCESS"}
 
         # -------------------------------------------------
         # 0.5) Gemini 키 점검
@@ -2191,17 +2202,9 @@ async def ask(request: Request):
                 logger.info(f"🎯 C-Level 호출: {clevel_decision.get('executive_id')} - {clevel_decision.get('reason')}")
 
         # -------------------------------------------------
-        # 3) Dual SSOT 선점 점검 (DRF 살아있는지 확인)
-        # [원본버그 수정] 중복 law_search 호출 제거, 들여쓰기 오류 수정
+        # 3) Dual SSOT 가용 여부 (startup 시 1회 확인 → 매 요청 ~2초 절약)
         # -------------------------------------------------
-        drf_connector = RUNTIME.get("drf")
-        ssot_available = False
-        if drf_connector:
-            try:
-                test_result = drf_connector.law_search(query)
-                ssot_available = bool(test_result)
-            except Exception as e:
-                logger.warning(f"[Pre-check] SSOT error: {e}")
+        ssot_available = RUNTIME.get("drf_healthy", False)
 
         # -------------------------------------------------
         # 3) LLM Tool 설정 (SSOT 살아있을 때만 활성화)
@@ -2238,10 +2241,11 @@ async def ask(request: Request):
             model = genai.GenerativeModel(
                 model_name=model_name,
                 tools=tools,
-                system_instruction=clevel_instruction
+                system_instruction=clevel_instruction,
+                generation_config={"max_output_tokens": 4096}
             )
 
-            chat = model.start_chat(enable_automatic_function_calling=True)
+            chat = model.start_chat(history=gemini_history, enable_automatic_function_calling=True)
             resp = chat.send_message(
                 f"now_kst={now_kst}\n"
                 f"ssot_available={ssot_available}\n"
@@ -2250,6 +2254,7 @@ async def ask(request: Request):
 
             final_text = _safe_extract_gemini_text(resp)
             leader_name = clevel.executives.get(exec_id, {}).get("name", exec_id)
+            leader_specialty = clevel.executives.get(exec_id, {}).get("role", exec_id)
             swarm_mode = False
 
             logger.info(f"✅ C-Level 분석 완료: {leader_name}")
@@ -2274,9 +2279,37 @@ async def ask(request: Request):
                     )
 
                     final_text = swarm_result["response"]
-                    leader_names = swarm_result.get("leaders", ["마디"])
+                    leader_names = swarm_result.get("leaders", ["유나"])
                     leader_name = ", ".join(leader_names[:3]) + (f" 외 {len(leader_names)-3}명" if len(leader_names) > 3 else "")
+                    leader_specialty = ", ".join(swarm_result.get("domains", ["콘텐츠 설계"])[:3])
                     swarm_mode = swarm_result.get("swarm_mode", False)
+
+                    # C-Level "swarm" 모드: Swarm 결과에 C-Level 관점 보강
+                    if clevel and clevel_decision and clevel_decision.get("mode") == "swarm":
+                        exec_id = clevel_decision.get("executive_id", "CSO")
+                        exec_name = clevel.executives.get(exec_id, {}).get("name", exec_id)
+                        logger.info(f"🎯 C-Level swarm 보강: {exec_name}({exec_id}) 관점 추가")
+
+                        try:
+                            clevel_instruction = clevel.get_clevel_system_instruction(exec_id, SYSTEM_INSTRUCTION_BASE)
+                            clevel_model = genai.GenerativeModel(
+                                model_name=model_name,
+                                system_instruction=clevel_instruction
+                            )
+                            clevel_chat = clevel_model.start_chat()
+                            clevel_resp = clevel_chat.send_message(
+                                f"다음은 법률 리더들의 분석 결과입니다:\n\n{final_text}\n\n"
+                                f"위 분석에 대해 {exec_name}({exec_id}) 관점에서 전략적 보강 의견을 2~3문장으로 추가하세요.\n"
+                                f"사용자 원래 질문: {query}"
+                            )
+                            clevel_opinion = _safe_extract_gemini_text(clevel_resp)
+                            if clevel_opinion:
+                                final_text += f"\n\n---\n**[{exec_name} ({exec_id}) 전략 보강]**\n{clevel_opinion}"
+                                leader_names.append(exec_name)
+                                leader_name += f", {exec_name}"
+                            logger.info(f"✅ C-Level swarm 보강 완료: {exec_name}")
+                        except Exception as ce:
+                            logger.warning(f"⚠️ C-Level swarm 보강 실패 (무시): {ce}")
 
                     logger.info(f"✅ Swarm 분석 완료: {leader_name} ({swarm_result.get('leader_count', 1)}명 협업)")
 
@@ -2291,6 +2324,7 @@ async def ask(request: Request):
 
                 leader = select_swarm_leader(query, LEADER_REGISTRY)
                 leader_name = leader['name']
+                leader_specialty = leader.get('specialty', '콘텐츠 설계')
                 swarm_mode = False
 
                 model = genai.GenerativeModel(
@@ -2299,11 +2333,14 @@ async def ask(request: Request):
                     system_instruction=(
                         f"{SYSTEM_INSTRUCTION_BASE}\n"
                         f"현재 당신은 '{leader['name']}({leader['role']})' 노드입니다.\n"
-                        f"반드시 [{leader['name']} 답변]으로 시작하세요."
+                        f"🎯 전문 분야: {leader.get('specialty', '통합')}\n"
+                        f"🎯 관점: {leader.get('specialty', '통합')} 전문가 관점에서 이 사안을 분석하세요.\n"
+                        f"반드시 [{leader['name']} ({leader.get('specialty', '통합')}) 답변]으로 시작하세요."
                     ),
+                    generation_config={"max_output_tokens": 4096},
                 )
 
-                chat = model.start_chat(enable_automatic_function_calling=True)
+                chat = model.start_chat(history=gemini_history, enable_automatic_function_calling=True)
 
                 resp = chat.send_message(
                     f"now_kst={now_kst}\n"
@@ -2312,6 +2349,17 @@ async def ask(request: Request):
                 )
 
                 final_text = _safe_extract_gemini_text(resp)
+
+                # 응답이 너무 짧으면 1회 재시도
+                if len(final_text.strip()) < 50:
+                    logger.warning(f"⚠️ 응답 너무 짧음 ({len(final_text)}자), 재시도...")
+                    retry_resp = chat.send_message(
+                        f"이전 응답이 너무 짧습니다. 다음 질문에 대해 상세하게 분석해주세요:\n{query}"
+                    )
+                    retry_text = _safe_extract_gemini_text(retry_resp)
+                    if len(retry_text.strip()) > len(final_text.strip()):
+                        final_text = retry_text
+                        logger.info(f"✅ 재시도 성공 ({len(final_text)}자)")
 
         # -------------------------------------------------
         # 5) Governance 검증
@@ -2465,6 +2513,7 @@ async def ask(request: Request):
             "trace_id": trace,
             "response": final_text_clean,
             "leader": leader_name,
+            "leader_specialty": leader_specialty if 'leader_specialty' in locals() else "",
             "status": "SUCCESS",
             "latency_ms": latency_ms,
             "swarm_mode": swarm_mode if 'swarm_mode' in locals() else False,
