@@ -105,7 +105,7 @@ class SwarmOrchestrator:
             "L57": ["상속", "신탁", "유언", "유산", "명의신탁", "상속세", "증여"],  # 상속·신탁
             "L58": ["스포츠", "레저", "체육", "운동"],  # 스포츠·레저
             "L59": ["데이터", "AI윤리", "알고리즘", "인공지능", "AI"],  # 데이터·AI윤리
-            "L60": ["시스템", "통합", "총괄", "법률", "조문", "판례"],  # 시스템 총괄
+            # L60(마디)은 도메인 매칭에서 제외 — 기본 응답은 유나(CCO)가 담당
         }
 
     def detect_name_call(self, query: str) -> Optional[str]:
@@ -195,9 +195,9 @@ class SwarmOrchestrator:
             detected_domains = self.detect_domains(query)
 
         if not detected_domains:
-            # 도메인 미탐지 시 기본 리더
-            logger.info("🎯 도메인 미탐지 → 마디(L60) 통합 리더 선택")
-            return [self.leaders.get("L60", {"name": "마디", "role": "시스템 총괄", "specialty": "통합"})]
+            # 도메인 미탐지 → 유나(CCO)가 따뜻하게 맞이
+            logger.info("🎯 도메인 미탐지 → 유나(CCO) 응대")
+            return [{"name": "유나", "role": "Chief Content Officer", "specialty": "콘텐츠 설계", "_clevel": "CCO"}]
 
         # 상위 N개 도메인의 Leader 선택
         selected_leaders = []
@@ -209,8 +209,8 @@ class SwarmOrchestrator:
 
         # 최소 리더 수 보장
         if len(selected_leaders) < self.min_leaders:
-            default_leader = self.leaders.get("L60", {"name": "마디", "role": "시스템 총괄"})
-            default_leader["_id"] = "L60"
+            default_leader = {"name": "유나", "role": "Chief Content Officer", "specialty": "콘텐츠 설계", "_clevel": "CCO"}
+            default_leader["_id"] = "CCO"
             default_leader["_score"] = 5
             selected_leaders.append(default_leader)
 
@@ -238,25 +238,64 @@ class SwarmOrchestrator:
         leader_specialty = leader.get("specialty", "Unknown")
 
         try:
-            # Leader 전용 시스템 지시
-            system_instruction = (
-                f"{system_instruction_base}\n\n"
-                f"🎯 당신의 역할: {leader_name} ({leader_role})\n"
-                f"🎯 전문 분야: {leader_specialty}\n"
-                f"🎯 관점: {leader_specialty} 전문가 관점에서 이 사안을 분석하세요.\n\n"
-                f"특히 다음에 집중하세요:\n"
-                f"1. {leader_specialty} 관련 법령 및 규정\n"
-                f"2. {leader_specialty} 관련 판례 및 해석례\n"
-                f"3. {leader_specialty} 관점에서의 쟁점 및 위험\n"
-                f"4. {leader_specialty} 관련 절차 및 대응 방안\n\n"
-                f"반드시 [{leader_name} ({leader_specialty}) 분석]으로 시작하세요."
-            )
+            # C-Level 여부 확인
+            clevel_id = leader.get("_clevel")
 
-            # Gemini 모델 생성
+            if clevel_id == "CCO":
+                # 유나(CCO) 전용: 따뜻하고 친근한 톤
+                system_instruction = (
+                    f"{system_instruction_base}\n\n"
+                    f"🎯 당신의 역할: 유나 (CCO, Chief Content Officer)\n"
+                    f"🎯 전문 분야: 콘텐츠 설계 · 사용자 경험\n"
+                    f"🎯 톤: 따뜻하고 친근하며, 사용자의 불안을 공감하고 행동으로 바꿔주는 스타일\n\n"
+                    f"사용자가 질문하면:\n"
+                    f"1. 먼저 공감과 격려로 시작하세요\n"
+                    f"2. 법률 관련이면 핵심 쟁점을 쉬운 말로 설명하세요\n"
+                    f"3. 구체적인 행동 계획을 안내하세요\n"
+                    f"4. 비법률 질문이면 친절하게 안내하되, 법률 상담도 가능함을 알려주세요\n\n"
+                    f"반드시 [유나 (CCO) 콘텐츠 설계]로 시작하세요."
+                )
+            elif clevel_id == "CSO":
+                # 서연(CSO) 전용: 전략적 접근
+                system_instruction = (
+                    f"{system_instruction_base}\n\n"
+                    f"🎯 당신의 역할: 서연 (CSO, Chief Strategy Officer)\n"
+                    f"🎯 전문 분야: 전략 기획 · 법률 전략\n"
+                    f"🎯 톤: 전략적이고 체계적이며, 큰 그림을 그려주는 스타일\n\n"
+                    f"반드시 [서연 (CSO) 전략 분석]으로 시작하세요."
+                )
+            elif clevel_id == "CTO":
+                # 지유(CTO) 전용
+                system_instruction = (
+                    f"{system_instruction_base}\n\n"
+                    f"🎯 당신의 역할: 지유 (CTO, Chief Technology Officer)\n"
+                    f"🎯 전문 분야: 기술 검증 · AI 무결성\n"
+                    f"🎯 톤: 정확하고 논리적이며, 기술적 관점을 제공하는 스타일\n\n"
+                    f"반드시 [지유 (CTO) 기술 분석]으로 시작하세요."
+                )
+            else:
+                # 일반 리더: 기존 로직
+                system_instruction = (
+                    f"{system_instruction_base}\n\n"
+                    f"🎯 당신의 역할: {leader_name} ({leader_role})\n"
+                    f"🎯 전문 분야: {leader_specialty}\n"
+                    f"🎯 관점: {leader_specialty} 전문가 관점에서 이 사안을 분석하세요.\n\n"
+                    f"특히 다음에 집중하세요:\n"
+                    f"1. {leader_specialty} 관련 법령 및 규정\n"
+                    f"2. {leader_specialty} 관련 판례 및 해석례\n"
+                    f"3. {leader_specialty} 관점에서의 쟁점 및 위험\n"
+                    f"4. {leader_specialty} 관련 절차 및 대응 방안\n\n"
+                    f"반드시 [{leader_name} ({leader_specialty}) 분석]으로 시작하세요."
+                )
+
+            # Gemini 모델 생성 (max_output_tokens 제한 → 응답 속도 개선)
             model = genai.GenerativeModel(
                 model_name=model_name,
                 tools=tools or [],
-                system_instruction=system_instruction
+                system_instruction=system_instruction,
+                generation_config={
+                    "max_output_tokens": 4096,
+                }
             )
 
             # 분석 실행 (Function Calling 활성화)
@@ -280,6 +319,23 @@ class SwarmOrchestrator:
 
                 if not analysis_text:
                     analysis_text = f"[{leader_specialty} 분석 결과를 텍스트로 변환하지 못했습니다]"
+
+            # 응답이 너무 짧으면 1회 재시도
+            if len(analysis_text.strip()) < 50:
+                logger.warning(f"⚠️ {leader_name} 응답 너무 짧음 ({len(analysis_text)}자), 재시도...")
+                retry_response = chat.send_message(
+                    f"이전 응답이 너무 짧습니다. 다음 질문에 대해 상세하게 분석해주세요:\n{query}"
+                )
+                try:
+                    retry_text = retry_response.text
+                except ValueError:
+                    retry_text = ""
+                    for part in retry_response.parts:
+                        if hasattr(part, 'text') and part.text:
+                            retry_text += part.text
+                if len(retry_text.strip()) > len(analysis_text.strip()):
+                    analysis_text = retry_text
+                    logger.info(f"✅ {leader_name} 재시도 성공 ({len(analysis_text)} chars)")
 
             logger.info(f"✅ {leader_name} 분석 완료 ({len(analysis_text)} chars)")
 
@@ -375,8 +431,9 @@ class SwarmOrchestrator:
 
         # 통합 프롬프트 생성
         synthesis_prompt = f"""
-당신은 Lawmadi OS의 최종 통합 리더 '마디'입니다.
-여러 전문 분야 리더들이 분석한 결과를 통합하여 최종 판단 흐름을 생성하세요.
+당신은 Lawmadi OS의 유나 (CCO, Chief Content Officer)입니다.
+여러 전문 분야 리더들이 분석한 결과를 따뜻하고 이해하기 쉽게 통합하여 최종 판단 흐름을 생성하세요.
+사용자의 불안에 공감하고, 구체적인 행동으로 바꿔주는 톤을 유지하세요.
 
 [사용자 질문]
 {query}
@@ -410,7 +467,7 @@ class SwarmOrchestrator:
 ✅ 사용: • **항목** - 설명 형식 또는 번호 목록
 
 [응답 형식]
-반드시 "[마디 통합 리더 답변]"으로 시작하세요.
+반드시 "[유나 (CCO) 종합 판단]"으로 시작하세요.
 """
 
         try:
@@ -422,6 +479,7 @@ class SwarmOrchestrator:
                 generation_config={
                     "temperature": 0.3,
                     "top_p": 0.95,
+                    "max_output_tokens": 4096,
                 }
             )
 
@@ -438,7 +496,7 @@ class SwarmOrchestrator:
 
     def _fallback_response(self, query: str) -> str:
         """Fallback 응답 생성"""
-        return f"""[마디 통합 리더 답변]
+        return f"""[유나 (CCO) 종합 판단]
 
 1. 요약 (Quick Insight)
 분석 중 시스템 오류가 발생했습니다.
@@ -459,7 +517,7 @@ class SwarmOrchestrator:
 
     def _fallback_response_with_analyses(self, query: str, analyses: List[Dict]) -> str:
         """분석 결과 포함 Fallback 응답"""
-        response = "[마디 통합 리더 답변]\n\n"
+        response = "[유나 (CCO) 종합 판단]\n\n"
         response += "1. 요약 (Quick Insight)\n"
         response += f"본 사안은 {', '.join([a['specialty'] for a in analyses])} 등 복합 법률 영역에 관한 질문입니다.\n\n"
 
@@ -542,18 +600,24 @@ class SwarmOrchestrator:
             model_name
         )
 
-        # 5. 결과 통합
-        final_response = self.synthesize_swarm_results(
-            query,
-            swarm_results,
-            model_name
-        )
+        # 5. 결과 통합 (성공한 리더가 1명뿐이면 synthesis 스킵 → ~8초 절약)
+        successful = [r for r in swarm_results if r.get("success", False)]
+
+        if len(successful) == 1:
+            logger.info(f"⚡ 성공 리더 1명 — synthesis 스킵 ({successful[0]['leader']})")
+            final_response = successful[0]["analysis"]
+        else:
+            final_response = self.synthesize_swarm_results(
+                query,
+                swarm_results,
+                model_name
+            )
 
         return {
             "response": final_response,
             "leaders": [r["leader"] for r in swarm_results],
             "domains": [r["specialty"] for r in swarm_results],
-            "swarm_mode": True,
+            "swarm_mode": len(successful) > 1,
             "leader_count": len(swarm_results),
             "detailed_results": swarm_results
         }
