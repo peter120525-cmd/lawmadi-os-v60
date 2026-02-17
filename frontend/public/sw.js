@@ -1,5 +1,5 @@
-// Lawmadi OS Service Worker v1
-const CACHE_NAME = 'lawmadi-v1';
+// Lawmadi OS Service Worker v2
+const CACHE_NAME = 'lawmadi-v60-20260217';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
