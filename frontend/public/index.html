@@ -92,6 +92,7 @@
             height: 100dvh;
             display: flex;
             overflow: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .layout-container {
@@ -110,7 +111,7 @@
             flex-direction: column;
             position: relative;
             z-index: 1000;
-            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease;
             box-shadow: 4px 0 24px rgba(0,0,0,0.12);
             flex-shrink: 0;
         }
@@ -759,6 +760,7 @@
             padding: 12px 20px;
             background: white;
             border-top: 1px solid var(--border);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
         .input-container {
@@ -3150,6 +3152,7 @@
             border-top: 1px solid var(--border);
             padding-bottom: env(safe-area-inset-bottom, 0px);
             box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }
 
         .tab-bar-inner {
@@ -3243,7 +3246,7 @@
 
         .content-viewport.slide-out {
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(-20px);
         }
 
         .conversation-viewport {
@@ -3308,6 +3311,79 @@
         }
         body.dark-mode :focus-visible {
             outline-color: #60a5fa;
+        }
+
+        /* ═══ 응답 소요시간 ═══ */
+        .msg-time {
+            display: block;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 12px;
+            text-align: right;
+        }
+
+        /* ═══ 스크롤 투 바텀 버튼 ═══ */
+        .scroll-bottom-btn {
+            position: fixed;
+            bottom: 100px;
+            right: 28px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+            z-index: 800;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        .scroll-bottom-btn:hover {
+            transform: scale(1.1);
+        }
+        .scroll-bottom-btn.visible {
+            display: flex;
+        }
+        @media (max-width: 768px) {
+            .scroll-bottom-btn {
+                bottom: 120px;
+                right: 16px;
+                width: 36px;
+                height: 36px;
+            }
+        }
+
+        /* ═══ 입력 글자 수 카운터 ═══ */
+        .char-counter {
+            text-align: right;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+            padding-right: 4px;
+        }
+        .char-counter.over-limit {
+            color: #ef4444;
+            font-weight: 700;
+        }
+
+        /* ═══ 메시지 타임스탬프 ═══ */
+        .msg-timestamp {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-align: right;
+            margin-top: 8px;
+        }
+
+        /* ═══ 전송 버튼 비활성화 ═══ */
+        .send-action.disabled {
+            opacity: 0.4;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -3382,6 +3458,9 @@
                     <span class="material-symbols-outlined" style="font-size: 1.2rem;">check_circle</span>
                     System: Healthy
                 </div>
+                <button id="newChatBtn" style="background:none; border:none; color:var(--text-muted); cursor:pointer; display:flex; padding: 8px; border-radius: 8px; transition: all 0.2s;" aria-label="새 대화 시작" title="새 대화">
+                    <span class="material-symbols-outlined" aria-hidden="true">add_comment</span>
+                </button>
             </div>
             <div class="header-right">
                 <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 6px;">
@@ -3497,6 +3576,11 @@
         <!-- Chat Conversation -->
         <div id="conversation-area" class="conversation-viewport hidden" role="log" aria-label="대화 내역" aria-live="polite"></div>
 
+        <!-- Scroll to Bottom Button -->
+        <button id="scrollBottomBtn" class="scroll-bottom-btn" aria-label="맨 아래로 스크롤">
+            <span class="material-symbols-outlined" style="font-size: 1.3rem;" aria-hidden="true">keyboard_arrow_down</span>
+        </button>
+
         <!-- Input Area -->
         <div class="input-pipeline-wrapper">
             <div class="input-container">
@@ -3512,6 +3596,8 @@
                     <span class="material-symbols-outlined" style="font-size: 1.4rem;" aria-hidden="true">arrow_upward</span>
                 </button>
             </div>
+
+            <div id="charCounter" class="char-counter">0/2000</div>
 
             <!-- 업로드된 파일 미리보기 (v60) -->
             <div id="uploadedFilePreview" style="display: none; margin-top: 12px; padding: 12px; background: var(--surface, white); border-radius: 12px; border: 2px solid #10b981; max-width: 900px; margin-left: auto; margin-right: auto;">
@@ -3641,6 +3727,9 @@
         removeFileBtn: document.getElementById('removeFileBtn'),
         favoritesPanel: document.getElementById('favoritesPanel'),
         favoritesList: document.getElementById('favoritesList'),
+        scrollBottomBtn: document.getElementById('scrollBottomBtn'),
+        charCounter: document.getElementById('charCounter'),
+        newChatBtn: document.getElementById('newChatBtn'),
         API_URL: 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app/ask',
         BASE_URL: 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app',
         USE_STREAMING: false,
@@ -3668,6 +3757,10 @@
             this.userInput.addEventListener('input', () => {
                 this.userInput.style.height = 'auto';
                 this.userInput.style.height = this.userInput.scrollHeight + 'px';
+                // 글자 수 카운터 업데이트
+                this.updateCharCounter();
+                // 전송 버튼 상태 업데이트
+                this.updateSendBtnState();
             });
 
             this.sendBtn.onclick = () => this.dispatchPacket();
@@ -3730,6 +3823,21 @@
             // 즐겨찾기 초기화
             const favToggle = document.getElementById('favToggle');
             if (favToggle) favToggle.onclick = () => this.toggleFavorites();
+
+            // 새 대화 버튼
+            if (this.newChatBtn) this.newChatBtn.onclick = () => this.resetConversation();
+
+            // 스크롤 투 바텀 버튼
+            if (this.scrollBottomBtn) {
+                this.scrollBottomBtn.onclick = () => this._smartScroll(true);
+                this.convArea.addEventListener('scroll', () => {
+                    const show = !this._isNearBottom() && !this.convArea.classList.contains('hidden');
+                    this.scrollBottomBtn.classList.toggle('visible', show);
+                });
+            }
+
+            // 전송 버튼 초기 상태
+            this.updateSendBtnState();
 
             // Hover effects for menu toggle
             this.menuToggle.onmouseenter = () => {
@@ -3930,13 +4038,13 @@
                     this.landingContent.classList.remove('slide-out');
                     this.convArea.classList.remove('hidden');
                     this.convArea.classList.add('slide-in');
-                    this.userInput.focus();
+                    if (window.innerWidth > 768) this.userInput.focus();
                     // 애니메이션 후 클래스 제거
                     setTimeout(() => this.convArea.classList.remove('slide-in'), 350);
                 }, 300);
             } else {
                 this.convArea.classList.remove('hidden');
-                this.userInput.focus();
+                if (window.innerWidth > 768) this.userInput.focus();
             }
         },
 
@@ -3959,6 +4067,8 @@
                 this.userInput.value = "";
                 this.userInput.style.height = 'auto';
                 this.lastQuery = query;
+                this.updateCharCounter();
+                this.updateSendBtnState();
             }
 
             // AbortController: 60초 타임아웃 + 취소 지원 (항목 #12)
@@ -3966,6 +4076,7 @@
             this.currentAbortController = new AbortController();
             const timeoutId = setTimeout(() => this.currentAbortController.abort(), 60000);
 
+            const _startTime = performance.now();
             this.showTypingIndicator();
 
             try {
@@ -3996,8 +4107,9 @@
                 try { localStorage.setItem('lawmadi-chat-history', JSON.stringify(this.conversationHistory)); } catch(e) {}
 
                 this.lastRawResponse = data.response;
+                const _elapsed = ((performance.now() - _startTime) / 1000).toFixed(1);
                 const formattedHtml = this.formatReport(data.response);
-                this.appendMessage('ai', formattedHtml, null, query, data.response, data.leader, data.leader_specialty);
+                this.appendMessage('ai', formattedHtml, null, query, data.response, data.leader, data.leader_specialty, _elapsed);
 
                 // GA4 이벤트 추적
                 if (typeof gtag === 'function') {
@@ -4018,11 +4130,11 @@
                     return this.dispatchPacket(retryCount + 1);
                 }
 
-                // 최종 실패: 재시도 버튼 포함
+                // 최종 실패: 사용자 친화적 에러 메시지 + 재시도 버튼
+                const friendlyMsg = this._friendlyError(error);
                 this.appendMessage('ai', `
                     <div style="color: #ef4444;">
-                        <p><strong>통신 오류가 발생했습니다.</strong></p>
-                        <p style="font-size: 0.85rem; color: var(--text-muted);">${this.escapeHtml(error.message)}</p>
+                        <p><strong>${this.escapeHtml(friendlyMsg)}</strong></p>
                         <button class="retry-btn" onclick="UI.retryLastQuery()">
                             <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
                             다시 시도
@@ -4308,7 +4420,7 @@
         },
 
         // ═══ 메시지 렌더링 (즐겨찾기 + PDF 버튼 추가) ═══
-        appendMessage(sender, text, id = null, originalQuery = null, rawResponse = null, leaderName = null, leaderSpecialtyFromServer = null) {
+        appendMessage(sender, text, id = null, originalQuery = null, rawResponse = null, leaderName = null, leaderSpecialtyFromServer = null, elapsedTime = null) {
             const msgDiv = document.createElement('div');
             msgDiv.className = sender === 'user' ? 'user-msg' : 'ai-msg';
             if (id) msgDiv.id = id;
@@ -4434,6 +4546,16 @@
                 }
             }
 
+            // 타임스탬프 추가
+            const tsDiv = document.createElement('div');
+            tsDiv.className = 'msg-timestamp';
+            let tsText = this._formatTime();
+            if (sender === 'ai' && elapsedTime) {
+                tsText += ` · ⏱ ${elapsedTime}초`;
+            }
+            tsDiv.textContent = tsText;
+            msgDiv.appendChild(tsDiv);
+
             this.convArea.appendChild(msgDiv);
             this._smartScroll(sender === 'user');
         },
@@ -4541,6 +4663,58 @@
             });
 
             return typingId;
+        },
+
+        // ═══ 새 대화 시작 ═══
+        resetConversation() {
+            this.conversationHistory = [];
+            this.convArea.innerHTML = '';
+            this.lastQuery = null;
+            this.lastRawResponse = null;
+            try { localStorage.removeItem('lawmadi-chat-history'); } catch(e) {}
+            // 랜딩 화면으로 복귀
+            this.convArea.classList.add('hidden');
+            this.landingContent.classList.remove('hidden');
+            this.userInput.value = '';
+            this.userInput.style.height = 'auto';
+            this.updateCharCounter();
+            this.updateSendBtnState();
+            if (this.scrollBottomBtn) this.scrollBottomBtn.classList.remove('visible');
+        },
+
+        // ═══ 글자 수 카운터 ═══
+        updateCharCounter() {
+            if (!this.charCounter) return;
+            const len = this.userInput.value.length;
+            this.charCounter.textContent = `${len}/2000`;
+            this.charCounter.classList.toggle('over-limit', len > 2000);
+        },
+
+        // ═══ 전송 버튼 상태 ═══
+        updateSendBtnState() {
+            const empty = this.userInput.value.trim().length === 0 && !this.uploadedFile;
+            this.sendBtn.classList.toggle('disabled', empty);
+        },
+
+        // ═══ 현재 시각 포맷 ═══
+        _formatTime() {
+            const now = new Date();
+            return now.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit', hour12: true });
+        },
+
+        // ═══ 사용자 친화적 에러 메시지 ═══
+        _friendlyError(error) {
+            const msg = error.message || '';
+            if (error.name === 'AbortError' || msg.includes('timeout') || msg.includes('abort')) {
+                return '응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.';
+            }
+            if (msg.includes('NetworkError') || msg.includes('Failed to fetch') || msg.includes('network')) {
+                return '인터넷 연결을 확인해주세요.';
+            }
+            if (msg.includes('5') && msg.includes('서버')) {
+                return '서버가 바쁩니다. 잠시 후 다시 시도해주세요.';
+            }
+            return msg || '알 수 없는 오류가 발생했습니다.';
         },
 
         hideTypingIndicator() {
