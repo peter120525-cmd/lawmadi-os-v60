@@ -203,24 +203,32 @@ def _sha256(text: str) -> str:
 
 def _get_client_ip(request: Request) -> str:
     """
-    클라이언트 IP 주소 추출
-    - X-Forwarded-For 헤더 우선 (프록시/로드밸런서 고려)
-    - 없으면 request.client.host 사용
+    클라이언트 IP 주소 추출 (Cloud Run 환경)
+    - Cloud Run LB가 X-Forwarded-For 마지막에 실제 클라이언트 IP 추가
+    - 스푸핑 방지: IP 형식 검증 + 마지막(신뢰할 수 있는) 항목 우선
     """
-    # X-Forwarded-For 헤더 확인 (프록시 환경)
+    import ipaddress
+
+    def _is_valid_ip(ip_str: str) -> bool:
+        try:
+            ipaddress.ip_address(ip_str)
+            return True
+        except (ValueError, TypeError):
+            return False
+
+    # X-Forwarded-For: Cloud Run에서는 마지막 항목이 LB가 추가한 실제 IP
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
-        # 여러 IP가 있을 경우 첫 번째가 실제 클라이언트 IP
-        return forwarded.split(",")[0].strip()
-
-    # X-Real-IP 헤더 확인
-    real_ip = request.headers.get("X-Real-IP")
-    if real_ip:
-        return real_ip.strip()
+        ips = [ip.strip() for ip in forwarded.split(",")]
+        # 마지막(LB 추가) IP 사용, 형식 검증
+        for ip in reversed(ips):
+            if _is_valid_ip(ip):
+                return ip
 
     # 직접 연결
     if request.client and request.client.host:
         return request.client.host
+    return "unknown"
 
     return "unknown"
 
@@ -2226,13 +2234,18 @@ async def ask(request: Request):
         query = (data.get("query", "") or "").strip()
         raw_history = data.get("history", [])
 
+        # 입력 길이 제한 (DoS 방지)
+        MAX_QUERY_LEN = 2000
+        if len(query) > MAX_QUERY_LEN:
+            query = query[:MAX_QUERY_LEN]
+
         # 대화 히스토리 → Gemini Content 형식 변환 (최근 6턴)
         gemini_history = []
         for msg in raw_history[-6:]:
             role = msg.get("role", "")
             content = msg.get("content", "")
             if role == "user" and content:
-                gemini_history.append({"role": "user", "parts": [content]})
+                gemini_history.append({"role": "user", "parts": [content[:MAX_QUERY_LEN]]})
             elif role == "assistant" and content:
                 gemini_history.append({"role": "model", "parts": [content[:2000]]})
 
@@ -2665,12 +2678,17 @@ async def ask_stream(request: Request):
         query = (data.get("query", "") or "").strip()
         raw_history = data.get("history", [])
 
+        # 입력 길이 제한 (DoS 방지)
+        MAX_QUERY_LEN = 2000
+        if len(query) > MAX_QUERY_LEN:
+            query = query[:MAX_QUERY_LEN]
+
         gemini_history = []
         for msg in raw_history[-6:]:
             role = msg.get("role", "")
             content = msg.get("content", "")
             if role == "user" and content:
-                gemini_history.append({"role": "user", "parts": [content]})
+                gemini_history.append({"role": "user", "parts": [content[:MAX_QUERY_LEN]]})
             elif role == "assistant" and content:
                 gemini_history.append({"role": "model", "parts": [content[:2000]]})
 

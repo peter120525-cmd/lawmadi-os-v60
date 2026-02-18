@@ -767,7 +767,7 @@ def get_verification_statistics(days: int = 7) -> Dict[str, Any]:
         cur = conn.cursor()
 
         # 전체 통계
-        cur.execute(f"""
+        cur.execute("""
             SELECT
                 COUNT(*) as total,
                 COUNT(CASE WHEN verification_result = 'PASS' THEN 1 END) as pass_count,
@@ -775,14 +775,14 @@ def get_verification_statistics(days: int = 7) -> Dict[str, Any]:
                 COUNT(CASE WHEN verification_result = 'FAIL' THEN 1 END) as fail_count,
                 AVG(ssot_compliance_score) as avg_score
             FROM response_verification
-            WHERE created_at >= NOW() - INTERVAL '{int(days)} days'
-        """)
+            WHERE created_at >= NOW() - INTERVAL %s
+        """, (f"{int(days)} days",))
 
         stats = cur.fetchone()
         total, pass_cnt, warn_cnt, fail_cnt, avg_score = stats
 
         # 최근 실패 케이스
-        cur.execute(f"""
+        cur.execute("""
             SELECT
                 created_at,
                 user_query,
@@ -792,10 +792,10 @@ def get_verification_statistics(days: int = 7) -> Dict[str, Any]:
                 claude_feedback
             FROM response_verification
             WHERE verification_result IN ('FAIL', 'WARNING')
-                AND created_at >= NOW() - INTERVAL '{int(days)} days'
+                AND created_at >= NOW() - INTERVAL %s
             ORDER BY created_at DESC
             LIMIT 10
-        """)
+        """, (f"{int(days)} days",))
 
         recent_failures = []
         for row in cur.fetchall():

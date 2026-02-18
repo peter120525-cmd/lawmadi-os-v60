@@ -4446,8 +4446,8 @@
             const file = this.uploadedFile;
 
             const userMsg = additionalQuery
-                ? `📄 ${file.name} (${this.formatFileSize(file.size)})<br>${this.escapeHtml(additionalQuery)}`
-                : `📄 ${file.name} (${this.formatFileSize(file.size)})`;
+                ? `📄 ${this.escapeHtml(file.name)} (${this.formatFileSize(file.size)})<br>${this.escapeHtml(additionalQuery)}`
+                : `📄 ${this.escapeHtml(file.name)} (${this.formatFileSize(file.size)})`;
 
             this.appendMessage('user', userMsg);
             this.userInput.value = "";

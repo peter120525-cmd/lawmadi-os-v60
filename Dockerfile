@@ -41,8 +41,12 @@ COPY llms.txt .
 COPY README.md .
 COPY license .
 
-# 필수 디렉토리 생성
-RUN mkdir -p temp logs uploads
+# 비루트 사용자 생성 및 디렉토리 설정
+RUN groupadd -r appuser && useradd -r -g appuser -d /app appuser \
+    && mkdir -p temp logs uploads \
+    && chown -R appuser:appuser /app
+
+USER appuser
 
 # 포트 설정 및 실행
 EXPOSE 8080
