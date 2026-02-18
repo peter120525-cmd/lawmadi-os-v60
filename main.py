@@ -238,9 +238,22 @@ def _now_iso() -> str:
     return kst_now.replace(microsecond=0).isoformat() + "+09:00"
 
 # =============================================================
-# 🕐 4시간당 10회 제한 (IP당, KST 기준)
+# 🕐 플랜별 요청 제한 (IP당, KST 기준)
 # =============================================================
-_WINDOW_LIMIT = 10
+PLAN_CONFIG = {
+    "free":    {"window_limit": 10, "window_hours": 4, "max_tokens": 3000, "expert_access": False},
+    "premium": {"window_limit": 100, "window_hours": 4, "max_tokens": 5000, "expert_access": True},
+}
+
+_PREMIUM_KEYS = set(filter(None, os.getenv("PREMIUM_KEYS", "").split(",")))
+
+def _get_user_plan(request: Request) -> str:
+    """X-Premium-Key 헤더 확인 → 유효하면 'premium', 아니면 'free'"""
+    key = request.headers.get("X-Premium-Key", "").strip()
+    if key and _PREMIUM_KEYS and key in _PREMIUM_KEYS:
+        return "premium"
+    return "free"
+
 _WINDOW_HOURS = 4
 _rate_usage: Dict[str, List[float]] = {}  # {ip_hash: [timestamp1, timestamp2, ...]}
 
@@ -250,6 +263,7 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
     통과 시 True, 초과 시 {"blocked": True, "retry_at_kst": "HH:MM"} 반환.
     IP는 해시로만 저장 (원본 비노출).
     관리자 키(X-Admin-Key 헤더)가 유효하면 제한 우회.
+    플랜에 따라 window_limit 동적 적용.
     """
     # 관리자 키 우회 (테스트/모니터링용)
     _admin_key = os.getenv("MCP_API_KEY", "") or os.getenv("INTERNAL_API_KEY", "")
@@ -257,6 +271,10 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
         req_key = request.headers.get("X-Admin-Key", "")
         if req_key == _admin_key:
             return True
+
+    plan = _get_user_plan(request)
+    plan_cfg = PLAN_CONFIG.get(plan, PLAN_CONFIG["free"])
+    window_limit = plan_cfg["window_limit"]
 
     ip = _get_client_ip(request)
     ip_hash = _sha256(ip)
@@ -267,7 +285,7 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
     # 윈도우 밖의 오래된 기록 제거
     timestamps = [t for t in timestamps if now - t < window]
 
-    if len(timestamps) >= _WINDOW_LIMIT:
+    if len(timestamps) >= window_limit:
         _rate_usage[ip_hash] = timestamps
         # 가장 오래된 요청이 윈도우를 벗어나는 KST 시각 계산
         oldest = min(timestamps)
@@ -506,6 +524,35 @@ def _remove_separator_lines(text: str) -> str:
         if re.match(r'^[━─═\-]{3,}$', stripped):
             continue
         result.append(line)
+    return '\n'.join(result)
+
+
+def _remove_think_blocks(text: str) -> str:
+    """Gemini <think>...</think> 내부 추론 블록 제거"""
+    import re
+    # <think>...</think> 태그 블록 제거 (멀티라인)
+    text = re.sub(r'<think>[\s\S]*?</think>', '', text)
+    # 태그 없이 'think\n' 으로 시작하는 영문 추론 블록 제거
+    # (첫 줄이 'think'이고 그 뒤 영문+줄바꿈이 이어지는 패턴)
+    text = re.sub(r'^think\n(?:[A-Za-z*].*\n)*', '', text)
+    # 선두 빈 줄 정리
+    text = text.lstrip('\n')
+    return text
+
+
+def _remove_markdown_headers(text: str) -> str:
+    """마크다운 # 헤더를 볼드(**) 텍스트로 변환"""
+    import re
+    lines = text.split('\n')
+    result = []
+    for line in lines:
+        # ## 또는 ### 등 → 볼드 텍스트로 변환 (# 기호 제거)
+        m = re.match(r'^(#{1,4})\s+(.+)$', line)
+        if m:
+            content = m.group(2).strip()
+            result.append(f'**{content}**')
+        else:
+            result.append(line)
     return '\n'.join(result)
 
 
@@ -2700,8 +2747,10 @@ async def ask(request: Request):
         # 백그라운드 태스크 시작 (응답 반환을 블로킹하지 않음)
         asyncio.create_task(_background_verify_and_save())
 
-        # 표 제거 + 구분선 제거 후처리
-        final_text_clean = _remove_markdown_tables(final_text)
+        # 후처리: think 블록 → 헤더 → 표 → 구분선 제거
+        final_text_clean = _remove_think_blocks(final_text)
+        final_text_clean = _remove_markdown_headers(final_text_clean)
+        final_text_clean = _remove_markdown_tables(final_text_clean)
         final_text_clean = _remove_separator_lines(final_text_clean)
 
         return {
@@ -3064,8 +3113,10 @@ async def ask_stream(request: Request):
                 yield _sse("error", {"message": "⚠️ 시스템 무결성 정책에 의해 답변이 제한되었습니다."})
                 return
 
-            # 후처리
-            final_text_clean = _remove_markdown_tables(final_text)
+            # 후처리: think 블록 → 헤더 → 표 → 구분선 제거
+            final_text_clean = _remove_think_blocks(final_text)
+            final_text_clean = _remove_markdown_headers(final_text_clean)
+            final_text_clean = _remove_markdown_tables(final_text_clean)
             final_text_clean = _remove_separator_lines(final_text_clean)
 
             latency_ms = int((time.time() - start_time) * 1000)
@@ -3893,6 +3944,156 @@ async def api_v1_search(q: str, limit: int = 10, authorization: str = Header(def
     _verify_api_key(authorization)
     # 기존 /search 로직 재활용
     return await search(q, limit)
+
+# =============================================================
+# 프리미엄 플랜 정보 조회
+# =============================================================
+@app.get("/plans")
+async def get_plans():
+    """프리미엄 플랜 정보 반환 (프론트엔드 가격표 렌더링용)"""
+    return {
+        "plans": {
+            "free": {
+                "name": "무료",
+                "price": 0,
+                "features": [
+                    "4시간당 10회 질문",
+                    "기본 AI 분석",
+                    "60명 리더 협업",
+                    "SSOT 법령 검증",
+                ],
+            },
+            "premium": {
+                "name": "프리미엄",
+                "price": 9900,
+                "currency": "KRW",
+                "period": "월",
+                "features": [
+                    "4시간당 100회 질문",
+                    "5000자+ 심층 응답",
+                    "Claude 전문가 검증",
+                    "상담 이력 관리",
+                    "전문 변호사 연결",
+                ],
+            },
+        }
+    }
+
+# =============================================================
+# 변호사 연결 문의 접수 (메모리 저장, 최근 500건 FIFO)
+# =============================================================
+LAWYER_INQUIRY_STORE: List[Dict] = []
+
+@app.post("/lawyer-inquiry")
+@limiter.limit("5/minute")
+async def submit_lawyer_inquiry(request: Request):
+    """변호사 연결 문의 접수 — 이름+연락처+상담요약"""
+    try:
+        data = await request.json()
+        name = str(data.get("name", "")).strip()[:50]
+        phone = str(data.get("phone", "")).strip()[:20]
+        query_summary = str(data.get("query_summary", "")).strip()[:500]
+        leader = str(data.get("leader", "")).strip()[:50]
+
+        if not name or not phone:
+            return JSONResponse(status_code=400, content={"error": "이름과 연락처는 필수입니다."})
+
+        entry = {
+            "name": name,
+            "phone": phone,
+            "query_summary": query_summary,
+            "leader": leader,
+            "ts": _now_iso(),
+            "status": "pending",
+        }
+        LAWYER_INQUIRY_STORE.append(entry)
+        while len(LAWYER_INQUIRY_STORE) > 500:
+            LAWYER_INQUIRY_STORE.pop(0)
+        logger.info(f"[LAWYER-INQUIRY] 접수: {name} / {leader} (total={len(LAWYER_INQUIRY_STORE)})")
+        return {"ok": True, "message": "변호사 상담 신청이 접수되었습니다. 빠른 시일 내 연락드리겠습니다."}
+    except Exception as e:
+        logger.warning(f"[LAWYER-INQUIRY] error: {e}")
+        return JSONResponse(status_code=400, content={"error": str(e)})
+
+# =============================================================
+# 피드백 수집 (메모리 저장, 최근 1000건 FIFO)
+# =============================================================
+FEEDBACK_STORE: List[Dict] = []
+
+@app.post("/feedback")
+@limiter.limit("30/minute")
+async def submit_feedback(request: Request):
+    """응답 만족도 피드백 (👍/👎) 저장"""
+    try:
+        data = await request.json()
+        rating = data.get("rating", "")
+        if rating not in ("up", "down"):
+            return JSONResponse(status_code=400, content={"error": "rating must be 'up' or 'down'"})
+        entry = {
+            "trace_id": str(data.get("trace_id", ""))[:64],
+            "rating": rating,
+            "query": str(data.get("query", ""))[:500],
+            "leader": str(data.get("leader", ""))[:50],
+            "ts": _now_iso(),
+        }
+        FEEDBACK_STORE.append(entry)
+        # FIFO: 최근 1000건만 보관
+        while len(FEEDBACK_STORE) > 1000:
+            FEEDBACK_STORE.pop(0)
+        logger.info(f"[FEEDBACK] {rating} from {entry['leader']} (total={len(FEEDBACK_STORE)})")
+        return {"ok": True}
+    except Exception as e:
+        logger.warning(f"[FEEDBACK] error: {e}")
+        return JSONResponse(status_code=400, content={"error": str(e)})
+
+# =============================================================
+# 관련 질문 추천 (Gemini 기반)
+# =============================================================
+@app.post("/suggest-questions")
+@limiter.limit("30/minute")
+async def suggest_questions(request: Request):
+    """현재 질문/리더에 기반한 후속 질문 3개 추천"""
+    try:
+        data = await request.json()
+        query = str(data.get("query", ""))[:500]
+        leader = str(data.get("leader", ""))[:50]
+        specialty = str(data.get("specialty", ""))[:50]
+
+        if not query:
+            return {"suggestions": []}
+
+        gc = RUNTIME.get("genai_client")
+        if not gc:
+            return {"suggestions": []}
+
+        prompt = (
+            f"사용자가 '{specialty}' 분야의 법률 전문가({leader})에게 다음 질문을 했습니다:\n"
+            f"\"{query}\"\n\n"
+            f"이 질문에 이어서 사용자가 물어볼 만한 후속 질문 3개를 생성하세요.\n"
+            f"각 질문은 20자~50자로 간결하고 구체적으로 작성하세요.\n"
+            f"JSON 배열 형식으로만 답하세요: [\"질문1\", \"질문2\", \"질문3\"]"
+        )
+
+        resp = gc.models.generate_content(
+            model=DEFAULT_GEMINI_MODEL,
+            contents=prompt,
+            config=genai_types.GenerateContentConfig(max_output_tokens=200, temperature=0.7),
+        )
+        text = (resp.text or "").strip()
+
+        # JSON 배열 파싱
+        import re as _re
+        match = _re.search(r'\[.*\]', text, _re.DOTALL)
+        if match:
+            suggestions = json.loads(match.group())
+            suggestions = [str(s).strip() for s in suggestions if isinstance(s, str) and s.strip()][:3]
+        else:
+            suggestions = []
+
+        return {"suggestions": suggestions}
+    except Exception as e:
+        logger.warning(f"[SUGGEST] error: {e}")
+        return {"suggestions": []}
 
 # =============================================================
 # MCP (Model Context Protocol) 서버 — 모든 라우트 등록 후 마운트
