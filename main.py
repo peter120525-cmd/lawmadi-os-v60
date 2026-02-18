@@ -109,9 +109,10 @@ app.state.limiter = limiter
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    # IP 정보를 절대 노출하지 않음
     return JSONResponse(
         status_code=429,
-        content={"error": "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.", "retry_after": str(exc.detail)}
+        content={"error": "일일 이용 한도에 도달했습니다. 내일 다시 이용해주세요.", "blocked": True}
     )
 
 # [감사 #2.2] CORS 도메인 제한 (원본: allow_origins=["*"])
@@ -1637,7 +1638,7 @@ def select_swarm_leader(query: str, leaders: Dict) -> Dict:
 
         # L21-L30
         "L21_IT_SEC":       (["IT", "보안", "정보보호", "해킹", "사이버", "네트워크", "시스템"], "L21"),
-        "L22_CRIMINAL":     (["형사", "형법", "고소", "고발", "처벌", "사기", "횡령", "배임", "폭행"], "L22"),
+        "L22_CRIMINAL":     (["형사", "형법", "고소", "고발", "처벌", "사기", "횡령", "배임", "폭행", "갚을 생각", "빌려줬", "차용증", "공증", "떼먹", "먹튀"], "L22"),
         "L23_ENTERTAIN":    (["엔터테인먼트", "연예", "연예인", "매니지먼트", "방송"], "L23"),
         "L24_TAX_APPEAL":   (["조세불복", "조세심판", "세무조사", "부과처분", "경정청구"], "L24"),
         "L25_MILITARY":     (["군형법", "군대", "군인", "병역", "군사법원", "영창"], "L25"),
@@ -1673,7 +1674,7 @@ def select_swarm_leader(query: str, leaders: Dict) -> Dict:
 
         # L51-L60
         "L51_RELIGION":     (["종교", "전통", "사찰", "교회", "종단"], "L51"),
-        "L52_MEDIA":        (["광고", "언론", "방송", "신문", "기자", "명예훼손"], "L52"),
+        "L52_MEDIA":        (["광고", "언론", "방송", "신문", "기자", "명예훼손", "허위사실", "SNS", "게시글", "비방", "모욕", "악플"], "L52"),
         "L53_AGRI":         (["농림", "축산", "농업", "축산업", "농지", "가축"], "L53"),
         "L54_FISHERY":      (["해양", "수산", "어업", "어선", "수산물"], "L54"),
         "L55_SCIENCE":      (["과학기술", "연구개발", "R&D", "기술이전"], "L55"),
@@ -2223,7 +2224,7 @@ async def get_leader_queries_api(
 # =============================================================
 
 @app.post("/ask")
-@limiter.limit("15/minute")
+@limiter.limit("3/day")
 async def ask(request: Request):
 
     trace = _trace_id()  # [ULTRA]
@@ -2673,7 +2674,7 @@ async def ask(request: Request):
 # =============================================================
 
 @app.post("/ask-stream")
-@limiter.limit("15/minute")
+@limiter.limit("3/day")
 async def ask_stream(request: Request):
     """SSE 스트리밍 엔드포인트 — 실시간 토큰 전송"""
 
