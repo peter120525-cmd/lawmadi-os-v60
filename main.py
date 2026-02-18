@@ -421,6 +421,20 @@ def _remove_markdown_tables(text: str) -> str:
 
     return '\n'.join(result)
 
+def _remove_separator_lines(text: str) -> str:
+    """응답에서 ━━━, ───, === 등 구분선만으로 된 줄 제거"""
+    import re
+    lines = text.split('\n')
+    result = []
+    for line in lines:
+        stripped = line.strip()
+        # 구분선만으로 이루어진 줄 (━, ─, ═, - 가 3개 이상 연속)
+        if re.match(r'^[━─═\-]{3,}$', stripped):
+            continue
+        result.append(line)
+    return '\n'.join(result)
+
+
 def validate_constitutional_compliance(response_text: str) -> bool:
     if not response_text or len(response_text.strip()) < 10:
         return False
@@ -2568,8 +2582,9 @@ async def ask(request: Request):
         except Exception as log_error:
             logger.warning(f"⚠️ [ChatHistory] 저장 실패 (무시): {log_error}")
 
-        # 표 제거 후처리
+        # 표 제거 + 구분선 제거 후처리
         final_text_clean = _remove_markdown_tables(final_text)
+        final_text_clean = _remove_separator_lines(final_text_clean)
 
         return {
             "trace_id": trace,
@@ -2597,10 +2612,7 @@ async def ask(request: Request):
 @limiter.limit("10/minute")
 async def ask_expert(request: Request):
     """
-    일반인용 답변을 Claude가 전문가 관점에서 재검증·보강.
-    - 법률 용어를 전문가 수준으로 유지
-    - SSOT 준수 여부 검증
-    - 추가 법적 논점·판례 보강
+    전문가용 답변: Gemini가 변호사 참고 수준으로 재생성 → Claude가 검증.
     """
     trace = str(uuid.uuid4())[:8]
     start = time.time()
@@ -2613,53 +2625,39 @@ async def ask_expert(request: Request):
         if not query or not original_response:
             return {"trace_id": trace, "status": "ERROR", "response": "query와 original_response가 필요합니다."}
 
-        # ResponseVerifier의 Claude 클라이언트 재사용
-        verifier_module = optional_import("engines.response_verifier")
-        if not verifier_module:
-            return {"trace_id": trace, "status": "ERROR", "response": "전문가 검증 모듈을 불러올 수 없습니다."}
+        gc = RUNTIME.get("genai_client")
+        if not gc:
+            return {"trace_id": trace, "status": "ERROR", "response": "Gemini 클라이언트가 초기화되지 않았습니다."}
 
-        verifier = verifier_module.get_verifier()
-        if not verifier.enabled:
-            return {"trace_id": trace, "status": "ERROR", "response": "전문가 검증 서비스가 현재 비활성화되어 있습니다. (ANTHROPIC_API_KEY 미설정)"}
+        model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
 
-        client = verifier.client
-
-        expert_prompt = f"""당신은 대한민국 법률 전문가입니다. 변호사가 실무에서 참고할 수 있는 수준의 전문가용 답변을 작성하세요.
-
-아래 일반인용 AI 답변을 바탕으로, 변호사/법무사 등 법률 전문가가 사건을 검토할 때 참고할 수 있는 **전문가용 분석 리포트**를 작성합니다.
+        # ── Step 1: Gemini가 전문가용 답변 재생성 ──
+        expert_system = """당신은 대한민국 법률 전문가입니다. 변호사/법무사가 실무에서 참고할 수 있는 전문가 수준의 분석 리포트를 작성하세요.
 
 # 작성 원칙
-
-1. **법률 용어 그대로 사용**: 일반인용 풀이 대신 정확한 법률 용어 사용 (필요시 조문 원문 인용)
-2. **판례 정밀 인용**: 대법원/헌법재판소 판례번호, 선고일자, 핵심 판시사항
-3. **쟁점별 리더 분석**: 원 답변에 참여한 리더들의 전문 분야별로 깊이 있는 분석
-4. **반대 해석/예외 사항**: 상대방 반론 가능성, 예외 조항, 판례 변경 가능성
-5. **실무 전략**: 소송 전략, 증거 확보, 시효 계산, 비용 예측
+- 법률 용어를 그대로 사용 (일반인 풀이 불필요, 조문 원문 인용)
+- 판례 정밀 인용: 대법원/헌재 판례번호, 선고일자, 핵심 판시사항
+- 각 법률 분야별로 전문가가 구체적으로 분석
+- 반대 해석/예외 사항, 상대방 반론 가능성 포함
+- 소송 전략, 증거 확보, 시효 계산, 비용 예측 포함
 
 # 응답 형식
 
 🔬 전문가용 분석 리포트
 
-**검증 결과**: [PASS ✅ / WARNING ⚠️ / FAIL ❌]
-**원 답변 정확도**: [0-100점]
-
 1. 사건 개요 및 쟁점 정리
-   — 법적 쟁점 요약 (전문 용어 기준)
+   — 법적 쟁점 요약 (전문 용어)
    — 적용 법률 및 관할
 
 2. 분야별 전문가 분석
-   (원 답변에서 언급된 각 법률 분야별로 구분하여 작성)
+   (각 관련 법률 분야별로 구분하여 깊이 있게 작성)
 
-   👤 [분야명] 분석
-   【적용 조문】 법령명 제○조 제○항 제○호 (원문 인용)
+   👤 [분야명] 전문 분석
+   【적용 조문】 법령명 제○조 제○항 제○호
    【관련 판례】 대법원 20○○. ○. ○. 선고 20○○다○○○○ 판결
-     — 판시사항 요약
-     — 본 사안 적용 시 시사점
-   【학설/통설】 해당 쟁점에 대한 학계 입장
-   【실무 포인트】 변호사가 유의할 사항
-
-   👤 [다른 분야명] 분석
-   ...
+     — 판시사항 및 본 사안 시사점
+   【학설/통설】 해당 쟁점 학계 입장
+   【실무 포인트】 변호사 유의사항
 
 3. 소송 전략 검토
    3.1 청구 취지 검토
@@ -2668,55 +2666,85 @@ async def ask_expert(request: Request):
    3.4 시효/기한 정밀 계산
 
 4. 위험 요소 및 예외
-   — 원 답변의 과도한 단순화 지적
+   — 과도한 단순화 지적
    — 판례 변경 가능성
    — 관할/절차적 리스크
 
 5. 전문가 체크리스트
-   □ [변호사가 확인해야 할 항목들]
+   □ [변호사 확인 항목들]
 
-> ⚠️ 본 분석은 Claude AI가 생성·검증한 것이며, 최종 법률 자문은 담당 변호사의 판단에 따릅니다.
+🚨 절대 마크다운 표(table) 사용 금지.
+"""
 
-🚨 절대로 마크다운 표(table) 형식을 사용하지 마세요.
-
----
+        expert_query = f"""아래 일반인용 AI 답변을 바탕으로, 변호사가 사건 검토 시 참고할 전문가용 분석 리포트를 작성하세요.
 
 [사용자 질문]
 {query}
 
-[원본 일반인용 AI 답변]
-{original_response}
-"""
+[원본 일반인용 답변]
+{original_response}"""
 
-        import asyncio
+        gemini_response = gc.models.generate_content(
+            model=model_name,
+            contents=expert_query,
+            config=genai_types.GenerateContentConfig(
+                system_instruction=expert_system,
+                temperature=0.2,
+                top_p=0.95,
+                max_output_tokens=4096,
+            ),
+        )
+        expert_text = gemini_response.text
+        gemini_latency = int((time.time() - start) * 1000)
 
-        def _call_claude():
-            return client.messages.create(
-                model="claude-sonnet-4-5-20250929",
-                max_tokens=4096,
-                temperature=0,
-                messages=[{"role": "user", "content": expert_prompt}]
-            )
+        logger.info(f"✅ [Expert] Gemini 전문가 재생성 완료 (trace={trace}, {gemini_latency}ms, {len(expert_text)} chars)")
 
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(None, _call_claude)
-        expert_text = response.content[0].text
+        # ── Step 2: Claude가 검증 ──
+        verification_result = {"result": "SKIP", "ssot_compliance_score": 0, "feedback": "검증 모듈 비활성화"}
+
+        verifier_module = optional_import("engines.response_verifier")
+        if verifier_module:
+            verifier = verifier_module.get_verifier()
+            if verifier.enabled:
+                try:
+                    import asyncio
+                    loop = asyncio.get_event_loop()
+                    verification_result = await loop.run_in_executor(
+                        None,
+                        lambda: verifier.verify_response(
+                            user_query=query,
+                            gemini_response=expert_text,
+                            tools_used=[],
+                            tool_results=[]
+                        )
+                    )
+                    logger.info(f"✅ [Expert] Claude 검증 완료: {verification_result.get('result')} (점수: {verification_result.get('ssot_compliance_score')})")
+                except Exception as ve:
+                    logger.warning(f"⚠️ [Expert] Claude 검증 실패 (무시): {ve}")
+
         latency_ms = int((time.time() - start) * 1000)
 
-        logger.info(f"✅ [Expert] 전문가 검증 완료 (trace={trace}, {latency_ms}ms, {len(expert_text)} chars)")
+        # 검증 결과를 응답 상단에 추가
+        v_result = verification_result.get("result", "SKIP")
+        v_score = verification_result.get("ssot_compliance_score", 0)
+        v_badge = {"PASS": "✅ PASS", "WARNING": "⚠️ WARNING", "FAIL": "❌ FAIL"}.get(v_result, "⏭️ SKIP")
+
+        verified_header = f"**Claude 검증**: {v_badge} | **SSOT 점수**: {v_score}/100\n\n"
+        final_response = verified_header + expert_text
 
         return {
             "trace_id": trace,
-            "response": expert_text,
+            "response": final_response,
             "status": "SUCCESS",
             "latency_ms": latency_ms,
-            "verified_by": "claude-sonnet-4-5"
+            "verified_by": "claude-sonnet-4-5",
+            "verification": verification_result
         }
 
     except Exception as e:
-        logger.error(f"❌ [Expert] 전문가 검증 실패 (trace={trace}): {type(e).__name__}: {e}")
+        logger.error(f"❌ [Expert] 전문가 답변 실패 (trace={trace}): {type(e).__name__}: {e}")
         logger.error(traceback.format_exc())
-        return {"trace_id": trace, "status": "ERROR", "response": f"전문가 검증 중 오류가 발생했습니다: {type(e).__name__}: {str(e)[:200]}"}
+        return {"trace_id": trace, "status": "ERROR", "response": f"전문가 답변 생성 중 오류가 발생했습니다: {type(e).__name__}: {str(e)[:200]}"}
 
 
 # =============================================================
