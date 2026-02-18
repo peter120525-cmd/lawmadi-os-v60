@@ -244,10 +244,11 @@ _WINDOW_LIMIT = 10
 _WINDOW_HOURS = 4
 _rate_usage: Dict[str, List[float]] = {}  # {ip_hash: [timestamp1, timestamp2, ...]}
 
-def _check_rate_limit(request: Request) -> bool:
+def _check_rate_limit(request: Request) -> Union[bool, dict]:
     """
     4시간 슬라이딩 윈도우 기준 요청 제한.
-    제한 초과 시 False 반환. IP는 해시로만 저장 (원본 비노출).
+    통과 시 True, 초과 시 {"blocked": True, "retry_at_kst": "HH:MM"} 반환.
+    IP는 해시로만 저장 (원본 비노출).
     관리자 키(X-Admin-Key 헤더)가 유효하면 제한 우회.
     """
     # 관리자 키 우회 (테스트/모니터링용)
@@ -268,17 +269,22 @@ def _check_rate_limit(request: Request) -> bool:
 
     if len(timestamps) >= _WINDOW_LIMIT:
         _rate_usage[ip_hash] = timestamps
-        return False
+        # 가장 오래된 요청이 윈도우를 벗어나는 KST 시각 계산
+        oldest = min(timestamps)
+        retry_ts = oldest + window
+        retry_kst = datetime.datetime.utcfromtimestamp(retry_ts) + datetime.timedelta(hours=9)
+        return {"blocked": True, "retry_at_kst": retry_kst.strftime("%H:%M")}
 
     timestamps.append(now)
     _rate_usage[ip_hash] = timestamps
     return True
 
-def _rate_limit_response():
-    """제한 초과 시 응답"""
+def _rate_limit_response(retry_at_kst: str = ""):
+    """제한 초과 시 응답 — 다음 이용 가능 시각 안내"""
+    msg = f"이용 한도에 도달했습니다. {retry_at_kst} 이후 다시 이용 가능합니다." if retry_at_kst else "이용 한도에 도달했습니다. 잠시 후 다시 이용해주세요."
     return JSONResponse(
         status_code=429,
-        content={"error": "이용 한도에 도달했습니다. 잠시 후 다시 이용해주세요.", "blocked": True}
+        content={"error": msg, "blocked": True, "retry_at_kst": retry_at_kst}
     )
 
 def _trace_id() -> str:
@@ -2270,8 +2276,9 @@ async def get_leader_queries_api(
 async def ask(request: Request):
 
     # 4시간당 10회 제한
-    if not _check_rate_limit(request):
-        return _rate_limit_response()
+    rate_check = _check_rate_limit(request)
+    if rate_check is not True:
+        return _rate_limit_response(rate_check.get("retry_at_kst", ""))
 
     trace = _trace_id()  # [ULTRA]
     start_time = time.time()
@@ -2724,8 +2731,9 @@ async def ask_stream(request: Request):
     """SSE 스트리밍 엔드포인트 — 실시간 토큰 전송"""
 
     # 4시간당 10회 제한
-    if not _check_rate_limit(request):
-        return _rate_limit_response()
+    rate_check = _check_rate_limit(request)
+    if rate_check is not True:
+        return _rate_limit_response(rate_check.get("retry_at_kst", ""))
 
     trace = _trace_id()
     start_time = time.time()
