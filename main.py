@@ -1982,7 +1982,7 @@ async def get_verification_stats(days: int = 7, authorization: str = Header(defa
 
 @app.post("/api/visit")
 @limiter.limit("30/minute")
-async def record_visitor(req: Request):
+async def record_visitor(request: Request):
     """
     방문 기록 API
     - IP 주소를 자동으로 추출하여 visitor_id로 사용
@@ -1990,7 +1990,7 @@ async def record_visitor(req: Request):
     """
     try:
         # IP 주소를 visitor_id로 사용
-        visitor_id = _get_client_ip(req)
+        visitor_id = _get_client_ip(request)
 
         if not visitor_id or visitor_id == "unknown":
             return JSONResponse(
@@ -3004,7 +3004,7 @@ async def _analyze_pdf_document(file_path: Path, analysis_type: str) -> Dict[str
 
 @app.post("/export-pdf")
 @limiter.limit("10/minute")
-async def export_pdf(req: Request):
+async def export_pdf(request: Request):
     """
     법률문서 텍스트를 PDF로 변환하여 다운로드
 
@@ -3018,7 +3018,7 @@ async def export_pdf(req: Request):
         PDF 파일 (application/pdf)
     """
     try:
-        data = await req.json()
+        data = await request.json()
         title = (data.get("title", "") or "법률문서").strip()
         content = (data.get("content", "") or "").strip()
 
