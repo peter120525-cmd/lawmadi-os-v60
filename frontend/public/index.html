@@ -259,19 +259,55 @@
             flex-direction: column;
         }
 
-        /* 데스크탑: 랜딩 콘텐츠 — 상단부터 자연 배치 (스크롤 허용) */
+        /* 데스크탑: 랜딩 콘텐츠 — 1프레임 fit (스크롤 없이) */
         .content-viewport > .hero-section {
             margin-top: 0;
         }
         .content-viewport > :last-child {
             margin-bottom: 0;
         }
+        /* 데스크탑 1프레임: 4영역만 표시 (Hero, 예시질문, Pricing, Lawyer+Trust) */
+        @media (min-width: 769px) {
+            .content-viewport .core-features-section { display: none; }
+            .content-viewport { padding: 8px 20px; }
+            /* Hero 압축 */
+            .hero-section { padding: 10px 20px 8px; }
+            .hero-badge { padding: 6px 16px; font-size: 0.8rem; margin-bottom: 6px; }
+            .hero-title { font-size: clamp(1.6rem, 4vw, 2.4rem); margin-bottom: 0.4rem; }
+            .hero-subtitle { font-size: 0.9rem; margin-bottom: 0.6rem; }
+            .cta-primary { padding: 10px 28px; font-size: 0.92rem; }
+            .hero-stats { margin-top: 10px; gap: 16px; }
+            .hero-stat-item { padding: 8px 14px; min-width: 100px; border-radius: 10px; }
+            .hero-stat-number { font-size: 1.3rem; }
+            .hero-stat-label { font-size: 0.7rem; }
+            /* 예시질문 압축 */
+            .examples-section { margin-bottom: 0 !important; padding-bottom: 4px !important; }
+            .examples-section h3 { font-size: 0.9rem; margin-bottom: 6px; }
+            .example-card { padding: 8px 10px; border-radius: 10px; gap: 6px; }
+            .example-card-icon { font-size: 1.2rem; }
+            .example-card-title { font-size: 0.8rem; }
+            .example-card-desc { font-size: 0.68rem; }
+            .example-card-grid { gap: 6px; }
+            /* Pricing 압축 */
+            .pricing-section { margin: 0.5rem auto; padding: 0.8rem 16px; border-radius: 14px; }
+            .pricing-section h3 { font-size: 0.95rem; margin-bottom: 0.5rem; }
+            .pricing-card { padding: 12px 12px; border-radius: 12px; }
+            .pricing-card .plan-price { font-size: 1.3rem; }
+            .pricing-card ul { font-size: 0.75rem; }
+            .pricing-card ul li { padding: 2px 0; }
+            /* Lawyer + Trust 압축 */
+            .lawyer-section { margin: 0.5rem auto; padding: 0.7rem 16px; border-radius: 14px; }
+            .lawyer-section h3 { font-size: 0.9rem; margin-bottom: 2px; }
+            .lawyer-section p { font-size: 0.72rem; margin-bottom: 6px; }
+            .lawyer-section .lawyer-cta-landing { padding: 6px 20px; font-size: 0.8rem; }
+            .trust-inline { margin-top: 0.3rem; padding: 4px 0; }
+        }
 
         /* ✨ Hero Section - PREMIUM */
         .hero-section {
             max-width: 100%;
             margin: 0 auto;
-            padding: 32px 20px 24px;
+            padding: 16px 20px 12px;
             text-align: center;
             position: relative;
             overflow: hidden;
@@ -318,14 +354,14 @@
         .hero-badge {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
             color: #93c5fd;
-            padding: 10px 24px;
+            padding: 6px 18px;
             border-radius: 30px;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             font-weight: 700;
-            margin-bottom: 12px;
+            margin-bottom: 6px;
             box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
             border: 1px solid rgba(59, 130, 246, 0.3);
             animation: fadeInDown 0.8s ease-out;
@@ -367,11 +403,11 @@
         }
 
         .hero-title {
-            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-size: clamp(1.6rem, 4vw, 2.4rem);
             font-weight: 900;
             line-height: 1.15;
             letter-spacing: -0.03em;
-            margin-bottom: 0.8rem;
+            margin-bottom: 0.4rem;
             background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
             -webkit-background-clip: text;
             background-clip: text;
@@ -382,10 +418,10 @@
         }
 
         .hero-subtitle {
-            font-size: clamp(0.95rem, 2vw, 1.15rem);
-            line-height: 1.5;
+            font-size: clamp(0.85rem, 1.5vw, 0.95rem);
+            line-height: 1.4;
             color: #94a3b8;
-            margin-bottom: 1.2rem;
+            margin-bottom: 0.5rem;
             max-width: 700px;
             margin-left: auto;
             margin-right: auto;
@@ -445,9 +481,9 @@
             background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
             color: white;
             border: none;
-            padding: 14px 36px;
-            border-radius: 14px;
-            font-size: 1.05rem;
+            padding: 10px 28px;
+            border-radius: 12px;
+            font-size: 0.92rem;
             font-weight: 800;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -4229,8 +4265,8 @@
         .hero-stats {
             display: flex;
             justify-content: center;
-            gap: 24px;
-            margin-top: 20px;
+            gap: 16px;
+            margin-top: 10px;
             animation: fadeInUp 0.8s ease-out 0.6s both;
             position: relative;
             z-index: 1;
@@ -4239,10 +4275,10 @@
             background: rgba(30, 41, 59, 0.6);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 14px;
-            padding: 14px 20px;
+            border-radius: 10px;
+            padding: 8px 16px;
             text-align: center;
-            min-width: 120px;
+            min-width: 100px;
             transition: all 0.3s ease;
         }
         .hero-stat-item:hover {
@@ -4251,7 +4287,7 @@
             box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
         }
         .hero-stat-number {
-            font-size: 1.6rem;
+            font-size: 1.3rem;
             font-weight: 900;
             background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
             -webkit-background-clip: text;
@@ -4270,8 +4306,8 @@
         .example-card {
             background: white;
             border: 1.5px solid var(--border);
-            padding: 14px;
-            border-radius: 14px;
+            padding: 10px;
+            border-radius: 10px;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             text-align: left;
@@ -4301,7 +4337,7 @@
             transform: scaleX(1);
         }
         .example-card-icon {
-            font-size: 1.5rem;
+            font-size: 1.2rem;
             flex-shrink: 0;
             line-height: 1;
             margin-top: 2px;
@@ -4311,13 +4347,13 @@
             min-width: 0;
         }
         .example-card-title {
-            font-size: 0.88rem;
+            font-size: 0.8rem;
             font-weight: 800;
             color: var(--text-main);
-            margin-bottom: 3px;
+            margin-bottom: 2px;
         }
         .example-card-desc {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: var(--text-muted);
             line-height: 1.4;
             display: -webkit-box;
