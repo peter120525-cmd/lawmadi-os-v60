@@ -240,7 +240,7 @@ def _now_iso() -> str:
 # =============================================================
 # 🕐 KST 기반 일일 3회 제한 (IP당)
 # =============================================================
-_DAILY_LIMIT = 3
+_DAILY_LIMIT = 10
 _daily_usage: Dict[str, Dict] = {}  # {ip_hash: {"date": "YYYY-MM-DD", "count": int}}
 
 def _kst_today() -> str:

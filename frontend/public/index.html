@@ -4242,7 +4242,7 @@
             clearTimeout(timeoutId);
             if (response.status === 429) {
                 this.hideTypingIndicator();
-                this.appendMessage('ai', '<p>일일 무료 이용 한도(3회)에 도달했습니다. 내일 다시 이용해주세요.</p>');
+                this.appendMessage('ai', '<p>일일 무료 이용 한도(10회)에 도달했습니다. 내일 다시 이용해주세요.</p>');
                 return;
             }
             if (!response.ok) throw new Error(`서버 오류 (${response.status})`);
@@ -4280,7 +4280,7 @@
             clearTimeout(timeoutId);
             if (response.status === 429) {
                 this.hideTypingIndicator();
-                this.appendMessage('ai', '<p>일일 무료 이용 한도(3회)에 도달했습니다. 내일 다시 이용해주세요.</p>');
+                this.appendMessage('ai', '<p>일일 무료 이용 한도(10회)에 도달했습니다. 내일 다시 이용해주세요.</p>');
                 return;
             }
             if (!response.ok) throw new Error(`서버 오류 (${response.status})`);
