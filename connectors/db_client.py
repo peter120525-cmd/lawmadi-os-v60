@@ -102,6 +102,8 @@ def init_tables():
     try:
         cur = conn.cursor()
         # LMD-CONST-005 준수를 위한 캐시 테이블 정의
+        # DDL DEFAULT는 파라미터화 불가 — 상수 SQL 이스케이프 적용
+        _safe_ver = _ENV_VERSION.replace("'", "''")
         cur.execute(f"""
             CREATE TABLE IF NOT EXISTS drf_cache (
                 cache_key       VARCHAR(255) PRIMARY KEY,
@@ -109,7 +111,7 @@ def init_tables():
                 signature       VARCHAR(64)  NOT NULL,
                 created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
                 expires_at      TIMESTAMP WITH TIME ZONE NOT NULL,
-                env_version     VARCHAR(50)  NOT NULL DEFAULT '{_ENV_VERSION}'
+                env_version     VARCHAR(50)  NOT NULL DEFAULT '{ _safe_ver }'
             );
         """)
 
@@ -120,7 +122,7 @@ def init_tables():
                 call_count      INTEGER      NOT NULL DEFAULT 0,
                 window_start    TIMESTAMP WITH TIME ZONE NOT NULL,
                 window_end      TIMESTAMP WITH TIME ZONE NOT NULL,
-                env_version     VARCHAR(50)  NOT NULL DEFAULT '{_ENV_VERSION}'
+                env_version     VARCHAR(50)  NOT NULL DEFAULT '{ _safe_ver }'
             );
         """)
 
