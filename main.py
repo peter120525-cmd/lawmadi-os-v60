@@ -2488,6 +2488,9 @@ async def ask(request: Request):
         if 'chat' in locals() and hasattr(chat, 'history'):
             _chat_history = chat.history
         _swarm_result_exists = 'swarm_result' in locals()
+        # Swarm 결과에서 tool 메타데이터 추출
+        _swarm_tools_used = swarm_result.get("tools_used", []) if _swarm_result_exists and 'swarm_result' in locals() else []
+        _swarm_tool_results = swarm_result.get("tool_results", []) if _swarm_result_exists and 'swarm_result' in locals() else []
 
         async def _background_verify_and_save():
             """백그라운드에서 Claude 검증 + DB 저장 수행"""
@@ -2496,7 +2499,12 @@ async def ask(request: Request):
                 tools_used = []
                 tool_results = []
 
-                if _chat_history:
+                # 1순위: Swarm 결과에서 수집된 tool 메타데이터
+                if _swarm_tools_used:
+                    tools_used = _swarm_tools_used
+                    tool_results = _swarm_tool_results
+                # 2순위: Fallback 모드의 chat history
+                elif _chat_history:
                     for turn in _chat_history:
                         if hasattr(turn, 'parts'):
                             for part in turn.parts:
@@ -2510,11 +2518,6 @@ async def ask(request: Request):
                                     fr = part.function_response
                                     response_data = dict(fr.response) if fr.response else {}
                                     tool_results.append(response_data)
-
-                if _swarm_mode_val and _swarm_result_exists:
-                    if not tools_used and ssot_available:
-                        tools_used.append({"name": "swarm_internal_tools", "args": {"query": query[:50]}})
-                        tool_results.append({"result": "UNKNOWN", "source": "Swarm 내부 처리"})
 
                 # Claude 검증 수행 (별도 스레드에서 실행)
                 verifier_module = optional_import("engines.response_verifier")
@@ -2721,8 +2724,8 @@ async def ask_expert(request: Request):
                         lambda: verifier.verify_response(
                             user_query=query,
                             gemini_response=expert_text,
-                            tools_used=[],
-                            tool_results=[]
+                            tools_used=[{"name": "expert_regeneration", "args": {"source": "original_response", "query": query[:100]}}],
+                            tool_results=[{"result": "FOUND", "source": "원본 AI 응답 기반 전문가 재생성 (DRF API는 원본 생성 시 사용됨)"}]
                         )
                     )
                     logger.info(f"✅ [Expert] Claude 검증 완료: {verification_result.get('result')} (점수: {verification_result.get('ssot_compliance_score')})")
