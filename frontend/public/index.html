@@ -5817,6 +5817,10 @@
         formatReport(text) {
             if (!text) return "응답 데이터를 수신하지 못했습니다.";
 
+            // 전처리: Gemini가 ## 대신 **N. 제목** 패턴을 쓴 경우 → ## 헤더로 정규화
+            text = text.replace(/^\*\*(\d+\.\d+\.?\s+.+?)\s*\*\*\s*$/gm, '### $1');
+            text = text.replace(/^\*\*(\d+\.\s+.+?)\s*\*\*\s*$/gm, '## $1');
+
             // 코드블록 사전 처리: ```로 감싼 블록을 플레이스홀더로 치환
             const codeBlocks = [];
             let processed = text.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
