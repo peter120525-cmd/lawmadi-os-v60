@@ -133,6 +133,30 @@ class SafetyGuard:
             re.IGNORECASE
         )
 
+        # LLM 프롬프트 인젝션 방어 패턴
+        self.prompt_injection_patterns = re.compile(
+            r"("
+            r"ignore\s+(all\s+)?previous\s+instructions?"
+            r"|ignore\s+(all\s+)?above"
+            r"|disregard\s+(all\s+)?previous"
+            r"|forget\s+(all\s+)?((your|the)\s+)?(previous\s+)?instructions?"
+            r"|이전\s*(의|에)?\s*지시(사항)?를?\s*(무시|잊어|버려)"
+            r"|위\s*내용을?\s*(무시|잊어|버려)"
+            r"|시스템\s*프롬프트(를)?\s*(출력|보여|알려)"
+            r"|print\s+(your\s+)?system\s+prompt"
+            r"|show\s+(me\s+)?(your\s+)?instructions?"
+            r"|what\s+are\s+your\s+instructions"
+            r"|repeat\s+(your\s+)?(system|initial)\s+(prompt|instructions?)"
+            r"|you\s+are\s+now\s+(a|an|my)"
+            r"|pretend\s+(to\s+be|you\s+are)"
+            r"|act\s+as\s+(if|a|an|my)"
+            r"|역할을?\s*바꿔|역할\s*변경"
+            r"|너는?\s*이제\s*(부터)?\s*(나의|내)"
+            r"|DAN\s*모드|jailbreak"
+            r")",
+            re.IGNORECASE
+        )
+
     # ── [IT 기술: 다단계 패킷 검사 (Inspection)] ────────────────────────────────────
     def check(self, user_input: str) -> Union[bool, str]:
         """
@@ -159,13 +183,18 @@ class SafetyGuard:
                 logger.warning(f"[Security] 금지 키워드 감지: '{word}'")
                 return False
 
-        # 3. 인젝션 공격 방어 (SQL/Command Injection Patterns)
-        injection_patterns = [";", "--", "DROP TABLE", "UNION SELECT", "'; --"]
-        if any(p in user_input for p in injection_patterns):
+        # 3. LLM 프롬프트 인젝션 방어 (Prompt Injection / Jailbreak)
+        if self.prompt_injection_patterns.search(user_input):
+            logger.warning("[LMD-SECURITY-002] 프롬프트 인젝션 시도가 차단되었습니다.")
+            return False
+
+        # 4. SQL/Command 인젝션 방어
+        injection_patterns = ["DROP TABLE", "UNION SELECT", "'; --", "1=1", "<script"]
+        if any(p.lower() in user_input.lower() for p in injection_patterns):
             logger.warning("[Security] 주입 공격 패턴이 감지되었습니다.")
             return False
 
-        # 4. 위급 상황(Crisis) 트리거 감지
+        # 5. 위급 상황(Crisis) 트리거 감지
         if any(kw in lower_input for kw in self.crisis_trigger_keywords):
             return "CRISIS"
 
