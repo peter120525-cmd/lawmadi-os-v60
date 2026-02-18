@@ -1914,9 +1914,9 @@
            Responsive — 768px (Mobile)
         ═══════════════════════════════════════════════════ */
         @media (max-width: 768px) {
-            /* ── 가로 스크롤 방지 (layout/main-canvas는 건드리지 않음 — overflow-y 스크롤 보존) ── */
+            /* ── 모바일 랜딩: 스크롤 방지 ── */
             .content-viewport {
-                overflow-x: hidden;
+                overflow: hidden;
             }
             .conversation-viewport {
                 overflow-x: hidden;
@@ -2856,39 +2856,52 @@
         }
 
         /* ═══════════════════════════════════════════════════
-           Enhanced Loading Animation
+           답변 하단 CTA (전문가 검증 / 변호사 상담)
         ═══════════════════════════════════════════════════ */
-        .typing-indicator {
-            align-self: flex-start;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 20px 24px;
-            max-width: 480px;
-            animation: fadeInUp 0.3s ease;
-        }
-
-        .typing-dots {
+        .ai-bottom-cta {
             display: flex;
-            gap: 6px;
-            margin-bottom: 12px;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+        .bottom-cta-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 16px;
+            border: none;
+            border-radius: 14px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .bottom-cta-btn .material-symbols-outlined { font-size: 1.2rem; }
+        .bottom-cta-btn.expert {
+            background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+            color: #5b21b6;
+        }
+        .bottom-cta-btn.expert:hover { background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%); transform: translateY(-1px); }
+        .bottom-cta-btn.expert.done { background: #d1fae5; color: #065f46; pointer-events: none; }
+        .bottom-cta-btn.expert:disabled { opacity: 0.7; cursor: wait; }
+        .bottom-cta-btn.lawyer {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            color: #1e40af;
+        }
+        .bottom-cta-btn.lawyer:hover { background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%); transform: translateY(-1px); }
+        body.dark-mode .bottom-cta-btn.expert { background: linear-gradient(135deg, #2e1065 0%, #3b0764 100%); color: #c4b5fd; }
+        body.dark-mode .bottom-cta-btn.lawyer { background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%); color: #93c5fd; }
+        @media (max-width: 768px) {
+            .ai-bottom-cta { flex-direction: column; gap: 8px; }
+            .bottom-cta-btn { padding: 12px 14px; font-size: 0.88rem; }
         }
 
-        .typing-dots span {
-            width: 8px;
-            height: 8px;
-            background: var(--primary);
-            border-radius: 50%;
-            animation: typingBounce 1.4s infinite;
-        }
-
-        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-
-        @keyframes typingBounce {
-            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-            30% { transform: translateY(-8px); opacity: 1; }
-        }
+        /* ═══════════════════════════════════════════════════
+           Enhanced Loading Animation (typing-indicator는 위에서 정의)
+        ═══════════════════════════════════════════════════ */
 
         .typing-progress {
             display: flex;
@@ -6047,29 +6060,7 @@
 
                 // ── 키워드 하이라이트 ──
                 if (originalQuery) {
-                    const stopwords = /[은는이가을를의에서로과와도만에게까지부터마다조차처럼한테보다]/g;
-                    const keywords = originalQuery.replace(stopwords, ' ').split(/\s+/).filter(w => w.length >= 2);
-                    if (keywords.length > 0) {
-                        const kwRegex = new RegExp(`(${keywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
-                        const walker = document.createTreeWalker(msgDiv, NodeFilter.SHOW_TEXT, {
-                            acceptNode(node) {
-                                const tag = node.parentElement?.tagName;
-                                if (['CODE','PRE','H1','H2','H3','SCRIPT','STYLE'].includes(tag)) return NodeFilter.FILTER_REJECT;
-                                if (node.parentElement?.classList?.contains('law-cite-chip')) return NodeFilter.FILTER_REJECT;
-                                if (node.parentElement?.classList?.contains('leader-name')) return NodeFilter.FILTER_REJECT;
-                                return NodeFilter.FILTER_ACCEPT;
-                            }
-                        });
-                        const nodes = [];
-                        while (walker.nextNode()) nodes.push(walker.currentNode);
-                        nodes.forEach(n => {
-                            if (kwRegex.test(n.textContent)) {
-                                const span = document.createElement('span');
-                                span.innerHTML = n.textContent.replace(kwRegex, '<span class="highlight">$1</span>');
-                                n.parentNode.replaceChild(span, n);
-                            }
-                        });
-                    }
+                    /* 키워드 하이라이트 제거 — 불필요한 단어까지 노란색 강조되는 문제 */
                 }
 
                 // ── 액션 버튼 툴바 ──
@@ -6121,64 +6112,6 @@
                     g1.appendChild(exportBtn);
                     toolbar.appendChild(g1);
 
-                    // 그룹2: 전문가, 변호사
-                    const g2 = document.createElement('div');
-                    g2.className = 'toolbar-group';
-
-                    const expertBtn = this._createToolbarBtn('verified', '전문가 검증', async () => {
-                        expertBtn.querySelector('.material-symbols-outlined').textContent = 'hourglass_top';
-                        expertBtn.style.pointerEvents = 'none';
-                        try {
-                            const expertRes = await fetch(`${this.BASE_URL}/ask-expert`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ query: originalQuery, original_response: rawResponse })
-                            });
-                            if (!expertRes.ok) throw new Error('전문가 검증 실패');
-                            const expertData = await expertRes.json();
-                            if (expertData.status === 'SUCCESS' && expertData.response) {
-                                const panel = document.createElement('div');
-                                panel.className = 'expert-response-panel';
-                                panel.innerHTML = this.formatReport(expertData.response);
-                                msgDiv.insertBefore(panel, toolbar);
-                                const vResult = expertData.verification?.result || 'SKIP';
-                                const vScore = expertData.verification?.ssot_compliance_score || 0;
-                                // SSOT 신뢰도 바
-                                if (vScore > 0) {
-                                    const barDiv = document.createElement('div');
-                                    barDiv.className = 'ssot-confidence-bar';
-                                    const level = vScore >= 80 ? 'high' : vScore >= 50 ? 'medium' : 'low';
-                                    barDiv.innerHTML = `<span class="bar-label">SSOT 신뢰도</span><div class="bar-track"><div class="bar-fill ${level}" style="width: ${vScore}%"></div></div><span class="bar-score ${level}">${vScore}점</span>`;
-                                    msgDiv.insertBefore(barDiv, toolbar);
-                                }
-                                if (vResult === 'PASS') { expertBtn.style.color = '#16a34a'; }
-                                else if (vResult === 'WARNING') { expertBtn.style.color = '#d97706'; }
-                                else if (vResult === 'FAIL') { expertBtn.style.color = '#dc2626'; }
-                                else { expertBtn.style.color = '#7c3aed'; }
-                                expertBtn.querySelector('.material-symbols-outlined').textContent = 'check_circle';
-                            } else { throw new Error('검증 실패'); }
-                        } catch (e) {
-                            expertBtn.querySelector('.material-symbols-outlined').textContent = 'verified';
-                            expertBtn.style.pointerEvents = '';
-                            console.error('Expert verification failed:', e);
-                        }
-                    });
-                    g2.appendChild(expertBtn);
-
-                    // 변호사 상담 CTA
-                    if (leaderName) {
-                        const clevelOnly = ['서연','지유','유나'];
-                        const lNames = leaderName.split(',').map(n => n.trim()).filter(Boolean);
-                        if (!lNames.every(n => clevelOnly.includes(n))) {
-                            const lawyerBtn = this._createToolbarBtn('gavel', '변호사 상담', () => {
-                                UI.openLawyerModal(originalQuery, leaderName);
-                            });
-                            g2.appendChild(lawyerBtn);
-                        }
-                    }
-                    toolbar.appendChild(g2);
-
-                    // 그룹3: 👍/👎 피드백
                     const g3 = document.createElement('div');
                     g3.className = 'toolbar-group';
                     const fbUp = this._createToolbarBtn('thumb_up', '좋아요', () => _sendFb('up', fbUp));
@@ -6199,6 +6132,61 @@
                     toolbar.appendChild(g3);
 
                     msgDiv.appendChild(toolbar);
+
+                    // ── 전문가 검증 + 변호사 상담 CTA (답변 맨 아래) ──
+                    const ctaBar = document.createElement('div');
+                    ctaBar.className = 'ai-bottom-cta';
+
+                    const expertCta = document.createElement('button');
+                    expertCta.className = 'bottom-cta-btn expert';
+                    expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가 검증 받기';
+                    expertCta.onclick = async () => {
+                        expertCta.disabled = true;
+                        expertCta.innerHTML = '<span class="material-symbols-outlined">hourglass_top</span> 검증 중...';
+                        try {
+                            const expertRes = await fetch(`${this.BASE_URL}/ask-expert`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ query: originalQuery, original_response: rawResponse })
+                            });
+                            if (!expertRes.ok) throw new Error('전문가 검증 실패');
+                            const expertData = await expertRes.json();
+                            if (expertData.status === 'SUCCESS' && expertData.response) {
+                                const panel = document.createElement('div');
+                                panel.className = 'expert-response-panel';
+                                panel.innerHTML = this.formatReport(expertData.response);
+                                msgDiv.insertBefore(panel, ctaBar);
+                                const vScore = expertData.verification?.ssot_compliance_score || 0;
+                                if (vScore > 0) {
+                                    const barDiv = document.createElement('div');
+                                    barDiv.className = 'ssot-confidence-bar';
+                                    const level = vScore >= 80 ? 'high' : vScore >= 50 ? 'medium' : 'low';
+                                    barDiv.innerHTML = `<span class="bar-label">SSOT 신뢰도</span><div class="bar-track"><div class="bar-fill ${level}" style="width: ${vScore}%"></div></div><span class="bar-score ${level}">${vScore}점</span>`;
+                                    msgDiv.insertBefore(barDiv, ctaBar);
+                                }
+                                expertCta.innerHTML = '<span class="material-symbols-outlined">check_circle</span> 검증 완료';
+                                expertCta.classList.add('done');
+                            } else { throw new Error('검증 실패'); }
+                        } catch (e) {
+                            expertCta.disabled = false;
+                            expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가 검증 받기';
+                            console.error('Expert verification failed:', e);
+                        }
+                    };
+                    ctaBar.appendChild(expertCta);
+
+                    if (leaderName) {
+                        const clevelOnly = ['서연','지유','유나'];
+                        const lNames = leaderName.split(',').map(n => n.trim()).filter(Boolean);
+                        if (!lNames.every(n => clevelOnly.includes(n))) {
+                            const lawyerCta = document.createElement('button');
+                            lawyerCta.className = 'bottom-cta-btn lawyer';
+                            lawyerCta.innerHTML = '<span class="material-symbols-outlined">gavel</span> 변호사 상담 신청';
+                            lawyerCta.onclick = () => UI.openLawyerModal(originalQuery, leaderName);
+                            ctaBar.appendChild(lawyerCta);
+                        }
+                    }
+                    msgDiv.appendChild(ctaBar);
 
                     // 관련 질문 추천 (비동기 로드)
                     const suggestArea = document.createElement('div');
