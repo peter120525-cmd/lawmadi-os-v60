@@ -1,11 +1,11 @@
 {
   "check_number": 1,
-  "timestamp": "2026-02-18T01:10:25.046263",
+  "timestamp": "2026-02-18T01:17:02.638566",
   "health": [
     {
       "component": "FastAPI",
       "status": "OK",
-      "latency_ms": 229.1,
+      "latency_ms": 194.1,
       "message": "vv60.0.0 online"
     },
     {
@@ -36,30 +36,31 @@
   "anomalies": [
     {
       "severity": "HIGH",
-      "pattern": "error_rate",
-      "count": 7,
-      "message": "에러율 12.5% > 임계값 5.0% (요청 56건 중 7건 실패)"
-    },
-    {
-      "severity": "MEDIUM",
-      "pattern": "simulation_fail_rate",
+      "pattern": "high_avg_latency",
       "count": 1,
-      "message": "시뮬레이션 일부 실패 20% (1/5건)"
+      "message": "시뮬레이션 평균 응답 18.2초 (임계값 10초)"
     }
   ],
-  "recovery": [],
+  "recovery": [
+    {
+      "target": "Cloud Run",
+      "action": "인스턴스 워밍업",
+      "success": true,
+      "message": "워밍업 성공 (154ms)"
+    }
+  ],
   "simulation": {
     "total": 5,
-    "pass_count": 4,
-    "fail_count": 1,
+    "pass_count": 5,
+    "fail_count": 0,
     "results": [
       {
         "id": 1,
         "query": "부당해고 구제 방법 알려주세요",
         "category": "labor",
         "status_code": 200,
-        "latency": 0.9,
-        "response_length": 178,
+        "latency": 15.0,
+        "response_length": 2196,
         "leader": "담우",
         "pass": true
       },
@@ -68,8 +69,8 @@
         "query": "전세 보증금 3억인데 집주인이 안 돌려줘요",
         "category": "lease",
         "status_code": 200,
-        "latency": 0.8,
-        "response_length": 178,
+        "latency": 27.6,
+        "response_length": 2345,
         "leader": "온유",
         "pass": true
       },
@@ -78,18 +79,18 @@
         "query": "서연아 전세 분쟁 전략 알려줘",
         "category": "clevel",
         "status_code": 200,
-        "latency": 0.7,
-        "response_length": 32,
-        "leader": "?",
-        "pass": false
+        "latency": 19.0,
+        "response_length": 2048,
+        "leader": "서연",
+        "pass": true
       },
       {
         "id": 4,
         "query": "사기죄 고소장 작성 방법을 알려주세요",
         "category": "criminal",
         "status_code": 200,
-        "latency": 0.7,
-        "response_length": 178,
+        "latency": 15.8,
+        "response_length": 2842,
         "leader": "무결",
         "pass": true
       },
@@ -98,13 +99,13 @@
         "query": "양도소득세 비과세 요건이 궁금합니다",
         "category": "tax",
         "status_code": 200,
-        "latency": 0.8,
-        "response_length": 180,
+        "latency": 13.7,
+        "response_length": 2266,
         "leader": "찬솔",
         "pass": true
       }
     ]
   },
-  "duration_ms": 25602.3,
+  "duration_ms": 112894.3,
   "overall_status": "HIGH"
 }
