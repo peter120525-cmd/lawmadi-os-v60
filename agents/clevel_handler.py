@@ -49,6 +49,28 @@ class CLevelHandler:
             }
         }
 
+    # 법률 도메인 키워드 — 이름 호출이 있어도 전문 리더에게 위임해야 할 질문 감지용
+    LEGAL_DOMAIN_KEYWORDS = [
+        "헌법", "위헌", "기본권", "헌재", "헌법재판소",
+        "형법", "형사", "사기", "횡령", "폭행", "살인", "절도", "성범죄",
+        "민법", "손해배상", "계약", "채권", "물권",
+        "이혼", "양육권", "상속", "유언", "친권",
+        "노동", "해고", "임금", "산재", "퇴직금",
+        "임대차", "전세", "보증금", "월세",
+        "부동산", "등기", "경매", "재개발",
+        "교통사고", "보험", "의료사고",
+        "저작권", "특허", "상표", "지식재산",
+        "행정소송", "행정심판", "공정거래",
+        "조세", "세금", "탈세",
+        "개인정보", "정보통신", "데이터",
+        "소비자", "소년법", "군형법",
+    ]
+
+    def _has_legal_domain(self, query: str) -> bool:
+        """질문에 법률 도메인 키워드가 포함되어 있는지 확인"""
+        query_lower = query.lower()
+        return any(kw in query_lower for kw in self.LEGAL_DOMAIN_KEYWORDS)
+
     def detect_clevel_call(self, query: str) -> Optional[Tuple[str, str]]:
         """
         Query에서 C-Level 임원 명시적 호출 감지
@@ -58,10 +80,14 @@ class CLevelHandler:
         """
         query_lower = query.lower()
 
-        # 1. 직접 호출 (이름)
+        # 1. 직접 호출 (이름) — 단, 자기소개 요청만 direct로 처리
+        #    법률 도메인 키워드가 포함되면 전문 리더에게 위임 (swarm 보강)
         for exec_id, config in self.call_patterns.items():
             for name in config["names"]:
                 if name in query or name.lower() in query_lower:
+                    if self._has_legal_domain(query):
+                        logger.info(f"🎯 C-Level 이름 호출 + 법률 도메인 감지: {exec_id} → swarm 보강으로 전환")
+                        return (exec_id, f"이름 호출 '{name}' + 법률 도메인 → 전문 리더 위임")
                     logger.info(f"🎯 C-Level 명시적 호출: {exec_id} ({name})")
                     return (exec_id, f"명시적 호출: '{name}'")
 
@@ -240,6 +266,14 @@ class CLevelHandler:
 
         if clevel_call:
             exec_id, reason = clevel_call
+            # 법률 도메인 키워드 포함 시 → swarm 보강 (전문 리더가 메인)
+            if self._has_legal_domain(query):
+                return {
+                    "invoke": True,
+                    "executive_id": exec_id,
+                    "reason": reason,
+                    "mode": "swarm"  # 전문 리더 메인 + C-Level 보강
+                }
             return {
                 "invoke": True,
                 "executive_id": exec_id,

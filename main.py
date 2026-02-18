@@ -2986,13 +2986,15 @@ async def ask_stream(request: Request):
                 chat = gc.chats.create(
                     model=model_name,
                     config=genai_types.GenerateContentConfig(
+                        tools=tools,
                         system_instruction=clevel_instruction,
                         max_output_tokens=3000,
+                        automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
                     ),
                     history=gemini_history,
                 )
 
-                # 스트리밍 전송 (비동기, tool 없음 — 순수 텍스트 스트리밍)
+                # 스트리밍 전송 (SSOT tools 포함)
                 accumulated = ""
                 async for text_part in _async_stream_chunks(
                     chat.send_message_stream(
@@ -3075,8 +3077,10 @@ async def ask_stream(request: Request):
                         chat = gc.chats.create(
                             model=model_name,
                             config=genai_types.GenerateContentConfig(
+                                tools=tools,
                                 system_instruction=sys_instr,
                                 max_output_tokens=4096,
+                                automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
                             ),
                             history=gemini_history,
                         )
@@ -3210,8 +3214,10 @@ async def ask_stream(request: Request):
                     chat = gc.chats.create(
                         model=model_name,
                         config=genai_types.GenerateContentConfig(
+                            tools=tools,
                             system_instruction=fallback_instruction,
                             max_output_tokens=_fb_max_tok,
+                            automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
                         ),
                         history=gemini_history,
                     )
