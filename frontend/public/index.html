@@ -4240,6 +4240,11 @@
             });
 
             clearTimeout(timeoutId);
+            if (response.status === 429) {
+                this.hideTypingIndicator();
+                this.appendMessage('ai', '<p>일일 무료 이용 한도(3회)에 도달했습니다. 내일 다시 이용해주세요.</p>');
+                return;
+            }
             if (!response.ok) throw new Error(`서버 오류 (${response.status})`);
             const data = await response.json();
 
@@ -4273,6 +4278,11 @@
             });
 
             clearTimeout(timeoutId);
+            if (response.status === 429) {
+                this.hideTypingIndicator();
+                this.appendMessage('ai', '<p>일일 무료 이용 한도(3회)에 도달했습니다. 내일 다시 이용해주세요.</p>');
+                return;
+            }
             if (!response.ok) throw new Error(`서버 오류 (${response.status})`);
 
             // 스트리밍 메시지 컨테이너 생성 (고유 ID로 충돌 방지)
