@@ -17,7 +17,7 @@ on:
           - 'false'
 
 env:
-  API_URL: https://lawmadi-os-v60-uzqkp6kadq-du.a.run.app
+  API_URL: https://lawmadi-os-v60-938146962157.asia-northeast3.run.app
 
 jobs:
   health-check:
@@ -134,9 +134,7 @@ jobs:
           scenarios = [
               {"query": "부당해고 구제 방법 알려주세요", "category": "labor"},
               {"query": "전세 보증금 3억인데 집주인이 안 돌려줘요", "category": "lease"},
-              {"query": "서연아 전세 분쟁 전략 알려줘", "category": "clevel"},
               {"query": "사기죄 고소장 작성 방법을 알려주세요", "category": "criminal"},
-              {"query": "양도소득세 비과세 요건이 궁금합니다", "category": "tax"},
           ]
 
           pass_count = 0

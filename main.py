@@ -1723,6 +1723,7 @@ def _diagnostic_snapshot() -> Dict[str, Any]:
         "python": sys.version,
         "pid": os.getpid(),
         "os_version": OS_VERSION,
+        "gemini_model": os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
         "modules": {
             "drf": bool(RUNTIME.get("drf")),
             "selector": bool(RUNTIME.get("selector")),
