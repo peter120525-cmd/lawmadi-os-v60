@@ -1,0 +1,74 @@
+name: Backup to Google Cloud Storage
+
+on:
+  workflow_dispatch:
+    inputs:
+      backup_label:
+        description: '백업 라벨 (예: mobile-app-ui)'
+        required: false
+        default: 'manual'
+
+env:
+  PROJECT_ID: lawmadi-db
+  BACKUP_BUCKET: gs://lawmadi-backups-v50/backups
+
+jobs:
+  backup:
+    name: Backup to GCS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_JSON }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Create backup
+        run: |
+          TIMESTAMP=$(date +%Y-%m-%d-%H%M%S)
+          LABEL="${{ github.event.inputs.backup_label }}"
+          BACKUP_PATH="${BACKUP_BUCKET}/${TIMESTAMP}-${LABEL}"
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+
+          echo "📦 Backup to: ${BACKUP_PATH}"
+          echo "📌 Commit: ${COMMIT_SHA}"
+
+          # 핵심 파일 백업
+          gsutil -m cp \
+            main.py \
+            leaders.json \
+            config.json \
+            requirements.txt \
+            Dockerfile \
+            "${BACKUP_PATH}/"
+
+          # 프론트엔드 백업
+          gsutil -m cp -r frontend/public/ "${BACKUP_PATH}/frontend-public/"
+
+          # 에이전트/커넥터 백업
+          gsutil -m cp -r agents/ "${BACKUP_PATH}/agents/"
+          gsutil -m cp -r connectors/ "${BACKUP_PATH}/connectors/"
+
+          # 테스트 백업
+          gsutil -m cp -r tests/ "${BACKUP_PATH}/tests/"
+
+          # 워크플로우 백업
+          gsutil -m cp -r .github/workflows/ "${BACKUP_PATH}/workflows/"
+
+          # 메타데이터 저장
+          echo "{\"timestamp\":\"${TIMESTAMP}\",\"commit\":\"${COMMIT_SHA}\",\"label\":\"${LABEL}\",\"branch\":\"main\"}" \
+            | gsutil cp - "${BACKUP_PATH}/backup-meta.json"
+
+          echo "✅ Backup complete: ${BACKUP_PATH}"
+
+      - name: Verify backup
+        run: |
+          TIMESTAMP=$(date +%Y-%m-%d-%H%M%S | cut -c1-10)
+          echo "📋 Recent backups:"
+          gsutil ls "${BACKUP_BUCKET}/" | tail -5
