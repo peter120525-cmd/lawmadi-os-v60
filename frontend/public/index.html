@@ -1393,7 +1393,7 @@
             align-self: flex-start;
             background: linear-gradient(145deg, #f0f4ff 0%, #e8f0fe 40%, #ede9fe 100%);
             border: 1px solid rgba(99, 102, 241, 0.18);
-            padding: 24px 32px;
+            padding: 40px 32px 24px;
             border-radius: 20px;
             box-shadow:
                 0 4px 16px rgba(99, 102, 241, 0.15),
@@ -1415,10 +1415,25 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 3px;
+            height: 4px;
             background: linear-gradient(90deg, #2563eb 0%, #7c3aed 50%, #2563eb 100%);
             border-radius: 20px 20px 0 0;
             overflow: hidden;
+        }
+
+        .typing-indicator::after {
+            content: '⚖ Lawmadi AI';
+            position: absolute;
+            top: 4px;
+            left: 24px;
+            font-size: 0.68rem;
+            font-weight: 800;
+            color: white;
+            background: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%);
+            padding: 3px 12px 4px;
+            border-radius: 0 0 8px 8px;
+            letter-spacing: 0.04em;
+            box-shadow: 0 3px 10px rgba(37, 99, 235, 0.4);
         }
 
         .typing-dots {
@@ -2067,7 +2082,7 @@
             /* ── 타이핑 인디케이터 ── */
             .typing-indicator {
                 max-width: 98%;
-                padding: 16px 20px;
+                padding: 36px 20px 16px;
             }
 
             /* ── 입력창 ── */
