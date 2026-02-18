@@ -241,7 +241,7 @@ def _now_iso() -> str:
 # 🕐 플랜별 요청 제한 (IP당, KST 기준)
 # =============================================================
 PLAN_CONFIG = {
-    "free":    {"window_limit": 10, "window_hours": 4, "max_tokens": 3000, "expert_access": False},
+    "free":    {"window_limit": 100, "window_hours": 4, "max_tokens": 3000, "expert_access": False},
     "premium": {"window_limit": 100, "window_hours": 4, "max_tokens": 5000, "expert_access": True},
 }
 
