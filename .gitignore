@@ -57,3 +57,12 @@ node_modules/
 # OS
 .DS_Store
 Thumbs.db
+
+# Test result data (generated at runtime)
+scripts/simulation_results.json
+tests/test_20_results.json
+tests/test_40_results.json
+
+# Node.js (not part of core project)
+package.json
+package-lock.json
