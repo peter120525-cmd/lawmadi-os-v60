@@ -5335,7 +5335,21 @@
                 // 스트리밍 중 생성된 부분 메시지 제거 (고유 ID prefix 매칭)
                 document.querySelectorAll('[id^="streaming-msg-"]').forEach(el => el.remove());
 
-                // 자동 재시도
+                // 서버 에러 (event: error)는 재시도 없이 바로 표시
+                if (error._serverError) {
+                    this.appendMessage('ai', `
+                        <div style="color: #ef4444;">
+                            <p><strong>${this.escapeHtml(error.message)}</strong></p>
+                            <button class="retry-btn" onclick="UI.retryLastQuery()">
+                                <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
+                                다시 시도
+                            </button>
+                        </div>
+                    `);
+                    return;
+                }
+
+                // 네트워크 오류만 자동 재시도
                 if (retryCount < this.MAX_RETRY) {
                     const waitSec = (retryCount + 1) * 2;
                     this.appendMessage('ai', `<p style="color: #f59e0b;">네트워크 오류 발생. ${waitSec}초 후 자동 재시도합니다... (${retryCount + 1}/${this.MAX_RETRY})</p>`);
@@ -5519,7 +5533,9 @@
                         } else if (eventType === 'error') {
                             this.hideTypingIndicator();
                             streamDiv.remove();
-                            throw new Error(payload.message || '스트리밍 오류');
+                            const serverErr = new Error(payload.message || '스트리밍 오류');
+                            serverErr._serverError = true;
+                            throw serverErr;
                         }
                     }
                 }
