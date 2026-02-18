@@ -2433,9 +2433,9 @@ async def ask(request: Request):
             role = msg.get("role", "")
             content = msg.get("content", "")
             if role == "user" and content:
-                gemini_history.append({"role": "user", "parts": [content[:MAX_QUERY_LEN]]})
+                gemini_history.append({"role": "user", "parts": [{"text": content[:MAX_QUERY_LEN]}]})
             elif role == "assistant" and content:
-                gemini_history.append({"role": "model", "parts": [content[:2000]]})
+                gemini_history.append({"role": "model", "parts": [{"text": content[:2000]}]})
 
         # IP 주소를 사용자 ID로 사용 (자동 추출)
         visitor_id = _get_client_ip(request)
@@ -2966,16 +2966,17 @@ async def ask_stream(request: Request):
             role = msg.get("role", "")
             content = msg.get("content", "")
             if role == "user" and content:
-                gemini_history.append({"role": "user", "parts": [content[:MAX_QUERY_LEN]]})
+                gemini_history.append({"role": "user", "parts": [{"text": content[:MAX_QUERY_LEN]}]})
             elif role == "assistant" and content:
-                gemini_history.append({"role": "model", "parts": [content[:2000]]})
+                gemini_history.append({"role": "model", "parts": [{"text": content[:2000]}]})
 
         visitor_id = _get_client_ip(request)
         config = RUNTIME.get("config", {})
 
     except Exception as parse_err:
+        logger.error(f"💥 요청 파싱 실패: {type(parse_err).__name__}: {parse_err}")
         async def _error_gen():
-            yield f"event: error\ndata: {json.dumps({'message': '요청 파싱 실패'}, ensure_ascii=False)}\n\n"
+            yield f"event: error\ndata: {json.dumps({'message': f'요청 파싱 실패: {type(parse_err).__name__}'}, ensure_ascii=False)}\n\n"
         return StreamingResponse(_error_gen(), media_type="text/event-stream")
 
     # --- SSE generator ---
