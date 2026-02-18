@@ -2747,9 +2747,8 @@ async def ask(request: Request):
         # 백그라운드 태스크 시작 (응답 반환을 블로킹하지 않음)
         asyncio.create_task(_background_verify_and_save())
 
-        # 후처리: think 블록 → 헤더 → 표 → 구분선 제거
+        # 후처리: think 블록 → 표 → 구분선 제거 (## 헤더는 프론트엔드에서 섹션 타이틀로 변환)
         final_text_clean = _remove_think_blocks(final_text)
-        final_text_clean = _remove_markdown_headers(final_text_clean)
         final_text_clean = _remove_markdown_tables(final_text_clean)
         final_text_clean = _remove_separator_lines(final_text_clean)
 
@@ -3113,9 +3112,8 @@ async def ask_stream(request: Request):
                 yield _sse("error", {"message": "⚠️ 시스템 무결성 정책에 의해 답변이 제한되었습니다."})
                 return
 
-            # 후처리: think 블록 → 헤더 → 표 → 구분선 제거
+            # 후처리: think 블록 → 표 → 구분선 제거 (## 헤더는 프론트엔드에서 섹션 타이틀로 변환)
             final_text_clean = _remove_think_blocks(final_text)
-            final_text_clean = _remove_markdown_headers(final_text_clean)
             final_text_clean = _remove_markdown_tables(final_text_clean)
             final_text_clean = _remove_separator_lines(final_text_clean)
 
