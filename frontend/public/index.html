@@ -6139,7 +6139,7 @@
 
                     const expertCta = document.createElement('button');
                     expertCta.className = 'bottom-cta-btn expert';
-                    expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가 검증 받기';
+                    expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기';
                     expertCta.onclick = async () => {
                         expertCta.disabled = true;
                         expertCta.innerHTML = '<span class="material-symbols-outlined">hourglass_top</span> 검증 중...';
@@ -6169,7 +6169,7 @@
                             } else { throw new Error('검증 실패'); }
                         } catch (e) {
                             expertCta.disabled = false;
-                            expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가 검증 받기';
+                            expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기';
                             console.error('Expert verification failed:', e);
                         }
                     };
