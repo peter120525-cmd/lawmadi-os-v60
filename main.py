@@ -2487,6 +2487,37 @@ async def ask(request: Request):
                 # Swarm 모드: 진정한 다중 Leader 협업
                 logger.info("🐝 SwarmOrchestrator 모드 활성화")
 
+                # ─── /ask 비법률 즉시 응답 (Swarm 경로) ───
+                _pre_domains = orchestrator.detect_domains(query)
+                _pre_leaders = orchestrator.select_leaders(query, _pre_domains)
+                if len(_pre_leaders) == 1 and _pre_leaders[0].get("_clevel") == "CCO" and not _pre_domains:
+                    instant_msg = (
+                        "[유나 (CCO) 콘텐츠 설계]\n\n"
+                        "## 💡 핵심 답변\n"
+                        "말씀하신 내용은 법률 분야가 아닌 일반 질문으로 판단됩니다. "
+                        "저는 법률 AI 시스템이라 전문적인 답변이 어려울 수 있지만, "
+                        "간단히 안내드릴게요.\n\n"
+                        "## 📌 주요 포인트\n"
+                        "• Lawmadi OS는 **대한민국 법률 상담 전문 AI**입니다\n"
+                        "• 60명의 전문 리더가 법률 분야별로 정밀 분석해 드려요\n"
+                        "• 임대차, 이혼, 상속, 형사, 노동법 등 다양한 분야를 다룹니다\n\n"
+                        "## 🔍 더 알아보기\n"
+                        "법률과 관련된 고민이 있으시다면 구체적으로 질문해 주세요! "
+                        "예를 들어 \"전세 보증금을 못 돌려받고 있어요\" 같은 질문이면 "
+                        "전문 리더가 즉시 분석을 시작합니다."
+                    )
+                    latency = int((time.time() - start_time) * 1000)
+                    METRICS["requests"] += 1
+                    return JSONResponse(content={
+                        "trace_id": trace,
+                        "response": instant_msg,
+                        "leader": "유나",
+                        "leader_specialty": "콘텐츠 설계",
+                        "status": "SUCCESS",
+                        "latency_ms": latency,
+                        "swarm_mode": False,
+                    })
+
                 try:
                     swarm_result = orchestrator.orchestrate(
                         query=query,
@@ -2549,7 +2580,37 @@ async def ask(request: Request):
 
                 gc = RUNTIME.get("genai_client")
                 _is_cco_fallback = leader.get("_clevel") == "CCO"
-                _fb_max_tokens = 800 if _is_cco_fallback else 3000
+
+                # ─── /ask 비법률 즉시 응답 ───
+                if _is_cco_fallback:
+                    instant_msg = (
+                        "[유나 (CCO) 콘텐츠 설계]\n\n"
+                        "## 💡 핵심 답변\n"
+                        "말씀하신 내용은 법률 분야가 아닌 일반 질문으로 판단됩니다. "
+                        "저는 법률 AI 시스템이라 전문적인 답변이 어려울 수 있지만, "
+                        "간단히 안내드릴게요.\n\n"
+                        "## 📌 주요 포인트\n"
+                        "• Lawmadi OS는 **대한민국 법률 상담 전문 AI**입니다\n"
+                        "• 60명의 전문 리더가 법률 분야별로 정밀 분석해 드려요\n"
+                        "• 임대차, 이혼, 상속, 형사, 노동법 등 다양한 분야를 다룹니다\n\n"
+                        "## 🔍 더 알아보기\n"
+                        "법률과 관련된 고민이 있으시다면 구체적으로 질문해 주세요! "
+                        "예를 들어 \"전세 보증금을 못 돌려받고 있어요\" 같은 질문이면 "
+                        "전문 리더가 즉시 분석을 시작합니다."
+                    )
+                    latency = int((time.time() - start_time) * 1000)
+                    METRICS["requests"] += 1
+                    return JSONResponse(content={
+                        "trace_id": trace,
+                        "response": instant_msg,
+                        "leader": "유나",
+                        "leader_specialty": "콘텐츠 설계",
+                        "status": "SUCCESS",
+                        "latency_ms": latency,
+                        "swarm_mode": False,
+                    })
+
+                _fb_max_tokens = 3000
                 fallback_instruction = (
                     f"{SYSTEM_INSTRUCTION_BASE}\n"
                     f"현재 당신은 '{leader['name']}({leader['role']})' 노드입니다.\n"
@@ -2963,13 +3024,43 @@ async def ask_stream(request: Request):
                     yield _sse("status", {"step": "analyzing", "leader": ", ".join(leader_names_list)})
 
                     if not use_swarm:
-                        # 단일 리더 스트리밍
+                        # 단일 리더
                         leader = selected_leaders[0]
                         leader_name = leader.get("name", "유나")
                         leader_specialty = leader.get("specialty", "콘텐츠 설계")
                         swarm_mode = False
 
                         clevel_id = leader.get("_clevel")
+
+                        # ─── 비법률 질문 즉시 응답 (CCO fallback, 스트리밍 없이) ───
+                        if clevel_id == "CCO" and not detected_domains:
+                            msg = (
+                                f"[유나 (CCO) 콘텐츠 설계]\n\n"
+                                f"## 💡 핵심 답변\n"
+                                f"말씀하신 내용은 법률 분야가 아닌 일반 질문으로 판단됩니다. "
+                                f"저는 법률 AI 시스템이라 전문적인 답변이 어려울 수 있지만, "
+                                f"간단히 안내드릴게요.\n\n"
+                                f"## 📌 주요 포인트\n"
+                                f"• Lawmadi OS는 **대한민국 법률 상담 전문 AI**입니다\n"
+                                f"• 60명의 전문 리더가 법률 분야별로 정밀 분석해 드려요\n"
+                                f"• 임대차, 이혼, 상속, 형사, 노동법 등 다양한 분야를 다룹니다\n\n"
+                                f"## 🔍 더 알아보기\n"
+                                f"법률과 관련된 고민이 있으시다면 구체적으로 질문해 주세요! "
+                                f"예를 들어 \"전세 보증금을 못 돌려받고 있어요\" 같은 질문이면 "
+                                f"전문 리더가 즉시 분석을 시작합니다."
+                            )
+                            yield _sse("chunk", {"text": msg})
+                            final_text = msg
+                            latency_ms = int((time.time() - start_time) * 1000)
+                            METRICS["requests"] += 1
+                            yield _sse("done", {
+                                "leader": "유나", "specialty": "콘텐츠 설계",
+                                "latency_ms": latency_ms, "trace_id": trace,
+                                "swarm_mode": False, "full_text": msg,
+                            })
+                            _audit("ask_stream", {"query": query, "leader": "유나", "status": "SUCCESS_INSTANT", "latency_ms": latency_ms, "swarm_mode": False})
+                            return
+
                         if clevel_id:
                             sys_instr = orchestrator._build_clevel_instruction(leader, SYSTEM_INSTRUCTION_BASE) if hasattr(orchestrator, '_build_clevel_instruction') else SYSTEM_INSTRUCTION_BASE
                         else:
@@ -3072,6 +3163,35 @@ async def ask_stream(request: Request):
                     swarm_mode = False
                     _is_cco_fb = leader.get("_clevel") == "CCO"
                     _fb_max_tok = 800 if _is_cco_fb else 3000
+
+                    # ─── Fallback 비법률 즉시 응답 ───
+                    if _is_cco_fb:
+                        msg = (
+                            "[유나 (CCO) 콘텐츠 설계]\n\n"
+                            "## 💡 핵심 답변\n"
+                            "말씀하신 내용은 법률 분야가 아닌 일반 질문으로 판단됩니다. "
+                            "저는 법률 AI 시스템이라 전문적인 답변이 어려울 수 있지만, "
+                            "간단히 안내드릴게요.\n\n"
+                            "## 📌 주요 포인트\n"
+                            "• Lawmadi OS는 **대한민국 법률 상담 전문 AI**입니다\n"
+                            "• 60명의 전문 리더가 법률 분야별로 정밀 분석해 드려요\n"
+                            "• 임대차, 이혼, 상속, 형사, 노동법 등 다양한 분야를 다룹니다\n\n"
+                            "## 🔍 더 알아보기\n"
+                            "법률과 관련된 고민이 있으시다면 구체적으로 질문해 주세요! "
+                            "예를 들어 \"전세 보증금을 못 돌려받고 있어요\" 같은 질문이면 "
+                            "전문 리더가 즉시 분석을 시작합니다."
+                        )
+                        yield _sse("chunk", {"text": msg})
+                        final_text = msg
+                        latency_ms = int((time.time() - start_time) * 1000)
+                        METRICS["requests"] += 1
+                        yield _sse("done", {
+                            "leader": "유나", "specialty": "콘텐츠 설계",
+                            "latency_ms": latency_ms, "trace_id": trace,
+                            "swarm_mode": False, "full_text": msg,
+                        })
+                        _audit("ask_stream", {"query": query, "leader": "유나", "status": "SUCCESS_INSTANT", "latency_ms": latency_ms, "swarm_mode": False})
+                        return
 
                     yield _sse("status", {"step": "analyzing", "leader": leader_name})
 
