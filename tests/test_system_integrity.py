@@ -169,6 +169,7 @@ class TestSearchService:
 
 # ─── 6. Gemini API 검증 ─────────────────────────────────────────────────────
 
+@pytest.mark.skipif(not os.getenv("GEMINI_API_KEY"), reason="CI 환경: GEMINI_API_KEY 미설정")
 class TestGeminiAPI:
     def test_api_key_set(self):
         assert os.getenv("GEMINI_API_KEY", ""), "GEMINI_API_KEY 미설정"
