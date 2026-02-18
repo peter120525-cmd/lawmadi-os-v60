@@ -253,7 +253,15 @@ def _check_daily_limit(request: Request) -> bool:
     """
     KST 기준 일일 요청 제한 확인.
     제한 초과 시 False 반환. IP는 해시로만 저장 (원본 비노출).
+    관리자 키(X-Admin-Key 헤더)가 유효하면 제한 우회.
     """
+    # 관리자 키 우회 (테스트/모니터링용)
+    _admin_key = os.getenv("MCP_API_KEY", "") or os.getenv("INTERNAL_API_KEY", "")
+    if _admin_key:
+        req_key = request.headers.get("X-Admin-Key", "")
+        if req_key == _admin_key:
+            return True
+
     ip = _get_client_ip(request)
     ip_hash = _sha256(ip)
     today = _kst_today()
