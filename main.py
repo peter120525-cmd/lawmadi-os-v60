@@ -2311,7 +2311,7 @@ async def ask(request: Request):
                 config=genai_types.GenerateContentConfig(
                     tools=tools,
                     system_instruction=clevel_instruction,
-                    max_output_tokens=4096,
+                    max_output_tokens=3000,
                     automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
                 ),
                 history=gemini_history,
@@ -2412,7 +2412,7 @@ async def ask(request: Request):
                     config=genai_types.GenerateContentConfig(
                         tools=tools,
                         system_instruction=fallback_instruction,
-                        max_output_tokens=4096,
+                        max_output_tokens=3000,
                         automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
                     ),
                     history=gemini_history,
@@ -2479,108 +2479,115 @@ async def ask(request: Request):
         })
 
         # -------------------------------------------------
-        # 8) Claude 검증 (SSOT Compliance Check)
+        # 8) Claude 검증 + DB 저장 (백그라운드 비동기 처리)
         # -------------------------------------------------
-        verification_result = None
-        try:
-            # Tool 호출 정보 추적
-            tools_used = []
-            tool_results = []
+        # 응답 속도 최적화: 검증/저장을 백그라운드로 이동하여 2~4초 절감
+        _swarm_mode_val = swarm_mode if 'swarm_mode' in locals() else False
+        _leader_names_val = leader_names if (swarm_mode and 'leader_names' in locals()) else None
+        _chat_history = None
+        if 'chat' in locals() and hasattr(chat, 'history'):
+            _chat_history = chat.history
+        _swarm_result_exists = 'swarm_result' in locals()
 
-            # chat.history에서 tool 호출 추출 (C-Level/Swarm 모드에서 모두 작동)
-            if 'chat' in locals() and hasattr(chat, 'history'):
-                for turn in chat.history:
-                    if hasattr(turn, 'parts'):
-                        for part in turn.parts:
-                            # Tool 호출 정보
-                            if hasattr(part, 'function_call'):
-                                fc = part.function_call
-                                tools_used.append({
-                                    "name": fc.name,
-                                    "args": dict(fc.args) if fc.args else {}
-                                })
-                            # Tool 응답 정보
-                            if hasattr(part, 'function_response'):
-                                fr = part.function_response
-                                response_data = dict(fr.response) if fr.response else {}
-                                tool_results.append(response_data)
+        async def _background_verify_and_save():
+            """백그라운드에서 Claude 검증 + DB 저장 수행"""
+            try:
+                # Tool 호출 정보 추적
+                tools_used = []
+                tool_results = []
 
-            # Swarm 모드는 내부 tool 호출을 직접 추적할 수 없으므로 ssot_available 기반 추정
-            if swarm_mode and 'swarm_result' in locals():
-                # Swarm 모드는 tool 사용 여부를 swarm_result에서 확인
-                if not tools_used and ssot_available:
-                    tools_used.append({"name": "swarm_internal_tools", "args": {"query": query[:50]}})
-                    tool_results.append({"result": "UNKNOWN", "source": "Swarm 내부 처리"})
+                if _chat_history:
+                    for turn in _chat_history:
+                        if hasattr(turn, 'parts'):
+                            for part in turn.parts:
+                                if hasattr(part, 'function_call'):
+                                    fc = part.function_call
+                                    tools_used.append({
+                                        "name": fc.name,
+                                        "args": dict(fc.args) if fc.args else {}
+                                    })
+                                if hasattr(part, 'function_response'):
+                                    fr = part.function_response
+                                    response_data = dict(fr.response) if fr.response else {}
+                                    tool_results.append(response_data)
 
-            # Claude 검증 수행
-            verifier_module = optional_import("engines.response_verifier")
-            if verifier_module:
-                verifier = verifier_module.get_verifier()
-                verification_result = verifier.verify_response(
-                    user_query=query,
-                    gemini_response=final_text,
-                    tools_used=tools_used,
-                    tool_results=tool_results
-                )
+                if _swarm_mode_val and _swarm_result_exists:
+                    if not tools_used and ssot_available:
+                        tools_used.append({"name": "swarm_internal_tools", "args": {"query": query[:50]}})
+                        tool_results.append({"result": "UNKNOWN", "source": "Swarm 내부 처리"})
 
-                # 검증 결과 로깅
-                v_result = verification_result.get("result", "SKIP")
-                v_score = verification_result.get("ssot_compliance_score", 0)
-                v_issues = verification_result.get("issues", [])
-
-                if v_result == "FAIL":
-                    logger.warning(f"🚨 [SSOT 검증 실패] 점수: {v_score}, 문제: {v_issues}")
-                elif v_result == "WARNING":
-                    logger.info(f"⚠️ [SSOT 경고] 점수: {v_score}, 문제: {v_issues}")
-                else:
-                    logger.info(f"✅ [SSOT 검증 통과] 점수: {v_score}")
-
-                # DB 저장
-                db_client_v2 = optional_import("connectors.db_client_v2")
-                if db_client_v2 and hasattr(db_client_v2, "save_verification_result"):
-                    db_client_v2.save_verification_result(
-                        session_id=trace,
-                        user_query=query,
-                        gemini_response=final_text,
-                        tools_used=tools_used,
-                        tool_results=tool_results,
-                        verification_result=v_result,
-                        ssot_compliance_score=v_score,
-                        issues_found=v_issues,
-                        claude_feedback=verification_result.get("feedback", "")
+                # Claude 검증 수행 (별도 스레드에서 실행)
+                verifier_module = optional_import("engines.response_verifier")
+                if verifier_module:
+                    verifier = verifier_module.get_verifier()
+                    loop = asyncio.get_event_loop()
+                    verification_result = await loop.run_in_executor(
+                        None,
+                        lambda: verifier.verify_response(
+                            user_query=query,
+                            gemini_response=final_text,
+                            tools_used=tools_used,
+                            tool_results=tool_results
+                        )
                     )
 
-        except Exception as verify_error:
-            logger.warning(f"⚠️ [Verification] 검증 실패 (무시): {verify_error}")
+                    v_result = verification_result.get("result", "SKIP")
+                    v_score = verification_result.get("ssot_compliance_score", 0)
+                    v_issues = verification_result.get("issues", [])
 
-        # -------------------------------------------------
-        # 9) Chat History 저장 (사용자 로그 분석용)
-        # -------------------------------------------------
-        try:
-            db_client_v2 = optional_import("connectors.db_client_v2")
-            if db_client_v2 and hasattr(db_client_v2, "save_chat_history"):
-                # 질문 유형 자동 분류
-                query_category = db_client_v2.classify_query_category(query)
+                    if v_result == "FAIL":
+                        logger.warning(f"🚨 [SSOT 검증 실패] 점수: {v_score}, 문제: {v_issues}")
+                    elif v_result == "WARNING":
+                        logger.info(f"⚠️ [SSOT 경고] 점수: {v_score}, 문제: {v_issues}")
+                    else:
+                        logger.info(f"✅ [SSOT 검증 통과] 점수: {v_score}")
 
-                # 리더 목록 (Swarm 모드인 경우)
-                leaders_used = None
-                if swarm_mode and 'leader_names' in locals():
-                    leaders_used = leader_names
+                    # 검증 결과 DB 저장
+                    db_client_v2 = optional_import("connectors.db_client_v2")
+                    if db_client_v2 and hasattr(db_client_v2, "save_verification_result"):
+                        await loop.run_in_executor(
+                            None,
+                            lambda: db_client_v2.save_verification_result(
+                                session_id=trace,
+                                user_query=query,
+                                gemini_response=final_text,
+                                tools_used=tools_used,
+                                tool_results=tool_results,
+                                verification_result=v_result,
+                                ssot_compliance_score=v_score,
+                                issues_found=v_issues,
+                                claude_feedback=verification_result.get("feedback", "")
+                            )
+                        )
 
-                # 저장
-                db_client_v2.save_chat_history(
-                    user_query=query,
-                    ai_response=final_text,
-                    leader=leader_name,
-                    status="success",
-                    latency_ms=latency_ms,
-                    visitor_id=visitor_id,
-                    swarm_mode=swarm_mode if 'swarm_mode' in locals() else False,
-                    leaders_used=leaders_used,
-                    query_category=query_category
-                )
-        except Exception as log_error:
-            logger.warning(f"⚠️ [ChatHistory] 저장 실패 (무시): {log_error}")
+            except Exception as verify_error:
+                logger.warning(f"⚠️ [Verification] 백그라운드 검증 실패 (무시): {verify_error}")
+
+            # Chat History 저장
+            try:
+                db_client_v2 = optional_import("connectors.db_client_v2")
+                if db_client_v2 and hasattr(db_client_v2, "save_chat_history"):
+                    query_category = db_client_v2.classify_query_category(query)
+                    loop = asyncio.get_event_loop()
+                    await loop.run_in_executor(
+                        None,
+                        lambda: db_client_v2.save_chat_history(
+                            user_query=query,
+                            ai_response=final_text,
+                            leader=leader_name,
+                            status="success",
+                            latency_ms=latency_ms,
+                            visitor_id=visitor_id,
+                            swarm_mode=_swarm_mode_val,
+                            leaders_used=_leader_names_val,
+                            query_category=query_category
+                        )
+                    )
+            except Exception as log_error:
+                logger.warning(f"⚠️ [ChatHistory] 백그라운드 저장 실패 (무시): {log_error}")
+
+        # 백그라운드 태스크 시작 (응답 반환을 블로킹하지 않음)
+        asyncio.create_task(_background_verify_and_save())
 
         # 표 제거 + 구분선 제거 후처리
         final_text_clean = _remove_markdown_tables(final_text)
