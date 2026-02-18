@@ -2226,7 +2226,7 @@
             .ai-msg .section-title {
                 font-size: 0.9rem;
                 padding: 10px 10px;
-                margin: 16px -10px 10px;
+                margin: 16px -14px 10px;
             }
 
             .ai-msg .subsection-title {
@@ -3906,9 +3906,9 @@
             background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #4f46e5 100%);
         }
         body.dark-mode .ai-msg .subsection-title {
-            background: linear-gradient(135deg, rgba(30,58,95,0.5) 0%, rgba(30,41,59,0.3) 100%);
-            border-left-color: #3b82f6;
-            color: #93c5fd;
+            background: linear-gradient(135deg, rgba(30,58,95,0.7) 0%, rgba(30,41,59,0.5) 100%);
+            border-left-color: #60a5fa;
+            color: #bfdbfe;
         }
 
         /* 1. 법령 인용 칩 */
@@ -5337,12 +5337,19 @@
                 this.updateSendBtnState();
             }
 
-            // AbortController: 120초 타임아웃 + 취소 지원
-            if (this.currentAbortController) this.currentAbortController.abort();
-            // 이전 타임아웃 타이머 정리 (충돌 방지)
-            if (this._requestTimeoutId) clearTimeout(this._requestTimeoutId);
+            // AbortController: 이전 요청 취소 + 120초 타임아웃
+            if (this.currentAbortController) {
+                this.currentAbortController.abort();
+                this.currentAbortController = null;
+            }
+            if (this._requestTimeoutId) {
+                clearTimeout(this._requestTimeoutId);
+                this._requestTimeoutId = null;
+            }
             this.currentAbortController = new AbortController();
-            const timeoutId = setTimeout(() => this.currentAbortController.abort(), 120000);
+            const timeoutId = setTimeout(() => {
+                if (this.currentAbortController) this.currentAbortController.abort();
+            }, 120000);
             this._requestTimeoutId = timeoutId;
 
             const _startTime = performance.now();
@@ -5364,9 +5371,16 @@
 
             } catch (error) {
                 clearTimeout(timeoutId);
+                this._requestTimeoutId = null;
                 this.hideTypingIndicator();
                 // 스트리밍 중 생성된 부분 메시지 제거 (고유 ID prefix 매칭)
                 document.querySelectorAll('[id^="streaming-msg-"]').forEach(el => el.remove());
+
+                // 사용자 취소 또는 타임아웃 (AbortError)
+                if (error.name === 'AbortError') {
+                    console.log('요청이 취소되었습니다.');
+                    return;
+                }
 
                 // 서버 에러 (event: error)는 재시도 없이 바로 표시
                 if (error._serverError) {
@@ -5560,8 +5574,8 @@
 
                         } else if (eventType === 'done') {
                             leaderName = payload.leader || '';
-                            leaderSpecialty = payload.specialty || '';
-                            fullTextFromServer = payload.full_text || accumulatedText;
+                            leaderSpecialty = payload.leader_specialty || payload.specialty || '';
+                            fullTextFromServer = payload.response || payload.full_text || accumulatedText;
 
                         } else if (eventType === 'error') {
                             this.hideTypingIndicator();
@@ -5583,8 +5597,8 @@
                                 accumulatedText += (payload.text || '');
                             } else if (eventType === 'done') {
                                 leaderName = payload.leader || '';
-                                leaderSpecialty = payload.specialty || '';
-                                fullTextFromServer = payload.full_text || accumulatedText;
+                                leaderSpecialty = payload.leader_specialty || payload.specialty || '';
+                                fullTextFromServer = payload.response || payload.full_text || accumulatedText;
                             }
                         } catch(e) { /* 무시 */ }
                     }

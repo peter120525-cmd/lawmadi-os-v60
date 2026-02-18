@@ -35,7 +35,7 @@ jobs:
 
       - name: Run system integrity tests
         run: |
-          python -m pytest tests/test_system_integrity.py -v --tb=short || true
+          python -m pytest tests/test_system_integrity.py -v --tb=short
 
       - name: Validate critical files
         run: |

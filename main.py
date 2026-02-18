@@ -170,7 +170,7 @@ async def security_headers_middleware(request: Request, call_next):
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' https: data:; "
-        "connect-src 'self' https://lawmadi-os-v60-uzqkp6kadq-du.a.run.app https://lawmadi-os-v60-938146962157.asia-northeast3.run.app https://www.google-analytics.com https://region1.google-analytics.com; "
+        "connect-src 'self' https://lawmadi-os-v60-938146962157.asia-northeast3.run.app https://www.google-analytics.com https://region1.google-analytics.com; "
         "frame-ancestors 'none'; "
         "object-src 'none'; "
         "base-uri 'self'"
@@ -241,8 +241,8 @@ def _now_iso() -> str:
 # 🕐 플랜별 요청 제한 (IP당, KST 기준)
 # =============================================================
 PLAN_CONFIG = {
-    "free":    {"window_limit": 100, "window_hours": 4, "max_tokens": 3000, "expert_access": False},
-    "premium": {"window_limit": 100, "window_hours": 4, "max_tokens": 5000, "expert_access": True},
+    "free":    {"window_limit": 50,  "window_hours": 4, "max_tokens": 3000, "expert_access": False},
+    "premium": {"window_limit": 200, "window_hours": 4, "max_tokens": 5000, "expert_access": True},
 }
 
 _PREMIUM_KEYS = set(filter(None, os.getenv("PREMIUM_KEYS", "").split(",")))
@@ -266,10 +266,10 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
     플랜에 따라 window_limit 동적 적용.
     """
     # 관리자 키 우회 (테스트/모니터링용)
-    _admin_key = os.getenv("MCP_API_KEY", "") or os.getenv("INTERNAL_API_KEY", "")
-    if _admin_key:
-        req_key = request.headers.get("X-Admin-Key", "")
-        if req_key == _admin_key:
+    _admin_key = os.getenv("MCP_API_KEY", "").strip() or os.getenv("INTERNAL_API_KEY", "").strip()
+    if _admin_key and len(_admin_key) >= 8:
+        req_key = request.headers.get("X-Admin-Key", "").strip()
+        if req_key and req_key == _admin_key:
             return True
 
     plan = _get_user_plan(request)
@@ -295,6 +295,13 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
 
     timestamps.append(now)
     _rate_usage[ip_hash] = timestamps
+
+    # 메모리 정리: 1000개 초과 시 빈 엔트리 제거
+    if len(_rate_usage) > 1000:
+        stale_keys = [k for k, v in _rate_usage.items() if not v]
+        for k in stale_keys:
+            del _rate_usage[k]
+
     return True
 
 def _rate_limit_response(retry_at_kst: str = ""):
@@ -1837,10 +1844,31 @@ def _diagnostic_snapshot() -> Dict[str, Any]:
 # 🚀 STARTUP
 # =============================================================
 
+def _cleanup_expired_uploads():
+    """만료된 업로드 파일 정리 (7일 경과)"""
+    uploads_dir = Path("uploads")
+    if not uploads_dir.exists():
+        return
+    now = time.time()
+    max_age = 7 * 24 * 3600  # 7일
+    cleaned = 0
+    for f in uploads_dir.iterdir():
+        if f.is_file() and (now - f.stat().st_mtime) > max_age:
+            f.unlink(missing_ok=True)
+            cleaned += 1
+    if cleaned:
+        logger.info(f"🧹 만료 업로드 파일 {cleaned}개 삭제")
+
 @app.on_event("startup")
 async def startup():
 
     logger.info(f"🚀 Lawmadi OS {OS_VERSION} starting...")
+
+    # 만료된 업로드 파일 정리
+    try:
+        _cleanup_expired_uploads()
+    except Exception:
+        pass
 
     # [감사 #4.2] SOFT_MODE 기본값을 true로 변경 (Cloud Run 일시 장애 대비)
     soft_mode = os.getenv("SOFT_MODE", "true").lower() == "true"
@@ -2379,7 +2407,7 @@ async def ask(request: Request):
         # -------------------------------------------------
         if not os.getenv("GEMINI_KEY"):
             _audit("ask_fail_closed", {"query": query, "status": "FAIL_CLOSED", "leader": "SYSTEM"})
-            return {"trace_id": trace, "response": "⚠️ GEMINI_KEY 미설정으로 추론이 비활성화되었습니다.", "status": "FAIL_CLOSED"}
+            raise HTTPException(status_code=503, detail="⚠️ GEMINI_KEY 미설정으로 추론이 비활성화되었습니다.")
 
         # -------------------------------------------------
         # 1) Security Guard
@@ -2610,7 +2638,7 @@ async def ask(request: Request):
                         "swarm_mode": False,
                     })
 
-                _fb_max_tokens = 3000
+                _fb_max_tokensens = 3000
                 fallback_instruction = (
                     f"{SYSTEM_INSTRUCTION_BASE}\n"
                     f"현재 당신은 '{leader['name']}({leader['role']})' 노드입니다.\n"
@@ -2628,19 +2656,22 @@ async def ask(request: Request):
                     config=genai_types.GenerateContentConfig(
                         tools=tools,
                         system_instruction=fallback_instruction,
-                        max_output_tokens=_fb_max_tokens,
+                        max_output_tokens=_fb_max_tokensens,
                         automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
                     ),
                     history=gemini_history,
                 )
 
-                resp = chat.send_message(
-                    f"now_kst={now_kst}\n"
-                    f"ssot_available={ssot_available}\n"
-                    f"사용자 질문: {query}"
-                )
-
-                final_text = _safe_extract_gemini_text(resp)
+                try:
+                    resp = chat.send_message(
+                        f"now_kst={now_kst}\n"
+                        f"ssot_available={ssot_available}\n"
+                        f"사용자 질문: {query}"
+                    )
+                    final_text = _safe_extract_gemini_text(resp)
+                except Exception as gemini_err:
+                    logger.error(f"💥 Gemini API 호출 실패 (fallback): {gemini_err}")
+                    final_text = f"[{leader['name']} ({leader.get('specialty', '통합')}) 답변]\n\n⚠️ AI 엔진 응답 생성 중 일시적 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
 
                 # 응답이 너무 짧으면 1회 재시도
                 if len(final_text.strip()) < 50:
@@ -2904,7 +2935,7 @@ async def ask_stream(request: Request):
                     q.put_nowait(None)
                 except Exception as e:
                     q.put_nowait(e)
-            asyncio.get_event_loop().run_in_executor(None, _consume)
+            asyncio.get_running_loop().run_in_executor(None, _consume)
             while True:
                 item = await q.get()
                 if item is None:
@@ -2928,7 +2959,7 @@ async def ask_stream(request: Request):
                     "60명의 전문 리더가 함께 도와드릴게요!\n"
                 )
                 yield _sse("chunk", {"text": msg})
-                yield _sse("done", {"leader": "유나", "specialty": "콘텐츠 설계", "latency_ms": 0, "trace_id": trace})
+                yield _sse("done", {"leader": "유나", "leader_specialty": "콘텐츠 설계", "latency_ms": 0, "trace_id": trace})
                 return
 
             # 0.5) Gemini 키
@@ -3056,9 +3087,9 @@ async def ask_stream(request: Request):
                             latency_ms = int((time.time() - start_time) * 1000)
                             METRICS["requests"] += 1
                             yield _sse("done", {
-                                "leader": "유나", "specialty": "콘텐츠 설계",
+                                "leader": "유나", "leader_specialty": "콘텐츠 설계",
                                 "latency_ms": latency_ms, "trace_id": trace,
-                                "swarm_mode": False, "full_text": msg,
+                                "swarm_mode": False, "response": msg, "status": "SUCCESS",
                             })
                             _audit("ask_stream", {"query": query, "leader": "유나", "status": "SUCCESS_INSTANT", "latency_ms": latency_ms, "swarm_mode": False})
                             return
@@ -3165,11 +3196,11 @@ async def ask_stream(request: Request):
                     leader_name = leader['name']
                     leader_specialty = leader.get('specialty', '콘텐츠 설계')
                     swarm_mode = False
-                    _is_cco_fb = leader.get("_clevel") == "CCO"
-                    _fb_max_tok = 800 if _is_cco_fb else 3000
+                    _is_cco_fallback = leader.get("_clevel") == "CCO"
+                    _fb_max_tokens = 800 if _is_cco_fallback else 3000
 
                     # ─── Fallback 비법률 즉시 응답 ───
-                    if _is_cco_fb:
+                    if _is_cco_fallback:
                         msg = (
                             "[유나 (CCO) 콘텐츠 설계]\n\n"
                             "## 💡 핵심 답변\n"
@@ -3190,9 +3221,9 @@ async def ask_stream(request: Request):
                         latency_ms = int((time.time() - start_time) * 1000)
                         METRICS["requests"] += 1
                         yield _sse("done", {
-                            "leader": "유나", "specialty": "콘텐츠 설계",
+                            "leader": "유나", "leader_specialty": "콘텐츠 설계",
                             "latency_ms": latency_ms, "trace_id": trace,
-                            "swarm_mode": False, "full_text": msg,
+                            "swarm_mode": False, "response": msg, "status": "SUCCESS",
                         })
                         _audit("ask_stream", {"query": query, "leader": "유나", "status": "SUCCESS_INSTANT", "latency_ms": latency_ms, "swarm_mode": False})
                         return
@@ -3205,7 +3236,7 @@ async def ask_stream(request: Request):
                         f"🎯 전문 분야: {leader.get('specialty', '통합')}\n"
                         f"🎯 관점: {leader.get('specialty', '통합')} 전문가 관점에서 이 사안을 분석하세요.\n"
                     )
-                    if _is_cco_fb:
+                    if _is_cco_fallback:
                         fallback_instruction += (
                             f"📏 **비법률 질문은 반드시 500자 이내로 간결하게 답변하세요.**\n"
                             f"**비법률 목차**: ## 💡 핵심 답변 → ## 📌 주요 포인트 → ## 🔍 더 알아보기\n"
@@ -3216,7 +3247,7 @@ async def ask_stream(request: Request):
                         config=genai_types.GenerateContentConfig(
                             tools=tools,
                             system_instruction=fallback_instruction,
-                            max_output_tokens=_fb_max_tok,
+                            max_output_tokens=_fb_max_tokens,
                             automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
                         ),
                         history=gemini_history,
@@ -3265,11 +3296,12 @@ async def ask_stream(request: Request):
             # done 이벤트
             yield _sse("done", {
                 "leader": leader_name,
-                "specialty": leader_specialty,
+                "leader_specialty": leader_specialty,
                 "latency_ms": latency_ms,
                 "trace_id": trace,
                 "swarm_mode": swarm_mode,
-                "full_text": final_text_clean,
+                "response": final_text_clean,
+                "status": "SUCCESS",
             })
 
             # 백그라운드 검증/저장
@@ -3494,7 +3526,11 @@ async def search(q: str, limit: int = 10, request: Request = None):
     q = q.strip()[:200]  # 입력 길이 제한
     if len(q) < 2:
         return {"status": "ERROR", "message": "검색어는 2자 이상 입력해주세요."}
-    return svc.search_law(q)
+    try:
+        return svc.search_law(q)
+    except Exception as e:
+        logger.error(f"❌ /search 오류: {e}")
+        return {"status": "ERROR", "message": "검색 처리 중 오류가 발생했습니다."}
 
 @app.get("/trending")
 @limiter.limit("30/minute")
@@ -3502,8 +3538,11 @@ async def trending(limit: int = 10, request: Request = None):
     svc = RUNTIME.get("search_service")
     if not svc:
         return {"status": "ERROR", "message": "SearchService not ready"}
-    # SearchService에 trending_laws가 없으므로 search_precedents로 대체
-    return svc.search_precedents(limit)
+    try:
+        return svc.search_precedents(limit)
+    except Exception as e:
+        logger.error(f"❌ /trending 오류: {e}")
+        return {"status": "ERROR", "message": "트렌딩 조회 중 오류가 발생했습니다."}
 
 # =============================================================
 # 📄 v60: 문서 업로드 및 법률 분석
