@@ -231,13 +231,51 @@ def _get_client_ip(request: Request) -> str:
         return request.client.host
     return "unknown"
 
-    return "unknown"
-
 def _now_iso() -> str:
     """한국 시간(KST, UTC+9) 기준 ISO 형식 반환"""
     utc_now = datetime.datetime.utcnow()
     kst_now = utc_now + datetime.timedelta(hours=9)
     return kst_now.replace(microsecond=0).isoformat() + "+09:00"
+
+# =============================================================
+# 🕐 KST 기반 일일 3회 제한 (IP당)
+# =============================================================
+_DAILY_LIMIT = 3
+_daily_usage: Dict[str, Dict] = {}  # {ip_hash: {"date": "YYYY-MM-DD", "count": int}}
+
+def _kst_today() -> str:
+    """현재 KST 날짜 문자열 반환"""
+    utc_now = datetime.datetime.utcnow()
+    kst_now = utc_now + datetime.timedelta(hours=9)
+    return kst_now.strftime("%Y-%m-%d")
+
+def _check_daily_limit(request: Request) -> bool:
+    """
+    KST 기준 일일 요청 제한 확인.
+    제한 초과 시 False 반환. IP는 해시로만 저장 (원본 비노출).
+    """
+    ip = _get_client_ip(request)
+    ip_hash = _sha256(ip)
+    today = _kst_today()
+
+    entry = _daily_usage.get(ip_hash)
+    if entry is None or entry["date"] != today:
+        # 새 날짜 → 리셋
+        _daily_usage[ip_hash] = {"date": today, "count": 1}
+        return True
+
+    if entry["count"] >= _DAILY_LIMIT:
+        return False
+
+    entry["count"] += 1
+    return True
+
+def _daily_limit_response():
+    """일일 제한 초과 시 응답"""
+    return JSONResponse(
+        status_code=429,
+        content={"error": "일일 이용 한도에 도달했습니다. 내일 다시 이용해주세요.", "blocked": True}
+    )
 
 def _trace_id() -> str:
     """[ULTRA] 요청별 고유 추적 ID"""
@@ -2225,8 +2263,11 @@ async def get_leader_queries_api(
 # =============================================================
 
 @app.post("/ask")
-@limiter.limit("3/day")
 async def ask(request: Request):
+
+    # KST 기준 일일 3회 제한
+    if not _check_daily_limit(request):
+        return _daily_limit_response()
 
     trace = _trace_id()  # [ULTRA]
     start_time = time.time()
@@ -2675,9 +2716,12 @@ async def ask(request: Request):
 # =============================================================
 
 @app.post("/ask-stream")
-@limiter.limit("3/day")
 async def ask_stream(request: Request):
     """SSE 스트리밍 엔드포인트 — 실시간 토큰 전송"""
+
+    # KST 기준 일일 3회 제한
+    if not _check_daily_limit(request):
+        return _daily_limit_response()
 
     trace = _trace_id()
     start_time = time.time()
