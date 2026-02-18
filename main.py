@@ -2447,19 +2447,26 @@ async def ask(request: Request):
                 swarm_mode = False
 
                 gc = RUNTIME.get("genai_client")
+                _is_cco_fallback = leader.get("_clevel") == "CCO"
+                _fb_max_tokens = 800 if _is_cco_fallback else 3000
                 fallback_instruction = (
                     f"{SYSTEM_INSTRUCTION_BASE}\n"
                     f"현재 당신은 '{leader['name']}({leader['role']})' 노드입니다.\n"
                     f"🎯 전문 분야: {leader.get('specialty', '통합')}\n"
                     f"🎯 관점: {leader.get('specialty', '통합')} 전문가 관점에서 이 사안을 분석하세요.\n"
-                    f"반드시 [{leader['name']} ({leader.get('specialty', '통합')}) 답변]으로 시작하세요."
                 )
+                if _is_cco_fallback:
+                    fallback_instruction += (
+                        f"📏 **비법률 질문은 반드시 500자 이내로 간결하게 답변하세요.**\n"
+                        f"**비법률 목차**: ## 💡 핵심 답변 → ## 📌 주요 포인트 → ## 🔍 더 알아보기\n"
+                    )
+                fallback_instruction += f"반드시 [{leader['name']} ({leader.get('specialty', '통합')}) 답변]으로 시작하세요."
                 chat = gc.chats.create(
                     model=model_name,
                     config=genai_types.GenerateContentConfig(
                         tools=tools,
                         system_instruction=fallback_instruction,
-                        max_output_tokens=3000,
+                        max_output_tokens=_fb_max_tokens,
                         automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
                     ),
                     history=gemini_history,
@@ -2957,6 +2964,8 @@ async def ask_stream(request: Request):
                     leader_name = leader['name']
                     leader_specialty = leader.get('specialty', '콘텐츠 설계')
                     swarm_mode = False
+                    _is_cco_fb = leader.get("_clevel") == "CCO"
+                    _fb_max_tok = 800 if _is_cco_fb else 3000
 
                     yield _sse("status", {"step": "analyzing", "leader": leader_name})
 
@@ -2965,13 +2974,18 @@ async def ask_stream(request: Request):
                         f"현재 당신은 '{leader['name']}({leader['role']})' 노드입니다.\n"
                         f"🎯 전문 분야: {leader.get('specialty', '통합')}\n"
                         f"🎯 관점: {leader.get('specialty', '통합')} 전문가 관점에서 이 사안을 분석하세요.\n"
-                        f"반드시 [{leader['name']} ({leader.get('specialty', '통합')}) 답변]으로 시작하세요."
                     )
+                    if _is_cco_fb:
+                        fallback_instruction += (
+                            f"📏 **비법률 질문은 반드시 500자 이내로 간결하게 답변하세요.**\n"
+                            f"**비법률 목차**: ## 💡 핵심 답변 → ## 📌 주요 포인트 → ## 🔍 더 알아보기\n"
+                        )
+                    fallback_instruction += f"반드시 [{leader['name']} ({leader.get('specialty', '통합')}) 답변]으로 시작하세요."
                     chat = gc.chats.create(
                         model=model_name,
                         config=genai_types.GenerateContentConfig(
                             system_instruction=fallback_instruction,
-                            max_output_tokens=3000,
+                            max_output_tokens=_fb_max_tok,
                         ),
                         history=gemini_history,
                     )
