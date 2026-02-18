@@ -2008,12 +2008,36 @@
                 font-size: 0.75rem;
                 padding: 5px 10px;
             }
+            .feedback-btn, .export-btn {
+                font-size: 0.72rem;
+                padding: 3px 8px;
+            }
+            .suggest-area {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 4px;
+            }
+            .suggest-chip {
+                font-size: 0.76rem;
+                padding: 4px 10px;
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
             .expert-response-panel {
                 padding: 12px;
                 font-size: 0.88rem;
             }
 
             .core-features-section {
+                display: none;
+            }
+
+            .pricing-section {
+                display: none;
+            }
+
+            .lawyer-section {
                 display: none;
             }
 
@@ -3009,6 +3033,62 @@
         .expert-btn:hover { background: linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%); transform: translateY(-1px); }
         .expert-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
+        /* Feedback (👍/👎) Buttons */
+        .feedback-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+            margin-right: 6px;
+            transition: all 0.2s;
+        }
+        .feedback-btn:hover { border-color: #10b981; color: #10b981; }
+        .feedback-btn.voted { opacity: 0.6; cursor: default; pointer-events: none; }
+
+        /* Export Button */
+        .export-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+            margin-right: 8px;
+            transition: all 0.2s;
+        }
+        .export-btn:hover { border-color: #6366f1; color: #6366f1; }
+
+        /* Suggest Questions */
+        .suggest-area {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .suggest-chip {
+            background: rgba(99,102,241,0.08);
+            border: 1px solid rgba(99,102,241,0.25);
+            color: var(--text-main);
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .suggest-chip:hover { background: rgba(99,102,241,0.18); border-color: #6366f1; }
+
         /* Expert Response Panel */
         .expert-response-panel {
             margin-top: 12px;
@@ -3040,14 +3120,27 @@
         /* ═══ 다크모드: 부가 버튼 ═══ */
         body.dark-mode .fav-btn,
         body.dark-mode .share-btn,
-        body.dark-mode .expert-btn {
+        body.dark-mode .expert-btn,
+        body.dark-mode .feedback-btn,
+        body.dark-mode .export-btn {
             background: rgba(255,255,255,0.06);
             border-color: #475569;
             color: #cbd5e1;
         }
         body.dark-mode .fav-btn:hover,
         body.dark-mode .share-btn:hover,
-        body.dark-mode .expert-btn:hover {
+        body.dark-mode .expert-btn:hover,
+        body.dark-mode .feedback-btn:hover,
+        body.dark-mode .export-btn:hover {
+            background: rgba(255,255,255,0.12);
+            color: #f1f5f9;
+        }
+        body.dark-mode .suggest-chip {
+            background: rgba(255,255,255,0.06);
+            border-color: #475569;
+            color: #cbd5e1;
+        }
+        body.dark-mode .suggest-chip:hover {
             background: rgba(255,255,255,0.12);
             color: #f1f5f9;
         }
@@ -3476,6 +3569,893 @@
             opacity: 0.4;
             pointer-events: none;
         }
+
+        /* ═══════════════════════════════════════════════════
+           프리미엄 플랜 요금표
+        ═══════════════════════════════════════════════════ */
+        .pricing-section {
+            max-width: 100%;
+            margin: 1.5rem auto;
+            padding: 1.5rem 16px;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        .pricing-section::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image:
+                linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+        }
+        .pricing-section h3 {
+            text-align: center;
+            color: #f1f5f9;
+            font-size: 1.1rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+        .pricing-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            position: relative;
+            z-index: 1;
+        }
+        .pricing-card {
+            padding: 20px 16px;
+            border-radius: 16px;
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s ease;
+        }
+        .pricing-card.premium {
+            border: 2px solid transparent;
+            background-image: linear-gradient(rgba(30,41,59,0.9), rgba(30,41,59,0.9)), linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7);
+            background-origin: border-box;
+            background-clip: padding-box, border-box;
+            position: relative;
+        }
+        .pricing-card .plan-badge {
+            display: inline-block;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+        .pricing-card .plan-badge.free-badge {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+        .pricing-card .plan-badge.premium-badge {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+        }
+        .pricing-card .plan-name {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #f1f5f9;
+            margin-bottom: 4px;
+        }
+        .pricing-card .plan-price {
+            font-size: 1.3rem;
+            font-weight: 900;
+            color: #e2e8f0;
+            margin-bottom: 12px;
+        }
+        .pricing-card .plan-price small {
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: #94a3b8;
+        }
+        .pricing-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .pricing-card ul li {
+            font-size: 0.78rem;
+            color: #cbd5e1;
+            padding: 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .pricing-card ul li::before {
+            content: '\2713';
+            color: #10b981;
+            font-weight: 700;
+            font-size: 0.75rem;
+            flex-shrink: 0;
+        }
+        .pricing-card .plan-cta {
+            display: block;
+            width: 100%;
+            margin-top: 14px;
+            padding: 10px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        .pricing-card .plan-cta.free-cta {
+            background: rgba(255,255,255,0.08);
+            color: #94a3b8;
+            cursor: default;
+        }
+        .pricing-card .plan-cta.premium-cta {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        .pricing-card .plan-cta.premium-cta:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+        }
+
+        /* ═══ 변호사 연결 섹션 ═══ */
+        .lawyer-section {
+            max-width: 100%;
+            margin: 1.5rem auto;
+            padding: 1.5rem 16px;
+            background: linear-gradient(135deg, #042f2e 0%, #0f3d3a 50%, #134e4a 100%);
+            border-radius: 20px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        .lawyer-section h3 {
+            color: #f0fdf4;
+            font-size: 1.05rem;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+        .lawyer-section p {
+            color: #86efac;
+            font-size: 0.8rem;
+            margin-bottom: 14px;
+        }
+        .lawyer-section .lawyer-cta-landing {
+            display: inline-block;
+            padding: 10px 28px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        .lawyer-section .lawyer-cta-landing:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        }
+
+        /* ═══ 변호사 상담 모달 ═══ */
+        .lawyer-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        .lawyer-modal-overlay.active { display: flex; }
+        .lawyer-modal {
+            background: var(--bg, #fff);
+            border-radius: 20px;
+            padding: 28px 24px;
+            width: 90%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .lawyer-modal h3 {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--text-main, #1e293b);
+            margin-bottom: 4px;
+        }
+        .lawyer-modal .modal-desc {
+            font-size: 0.78rem;
+            color: var(--text-muted, #64748b);
+            margin-bottom: 16px;
+        }
+        .lawyer-modal .form-group {
+            margin-bottom: 12px;
+        }
+        .lawyer-modal .form-group label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-main, #1e293b);
+            margin-bottom: 4px;
+        }
+        .lawyer-modal .form-group input,
+        .lawyer-modal .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border, #e2e8f0);
+            border-radius: 10px;
+            font-size: 0.88rem;
+            color: var(--text-main, #1e293b);
+            background: var(--surface, #f8fafc);
+            min-height: 44px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .lawyer-modal .form-group input:focus,
+        .lawyer-modal .form-group textarea:focus {
+            border-color: #10b981;
+        }
+        .lawyer-modal .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .lawyer-modal .modal-submit {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: all 0.2s;
+        }
+        .lawyer-modal .modal-submit:hover { transform: translateY(-1px); }
+        .lawyer-modal .modal-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .lawyer-modal .modal-close {
+            position: absolute;
+            top: 12px; right: 12px;
+            background: none;
+            border: none;
+            color: var(--text-muted, #64748b);
+            cursor: pointer;
+            padding: 4px;
+        }
+        .lawyer-modal .modal-success {
+            text-align: center;
+            padding: 20px 0;
+        }
+        .lawyer-modal .modal-success .success-icon {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+        }
+        .lawyer-modal .modal-success p {
+            color: var(--text-main, #1e293b);
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        /* ═══ AI 응답 내 변호사 CTA 버튼 ═══ */
+        .lawyer-cta-btn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+            margin-right: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+        }
+        .lawyer-cta-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+        }
+
+        /* ═══ 모바일: 프리미엄/변호사 섹션 최적화 ═══ */
+        @media (max-width: 768px) {
+            .pricing-cards {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            .pricing-section { margin: 1rem auto; padding: 1rem 12px; }
+            .lawyer-section { margin: 1rem auto; padding: 1rem 12px; }
+            .lawyer-modal {
+                width: 95vw;
+                max-width: none;
+                border-radius: 20px 20px 0 0;
+                position: fixed;
+                bottom: 0;
+                left: 50%;
+                transform: translateX(-50%);
+            }
+            .lawyer-modal-overlay.active {
+                align-items: flex-end;
+            }
+        }
+
+        /* ═══ 다크모드: 프리미엄/변호사 섹션 ═══ */
+        body.dark-mode .lawyer-modal {
+            background: #1e293b;
+        }
+        body.dark-mode .lawyer-modal .form-group input,
+        body.dark-mode .lawyer-modal .form-group textarea {
+            background: #0f172a;
+            border-color: #334155;
+            color: #e2e8f0;
+        }
+        /* ═══════════════════════════════════════════════════
+           답변 UI 고퀄리티 개선 — CSS
+        ═══════════════════════════════════════════════════ */
+
+        /* 1. 법령 인용 칩 */
+        .law-cite-chip {
+            display: inline;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border: 1px solid #93c5fd;
+            border-radius: 6px;
+            padding: 1px 7px;
+            font-size: 0.92em;
+            font-weight: 700;
+            color: #1d4ed8;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            cursor: default;
+        }
+        .law-cite-chip:hover {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+        }
+
+        /* 2. 섹션 래퍼 */
+        .ai-section {
+            margin: 0;
+            border-radius: 12px;
+            overflow: hidden;
+            animation: sectionFadeIn 0.5s ease both;
+        }
+        .ai-section:nth-child(2) { animation-delay: 80ms; }
+        .ai-section:nth-child(3) { animation-delay: 160ms; }
+        .ai-section:nth-child(4) { animation-delay: 240ms; }
+        .ai-section:nth-child(5) { animation-delay: 320ms; }
+        .ai-section:nth-child(6) { animation-delay: 400ms; }
+        .ai-section:nth-child(7) { animation-delay: 480ms; }
+        .ai-section:nth-child(8) { animation-delay: 560ms; }
+
+        @keyframes sectionFadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .ai-section { animation: none !important; }
+        }
+
+        .ai-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+            padding: 0;
+        }
+        .ai-section-header h2 {
+            margin-bottom: 0;
+            flex: 1;
+        }
+        .ai-section-header .toggle-icon {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            transition: transform 0.3s ease;
+            flex-shrink: 0;
+            margin-left: 8px;
+        }
+        .ai-section.collapsed .ai-section-header .toggle-icon {
+            transform: rotate(180deg);
+        }
+        .ai-section-body {
+            max-height: 5000px;
+            opacity: 1;
+            overflow: hidden;
+            transition: max-height 0.4s ease, opacity 0.3s ease;
+        }
+        .ai-section.collapsed .ai-section-body {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        /* 3. TOC 네비게이션 */
+        .ai-toc {
+            background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+            border: 1px solid #c7d2fe;
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+        .ai-toc::before {
+            content: '📑';
+            font-size: 0.85rem;
+            margin-right: 4px;
+        }
+        .ai-toc-item {
+            display: inline-block;
+            padding: 3px 10px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #4338ca;
+            background: rgba(255,255,255,0.7);
+            border: 1px solid #c7d2fe;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .ai-toc-item:hover {
+            background: #4338ca;
+            color: white;
+            border-color: #4338ca;
+        }
+        .ai-section.toc-highlight {
+            outline: 2px solid #6366f1;
+            outline-offset: 2px;
+            border-radius: 12px;
+            transition: outline-color 1.5s ease;
+        }
+
+        /* 4. 응답 요약 카드 */
+        .response-summary-card {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            margin-bottom: 14px;
+            background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+            border: 1.5px dashed #a5b4fc;
+            border-radius: 10px;
+        }
+        .summary-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            background: rgba(255,255,255,0.8);
+            border: 1px solid #c7d2fe;
+            color: #4338ca;
+        }
+        .summary-badge .material-symbols-outlined {
+            font-size: 14px;
+        }
+
+        /* 5. 액션 버튼 툴바 */
+        .ai-action-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+        .toolbar-group + .toolbar-group {
+            margin-left: 6px;
+            padding-left: 8px;
+            border-left: 1px solid var(--border);
+        }
+        .toolbar-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+            position: relative;
+            padding: 0;
+        }
+        .toolbar-btn:hover {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+        .toolbar-btn .material-symbols-outlined {
+            font-size: 18px;
+        }
+        .toolbar-btn[data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 4px 8px;
+            background: #1e293b;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 600;
+            border-radius: 6px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s ease;
+            z-index: 10;
+        }
+        .toolbar-btn[data-tooltip]:hover::after {
+            opacity: 1;
+        }
+        .toolbar-btn.active {
+            color: var(--primary);
+        }
+        .toolbar-btn.voted {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        /* 6. SSOT 신뢰도 바 */
+        .ssot-confidence-bar {
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+            border: 1px solid #86efac;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .ssot-confidence-bar .bar-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #166534;
+            white-space: nowrap;
+        }
+        .ssot-confidence-bar .bar-track {
+            flex: 1;
+            height: 6px;
+            background: #d1fae5;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .ssot-confidence-bar .bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 1s ease;
+        }
+        .ssot-confidence-bar .bar-fill.high { background: linear-gradient(90deg, #22c55e, #16a34a); }
+        .ssot-confidence-bar .bar-fill.medium { background: linear-gradient(90deg, #f59e0b, #d97706); }
+        .ssot-confidence-bar .bar-fill.low { background: linear-gradient(90deg, #ef4444, #dc2626); }
+        .ssot-confidence-bar .bar-score {
+            font-size: 0.75rem;
+            font-weight: 800;
+            min-width: 32px;
+            text-align: right;
+        }
+        .ssot-confidence-bar .bar-score.high { color: #16a34a; }
+        .ssot-confidence-bar .bar-score.medium { color: #d97706; }
+        .ssot-confidence-bar .bar-score.low { color: #dc2626; }
+
+        /* ═══ 랜딩페이지 개선 CSS ═══ */
+
+        /* Hero 통계 카운터 */
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 20px;
+            animation: fadeInUp 0.8s ease-out 0.6s both;
+            position: relative;
+            z-index: 1;
+        }
+        .hero-stat-item {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            padding: 14px 20px;
+            text-align: center;
+            min-width: 120px;
+            transition: all 0.3s ease;
+        }
+        .hero-stat-item:hover {
+            transform: translateY(-3px);
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
+        }
+        .hero-stat-number {
+            font-size: 1.6rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.2;
+        }
+        .hero-stat-label {
+            font-size: 0.72rem;
+            color: #94a3b8;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        /* 예시 질문 카드 업그레이드 */
+        .example-card {
+            background: white;
+            border: 1.5px solid var(--border);
+            padding: 14px;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: left;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            position: relative;
+            overflow: hidden;
+        }
+        .example-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary), #8b5cf6);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+            transform-origin: left;
+        }
+        .example-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 28px rgba(37, 99, 235, 0.15);
+        }
+        .example-card:hover::before {
+            transform: scaleX(1);
+        }
+        .example-card-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+            line-height: 1;
+            margin-top: 2px;
+        }
+        .example-card-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .example-card-title {
+            font-size: 0.88rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 3px;
+        }
+        .example-card-desc {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* 데스크탑: 예시질문 3열 그리드 */
+        .example-card-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        /* Core Features 숫자 강조 */
+        .feature-number {
+            font-size: 1.5rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+            margin-bottom: 2px;
+        }
+        .feature-card-mini:hover .feature-icon {
+            animation: iconBounce 0.5s ease;
+        }
+        @keyframes iconBounce {
+            0%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-6px); }
+            60% { transform: translateY(-3px); }
+        }
+
+        /* Trust 라이브 통계 */
+        .trust-live {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            padding: 12px 0;
+        }
+        .trust-live-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+        .trust-live-item .material-symbols-outlined {
+            font-size: 16px;
+            color: var(--success);
+        }
+        .trust-pulse {
+            width: 6px; height: 6px;
+            background: var(--success);
+            border-radius: 50%;
+            display: inline-block;
+            animation: trustPulse 2s ease-in-out infinite;
+        }
+        @keyframes trustPulse {
+            0%, 100% { opacity: 0.4; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        /* 스크롤 애니메이션 */
+        .landing-animate {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .landing-animate.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ═══ 다크모드: 새 UI 요소 ═══ */
+        body.dark-mode .law-cite-chip {
+            background: linear-gradient(135deg, #1e3a5f 0%, #172554 100%);
+            border-color: #3b82f6;
+            color: #93c5fd;
+        }
+        body.dark-mode .ai-toc {
+            background: linear-gradient(135deg, #1e293b 0%, #1e3a5f 100%);
+            border-color: #334155;
+        }
+        body.dark-mode .ai-toc-item {
+            background: rgba(255,255,255,0.08);
+            border-color: #475569;
+            color: #a5b4fc;
+        }
+        body.dark-mode .ai-toc-item:hover {
+            background: #6366f1;
+            color: white;
+            border-color: #6366f1;
+        }
+        body.dark-mode .response-summary-card {
+            background: linear-gradient(135deg, #1e293b 0%, #1e3a5f 100%);
+            border-color: #475569;
+        }
+        body.dark-mode .summary-badge {
+            background: rgba(255,255,255,0.08);
+            border-color: #475569;
+            color: #a5b4fc;
+        }
+        body.dark-mode .ai-action-toolbar {
+            border-top-color: #334155;
+        }
+        body.dark-mode .toolbar-group + .toolbar-group {
+            border-left-color: #334155;
+        }
+        body.dark-mode .toolbar-btn {
+            color: #94a3b8;
+        }
+        body.dark-mode .toolbar-btn:hover {
+            background: rgba(99, 102, 241, 0.15);
+            color: #a5b4fc;
+        }
+        body.dark-mode .ssot-confidence-bar {
+            background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+            border-color: #059669;
+        }
+        body.dark-mode .ssot-confidence-bar .bar-label { color: #6ee7b7; }
+        body.dark-mode .ssot-confidence-bar .bar-track { background: #1e293b; }
+
+        /* 다크모드: 예시 카드 */
+        body.dark-mode .example-card {
+            background: #1e293b;
+            border-color: #334155;
+        }
+        body.dark-mode .example-card:hover {
+            border-color: #3b82f6;
+        }
+        body.dark-mode .example-card-title { color: #e2e8f0; }
+        body.dark-mode .example-card-desc { color: #94a3b8; }
+
+        /* 다크모드: Trust live */
+        body.dark-mode .trust-live-item { color: #94a3b8; }
+
+        /* ═══ 모바일: 새 UI 요소 ═══ */
+        @media (max-width: 768px) {
+            .hero-stats {
+                gap: 10px;
+            }
+            .hero-stat-item {
+                padding: 10px 12px;
+                min-width: 80px;
+                border-radius: 10px;
+            }
+            .hero-stat-number { font-size: 1.2rem; }
+            .hero-stat-label { font-size: 0.65rem; }
+
+            .example-card-grid {
+                display: flex;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scroll-snap-type: x mandatory;
+                gap: 8px;
+                padding-bottom: 4px;
+            }
+            .example-card {
+                min-width: 200px;
+                flex-shrink: 0;
+                scroll-snap-align: start;
+            }
+            .example-card-desc { display: none; }
+
+            .ai-toc {
+                padding: 8px 10px;
+                gap: 4px;
+            }
+            .ai-toc-item { font-size: 0.72rem; padding: 2px 8px; }
+
+            .response-summary-card {
+                padding: 8px 10px;
+                gap: 6px;
+            }
+            .summary-badge { font-size: 0.7rem; padding: 2px 8px; }
+
+            .ai-action-toolbar {
+                justify-content: center;
+                padding-top: 10px;
+                margin-top: 10px;
+            }
+            .toolbar-btn { width: 36px; height: 36px; }
+            .toolbar-btn[data-tooltip]::after { display: none; }
+
+            .trust-live { gap: 12px; }
+            .trust-live-item { font-size: 0.75rem; }
+        }
+
     </style>
 </head>
 <body>
@@ -3593,55 +4573,108 @@
                         <span style="position: relative; z-index: 1;">지금 무료로 체험하기</span>
                     </button>
                 </div>
+
+                <div class="hero-stats">
+                    <div class="hero-stat-item">
+                        <div class="hero-stat-number" data-count="60">0</div>
+                        <div class="hero-stat-label">전문 리더</div>
+                    </div>
+                    <div class="hero-stat-item">
+                        <div class="hero-stat-number" data-count="24">0</div>
+                        <div class="hero-stat-label">시간 AI 상담</div>
+                    </div>
+                    <div class="hero-stat-item">
+                        <div class="hero-stat-number" data-count="100" data-suffix="+">0</div>
+                        <div class="hero-stat-label">법령 실시간 검증</div>
+                    </div>
+                </div>
             </div>
 
             <!-- Example Questions -->
-            <div class="example-questions">
+            <div class="example-questions landing-animate">
                 <h3>💬 이런 질문을 해보세요</h3>
-                <div class="example-grid">
-                    <button class="example-btn" aria-label="예시 질문: 전세분쟁" data-question="2년 전인 2024년 3월에 전세 계약을 했습니다. 보증금은 3억원이고, 2026년 3월이 만기입니다. 그런데 집주인이 갑자기 집을 팔겠다고 하면서 2개월 뒤에 나가달라고 합니다.">
-                        💬 전세분쟁
-                    </button>
-                    <button class="example-btn" aria-label="예시 질문: 부동산" data-question="아버지께서 2020년 1월에 제 명의로 아파트를 구입하셨습니다. 실제 돈은 아버지가 내셨고, 저는 그냥 명의만 빌려드린 것입니다. 그런데 지금 제 빚 때문에 경매가 진행 중입니다.">
-                        💬 부동산
-                    </button>
-                    <button class="example-btn" aria-label="예시 질문: 노동문제" data-question="회사에서 갑자기 해고 통보를 받았습니다. 제가 3번이나 지각을 했다는 이유인데, 사실 그 날들은 모두 지하철 고장 때문이었습니다.">
-                        💬 노동문제
-                    </button>
-                    <button class="example-btn" aria-label="예시 질문: 이혼·양육" data-question="남편과 이혼을 준비하고 있습니다. 아이가 7살인데, 양육권과 재산분할은 어떻게 진행되나요? 남편 명의의 아파트와 공동 대출이 있습니다.">
-                        💬 이혼·양육
-                    </button>
-                    <button class="example-btn" aria-label="예시 질문: 상속분쟁" data-question="아버지가 돌아가시면서 유언장 없이 아파트 1채와 예금 2억원을 남기셨습니다. 형제가 3명인데, 큰형이 혼자 다 가져가겠다고 합니다.">
-                        💬 상속분쟁
-                    </button>
-                    <button class="example-btn" aria-label="예시 질문: 교통사고" data-question="지난주 교차로에서 교통사고가 났습니다. 상대방이 신호위반이었는데, 보험사에서 저한테도 과실 30%를 주장하고 있습니다.">
-                        💬 교통사고
-                    </button>
-                    <button class="example-btn" aria-label="예시 질문: 사기·횡령" data-question="지인에게 사업자금으로 5천만원을 빌려줬는데, 알고 보니 처음부터 갚을 생각이 없었던 것 같습니다. 차용증은 있지만 공증은 안 했습니다.">
-                        💬 사기·횡령
-                    </button>
-                    <button class="example-btn" aria-label="예시 질문: 명예훼손" data-question="전 직장 동료가 SNS에 저에 대한 허위사실을 올려서 퇴사까지 하게 되었습니다. 게시글 캡처는 해두었는데 어떻게 대응해야 하나요?">
-                        💬 명예훼손
-                    </button>
-                    <button class="example-btn" aria-label="예시 질문: 의료사고" data-question="어머니가 간단한 수술을 받았는데 의료진 실수로 합병증이 생겨 재수술을 받아야 합니다. 병원에서는 불가항력이라고 하는데 손해배상 청구가 가능한가요?">
-                        💬 의료사고
-                    </button>
+                <div class="example-card-grid">
+                    <div class="example-card" role="button" tabindex="0" aria-label="예시 질문: 전세분쟁" data-question="2년 전인 2024년 3월에 전세 계약을 했습니다. 보증금은 3억원이고, 2026년 3월이 만기입니다. 그런데 집주인이 갑자기 집을 팔겠다고 하면서 2개월 뒤에 나가달라고 합니다.">
+                        <span class="example-card-icon">⚖️</span>
+                        <div class="example-card-content">
+                            <div class="example-card-title">전세분쟁</div>
+                            <div class="example-card-desc">보증금 반환, 계약 갱신 거절 대응</div>
+                        </div>
+                    </div>
+                    <div class="example-card" role="button" tabindex="0" aria-label="예시 질문: 부동산" data-question="아버지께서 2020년 1월에 제 명의로 아파트를 구입하셨습니다. 실제 돈은 아버지가 내셨고, 저는 그냥 명의만 빌려드린 것입니다. 그런데 지금 제 빚 때문에 경매가 진행 중입니다.">
+                        <span class="example-card-icon">🏠</span>
+                        <div class="example-card-content">
+                            <div class="example-card-title">부동산</div>
+                            <div class="example-card-desc">명의신탁, 경매, 소유권 분쟁</div>
+                        </div>
+                    </div>
+                    <div class="example-card" role="button" tabindex="0" aria-label="예시 질문: 노동문제" data-question="회사에서 갑자기 해고 통보를 받았습니다. 제가 3번이나 지각을 했다는 이유인데, 사실 그 날들은 모두 지하철 고장 때문이었습니다.">
+                        <span class="example-card-icon">💼</span>
+                        <div class="example-card-content">
+                            <div class="example-card-title">노동문제</div>
+                            <div class="example-card-desc">부당해고, 임금체불, 퇴직금</div>
+                        </div>
+                    </div>
+                    <div class="example-card" role="button" tabindex="0" aria-label="예시 질문: 이혼·양육" data-question="남편과 이혼을 준비하고 있습니다. 아이가 7살인데, 양육권과 재산분할은 어떻게 진행되나요? 남편 명의의 아파트와 공동 대출이 있습니다.">
+                        <span class="example-card-icon">👨‍👩‍👧</span>
+                        <div class="example-card-content">
+                            <div class="example-card-title">이혼·양육</div>
+                            <div class="example-card-desc">양육권, 재산분할, 위자료</div>
+                        </div>
+                    </div>
+                    <div class="example-card" role="button" tabindex="0" aria-label="예시 질문: 상속분쟁" data-question="아버지가 돌아가시면서 유언장 없이 아파트 1채와 예금 2억원을 남기셨습니다. 형제가 3명인데, 큰형이 혼자 다 가져가겠다고 합니다.">
+                        <span class="example-card-icon">📜</span>
+                        <div class="example-card-content">
+                            <div class="example-card-title">상속분쟁</div>
+                            <div class="example-card-desc">유류분, 상속재산 분할</div>
+                        </div>
+                    </div>
+                    <div class="example-card" role="button" tabindex="0" aria-label="예시 질문: 교통사고" data-question="지난주 교차로에서 교통사고가 났습니다. 상대방이 신호위반이었는데, 보험사에서 저한테도 과실 30%를 주장하고 있습니다.">
+                        <span class="example-card-icon">🚗</span>
+                        <div class="example-card-content">
+                            <div class="example-card-title">교통사고</div>
+                            <div class="example-card-desc">과실비율, 보험 보상, 합의</div>
+                        </div>
+                    </div>
+                    <div class="example-card" role="button" tabindex="0" aria-label="예시 질문: 사기·횡령" data-question="지인에게 사업자금으로 5천만원을 빌려줬는데, 알고 보니 처음부터 갚을 생각이 없었던 것 같습니다. 차용증은 있지만 공증은 안 했습니다.">
+                        <span class="example-card-icon">🔍</span>
+                        <div class="example-card-content">
+                            <div class="example-card-title">사기·횡령</div>
+                            <div class="example-card-desc">고소장 작성, 피해 회복</div>
+                        </div>
+                    </div>
+                    <div class="example-card" role="button" tabindex="0" aria-label="예시 질문: 명예훼손" data-question="전 직장 동료가 SNS에 저에 대한 허위사실을 올려서 퇴사까지 하게 되었습니다. 게시글 캡처는 해두었는데 어떻게 대응해야 하나요?">
+                        <span class="example-card-icon">🛡️</span>
+                        <div class="example-card-content">
+                            <div class="example-card-title">명예훼손</div>
+                            <div class="example-card-desc">SNS 허위사실, 손해배상</div>
+                        </div>
+                    </div>
+                    <div class="example-card" role="button" tabindex="0" aria-label="예시 질문: 의료사고" data-question="어머니가 간단한 수술을 받았는데 의료진 실수로 합병증이 생겨 재수술을 받아야 합니다. 병원에서는 불가항력이라고 하는데 손해배상 청구가 가능한가요?">
+                        <span class="example-card-icon">🏥</span>
+                        <div class="example-card-content">
+                            <div class="example-card-title">의료사고</div>
+                            <div class="example-card-desc">의료과실, 손해배상 청구</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- Core Features (Compact) -->
-            <div class="core-features-section">
+            <div class="core-features-section landing-animate">
                 <div class="feature-cards compact">
                     <div class="feature-card-mini">
                         <span class="feature-icon">🐝</span>
                         <div>
-                            <strong>60 Leader Swarm</strong>
-                            <span>60명 전문 리더 동시 협업 분석</span>
+                            <div class="feature-number">60</div>
+                            <strong>Leader Swarm</strong>
+                            <span>전문 리더 동시 협업 분석</span>
                         </div>
                     </div>
                     <div class="feature-card-mini">
                         <span class="feature-icon">🛡️</span>
                         <div>
+                            <div class="feature-number">100+</div>
                             <strong>SSOT 실시간 검증</strong>
                             <span>법제처 API 기반 법령 검증</span>
                         </div>
@@ -3649,18 +4682,63 @@
                     <div class="feature-card-mini">
                         <span class="feature-icon">📋</span>
                         <div>
-                            <strong>5단계 구조화 응답</strong>
+                            <div class="feature-number">5</div>
+                            <strong>단계 구조화 응답</strong>
                             <span>감정수용부터 행동계획까지</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Trust Badges (inline) -->
-            <div class="trust-inline">
-                <span><span class="material-symbols-outlined">verified</span> law.go.kr 실시간 검증</span>
-                <span><span class="material-symbols-outlined">api</span> DRF API 연동</span>
-                <span><span class="material-symbols-outlined">toll</span> 무료 이용</span>
+            <!-- Premium Plan Pricing -->
+            <div class="pricing-section">
+                <h3>플랜 선택</h3>
+                <div class="pricing-cards">
+                    <div class="pricing-card">
+                        <span class="plan-badge free-badge">FREE</span>
+                        <div class="plan-name">무료</div>
+                        <div class="plan-price">&#8361;0</div>
+                        <ul>
+                            <li>4시간당 10회 질문</li>
+                            <li>기본 AI 분석</li>
+                            <li>60명 리더 협업</li>
+                            <li>SSOT 법령 검증</li>
+                        </ul>
+                        <button class="plan-cta free-cta">현재 이용 중</button>
+                    </div>
+                    <div class="pricing-card premium">
+                        <span class="plan-badge premium-badge">PREMIUM</span>
+                        <div class="plan-name">프리미엄</div>
+                        <div class="plan-price">&#8361;9,900 <small>/월</small></div>
+                        <ul>
+                            <li>4시간당 100회 질문</li>
+                            <li>5000자+ 심층 응답</li>
+                            <li>Claude 전문가 검증</li>
+                            <li>상담 이력 관리</li>
+                            <li>전문 변호사 연결</li>
+                        </ul>
+                        <button class="plan-cta premium-cta" onclick="alert('프리미엄 서비스 준비 중입니다. 곧 오픈 예정입니다!')">프리미엄 시작하기</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lawyer Consultation CTA -->
+            <div class="lawyer-section">
+                <h3>AI가 1차 분석, 전문 변호사가 마무리</h3>
+                <p>AI 분석 결과를 바탕으로 전문 변호사가 최종 자문을 드립니다</p>
+                <button class="lawyer-cta-landing" onclick="alert('변호사 연결 서비스 준비 중입니다. 곧 오픈 예정입니다!')">
+                    <span class="material-symbols-outlined" style="font-size: 1.1rem; vertical-align: middle;">gavel</span>
+                    변호사 상담 신청
+                </button>
+            </div>
+
+            <!-- Trust Badges (live stats) -->
+            <div class="trust-inline landing-animate">
+                <div class="trust-live">
+                    <span class="trust-live-item"><span class="trust-pulse"></span> <span class="material-symbols-outlined">verified</span> law.go.kr 실시간 검증</span>
+                    <span class="trust-live-item"><span class="material-symbols-outlined">api</span> DRF API 연동</span>
+                    <span class="trust-live-item"><span class="material-symbols-outlined">toll</span> 무료 이용</span>
+                </div>
             </div>
         </div>
 
@@ -3711,6 +4789,43 @@
             </div>
         </div>
     </main>
+</div>
+
+<!-- Lawyer Consultation Modal -->
+<div class="lawyer-modal-overlay" id="lawyerModalOverlay">
+    <div class="lawyer-modal">
+        <button class="modal-close" onclick="UI.closeLawyerModal()" aria-label="닫기">
+            <span class="material-symbols-outlined">close</span>
+        </button>
+        <div id="lawyerFormView">
+            <h3>변호사 상담 신청</h3>
+            <p class="modal-desc">AI 분석 결과를 바탕으로 전문 변호사가 연락드립니다</p>
+            <form id="lawyerForm" onsubmit="return UI.submitLawyerInquiry(event)">
+                <div class="form-group">
+                    <label for="lawyerName">이름 *</label>
+                    <input type="text" id="lawyerName" required maxlength="50" placeholder="홍길동">
+                </div>
+                <div class="form-group">
+                    <label for="lawyerPhone">연락처 *</label>
+                    <input type="tel" id="lawyerPhone" required maxlength="20" placeholder="010-1234-5678">
+                </div>
+                <div class="form-group">
+                    <label for="lawyerSummary">상담 내용 요약</label>
+                    <textarea id="lawyerSummary" maxlength="500" placeholder="상담받고 싶은 내용을 간략히 적어주세요"></textarea>
+                </div>
+                <input type="hidden" id="lawyerLeader" value="">
+                <button type="submit" class="modal-submit" id="lawyerSubmitBtn">상담 신청하기</button>
+            </form>
+        </div>
+        <div id="lawyerSuccessView" style="display:none;">
+            <div class="modal-success">
+                <div class="success-icon">&#9989;</div>
+                <p>변호사 상담 신청이 접수되었습니다</p>
+                <p style="font-size: 0.78rem; color: var(--text-muted, #64748b); margin-top: 8px;">빠른 시일 내 연락드리겠습니다</p>
+                <button class="modal-submit" style="margin-top: 16px;" onclick="UI.closeLawyerModal()">확인</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -3865,13 +4980,15 @@
 
             this.startChatBtn.onclick = () => this.switchToChatMode();
 
-            document.querySelectorAll('.example-btn').forEach(btn => {
-                btn.onclick = () => {
-                    const question = btn.getAttribute('data-question');
+            document.querySelectorAll('.example-card').forEach(card => {
+                const handler = () => {
+                    const question = card.getAttribute('data-question');
                     this.userInput.value = question;
                     this.switchToChatMode();
                     this.dispatchPacket();
                 };
+                card.onclick = handler;
+                card.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); } };
             });
 
             // C-Level 임원 클릭/키보드 → 해당 임원에게 인사 질문 전송
@@ -3970,6 +5087,22 @@
             if (!panel) return;
             const isActive = panel.classList.toggle('active');
             if (isActive) this.renderFavorites();
+        },
+
+        // ─── 변호사 상담 모달 ───
+        openLawyerModal(querySummary, leader) {
+            alert('변호사 연결 서비스 준비 중입니다. 곧 오픈 예정입니다!');
+        },
+
+        closeLawyerModal() {
+            const overlay = document.getElementById('lawyerModalOverlay');
+            if (overlay) overlay.classList.remove('active');
+        },
+
+        async submitLawyerInquiry(e) {
+            e.preventDefault();
+            alert('변호사 연결 서비스 준비 중입니다. 곧 오픈 예정입니다!');
+            return false;
         },
 
         saveFavorite(query, response) {
@@ -4444,6 +5577,31 @@
                 .replace(/\n/g, '<br>');
         },
 
+        // ═══ 관련 질문 추천 로드 ═══
+        async _loadSuggestions(container, query, leader, specialty) {
+            try {
+                const res = await fetch(`${this.BASE_URL}/suggest-questions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, leader: leader || '', specialty: specialty || '' })
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (!data.suggestions || !data.suggestions.length) return;
+                container.innerHTML = data.suggestions.map(q =>
+                    `<button class="suggest-chip">${this.escapeHtml(q)}</button>`
+                ).join('');
+                container.querySelectorAll('.suggest-chip').forEach(chip => {
+                    chip.onclick = () => {
+                        this.userInput.value = chip.textContent;
+                        this.updateCharCounter();
+                        this.updateSendBtnState();
+                        this.dispatchPacket();
+                    };
+                });
+            } catch(e) { /* 무시 */ }
+        },
+
         // ═══ 타이핑 인디케이터 상태 텍스트 업데이트 ═══
         _updateTypingStatus(statusText) {
             const steps = document.querySelectorAll('.typing-step');
@@ -4702,7 +5860,26 @@
             if (inList) html.push('</ul>');
             if (inOrderedList) html.push('</ol>');
 
-            return html.join('\n');
+            // 섹션 래핑: H2 기준으로 ai-section 래퍼 생성
+            let joined = html.join('\n');
+            const sectionParts = joined.split(/(?=<h2>)/);
+            if (sectionParts.length > 1) {
+                let secIdx = 0;
+                const wrapped = sectionParts.map((part, i) => {
+                    if (part.startsWith('<h2>')) {
+                        secIdx++;
+                        const titleMatch = part.match(/<h2>(.*?)<\/h2>/);
+                        const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '') : '';
+                        const h2Tag = titleMatch ? titleMatch[0] : '';
+                        const body = part.substring(part.indexOf('</h2>') + 5);
+                        return `<div class="ai-section" id="sec-${secIdx}" data-section-title="${this.escapeHtml(title)}"><div class="ai-section-header">${h2Tag}<span class="material-symbols-outlined toggle-icon">expand_less</span></div><div class="ai-section-body">${body}</div></div>`;
+                    }
+                    return part;
+                });
+                joined = wrapped.join('\n');
+            }
+
+            return joined;
         },
 
         formatInline(text) {
@@ -4712,6 +5889,8 @@
             result = result.replace(/\*\*\*([^*]+?)\*\*\*/g, '<strong><em>$1</em></strong>');
             result = result.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>');
             result = result.replace(/\*([^*\n]+?)\*/g, '<em>$1</em>');
+            // 법령 인용 하이라이트: "민법 제750조", "형법 제123조의2 제1항" 등
+            result = result.replace(/((?:[가-힣]+\s)?제\d+조(?:의\d+)?(?:\s제\d+항)?(?:\s제\d+호)?)/g, '<span class="law-cite-chip">$1</span>');
             return result;
         },
 
@@ -4760,57 +5939,139 @@
             if (sender === 'ai' && !id) {
                 this.addCopyButton(msgDiv);
 
-                // 즐겨찾기 버튼
-                if (originalQuery && rawResponse) {
-                    const favBtn = document.createElement('button');
-                    favBtn.className = 'fav-btn';
-                    favBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px;">bookmark_add</span> 저장';
-                    favBtn.onclick = () => {
-                        this.saveFavorite(originalQuery, rawResponse);
-                        favBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px; color: #f59e0b;">bookmark_added</span> 저장됨';
-                        favBtn.style.borderColor = '#f59e0b';
-                        favBtn.style.color = '#f59e0b';
-                    };
-                    msgDiv.appendChild(favBtn);
+                // ── 응답 요약 카드 ──
+                if (leaderName && originalQuery) {
+                    const sections = msgDiv.querySelectorAll('.ai-section');
+                    const firstH2 = msgDiv.querySelector('h2');
+                    const topicText = firstH2 ? firstH2.textContent.replace(/[^\w가-힣\s]/g, '').trim().substring(0, 20) : '';
+                    const summaryCard = document.createElement('div');
+                    summaryCard.className = 'response-summary-card';
+                    let summaryHtml = `<span class="summary-badge"><span class="material-symbols-outlined">person</span>${this.escapeHtml(leaderName)}</span>`;
+                    if (leaderSpecialtyFromServer) summaryHtml += `<span class="summary-badge"><span class="material-symbols-outlined">category</span>${this.escapeHtml(leaderSpecialtyFromServer.split(',')[0].trim())}</span>`;
+                    if (topicText) summaryHtml += `<span class="summary-badge"><span class="material-symbols-outlined">topic</span>${this.escapeHtml(topicText)}</span>`;
+                    if (elapsedTime) summaryHtml += `<span class="summary-badge"><span class="material-symbols-outlined">timer</span>${elapsedTime}초</span>`;
+                    summaryCard.innerHTML = summaryHtml;
+                    const headerEl = msgDiv.querySelector('.leader-response-header');
+                    if (headerEl && headerEl.nextSibling) {
+                        msgDiv.insertBefore(summaryCard, headerEl.nextSibling);
+                    } else {
+                        msgDiv.insertBefore(summaryCard, msgDiv.firstChild);
+                    }
+                }
 
-                    // 공유 버튼
-                    const shareBtn = document.createElement('button');
-                    shareBtn.className = 'share-btn';
-                    shareBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px;">share</span> 공유';
-                    shareBtn.onclick = async () => {
-                        const shareText = rawResponse.substring(0, 500) + (rawResponse.length > 500 ? '...' : '');
-                        const shareData = {
-                            title: 'Lawmadi OS - AI 법률 분석',
-                            text: shareText,
-                            url: window.location.origin
+                // ── TOC 네비게이션 (섹션 3개 초과 시) ──
+                const aiSections = msgDiv.querySelectorAll('.ai-section');
+                if (aiSections.length > 3) {
+                    const tocNav = document.createElement('div');
+                    tocNav.className = 'ai-toc';
+                    aiSections.forEach((sec) => {
+                        const title = sec.getAttribute('data-section-title') || '';
+                        if (!title) return;
+                        const chip = document.createElement('span');
+                        chip.className = 'ai-toc-item';
+                        chip.textContent = title.substring(0, 15);
+                        chip.onclick = () => {
+                            sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            sec.classList.add('toc-highlight');
+                            setTimeout(() => sec.classList.remove('toc-highlight'), 1500);
                         };
+                        tocNav.appendChild(chip);
+                    });
+                    const summaryEl = msgDiv.querySelector('.response-summary-card');
+                    const insertRef = summaryEl ? summaryEl.nextSibling : (msgDiv.querySelector('.leader-response-header')?.nextSibling || msgDiv.firstChild);
+                    msgDiv.insertBefore(tocNav, insertRef);
+                }
+
+                // ── 섹션 접기/펼치기 바인딩 ──
+                msgDiv.querySelectorAll('.ai-section-header').forEach(header => {
+                    header.addEventListener('click', () => {
+                        header.parentElement.classList.toggle('collapsed');
+                    });
+                });
+
+                // ── 키워드 하이라이트 ──
+                if (originalQuery) {
+                    const stopwords = /[은는이가을를의에서로과와도만에게까지부터마다조차처럼한테보다]/g;
+                    const keywords = originalQuery.replace(stopwords, ' ').split(/\s+/).filter(w => w.length >= 2);
+                    if (keywords.length > 0) {
+                        const kwRegex = new RegExp(`(${keywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+                        const walker = document.createTreeWalker(msgDiv, NodeFilter.SHOW_TEXT, {
+                            acceptNode(node) {
+                                const tag = node.parentElement?.tagName;
+                                if (['CODE','PRE','H1','H2','H3','SCRIPT','STYLE'].includes(tag)) return NodeFilter.FILTER_REJECT;
+                                if (node.parentElement?.classList?.contains('law-cite-chip')) return NodeFilter.FILTER_REJECT;
+                                if (node.parentElement?.classList?.contains('leader-name')) return NodeFilter.FILTER_REJECT;
+                                return NodeFilter.FILTER_ACCEPT;
+                            }
+                        });
+                        const nodes = [];
+                        while (walker.nextNode()) nodes.push(walker.currentNode);
+                        nodes.forEach(n => {
+                            if (kwRegex.test(n.textContent)) {
+                                const span = document.createElement('span');
+                                span.innerHTML = n.textContent.replace(kwRegex, '<span class="highlight">$1</span>');
+                                n.parentNode.replaceChild(span, n);
+                            }
+                        });
+                    }
+                }
+
+                // ── 액션 버튼 툴바 ──
+                if (originalQuery && rawResponse) {
+                    const toolbar = document.createElement('div');
+                    toolbar.className = 'ai-action-toolbar';
+
+                    // 그룹1: 저장, 공유, 내보내기
+                    const g1 = document.createElement('div');
+                    g1.className = 'toolbar-group';
+
+                    const favBtn = this._createToolbarBtn('bookmark_add', '저장', () => {
+                        this.saveFavorite(originalQuery, rawResponse);
+                        favBtn.querySelector('.material-symbols-outlined').textContent = 'bookmark_added';
+                        favBtn.classList.add('active');
+                    });
+                    g1.appendChild(favBtn);
+
+                    const shareBtn = this._createToolbarBtn('share', '공유', async () => {
+                        const shareText = rawResponse.substring(0, 500) + (rawResponse.length > 500 ? '...' : '');
                         try {
                             if (navigator.share) {
-                                await navigator.share(shareData);
+                                await navigator.share({ title: 'Lawmadi OS', text: shareText, url: location.origin });
                             } else {
-                                await navigator.clipboard.writeText(shareText + '\n\n' + window.location.origin);
-                                shareBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px; color: #3b82f6;">check</span> 복사됨';
-                                shareBtn.style.borderColor = '#3b82f6';
-                                shareBtn.style.color = '#3b82f6';
-                                setTimeout(() => {
-                                    shareBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px;">share</span> 공유';
-                                    shareBtn.style.borderColor = '';
-                                    shareBtn.style.color = '';
-                                }, 2000);
+                                await navigator.clipboard.writeText(shareText + '\n\n' + location.origin);
+                                shareBtn.querySelector('.material-symbols-outlined').textContent = 'check';
+                                setTimeout(() => { shareBtn.querySelector('.material-symbols-outlined').textContent = 'share'; }, 2000);
                             }
-                        } catch (e) {
-                            if (e.name !== 'AbortError') console.warn('Share failed:', e);
-                        }
-                    };
-                    msgDiv.appendChild(shareBtn);
+                        } catch(e) { if (e.name !== 'AbortError') console.warn('Share failed:', e); }
+                    });
+                    g1.appendChild(shareBtn);
 
-                    // 전문가용 답변 버튼
-                    const expertBtn = document.createElement('button');
-                    expertBtn.className = 'expert-btn';
-                    expertBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px;">verified</span> 전문가용 답변';
-                    expertBtn.onclick = async () => {
-                        expertBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px;">hourglass_top</span> Claude 검증 중...';
-                        expertBtn.disabled = true;
+                    const exportBtn = this._createToolbarBtn('download', '내보내기', () => {
+                        const now = new Date();
+                        const pad = n => String(n).padStart(2, '0');
+                        const fname = `lawmadi-상담-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.txt`;
+                        let content = `[Lawmadi OS 법률 상담 기록]\n날짜: ${now.toLocaleString('ko-KR')}\n\n`;
+                        content += `[질문]\n${originalQuery}\n\n`;
+                        if (leaderName) content += `[담당 리더] ${leaderName}${leaderSpecialtyFromServer ? ' (' + leaderSpecialtyFromServer + ')' : ''}\n\n`;
+                        content += `[답변]\n${rawResponse}\n\n`;
+                        content += `---\n본 분석은 AI에 의해 자동 생성되었습니다. 최종 결정은 법률 전문가와 상의하시기 바랍니다.\n`;
+                        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a'); a.href = url; a.download = fname; a.click();
+                        URL.revokeObjectURL(url);
+                        exportBtn.querySelector('.material-symbols-outlined').textContent = 'check';
+                        setTimeout(() => { exportBtn.querySelector('.material-symbols-outlined').textContent = 'download'; }, 2000);
+                    });
+                    g1.appendChild(exportBtn);
+                    toolbar.appendChild(g1);
+
+                    // 그룹2: 전문가, 변호사
+                    const g2 = document.createElement('div');
+                    g2.className = 'toolbar-group';
+
+                    const expertBtn = this._createToolbarBtn('verified', '전문가 검증', async () => {
+                        expertBtn.querySelector('.material-symbols-outlined').textContent = 'hourglass_top';
+                        expertBtn.style.pointerEvents = 'none';
                         try {
                             const expertRes = await fetch(`${this.BASE_URL}/ask-expert`, {
                                 method: 'POST',
@@ -4823,41 +6084,71 @@
                                 const panel = document.createElement('div');
                                 panel.className = 'expert-response-panel';
                                 panel.innerHTML = this.formatReport(expertData.response);
-                                msgDiv.appendChild(panel);
-                                // 검증 상태에 따라 버튼 표시 분기
+                                msgDiv.insertBefore(panel, toolbar);
                                 const vResult = expertData.verification?.result || 'SKIP';
                                 const vScore = expertData.verification?.ssot_compliance_score || 0;
-                                if (vResult === 'PASS') {
-                                    expertBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px; color: #16a34a;">check_circle</span> SSOT 검증 완료 (${vScore}점)`;
-                                    expertBtn.style.borderColor = '#16a34a';
-                                    expertBtn.style.color = '#16a34a';
-                                } else if (vResult === 'WARNING') {
-                                    expertBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px; color: #d97706;">warning</span> SSOT 부분 검증 (${vScore}점)`;
-                                    expertBtn.style.borderColor = '#d97706';
-                                    expertBtn.style.color = '#d97706';
-                                } else if (vResult === 'FAIL') {
-                                    expertBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px; color: #dc2626;">error</span> SSOT 검증 미달 (${vScore}점)`;
-                                    expertBtn.style.borderColor = '#dc2626';
-                                    expertBtn.style.color = '#dc2626';
-                                } else {
-                                    expertBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px; color: #a78bfa;">auto_awesome</span> 전문가 분석 완료';
-                                    expertBtn.style.borderColor = '#7c3aed';
-                                    expertBtn.style.color = '#7c3aed';
+                                // SSOT 신뢰도 바
+                                if (vScore > 0) {
+                                    const barDiv = document.createElement('div');
+                                    barDiv.className = 'ssot-confidence-bar';
+                                    const level = vScore >= 80 ? 'high' : vScore >= 50 ? 'medium' : 'low';
+                                    barDiv.innerHTML = `<span class="bar-label">SSOT 신뢰도</span><div class="bar-track"><div class="bar-fill ${level}" style="width: ${vScore}%"></div></div><span class="bar-score ${level}">${vScore}점</span>`;
+                                    msgDiv.insertBefore(barDiv, toolbar);
                                 }
-                                expertBtn.style.background = 'none';
-                                if (expertData.latency_ms) {
-                                    expertBtn.innerHTML += ` · ${(expertData.latency_ms / 1000).toFixed(1)}초`;
-                                }
-                            } else {
-                                throw new Error(expertData.response || '검증 실패');
-                            }
+                                if (vResult === 'PASS') { expertBtn.style.color = '#16a34a'; }
+                                else if (vResult === 'WARNING') { expertBtn.style.color = '#d97706'; }
+                                else if (vResult === 'FAIL') { expertBtn.style.color = '#dc2626'; }
+                                else { expertBtn.style.color = '#7c3aed'; }
+                                expertBtn.querySelector('.material-symbols-outlined').textContent = 'check_circle';
+                            } else { throw new Error('검증 실패'); }
                         } catch (e) {
-                            expertBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px;">error</span> 재시도';
-                            expertBtn.disabled = false;
+                            expertBtn.querySelector('.material-symbols-outlined').textContent = 'verified';
+                            expertBtn.style.pointerEvents = '';
                             console.error('Expert verification failed:', e);
                         }
+                    });
+                    g2.appendChild(expertBtn);
+
+                    // 변호사 상담 CTA
+                    if (leaderName) {
+                        const clevelOnly = ['서연','지유','유나'];
+                        const lNames = leaderName.split(',').map(n => n.trim()).filter(Boolean);
+                        if (!lNames.every(n => clevelOnly.includes(n))) {
+                            const lawyerBtn = this._createToolbarBtn('gavel', '변호사 상담', () => {
+                                UI.openLawyerModal(originalQuery, leaderName);
+                            });
+                            g2.appendChild(lawyerBtn);
+                        }
+                    }
+                    toolbar.appendChild(g2);
+
+                    // 그룹3: 👍/👎 피드백
+                    const g3 = document.createElement('div');
+                    g3.className = 'toolbar-group';
+                    const fbUp = this._createToolbarBtn('thumb_up', '좋아요', () => _sendFb('up', fbUp));
+                    const fbDown = this._createToolbarBtn('thumb_down', '아쉬워요', () => _sendFb('down', fbDown));
+                    const _sendFb = async (rating, btn) => {
+                        try {
+                            await fetch(`${this.BASE_URL}/feedback`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ rating, query: originalQuery, leader: leaderName || '' })
+                            });
+                        } catch(e) { /* 무시 */ }
+                        fbUp.classList.add('voted');
+                        fbDown.classList.add('voted');
                     };
-                    msgDiv.appendChild(expertBtn);
+                    g3.appendChild(fbUp);
+                    g3.appendChild(fbDown);
+                    toolbar.appendChild(g3);
+
+                    msgDiv.appendChild(toolbar);
+
+                    // 관련 질문 추천 (비동기 로드)
+                    const suggestArea = document.createElement('div');
+                    suggestArea.className = 'suggest-area';
+                    msgDiv.appendChild(suggestArea);
+                    this._loadSuggestions(suggestArea, originalQuery, leaderName, leaderSpecialtyFromServer);
                 }
 
                 // PDF 다운로드 버튼 (법률문서 코드블록 감지)
@@ -4930,6 +6221,15 @@
                 this.addCopyButton(msgDiv);
                 this._smartScroll();
             }
+        },
+
+        _createToolbarBtn(icon, tooltip, onClick) {
+            const btn = document.createElement('button');
+            btn.className = 'toolbar-btn';
+            btn.setAttribute('data-tooltip', tooltip);
+            btn.innerHTML = `<span class="material-symbols-outlined">${icon}</span>`;
+            btn.onclick = onClick;
+            return btn;
         },
 
         addCopyButton(msgDiv) {
@@ -5209,6 +6509,58 @@
         </button>
     </div>
 </div>
+
+<script>
+// ═══ 랜딩 스크롤 애니메이션 + 카운터 ═══
+(function() {
+    // IntersectionObserver 스크롤 애니메이션
+    const animElements = document.querySelectorAll('.landing-animate');
+    if (animElements.length > 0 && 'IntersectionObserver' in window) {
+        const obs = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    obs.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.15 });
+        animElements.forEach(el => obs.observe(el));
+    } else {
+        animElements.forEach(el => el.classList.add('visible'));
+    }
+
+    // Hero 숫자 카운트업 애니메이션
+    const counters = document.querySelectorAll('.hero-stat-number[data-count]');
+    const animateCounter = (el) => {
+        const target = parseInt(el.getAttribute('data-count'));
+        const suffix = el.getAttribute('data-suffix') || '';
+        const duration = 1200;
+        const start = performance.now();
+        const step = (now) => {
+            const progress = Math.min((now - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.floor(target * eased) + suffix;
+            if (progress < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    };
+    if (counters.length > 0 && 'IntersectionObserver' in window) {
+        const counterObs = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    animateCounter(entry.target);
+                    counterObs.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.5 });
+        counters.forEach(el => counterObs.observe(el));
+    } else {
+        counters.forEach(el => {
+            el.textContent = el.getAttribute('data-count') + (el.getAttribute('data-suffix') || '');
+        });
+    }
+})();
+</script>
 
 <script>
 // ═══ PWA Install Prompt (A2HS) ═══
