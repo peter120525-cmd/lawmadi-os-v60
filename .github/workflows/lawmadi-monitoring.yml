@@ -1,0 +1,217 @@
+name: Lawmadi OS Health Monitor
+
+on:
+  # 6시간마다 자동 실행
+  schedule:
+    - cron: '0 */6 * * *'
+  # 수동 실행 지원
+  workflow_dispatch:
+    inputs:
+      include_simulation:
+        description: '시뮬레이션 포함 여부'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+env:
+  API_URL: https://lawmadi-os-v60-uzqkp6kadq-du.a.run.app
+
+jobs:
+  health-check:
+    name: System Health Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Health Check
+        id: health
+        run: |
+          python - <<'PYEOF'
+          import requests, json, time, sys
+
+          API = "${{ env.API_URL }}"
+          results = {"checks": [], "pass": 0, "fail": 0}
+
+          def check(name, func):
+              try:
+                  ok, msg, ms = func()
+                  icon = "✅" if ok else "❌"
+                  results["pass" if ok else "fail"] += 1
+                  results["checks"].append({"name": name, "ok": ok, "msg": msg, "ms": ms})
+                  print(f"{icon} {name}: {msg} ({ms:.0f}ms)")
+                  return ok
+              except Exception as e:
+                  results["fail"] += 1
+                  results["checks"].append({"name": name, "ok": False, "msg": str(e)[:100], "ms": 0})
+                  print(f"❌ {name}: {e}")
+                  return False
+
+          # 1. /health 엔드포인트
+          def check_health():
+              s = time.time()
+              r = requests.get(f"{API}/health", timeout=15)
+              ms = (time.time() - s) * 1000
+              data = r.json()
+              status = data.get("status", "")
+              modules = data.get("diagnostics", {}).get("modules", {})
+              active = sum(1 for v in modules.values() if v)
+              total = len(modules)
+              return status == "online", f"status={status}, modules={active}/{total}", ms
+
+          check("Health Endpoint", check_health)
+
+          # 2. API 응답 시간
+          def check_latency():
+              s = time.time()
+              r = requests.get(f"{API}/health", timeout=15)
+              ms = (time.time() - s) * 1000
+              ok = ms < 3000
+              return ok, f"{ms:.0f}ms {'(정상)' if ok else '(느림!)'}", ms
+
+          check("API Latency", check_latency)
+
+          # 3. 핵심 모듈 상태
+          def check_modules():
+              r = requests.get(f"{API}/health", timeout=15)
+              modules = r.json().get("diagnostics", {}).get("modules", {})
+              critical = ["gemini_key", "swarm_orchestrator", "clevel_handler"]
+              missing = [m for m in critical if not modules.get(m, False)]
+              ok = len(missing) == 0
+              return ok, f"{'모두 활성' if ok else f'비활성: {missing}'}", 0
+
+          check("Critical Modules", check_modules)
+
+          # 4. Gemini 모델 상태
+          def check_gemini():
+              r = requests.get(f"{API}/health", timeout=15)
+              model = r.json().get("diagnostics", {}).get("gemini_model", "unknown")
+              return "gemini" in model.lower(), f"model={model}", 0
+
+          check("Gemini Model", check_gemini)
+
+          # 결과 요약
+          total = results["pass"] + results["fail"]
+          print(f"\n{'='*50}")
+          print(f"결과: {results['pass']}/{total} 통과")
+          status = "OK" if results["fail"] == 0 else "DEGRADED"
+          print(f"상태: {status}")
+
+          # GitHub Actions 출력
+          import os
+          gh_out = os.environ.get("GITHUB_OUTPUT", "")
+          if gh_out:
+              with open(gh_out, "a") as f:
+                  f.write(f"status={status}\n")
+                  f.write(f"pass_count={results['pass']}\n")
+                  f.write(f"total_count={total}\n")
+
+          if results["fail"] > 0:
+              sys.exit(1)
+          PYEOF
+
+      - name: Simulation Test
+        if: ${{ github.event.inputs.include_simulation != 'false' }}
+        id: simulation
+        run: |
+          python - <<'PYEOF'
+          import requests, json, time, sys
+
+          API = "${{ env.API_URL }}"
+          scenarios = [
+              {"query": "부당해고 구제 방법 알려주세요", "category": "labor"},
+              {"query": "전세 보증금 3억인데 집주인이 안 돌려줘요", "category": "lease"},
+              {"query": "서연아 전세 분쟁 전략 알려줘", "category": "clevel"},
+              {"query": "사기죄 고소장 작성 방법을 알려주세요", "category": "criminal"},
+              {"query": "양도소득세 비과세 요건이 궁금합니다", "category": "tax"},
+          ]
+
+          pass_count = 0
+          results = []
+          delay = 5.0  # Rate limit 방지
+
+          for i, sc in enumerate(scenarios):
+              s = time.time()
+              try:
+                  r = requests.post(f"{API}/ask", json={"query": sc["query"]}, timeout=60)
+                  ms = (time.time() - s) * 1000
+                  if r.status_code == 200:
+                      data = r.json()
+                      resp_len = len(data.get("response", ""))
+                      leader = data.get("leader", "?")
+                      ok = data.get("status") == "SUCCESS" and resp_len >= 50
+                  else:
+                      resp_len, leader, ok = 0, "N/A", False
+              except Exception as e:
+                  ms = (time.time() - s) * 1000
+                  resp_len, leader, ok = 0, "ERR", False
+
+              if ok:
+                  pass_count += 1
+              icon = "✅" if ok else "❌"
+              print(f"{icon} #{i+1} [{sc['category']}] leader={leader} {ms/1000:.1f}s {resp_len}자")
+              results.append({"ok": ok, "cat": sc["category"], "leader": leader, "ms": round(ms)})
+
+              if i < len(scenarios) - 1:
+                  time.sleep(delay)
+
+          total = len(scenarios)
+          print(f"\n{'='*50}")
+          print(f"시뮬레이션: {pass_count}/{total} 성공")
+
+          import os
+          gh_out = os.environ.get("GITHUB_OUTPUT", "")
+          if gh_out:
+              with open(gh_out, "a") as f:
+                  f.write(f"sim_pass={pass_count}\n")
+                  f.write(f"sim_total={total}\n")
+
+          if pass_count < total * 0.8:
+              print("⚠️ 시뮬레이션 성공률 80% 미달!")
+              sys.exit(1)
+          PYEOF
+
+      - name: Generate Report
+        if: always()
+        run: |
+          echo "## Lawmadi OS Health Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **시간**: $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')" >> $GITHUB_STEP_SUMMARY
+          echo "- **API**: ${{ env.API_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **헬스체크**: ${{ steps.health.outcome == 'success' && '✅ 정상' || '❌ 이상' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **시뮬레이션**: ${{ steps.simulation.outcome == 'success' && '✅ 정상' || steps.simulation.outcome == 'skipped' && '⏭️ 스킵' || '❌ 실패' }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Auto Recovery (on failure)
+        if: failure()
+        run: |
+          echo "🔄 자동 복구 시도..."
+          python - <<'PYEOF'
+          import requests, time
+
+          API = "${{ env.API_URL }}"
+
+          # 워밍업 요청 3회
+          for i in range(3):
+              try:
+                  r = requests.get(f"{API}/health", timeout=15)
+                  print(f"워밍업 #{i+1}: HTTP {r.status_code}")
+                  if r.status_code == 200:
+                      print("✅ 서비스 정상 복구 확인")
+                      break
+              except Exception as e:
+                  print(f"❌ 워밍업 #{i+1} 실패: {e}")
+              time.sleep(10)
+          PYEOF

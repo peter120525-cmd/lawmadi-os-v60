@@ -151,11 +151,20 @@ METRICS: Dict[str, Any] = {
 }
 
 @app.middleware("http")
-async def mcp_monitor_middleware(request: Request, call_next):
+async def security_headers_middleware(request: Request, call_next):
+    """보안 헤더 주입 + MCP 모니터링"""
     if request.url.path.startswith("/mcp"):
         METRICS["mcp_requests"] += 1
         logger.info(f"[MCP] {request.method} {request.url.path}")
-    return await call_next(request)
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    if request.url.scheme == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
 # =============================================================
 # 🐝 [L2 SWARM DATA] Leader Registry (Hot-Swap JSON SSOT)
@@ -1964,7 +1973,7 @@ async def get_verification_stats(days: int = 7, authorization: str = Header(defa
         logger.error(f"⚠️ [VerificationStats] 조회 실패: {e}")
         return JSONResponse(
             status_code=500,
-            content={"ok": False, "error": str(e)}
+            content={"ok": False, "error": "통계 조회 중 오류가 발생했습니다."}
         )
 
 # =============================================================
@@ -1972,6 +1981,7 @@ async def get_verification_stats(days: int = 7, authorization: str = Header(defa
 # =============================================================
 
 @app.post("/api/visit")
+@limiter.limit("30/minute")
 async def record_visitor(req: Request):
     """
     방문 기록 API
@@ -1999,12 +2009,13 @@ async def record_visitor(req: Request):
         logger.error(f"⚠️ [API] /api/visit 실패: {e}")
         return JSONResponse(
             status_code=500,
-            content={"ok": False, "error": str(e)}
+            content={"ok": False, "error": "방문 기록 처리 중 오류가 발생했습니다."}
         )
 
 
 @app.get("/api/visitor-stats")
-async def get_visitor_statistics():
+@limiter.limit("30/minute")
+async def get_visitor_statistics(request: Request):
     """
     방문자 통계 조회 API
     - today_visitors: 오늘 방문자 수
@@ -2034,7 +2045,7 @@ async def get_visitor_statistics():
                 "ok": False,
                 "today_visitors": 0,
                 "total_visitors": 0,
-                "error": str(e)
+                "error": "통계 조회 중 오류가 발생했습니다."
             }
         )
 
@@ -2059,7 +2070,7 @@ async def get_leader_stats_api(days: int = 30, authorization: str = Header(defau
         logger.error(f"⚠️ [API] /api/admin/leader-stats 실패: {e}")
         return JSONResponse(
             status_code=500,
-            content={"ok": False, "error": str(e)}
+            content={"ok": False, "error": "리더 통계 조회 중 오류가 발생했습니다."}
         )
 
 
@@ -2083,7 +2094,7 @@ async def get_category_stats_api(days: int = 30, authorization: str = Header(def
         logger.error(f"⚠️ [API] /api/admin/category-stats 실패: {e}")
         return JSONResponse(
             status_code=500,
-            content={"ok": False, "error": str(e)}
+            content={"ok": False, "error": "카테고리 통계 조회 중 오류가 발생했습니다."}
         )
 
 
@@ -2112,7 +2123,7 @@ async def get_leader_queries_api(
         logger.error(f"⚠️ [API] /api/admin/leader-queries 실패: {e}")
         return JSONResponse(
             status_code=500,
-            content={"ok": False, "error": str(e)}
+            content={"ok": False, "error": "리더 질문 조회 중 오류가 발생했습니다."}
         )
 
 # =============================================================
@@ -2547,14 +2558,19 @@ async def ask(request: Request):
 # =============================================================
 
 @app.get("/search")
-async def search(q: str, limit: int = 10):
+@limiter.limit("30/minute")
+async def search(q: str, limit: int = 10, request: Request = None):
     svc = RUNTIME.get("search_service")
     if not svc:
         return {"status": "ERROR", "message": "SearchService not ready"}
+    q = q.strip()[:200]  # 입력 길이 제한
+    if len(q) < 2:
+        return {"status": "ERROR", "message": "검색어는 2자 이상 입력해주세요."}
     return svc.search_law(q)
 
 @app.get("/trending")
-async def trending(limit: int = 10):
+@limiter.limit("30/minute")
+async def trending(limit: int = 10, request: Request = None):
     svc = RUNTIME.get("search_service")
     if not svc:
         return {"status": "ERROR", "message": "SearchService not ready"}
@@ -2566,6 +2582,7 @@ async def trending(limit: int = 10):
 # =============================================================
 
 @app.post("/upload")
+@limiter.limit("10/minute")
 async def upload_document(file: UploadFile = File(...), request: Request = None):
     """
     사용자 문서/이미지 업로드 및 법률 분석
@@ -2690,11 +2707,12 @@ async def upload_document(file: UploadFile = File(...), request: Request = None)
     except Exception as e:
         logger.error(f"❌ [Upload] 업로드 실패: {e}")
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"업로드 실패: {str(e)}")
+        raise HTTPException(status_code=500, detail="파일 업로드 처리 중 오류가 발생했습니다.")
 
 
 @app.post("/analyze-document/{file_id}")
-async def analyze_document(file_id: str, analysis_type: str = "general"):
+@limiter.limit("10/minute")
+async def analyze_document(file_id: str, analysis_type: str = "general", request: Request = None):
     """
     업로드된 문서 법률 분석
 
@@ -2718,20 +2736,26 @@ async def analyze_document(file_id: str, analysis_type: str = "general"):
     logger.info(f"🔍 [Analyze] trace={trace}, file_id={file_id}, type={analysis_type}")
 
     try:
-        # 1. 파일 찾기
+        # 1. 파일 찾기 (경로 탐색 방지: 영숫자만 허용)
+        safe_id = re.sub(r'[^a-fA-F0-9]', '', file_id[:16])
+        if len(safe_id) < 8:
+            raise HTTPException(status_code=400, detail="유효하지 않은 파일 ID입니다.")
         uploads_dir = Path("uploads")
-        matching_files = list(uploads_dir.glob(f"{file_id[:8]}*"))
+        matching_files = list(uploads_dir.glob(f"{safe_id[:8]}*"))
 
         if not matching_files:
             raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
 
-        file_path = matching_files[0]
+        file_path = matching_files[0].resolve()
+        # 경로 탐색 방지: uploads 디렉토리 내부인지 검증
+        if not str(file_path).startswith(str(uploads_dir.resolve())):
+            raise HTTPException(status_code=403, detail="접근이 거부되었습니다.")
         logger.info(f"📄 [Analyze] 파일 발견: {file_path}")
 
         # 2. Gemini 클라이언트 확인
         gc = RUNTIME.get("genai_client")
         if not gc:
-            raise HTTPException(status_code=500, detail="Gemini API Key가 설정되지 않았습니다.")
+            raise HTTPException(status_code=503, detail="AI 분석 서비스가 현재 이용 불가합니다.")
 
         # 3. 파일 타입에 따라 처리
         file_ext = file_path.suffix.lower()
@@ -2768,7 +2792,7 @@ async def analyze_document(file_id: str, analysis_type: str = "general"):
                         analysis_result.get("legal_category", "일반"),
                         analysis_result.get("risk_level", "medium"),
                         os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
-                        f"{file_id}%"
+                        f"{safe_id}%"
                     ),
                     fetch="none"
                 )
@@ -2790,7 +2814,7 @@ async def analyze_document(file_id: str, analysis_type: str = "general"):
     except Exception as e:
         logger.error(f"❌ [Analyze] 분석 실패: {e}")
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"분석 실패: {str(e)}")
+        raise HTTPException(status_code=500, detail="문서 분석 처리 중 오류가 발생했습니다.")
 
 
 async def _analyze_image_document(file_path: Path, analysis_type: str) -> Dict[str, Any]:
@@ -2979,6 +3003,7 @@ async def _analyze_pdf_document(file_path: Path, analysis_type: str) -> Dict[str
 # =============================================================
 
 @app.post("/export-pdf")
+@limiter.limit("10/minute")
 async def export_pdf(req: Request):
     """
     법률문서 텍스트를 PDF로 변환하여 다운로드
@@ -3088,9 +3113,9 @@ async def shutdown():
 _API_KEYS = set(k.strip() for k in os.getenv("API_KEYS", "").split(",") if k.strip())
 
 def _verify_api_key(authorization: str = Header(default="")) -> None:
-    """Zapier/외부 API 키 검증 (Bearer token)"""
+    """Zapier/외부 API 키 검증 (Bearer token) — FAIL_CLOSED"""
     if not _API_KEYS:
-        return  # 키 미설정 시 기존처럼 오픈 (하위 호환)
+        raise HTTPException(status_code=403, detail="API_KEYS not configured")
     token = authorization.removeprefix("Bearer ").strip()
     if token not in _API_KEYS:
         raise HTTPException(status_code=401, detail="Invalid API key")
@@ -3124,9 +3149,9 @@ from fastapi_mcp import FastApiMCP, AuthConfig
 _MCP_API_KEY = os.getenv("MCP_API_KEY", "")
 
 def _verify_mcp_auth(authorization: str = Header(default="")) -> None:
-    """MCP 엔드포인트 인증 (MCP_API_KEY 설정 시 Bearer 토큰 필수)"""
+    """MCP 엔드포인트 인증 — FAIL_CLOSED"""
     if not _MCP_API_KEY:
-        return
+        raise HTTPException(status_code=403, detail="MCP_API_KEY not configured")
     token = authorization.removeprefix("Bearer ").strip()
     if token != _MCP_API_KEY:
         raise HTTPException(status_code=401, detail="Invalid MCP API key")
@@ -3139,7 +3164,7 @@ mcp = FastApiMCP(
     describe_full_response_schema=True,
     auth_config=AuthConfig(
         dependencies=[Depends(_verify_mcp_auth)],
-    ) if _MCP_API_KEY else None,
+    ),
 )
 mcp.mount_http()
 
