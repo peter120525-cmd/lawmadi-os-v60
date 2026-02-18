@@ -2797,12 +2797,12 @@ async def ask_stream(request: Request):
                         tools=tools,
                         system_instruction=clevel_instruction,
                         max_output_tokens=3000,
-                        automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
+                        automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=True),
                     ),
                     history=gemini_history,
                 )
 
-                # 스트리밍 전송 (비동기)
+                # 스트리밍 전송 (비동기, auto FC 비활성 — 스트림 안정성)
                 accumulated = ""
                 async for text_part in _async_stream_chunks(
                     chat.send_message_stream(
@@ -2858,7 +2858,7 @@ async def ask_stream(request: Request):
                                 tools=tools,
                                 system_instruction=sys_instr,
                                 max_output_tokens=4096,
-                                automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
+                                automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=True),
                             ),
                             history=gemini_history,
                         )
@@ -2959,7 +2959,7 @@ async def ask_stream(request: Request):
                             tools=tools,
                             system_instruction=fallback_instruction,
                             max_output_tokens=3000,
-                            automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
+                            automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=True),
                         ),
                         history=gemini_history,
                     )
