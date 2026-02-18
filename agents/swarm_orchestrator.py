@@ -446,21 +446,50 @@ class SwarmOrchestrator:
             synthesis_prompt += result['analysis']
             synthesis_prompt += "\n"
 
-        synthesis_prompt += """
+        # 참여 리더 목록 생성
+        leader_names = [f"{a['leader']} ({a['specialty']})" for a in successful_analyses]
+        leader_list_str = ", ".join(leader_names)
+
+        synthesis_prompt += f"""
 
 [통합 지침]
 1. 모든 전문 리더의 분석을 고려하여 종합적인 답변을 작성하세요
-2. 반드시 다음 5단계 구조를 유지하세요:
-   - 1. 요약 (Quick Insight)
-   - 2. 📚 법률 근거 (Verified Evidence)
-   - 3. 🕐 시간축 분석 (Timeline Analysis)
-   - 4. 절차 안내 (Action Plan)
-   - 5. 🔍 참고 정보 (Additional Context)
+2. 반드시 아래 헤더로 시작하세요:
+   [유나 (CCO) 종합 판단]
+   참여 전문가: {leader_list_str}
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-3. 여러 전문 분야가 교차하는 복합 사안임을 명시하세요
-4. 각 전문 분야별 주요 쟁점을 정리하세요
+3. 반드시 다음 5단계 계층 구조를 유지하세요:
+
+   1. 핵심 요약
+      1.1 상황 진단 — 공감과 현황 파악
+      1.2 결론 및 전략 방향 — 서연 CSO의 법률 전략 관점을 최우선으로 반영
+
+   2. 법률 근거 분석
+      — 리더별로 배지형 구분 사용:
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      👤 [리더명] 리더 ([전문분야] 전문)
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      2.1, 2.2... 순서로 분야별 법률 근거 정리
+      ⚠️ 법률 전략 관련 내용은 서연(CSO)의 분석을 가장 먼저 배치하세요
+
+   3. 시간축 전략
+      3.1 과거 (상황 정리)
+      3.2 현재 (골든타임) — 시효/기한 강조
+      3.3 미래 (대응 시나리오)
+
+   4. 실행 계획
+      4.1 즉시 조치 (24시간 내)
+      4.2 단계별 가이드
+      4.3 체크리스트 — □ 기호로 확인 항목 나열
+
+   5. 추가 정보
+      5.1 무료 법률 지원 (기관명 + 전화번호)
+      5.2 관련 법령 요약
+
+4. 여러 전문 분야가 교차하는 복합 사안임을 명시하세요
 5. 전문가 간 의견이 다를 경우 양측 관점을 모두 제시하세요
-6. 법률 근거는 각 전문 분야별로 구분하여 제시하세요
+6. 마무리에 재질문 유도 + 간결한 면책 포함
 
 🚨 **CRITICAL**: 절대로 마크다운 표(table) 형식을 사용하지 마세요!
 ❌ 금지: | 구분 | 내용 | 형식
@@ -498,36 +527,66 @@ class SwarmOrchestrator:
         """Fallback 응답 생성"""
         return f"""[유나 (CCO) 종합 판단]
 
-1. 요약 (Quick Insight)
-분석 중 시스템 오류가 발생했습니다.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-2. 📚 법률 근거 (Verified Evidence)
-현재 법률 데이터 검색이 제한되어 있습니다.
+1. 핵심 요약
+   1.1 상황 진단
+   분석 중 시스템 오류가 발생하여 일부 기능이 제한되었습니다.
 
-3. 🕐 시간축 분석 (Timeline Analysis)
-질문: {query[:100]}...
+   1.2 결론 및 전략 방향
+   아래 지원 기관을 통해 직접 상담을 받으시길 권장합니다.
 
-4. 절차 안내 (Action Plan)
-- 전문 법률가 상담을 권장합니다
-- 관할 법원/기관에 문의하세요
+2. 법률 근거 분석
+   현재 법률 데이터 검색이 제한되어 있습니다.
+   질문: {query[:100]}...
 
-5. 🔍 참고 정보
-본 시스템은 법률 자문이 아닌 정보 제공 시스템입니다.
+3. 시간축 전략
+   3.1 현재 (골든타임)
+   • 아래 무료 상담 기관에 즉시 연락하세요.
+
+4. 실행 계획
+   4.1 즉시 조치
+   • 대한법률구조공단 ☎ 132 — 무료 법률 상담
+   • 관할 법원/기관에 문의
+
+   4.3 체크리스트
+   □ 관련 서류 정리
+   □ 상담 기관 연락
+
+5. 추가 정보
+   5.1 무료 법률 지원
+   • 대한법률구조공단 ☎ 132 (klac.or.kr)
+   • 국민권익위원회 ☎ 110 (epeople.go.kr)
+
+> ℹ️ 본 시스템은 법률 자문이 아닌 정보 제공 시스템입니다.
 """
 
     def _fallback_response_with_analyses(self, query: str, analyses: List[Dict]) -> str:
         """분석 결과 포함 Fallback 응답"""
-        response = "[유나 (CCO) 종합 판단]\n\n"
-        response += "1. 요약 (Quick Insight)\n"
-        response += f"본 사안은 {', '.join([a['specialty'] for a in analyses])} 등 복합 법률 영역에 관한 질문입니다.\n\n"
+        leader_names = [f"{a['leader']} ({a['specialty']})" for a in analyses]
+        leader_list_str = ", ".join(leader_names)
 
-        response += "2. 📚 전문 분야별 분석\n\n"
-        for analysis in analyses:
-            response += f"━━━ {analysis['leader']} ({analysis['specialty']}) ━━━\n"
+        response = "[유나 (CCO) 종합 판단]\n\n"
+        response += f"참여 전문가: {leader_list_str}\n\n"
+        response += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+
+        response += "1. 핵심 요약\n"
+        response += f"   1.1 상황 진단\n"
+        response += f"   본 사안은 {', '.join([a['specialty'] for a in analyses])} 등 복합 법률 영역에 관한 질문입니다.\n\n"
+
+        response += "2. 법률 근거 분석\n\n"
+        for idx, analysis in enumerate(analyses, 1):
+            response += f"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            response += f"   👤 {analysis['leader']} 리더 ({analysis['specialty']} 전문)\n"
+            response += f"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            response += f"   2.{idx} {analysis['specialty']} 검토\n"
             response += analysis['analysis']
             response += "\n\n"
 
-        response += "3. 🔍 참고 정보\n"
+        response += "5. 추가 정보\n"
+        response += "   5.1 무료 법률 지원\n"
+        response += "   • 대한법률구조공단 ☎ 132 (klac.or.kr)\n"
+        response += "   • 국민권익위원회 ☎ 110 (epeople.go.kr)\n\n"
         response += "여러 전문 분야의 분석이 제공되었습니다. 종합적인 판단을 위해 전문가 상담을 권장합니다.\n"
 
         return response
