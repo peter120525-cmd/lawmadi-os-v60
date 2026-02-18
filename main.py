@@ -2594,6 +2594,121 @@ async def ask(request: Request):
         return {"trace_id": trace, "response": f"⚠️ 시스템 장애가 발생했습니다. (Ref: {ref})", "status": "ERROR"}
 
 # =============================================================
+# ✅ 전문가용 답변 (Claude 검증 + 전문 용어 유지)
+# =============================================================
+
+@app.post("/ask-expert")
+@limiter.limit("10/minute")
+async def ask_expert(request: Request):
+    """
+    일반인용 답변을 Claude가 전문가 관점에서 재검증·보강.
+    - 법률 용어를 전문가 수준으로 유지
+    - SSOT 준수 여부 검증
+    - 추가 법적 논점·판례 보강
+    """
+    trace = str(uuid.uuid4())[:8]
+    start = time.time()
+
+    try:
+        body = await request.json()
+        query = str(body.get("query", "")).strip()
+        original_response = str(body.get("original_response", "")).strip()
+
+        if not query or not original_response:
+            return {"trace_id": trace, "status": "ERROR", "response": "query와 original_response가 필요합니다."}
+
+        # Anthropic 클라이언트 초기화
+        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            return {"trace_id": trace, "status": "ERROR", "response": "전문가 검증 서비스가 현재 비활성화되어 있습니다."}
+
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+
+        expert_prompt = f"""당신은 대한민국 법률 전문가 검증관입니다.
+아래 AI 법률 상담 응답을 **전문가 관점**에서 검증하고, 전문가용으로 보강하세요.
+
+# 검증 및 보강 기준
+
+1. **법률 용어 전문화**: 일반인용 쉬운 표현 → 정확한 법률 용어로 변환 (원래 쉬운 설명도 병기)
+2. **SSOT 검증**: 인용된 법령·조문·판례가 정확한지 확인, 부정확하면 ⚠️ 표시
+3. **추가 논점**: 원 답변에서 빠진 법적 쟁점, 관련 판례, 반대 해석 가능성 보강
+4. **실무 관점**: 변호사가 실제 사건에서 고려할 전략적 포인트 추가
+5. **위험 요소**: 원 답변의 잠재적 오류나 과도한 단순화 지적
+
+# 응답 형식
+
+반드시 아래 구조로 응답하세요:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔬 전문가 검증 리포트
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+**검증 결과**: [PASS ✅ / WARNING ⚠️ / FAIL ❌]
+**SSOT 준수 점수**: [0-100점]
+
+1. 검증 요약
+   1.1 원 답변 정확성 평가
+   1.2 주요 보완 사항
+
+2. 전문가 분석
+   2.1 법률 근거 심화
+   — 정확한 조문 인용 (제○조 제○항 제○호)
+   — 관련 판례 보강 (대법원/헌재 판례번호 포함)
+   — 학설·통설 언급 (해당 시)
+
+   2.2 실무적 쟁점
+   — 소송 전략적 고려사항
+   — 상대방 반론 예상 및 대응
+   — 증거 확보 실무
+
+3. 위험 요소 및 주의사항
+   — 원 답변의 과도한 단순화 지적
+   — 예외 사항 및 변수
+   — 시효·기한 정밀 계산
+
+4. 전문가 체크리스트
+   □ [전문가가 추가로 확인할 항목들]
+
+> ⚠️ 본 전문가 검증은 Claude AI가 수행한 것이며, 최종 법률 자문은 변호사와 상의하세요.
+
+🚨 절대로 마크다운 표(table) 형식을 사용하지 마세요.
+
+---
+
+[사용자 질문]
+{query}
+
+[원본 AI 답변]
+{original_response}
+"""
+
+        response = client.messages.create(
+            model="claude-sonnet-4-5-20250929",
+            max_tokens=4096,
+            temperature=0,
+            messages=[{"role": "user", "content": expert_prompt}]
+        )
+
+        expert_text = response.content[0].text
+        latency_ms = int((time.time() - start) * 1000)
+
+        logger.info(f"✅ [Expert] 전문가 검증 완료 (trace={trace}, {latency_ms}ms, {len(expert_text)} chars)")
+
+        return {
+            "trace_id": trace,
+            "response": expert_text,
+            "status": "SUCCESS",
+            "latency_ms": latency_ms,
+            "verified_by": "claude-sonnet-4-5"
+        }
+
+    except Exception as e:
+        logger.error(f"❌ [Expert] 전문가 검증 실패 (trace={trace}): {e}")
+        return {"trace_id": trace, "status": "ERROR", "response": f"전문가 검증 중 오류가 발생했습니다."}
+
+
+# =============================================================
 # ✅ search / trending (SearchService 없으면 ERROR)
 # =============================================================
 
