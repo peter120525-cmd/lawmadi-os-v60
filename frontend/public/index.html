@@ -4242,7 +4242,10 @@
             clearTimeout(timeoutId);
             if (response.status === 429) {
                 this.hideTypingIndicator();
-                this.appendMessage('ai', '<p>이용 한도(4시간당 10회)에 도달했습니다. 잠시 후 다시 이용해주세요.</p>');
+                try {
+                    const errData = await response.json();
+                    this.appendMessage('ai', `<p>${this.escapeHtml(errData.error || '이용 한도에 도달했습니다.')}</p>`);
+                } catch { this.appendMessage('ai', '<p>이용 한도에 도달했습니다. 잠시 후 다시 이용해주세요.</p>'); }
                 return;
             }
             if (!response.ok) throw new Error(`서버 오류 (${response.status})`);
@@ -4280,7 +4283,10 @@
             clearTimeout(timeoutId);
             if (response.status === 429) {
                 this.hideTypingIndicator();
-                this.appendMessage('ai', '<p>이용 한도(4시간당 10회)에 도달했습니다. 잠시 후 다시 이용해주세요.</p>');
+                try {
+                    const errData = await response.json();
+                    this.appendMessage('ai', `<p>${this.escapeHtml(errData.error || '이용 한도에 도달했습니다.')}</p>`);
+                } catch { this.appendMessage('ai', '<p>이용 한도에 도달했습니다. 잠시 후 다시 이용해주세요.</p>'); }
                 return;
             }
             if (!response.ok) throw new Error(`서버 오류 (${response.status})`);
