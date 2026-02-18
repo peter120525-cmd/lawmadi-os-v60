@@ -1,11 +1,11 @@
 # Lawmadi OS — LLM System Specification
-> Version: v60.0.0 | Last Updated: 2026-02-14 | Format: llms.txt/1.0
+> Version: v60.0.0 | Last Updated: 2026-02-18 | Format: llms.txt/1.0
 
 ---
 
 ## SYSTEM IDENTITY
 
-- **Name**: Lawmadi OS (법마디 OS)
+- **Name**: Lawmadi OS (로마디 OS)
 - **Version**: v60.0.0
 - **Type**: Korean Legal AI Decision Operating System
 - **Description**: 대한민국 법령·판례·행정규칙 기반 법률 자문 멀티에이전트 AI 운영체제.
@@ -58,7 +58,7 @@ L7 RENDERER    → Legal vs Reference Output Segregation (Section Divider, Discl
 |-----------|-----------|
 | Backend Framework | FastAPI 0.128.0 + Uvicorn 0.40.0 |
 | Runtime | Python 3.10+ |
-| Primary LLM | Google Gemini 2.5 Flash (gemini-2.5-flash-preview-09-2025) |
+| Primary LLM | Google Gemini 3 Flash (gemini-3-flash-preview) |
 | Constitutional Verifier | Anthropic Claude (claude-sonnet series) |
 | Cloud Platform | GCP Cloud Run (asia-northeast3) |
 | Cloud Resources | 2 vCPU / 2 GiB RAM / max 10 instances / concurrency 80 / timeout 300s |
@@ -72,7 +72,7 @@ L7 RENDERER    → Legal vs Reference Output Segregation (Section Divider, Discl
 ```
 OS_VERSION   = "v60.0.0"
 SOFT_MODE    = true (default)
-GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025"
+GEMINI_MODEL = "gemini-3-flash-preview"
 USE_SWARM    = controlled via environment variable
 ```
 
@@ -238,6 +238,7 @@ USE_SWARM    = controlled via environment variable
 | GET | `/metrics` | 시스템 메트릭 (요청 수, 평균 레이턴시) |
 | GET | `/diagnostics` | 시스템 진단 정보 |
 | POST | `/ask` | 법률 질의 처리 (메인 AI 엔드포인트) |
+| POST | `/ask-expert` | 전문가용 답변 (Gemini 재생성 + Claude SSOT 검증) |
 | POST | `/upload` | 법률 문서 파일 업로드 |
 | GET | `/analyze-document/{file_id}` | 업로드된 문서 분석 |
 | POST | `/api/visit` | 방문자 카운터 업데이트 |
@@ -330,12 +331,13 @@ Response on violation: 요청을 처리할 수 없음을 통지하고 로그 기
 
 ## DEPLOYMENT CONFIGURATION
 
-### GCP Secret Manager (4 Secrets)
+### GCP Secret Manager (5 Secrets)
 ```
 GEMINI_API_KEY      — Google Gemini API key
 LAWGO_DRF_OC        — 법제처 DRF API OC (Open API Client key)
 ANTHROPIC_API_KEY   — Anthropic Claude API key
 CLOUD_SQL_INSTANCE  — Cloud SQL connection name
+MCP_API_KEY         — MCP 서버 Bearer 토큰 인증 키
 ```
 
 ### Required Environment Variables
@@ -351,7 +353,7 @@ Region: asia-northeast3 (Seoul)
 CPU: 2 vCPU
 Memory: 2 GiB
 Max Instances: 10
-Min Instances: 0 (cold start possible)
+Min Instances: 1 (cold start 방지)
 Concurrency: 80
 Request Timeout: 300s
 ```
@@ -379,6 +381,7 @@ core.security              → SafetyGuard
 connectors.drf_client      → DRFConnector
 core.law_selector          → LawSelector
 connectors.db_client       → db_client
+engines.response_verifier  → ResponseVerifier (Claude SSOT 검증)
 ```
 
 ---
@@ -412,4 +415,4 @@ connectors.db_client       → db_client
 ---
 
 *This llms.txt file conforms to the llms.txt/1.0 specification for machine-readable AI system documentation.*
-*Generated: 2026-02-14 | Lawmadi OS v60.0.0*
+*Generated: 2026-02-18 | Lawmadi OS v60.0.0*
