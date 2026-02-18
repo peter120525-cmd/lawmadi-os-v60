@@ -1641,83 +1641,7 @@
             box-shadow: 0 1px 3px rgba(234, 179, 8, 0.2);
         }
 
-        /* 구분선 - 모던 미니멀 디자인 (C-Level 스타일) */
-        .ai-msg hr.fancy {
-            border: none;
-            height: 1px;
-            margin: 48px 0;
-            position: relative;
-            background: linear-gradient(90deg,
-                transparent 0%,
-                rgba(226, 232, 240, 0.3) 20%,
-                rgba(203, 213, 225, 0.5) 50%,
-                rgba(226, 232, 240, 0.3) 80%,
-                transparent 100%
-            );
-        }
-
-        /* 중앙 포인트 */
-        .ai-msg hr.fancy::before {
-            content: '';
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: 8px;
-            height: 8px;
-            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-            border-radius: 50%;
-            box-shadow:
-                0 0 0 4px rgba(255, 255, 255, 1),
-                0 0 0 5px rgba(226, 232, 240, 0.5),
-                0 2px 8px rgba(37, 99, 235, 0.15);
-            animation: dividerPulseMinimal 3s ease-in-out infinite;
-        }
-
-        /* 좌우 장식선 */
-        .ai-msg hr.fancy::after {
-            content: '';
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: 120px;
-            height: 1px;
-            background: linear-gradient(90deg,
-                rgba(37, 99, 235, 0.1) 0%,
-                rgba(37, 99, 235, 0.05) 100%
-            );
-            opacity: 0;
-            animation: dividerLineExpand 3s ease-in-out infinite;
-        }
-
-        @keyframes dividerPulseMinimal {
-            0%, 100% {
-                transform: translate(-50%, -50%) scale(1);
-                box-shadow:
-                    0 0 0 4px rgba(255, 255, 255, 1),
-                    0 0 0 5px rgba(226, 232, 240, 0.5),
-                    0 2px 8px rgba(37, 99, 235, 0.15);
-            }
-            50% {
-                transform: translate(-50%, -50%) scale(1.2);
-                box-shadow:
-                    0 0 0 4px rgba(255, 255, 255, 1),
-                    0 0 0 6px rgba(226, 232, 240, 0.6),
-                    0 2px 12px rgba(37, 99, 235, 0.25);
-            }
-        }
-
-        @keyframes dividerLineExpand {
-            0%, 100% {
-                opacity: 0;
-                width: 120px;
-            }
-            50% {
-                opacity: 0.3;
-                width: 160px;
-            }
-        }
+        /* 구분선 애니메이션 제거 — 정적 hr만 사용 */
 
         /* 코드 블록 업그레이드 (문법 강조 색상) */
         .ai-msg pre code .keyword {
@@ -2496,18 +2420,6 @@
             background: linear-gradient(90deg,
                 transparent 0%, #334155 20%, #475569 50%, #334155 80%, transparent 100%);
         }
-        body.dark-mode .ai-msg hr.fancy {
-            background: linear-gradient(90deg,
-                transparent 0%, rgba(71, 85, 105, 0.3) 20%, rgba(71, 85, 105, 0.5) 50%,
-                rgba(71, 85, 105, 0.3) 80%, transparent 100%);
-        }
-        body.dark-mode .ai-msg hr.fancy::before {
-            box-shadow:
-                0 0 0 4px #1e293b,
-                0 0 0 5px #334155,
-                0 2px 8px rgba(59, 130, 246, 0.25);
-        }
-
         /* 14. stat-badge */
         body.dark-mode .ai-msg .stat-badge {
             background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
@@ -5922,7 +5834,7 @@
                 if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
                     if (inList) { html.push('</ul>'); inList = false; }
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
-                    html.push('<hr class="fancy">');
+                    html.push('<hr>');
                     lastWasH2 = false;
                     continue;
                 }
@@ -5930,7 +5842,7 @@
                 if (trimmed.startsWith('## ')) {
                     if (inList) { html.push('</ul>'); inList = false; }
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
-                    if (html.length > 0 && !lastWasH2) html.push('<hr class="fancy">');
+                    if (html.length > 0 && !lastWasH2) html.push('<hr>');
                     html.push('<p><strong class="section-title">' + this.formatInline(trimmed.substring(3)) + '</strong></p>');
                     lastWasH2 = true;
                 }
