@@ -3023,6 +3023,43 @@
         }
         @keyframes expertFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* ═══ 스트리밍 실시간 텍스트 ═══ */
+        .stream-content {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 17px;
+            line-height: 1.85;
+            color: var(--text-main);
+            letter-spacing: -0.01em;
+            overflow-wrap: break-word;
+            word-break: break-word;
+        }
+        body.dark-mode .stream-content {
+            color: #e2e8f0;
+        }
+
+        /* ═══ 다크모드: 부가 버튼 ═══ */
+        body.dark-mode .fav-btn,
+        body.dark-mode .share-btn,
+        body.dark-mode .expert-btn {
+            background: rgba(255,255,255,0.06);
+            border-color: #475569;
+            color: #cbd5e1;
+        }
+        body.dark-mode .fav-btn:hover,
+        body.dark-mode .share-btn:hover,
+        body.dark-mode .expert-btn:hover {
+            background: rgba(255,255,255,0.12);
+            color: #f1f5f9;
+        }
+        body.dark-mode .pdf-download-btn {
+            background: rgba(37,99,235,0.15);
+            border-color: #475569;
+            color: #93c5fd;
+        }
+        body.dark-mode .msg-timestamp {
+            color: #64748b;
+        }
+
         /* ═══════════════════════════════════════════════════
            Responsive — 360px (Extra Small Mobile)
         ═══════════════════════════════════════════════════ */
@@ -3785,8 +3822,9 @@
         charCounter: document.getElementById('charCounter'),
         newChatBtn: document.getElementById('newChatBtn'),
         API_URL: 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app/ask',
+        STREAM_URL: 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app/ask-stream',
         BASE_URL: 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app',
-        USE_STREAMING: false,
+        USE_STREAMING: true,
         USE_TYPING_EFFECT: false,
         uploadedFile: null,
         conversationHistory: [],
@@ -4125,45 +4163,25 @@
                 this.updateSendBtnState();
             }
 
-            // AbortController: 60초 타임아웃 + 취소 지원 (항목 #12)
+            // AbortController: 120초 타임아웃 + 취소 지원
             if (this.currentAbortController) this.currentAbortController.abort();
+            // 이전 타임아웃 타이머 정리 (충돌 방지)
+            if (this._requestTimeoutId) clearTimeout(this._requestTimeoutId);
             this.currentAbortController = new AbortController();
-            const timeoutId = setTimeout(() => this.currentAbortController.abort(), 60000);
+            const timeoutId = setTimeout(() => this.currentAbortController.abort(), 120000);
+            this._requestTimeoutId = timeoutId;
 
             const _startTime = performance.now();
             this.showTypingIndicator();
 
             try {
-                const response = await fetch(this.API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        query: query,
-                        history: this.conversationHistory.slice(-10)
-                    }),
-                    signal: this.currentAbortController.signal
-                });
+                if (this.USE_STREAMING) {
+                    await this._dispatchStreaming(query, _startTime, timeoutId);
+                } else {
+                    await this._dispatchClassic(query, _startTime, timeoutId);
+                }
 
                 clearTimeout(timeoutId);
-                if (!response.ok) throw new Error(`서버 오류 (${response.status})`);
-                const data = await response.json();
-
-                this.hideTypingIndicator();
-
-                // 대화 이력 저장 + localStorage 영속화 (항목 #13)
-                this.conversationHistory.push(
-                    { role: 'user', content: query },
-                    { role: 'assistant', content: data.response || '' }
-                );
-                if (this.conversationHistory.length > 20) {
-                    this.conversationHistory = this.conversationHistory.slice(-20);
-                }
-                try { localStorage.setItem('lawmadi-chat-history', JSON.stringify(this.conversationHistory)); } catch(e) {}
-
-                this.lastRawResponse = data.response;
-                const _elapsed = ((performance.now() - _startTime) / 1000).toFixed(1);
-                const formattedHtml = this.formatReport(data.response);
-                this.appendMessage('ai', formattedHtml, null, query, data.response, data.leader, data.leader_specialty, _elapsed);
 
                 // GA4 이벤트 추적
                 if (typeof gtag === 'function') {
@@ -4171,7 +4189,10 @@
                 }
 
             } catch (error) {
+                clearTimeout(timeoutId);
                 this.hideTypingIndicator();
+                // 스트리밍 중 생성된 부분 메시지 제거 (고유 ID prefix 매칭)
+                document.querySelectorAll('[id^="streaming-msg-"]').forEach(el => el.remove());
 
                 // 자동 재시도
                 if (retryCount < this.MAX_RETRY) {
@@ -4204,6 +4225,221 @@
             const lastMsg = this.convArea.lastElementChild;
             if (lastMsg && lastMsg.classList.contains('ai-msg')) lastMsg.remove();
             this.dispatchPacket(0);
+        },
+
+        // ═══ 클래식(비스트리밍) 디스패치 ═══
+        async _dispatchClassic(query, _startTime, timeoutId) {
+            const response = await fetch(this.API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    query: query,
+                    history: this.conversationHistory.slice(-10)
+                }),
+                signal: this.currentAbortController.signal
+            });
+
+            clearTimeout(timeoutId);
+            if (!response.ok) throw new Error(`서버 오류 (${response.status})`);
+            const data = await response.json();
+
+            this.hideTypingIndicator();
+
+            this.conversationHistory.push(
+                { role: 'user', content: query },
+                { role: 'assistant', content: data.response || '' }
+            );
+            if (this.conversationHistory.length > 20) {
+                this.conversationHistory = this.conversationHistory.slice(-20);
+            }
+            try { localStorage.setItem('lawmadi-chat-history', JSON.stringify(this.conversationHistory)); } catch(e) {}
+
+            this.lastRawResponse = data.response;
+            const _elapsed = ((performance.now() - _startTime) / 1000).toFixed(1);
+            const formattedHtml = this.formatReport(data.response);
+            this.appendMessage('ai', formattedHtml, null, query, data.response, data.leader, data.leader_specialty, _elapsed);
+        },
+
+        // ═══ SSE 스트리밍 디스패치 ═══
+        async _dispatchStreaming(query, _startTime, timeoutId) {
+            const response = await fetch(this.STREAM_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    query: query,
+                    history: this.conversationHistory.slice(-10)
+                }),
+                signal: this.currentAbortController.signal
+            });
+
+            clearTimeout(timeoutId);
+            if (!response.ok) throw new Error(`서버 오류 (${response.status})`);
+
+            // 스트리밍 메시지 컨테이너 생성 (고유 ID로 충돌 방지)
+            const streamId = 'streaming-msg-' + Date.now();
+            const streamDiv = document.createElement('div');
+            streamDiv.className = 'ai-msg';
+            streamDiv.id = streamId;
+            const streamContent = document.createElement('div');
+            streamContent.className = 'stream-content';
+            streamDiv.appendChild(streamContent);
+            this.convArea.appendChild(streamDiv);
+
+            let accumulatedText = '';
+            let leaderName = '';
+            let leaderSpecialty = '';
+            let fullTextFromServer = '';
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            const _statusLabels = {
+                'detecting_domain': '🔍 질문 분석 중...',
+                'analyzing': '👥 전문 리더 분석 중...',
+                'parallel_analysis': '👥 다중 리더 병렬 분석 중...',
+                'synthesizing': '📝 종합 판단 생성 중...'
+            };
+
+            // SSE 이벤트 파싱 헬퍼 (multi-line data 지원)
+            const _parseSSE = (rawEvent) => {
+                let eventType = 'message';
+                const dataLines = [];
+                for (const line of rawEvent.split('\n')) {
+                    if (line.startsWith('event: ')) {
+                        eventType = line.slice(7).trim();
+                    } else if (line.startsWith('data: ')) {
+                        dataLines.push(line.slice(6));
+                    } else if (line.startsWith('data:')) {
+                        dataLines.push(line.slice(5));
+                    }
+                }
+                return { eventType, eventData: dataLines.join('\n') };
+            };
+
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+
+                    // SSE 파싱: 이벤트는 빈 줄(\n\n)로 구분
+                    const events = buffer.split('\n\n');
+                    buffer = events.pop() || ''; // 마지막 불완전 이벤트는 버퍼에 유지
+
+                    for (const rawEvent of events) {
+                        if (!rawEvent.trim()) continue;
+
+                        const { eventType, eventData } = _parseSSE(rawEvent);
+                        if (!eventData) continue;
+
+                        let payload;
+                        try { payload = JSON.parse(eventData); } catch(e) {
+                            console.warn('[SSE] JSON 파싱 실패:', eventData.slice(0, 100));
+                            continue;
+                        }
+
+                        if (eventType === 'status') {
+                            const stepKey = payload.step || '';
+                            const statusText = _statusLabels[stepKey] || stepKey;
+                            const leaderInfo = payload.leader ? ` (${payload.leader})` : '';
+                            this._updateTypingStatus(statusText + leaderInfo);
+
+                        } else if (eventType === 'chunk') {
+                            if (!accumulatedText) {
+                                this.hideTypingIndicator();
+                            }
+                            accumulatedText += (payload.text || '');
+                            streamContent.innerHTML = this._renderStreamingText(accumulatedText);
+                            this._smartScroll(false);
+
+                        } else if (eventType === 'done') {
+                            leaderName = payload.leader || '';
+                            leaderSpecialty = payload.specialty || '';
+                            fullTextFromServer = payload.full_text || accumulatedText;
+
+                        } else if (eventType === 'error') {
+                            this.hideTypingIndicator();
+                            streamDiv.remove();
+                            throw new Error(payload.message || '스트리밍 오류');
+                        }
+                    }
+                }
+
+                // 스트림 종료 후 버퍼에 남은 이벤트 처리
+                if (buffer.trim()) {
+                    const { eventType, eventData } = _parseSSE(buffer);
+                    if (eventData) {
+                        try {
+                            const payload = JSON.parse(eventData);
+                            if (eventType === 'chunk') {
+                                accumulatedText += (payload.text || '');
+                            } else if (eventType === 'done') {
+                                leaderName = payload.leader || '';
+                                leaderSpecialty = payload.specialty || '';
+                                fullTextFromServer = payload.full_text || accumulatedText;
+                            }
+                        } catch(e) { /* 무시 */ }
+                    }
+                }
+            } catch (streamError) {
+                // reader 리소스 정리
+                try { reader.cancel(); } catch(e) { /* 무시 */ }
+                // 스트리밍 div 정리 (아직 DOM에 있으면)
+                const el = document.getElementById(streamId);
+                if (el) el.remove();
+                throw streamError;  // 상위 catch에서 처리
+            }
+
+            // 스트리밍 완료 → 최종 포맷 렌더링
+            this.hideTypingIndicator();
+            const finalText = fullTextFromServer || accumulatedText;
+            streamDiv.remove();
+
+            // 빈 응답 방어
+            if (!finalText.trim()) {
+                throw new Error('서버에서 응답을 받지 못했습니다.');
+            }
+
+            this.conversationHistory.push(
+                { role: 'user', content: query },
+                { role: 'assistant', content: finalText }
+            );
+            if (this.conversationHistory.length > 20) {
+                this.conversationHistory = this.conversationHistory.slice(-20);
+            }
+            try { localStorage.setItem('lawmadi-chat-history', JSON.stringify(this.conversationHistory)); } catch(e) {}
+
+            this.lastRawResponse = finalText;
+            const _elapsed = ((performance.now() - _startTime) / 1000).toFixed(1);
+            const formattedHtml = this.formatReport(finalText);
+            this.appendMessage('ai', formattedHtml, null, query, finalText, leaderName, leaderSpecialty, _elapsed);
+        },
+
+        // ═══ 스트리밍 텍스트 실시간 렌더링 (경량) ═══
+        _renderStreamingText(text) {
+            // 기본 마크다운 변환 (볼드, 줄바꿈)
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>');
+        },
+
+        // ═══ 타이핑 인디케이터 상태 텍스트 업데이트 ═══
+        _updateTypingStatus(statusText) {
+            const steps = document.querySelectorAll('.typing-step');
+            if (steps.length > 0) {
+                // 모든 step의 active 제거
+                steps.forEach(s => { s.classList.remove('active'); s.classList.add('done'); });
+                // 마지막 step을 현재 상태로 업데이트
+                const lastStep = steps[steps.length - 1];
+                lastStep.classList.remove('done');
+                lastStep.classList.add('active');
+                lastStep.innerHTML = statusText;
+            }
         },
 
         async handleFileUploadAndAnalysis(additionalQuery) {
@@ -4890,9 +5126,31 @@
         });
     };
 
-    // Service Worker 등록
+    // Service Worker 등록 + 자동 업데이트
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
+        navigator.serviceWorker.register('/sw.js').then((reg) => {
+            // 새 SW 발견 시 즉시 적용
+            reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing;
+                if (newWorker) {
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+                            // 새 버전 활성화됨 → 페이지 새로고침으로 적용
+                            if (document.hidden) {
+                                // 백그라운드 탭이면 다음 포커스 시 새로고침
+                                document.addEventListener('visibilitychange', () => {
+                                    if (!document.hidden) window.location.reload();
+                                }, { once: true });
+                            } else {
+                                window.location.reload();
+                            }
+                        }
+                    });
+                }
+            });
+            // 주기적 업데이트 확인 (30분마다)
+            setInterval(() => reg.update(), 30 * 60 * 1000);
+        }).catch(() => {});
     }
 </script>
 

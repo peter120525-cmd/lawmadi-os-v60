@@ -45,7 +45,7 @@ from google import genai
 from google.genai import types as genai_types
 from fastapi import FastAPI, Request, Header, HTTPException, File, UploadFile, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from slowapi import Limiter
@@ -2647,6 +2647,429 @@ async def ask(request: Request):
         logger.error(traceback.format_exc())
         _audit("ask_error", {"query": str(locals().get("query", "")), "status": "ERROR", "leader": "SYSTEM", "latency_ms": 0})
         return {"trace_id": trace, "response": f"⚠️ 시스템 장애가 발생했습니다. (Ref: {ref})", "status": "ERROR"}
+
+# =============================================================
+# 🔄 SSE 스트리밍 응답 (/ask-stream)
+# =============================================================
+
+@app.post("/ask-stream")
+@limiter.limit("15/minute")
+async def ask_stream(request: Request):
+    """SSE 스트리밍 엔드포인트 — 실시간 토큰 전송"""
+
+    trace = _trace_id()
+    start_time = time.time()
+
+    try:
+        data = await request.json()
+        query = (data.get("query", "") or "").strip()
+        raw_history = data.get("history", [])
+
+        gemini_history = []
+        for msg in raw_history[-6:]:
+            role = msg.get("role", "")
+            content = msg.get("content", "")
+            if role == "user" and content:
+                gemini_history.append({"role": "user", "parts": [content]})
+            elif role == "assistant" and content:
+                gemini_history.append({"role": "model", "parts": [content[:2000]]})
+
+        visitor_id = _get_client_ip(request)
+        config = RUNTIME.get("config", {})
+
+    except Exception as parse_err:
+        async def _error_gen():
+            yield f"event: error\ndata: {json.dumps({'message': '요청 파싱 실패'}, ensure_ascii=False)}\n\n"
+        return StreamingResponse(_error_gen(), media_type="text/event-stream")
+
+    # --- SSE generator ---
+    async def _sse_generator():
+        nonlocal query, raw_history, gemini_history, visitor_id, config, trace, start_time
+
+        final_text = ""
+        leader_name = "유나"
+        leader_specialty = "콘텐츠 설계"
+        swarm_mode = False
+
+        def _sse(event: str, payload: dict) -> str:
+            return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+        async def _async_stream_chunks(sync_stream):
+            """동기 스트림 이터레이터를 비동기로 소비 (이벤트 루프 블로킹 방지)"""
+            q = asyncio.Queue()
+            def _consume():
+                try:
+                    for chunk in sync_stream:
+                        text_part = ""
+                        if hasattr(chunk, 'text') and chunk.text:
+                            text_part = chunk.text
+                        elif hasattr(chunk, 'parts'):
+                            for part in chunk.parts:
+                                if hasattr(part, 'text') and part.text:
+                                    text_part += part.text
+                        if text_part:
+                            q.put_nowait(text_part)
+                    q.put_nowait(None)
+                except Exception as e:
+                    q.put_nowait(e)
+            asyncio.get_event_loop().run_in_executor(None, _consume)
+            while True:
+                item = await q.get()
+                if item is None:
+                    break
+                if isinstance(item, Exception):
+                    raise item
+                yield item
+
+        try:
+            # 0) Low Signal
+            if _is_low_signal(query):
+                msg = (
+                    "[유나 (CCO) 안내]\n\n"
+                    "안녕하세요! 유나입니다. 😊\n\n"
+                    "테스트 입력이 감지되었습니다. 서버는 정상 동작 중이에요.\n\n"
+                    "더 정확한 답변을 드리기 위해 다음 정보를 알려주시면 좋겠어요:\n"
+                    "- 사건 개요 (어떤 상황인지)\n"
+                    "- 날짜/당사자/증빙 자료\n"
+                    "- 원하시는 결과\n\n"
+                    "법률 문제로 걱정이 있으시다면, 구체적으로 질문해 주세요.\n"
+                    "60명의 전문 리더가 함께 도와드릴게요!\n"
+                )
+                yield _sse("chunk", {"text": msg})
+                yield _sse("done", {"leader": "유나", "specialty": "콘텐츠 설계", "latency_ms": 0, "trace_id": trace})
+                return
+
+            # 0.5) Gemini 키
+            if not os.getenv("GEMINI_KEY"):
+                yield _sse("error", {"message": "⚠️ GEMINI_KEY 미설정으로 추론이 비활성화되었습니다."})
+                return
+
+            # 1) Security Guard
+            guard = RUNTIME.get("guard")
+            if guard:
+                check_result = guard.check(query)
+                if check_result == "CRISIS":
+                    safety_config = config.get("security_layer", {}).get("safety", {})
+                    crisis_res = safety_config.get("crisis_resources", {})
+                    lines = ["🚨 당신의 안전이 가장 중요합니다.\n"]
+                    for label, number in crisis_res.items():
+                        lines.append(f"  📞 {label}: {number}")
+                    lines.append("\n위 전문 기관으로 지금 바로 연락하세요.")
+                    yield _sse("chunk", {"text": "\n".join(lines)})
+                    yield _sse("done", {"leader": "SAFETY", "specialty": "", "latency_ms": 0, "trace_id": trace})
+                    return
+                if check_result is False:
+                    yield _sse("error", {"message": "🚫 보안 정책에 의해 차단되었습니다."})
+                    return
+
+            # 2) C-Level
+            clevel = RUNTIME.get("clevel_handler")
+            clevel_decision = None
+            if clevel:
+                clevel_decision = clevel.should_invoke_clevel(query)
+
+            # 3) SSOT / Tools
+            ssot_available = RUNTIME.get("drf_healthy", False)
+            tools = []
+            if ssot_available:
+                tools = [
+                    search_law_drf, search_precedents_drf, search_admrul_drf,
+                    search_expc_drf, search_constitutional_drf, search_ordinance_drf,
+                    search_legal_term_drf, search_admin_appeals_drf, search_treaty_drf
+                ]
+
+            now_kst = _now_iso()
+            model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+            gc = RUNTIME.get("genai_client")
+
+            # ─── 경로 A: C-Level 직접 호출 (스트리밍) ───
+            if clevel_decision and clevel_decision.get("mode") == "direct":
+                exec_id = clevel_decision.get("executive_id")
+                clevel_instruction = clevel.get_clevel_system_instruction(exec_id, SYSTEM_INSTRUCTION_BASE)
+                leader_name = clevel.executives.get(exec_id, {}).get("name", exec_id)
+                leader_specialty = clevel.executives.get(exec_id, {}).get("role", exec_id)
+
+                yield _sse("status", {"step": "analyzing", "leader": leader_name})
+
+                chat = gc.chats.create(
+                    model=model_name,
+                    config=genai_types.GenerateContentConfig(
+                        tools=tools,
+                        system_instruction=clevel_instruction,
+                        max_output_tokens=3000,
+                        automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
+                    ),
+                    history=gemini_history,
+                )
+
+                # 스트리밍 전송 (비동기)
+                accumulated = ""
+                async for text_part in _async_stream_chunks(
+                    chat.send_message_stream(
+                        f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
+                    )
+                ):
+                    accumulated += text_part
+                    yield _sse("chunk", {"text": text_part})
+
+                final_text = accumulated
+                swarm_mode = False
+
+            # ─── 경로 B: Swarm 모드 ───
+            elif not (clevel_decision and clevel_decision.get("mode") == "direct"):
+                orchestrator = RUNTIME.get("swarm_orchestrator")
+
+                if orchestrator and os.getenv("USE_SWARM", "true").lower() == "true":
+                    yield _sse("status", {"step": "detecting_domain"})
+
+                    detected_domains = orchestrator.detect_domains(query)
+                    selected_leaders = orchestrator.select_leaders(query, detected_domains)
+
+                    use_swarm = (
+                        orchestrator.swarm_enabled
+                        and len(selected_leaders) > 1
+                    )
+
+                    leader_names_list = [l.get("name", "?") for l in selected_leaders]
+                    yield _sse("status", {"step": "analyzing", "leader": ", ".join(leader_names_list)})
+
+                    if not use_swarm:
+                        # 단일 리더 스트리밍
+                        leader = selected_leaders[0]
+                        leader_name = leader.get("name", "유나")
+                        leader_specialty = leader.get("specialty", "콘텐츠 설계")
+                        swarm_mode = False
+
+                        clevel_id = leader.get("_clevel")
+                        if clevel_id:
+                            sys_instr = orchestrator._build_clevel_instruction(leader, SYSTEM_INSTRUCTION_BASE) if hasattr(orchestrator, '_build_clevel_instruction') else SYSTEM_INSTRUCTION_BASE
+                        else:
+                            sys_instr = (
+                                f"{SYSTEM_INSTRUCTION_BASE}\n\n"
+                                f"🎯 당신의 역할: {leader.get('name', '')} ({leader.get('role', '')})\n"
+                                f"🎯 전문 분야: {leader_specialty}\n"
+                                f"🎯 관점: {leader_specialty} 전문가 관점에서 이 사안을 분석하세요.\n\n"
+                                f"반드시 [{leader.get('name', '')} ({leader_specialty}) 분석]으로 시작하세요."
+                            )
+
+                        chat = gc.chats.create(
+                            model=model_name,
+                            config=genai_types.GenerateContentConfig(
+                                tools=tools,
+                                system_instruction=sys_instr,
+                                max_output_tokens=4096,
+                                automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
+                            ),
+                            history=gemini_history,
+                        )
+
+                        accumulated = ""
+                        async for text_part in _async_stream_chunks(
+                            chat.send_message_stream(
+                                f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
+                            )
+                        ):
+                            accumulated += text_part
+                            yield _sse("chunk", {"text": text_part})
+
+                        final_text = accumulated
+
+                    else:
+                        # 다중 리더: 병렬 분석(기존) → synthesis만 스트리밍
+                        yield _sse("status", {"step": "parallel_analysis", "leaders": leader_names_list})
+
+                        loop = asyncio.get_event_loop()
+                        swarm_results = await loop.run_in_executor(
+                            None,
+                            lambda: orchestrator.parallel_swarm_analysis(
+                                query, selected_leaders, tools,
+                                SYSTEM_INSTRUCTION_BASE, model_name
+                            )
+                        )
+
+                        successful = [r for r in swarm_results if r.get("success", False)]
+                        leader_name = ", ".join([r["leader"] for r in swarm_results][:3])
+                        if len(swarm_results) > 3:
+                            leader_name += f" 외 {len(swarm_results)-3}명"
+                        leader_specialty = ", ".join([r["specialty"] for r in swarm_results][:3])
+                        swarm_mode = len(successful) > 1
+
+                        if len(successful) == 1:
+                            final_text = successful[0]["analysis"]
+                            yield _sse("chunk", {"text": final_text})
+                        else:
+                            yield _sse("status", {"step": "synthesizing"})
+
+                            # synthesis 스트리밍
+                            synthesis_orchestrator = RUNTIME.get("swarm_orchestrator")
+                            accumulated = ""
+                            async for text_chunk in synthesis_orchestrator.synthesize_swarm_results_stream(
+                                query, swarm_results, model_name
+                            ):
+                                accumulated += text_chunk
+                                yield _sse("chunk", {"text": text_chunk})
+
+                            final_text = accumulated
+
+                        # C-Level swarm 보강
+                        if clevel and clevel_decision and clevel_decision.get("mode") == "swarm":
+                            exec_id = clevel_decision.get("executive_id", "CSO")
+                            exec_name = clevel.executives.get(exec_id, {}).get("name", exec_id)
+                            try:
+                                clevel_instruction = clevel.get_clevel_system_instruction(exec_id, SYSTEM_INSTRUCTION_BASE)
+                                clevel_chat = gc.chats.create(
+                                    model=model_name,
+                                    config=genai_types.GenerateContentConfig(
+                                        system_instruction=clevel_instruction,
+                                    ),
+                                )
+                                clevel_resp = clevel_chat.send_message(
+                                    f"다음은 법률 리더들의 분석 결과입니다:\n\n{final_text}\n\n"
+                                    f"위 분석에 대해 {exec_name}({exec_id}) 관점에서 전략적 보강 의견을 2~3문장으로 추가하세요.\n"
+                                    f"사용자 원래 질문: {query}"
+                                )
+                                clevel_opinion = _safe_extract_gemini_text(clevel_resp)
+                                if clevel_opinion:
+                                    extra = f"\n\n---\n**[{exec_name} ({exec_id}) 전략 보강]**\n{clevel_opinion}"
+                                    final_text += extra
+                                    yield _sse("chunk", {"text": extra})
+                                    leader_name += f", {exec_name}"
+                            except Exception as ce:
+                                logger.warning(f"⚠️ C-Level swarm 보강 실패 (무시): {ce}")
+
+                else:
+                    # Fallback 단일 리더
+                    leader = select_swarm_leader(query, LEADER_REGISTRY)
+                    leader_name = leader['name']
+                    leader_specialty = leader.get('specialty', '콘텐츠 설계')
+                    swarm_mode = False
+
+                    yield _sse("status", {"step": "analyzing", "leader": leader_name})
+
+                    fallback_instruction = (
+                        f"{SYSTEM_INSTRUCTION_BASE}\n"
+                        f"현재 당신은 '{leader['name']}({leader['role']})' 노드입니다.\n"
+                        f"🎯 전문 분야: {leader.get('specialty', '통합')}\n"
+                        f"🎯 관점: {leader.get('specialty', '통합')} 전문가 관점에서 이 사안을 분석하세요.\n"
+                        f"반드시 [{leader['name']} ({leader.get('specialty', '통합')}) 답변]으로 시작하세요."
+                    )
+                    chat = gc.chats.create(
+                        model=model_name,
+                        config=genai_types.GenerateContentConfig(
+                            tools=tools,
+                            system_instruction=fallback_instruction,
+                            max_output_tokens=3000,
+                            automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
+                        ),
+                        history=gemini_history,
+                    )
+
+                    accumulated = ""
+                    async for text_part in _async_stream_chunks(
+                        chat.send_message_stream(
+                            f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
+                        )
+                    ):
+                        accumulated += text_part
+                        yield _sse("chunk", {"text": text_part})
+
+                    final_text = accumulated
+
+            # Governance 검증
+            if not validate_constitutional_compliance(final_text):
+                yield _sse("error", {"message": "⚠️ 시스템 무결성 정책에 의해 답변이 제한되었습니다."})
+                return
+
+            # 후처리
+            final_text_clean = _remove_markdown_tables(final_text)
+            final_text_clean = _remove_separator_lines(final_text_clean)
+
+            latency_ms = int((time.time() - start_time) * 1000)
+            if latency_ms > 10000:
+                logger.warning(f"🐌 [SLOW_REQUEST] {latency_ms}ms | query={query[:80]} | leader={leader_name}")
+
+            # Metrics
+            METRICS["requests"] += 1
+            req_count = METRICS["requests"]
+            prev_avg = METRICS["avg_latency_ms"]
+            METRICS["avg_latency_ms"] = int(((prev_avg * (req_count - 1)) + latency_ms) / max(req_count, 1))
+
+            # Audit
+            _audit("ask_stream", {
+                "query": query,
+                "leader": leader_name,
+                "status": "SUCCESS",
+                "latency_ms": latency_ms,
+                "swarm_mode": swarm_mode,
+            })
+
+            # done 이벤트
+            yield _sse("done", {
+                "leader": leader_name,
+                "specialty": leader_specialty,
+                "latency_ms": latency_ms,
+                "trace_id": trace,
+                "swarm_mode": swarm_mode,
+                "full_text": final_text_clean,
+            })
+
+            # 백그라운드 검증/저장
+            async def _bg_verify():
+                try:
+                    verifier_module = optional_import("engines.response_verifier")
+                    if verifier_module:
+                        verifier = verifier_module.get_verifier()
+                        _loop = asyncio.get_event_loop()
+                        await _loop.run_in_executor(
+                            None,
+                            lambda: verifier.verify_response(
+                                user_query=query,
+                                gemini_response=final_text_clean,
+                                tools_used=[],
+                                tool_results=[]
+                            )
+                        )
+                except Exception as e:
+                    logger.warning(f"⚠️ [Stream Verification] 실패 (무시): {e}")
+                try:
+                    db_client_v2 = optional_import("connectors.db_client_v2")
+                    if db_client_v2 and hasattr(db_client_v2, "save_chat_history"):
+                        query_category = db_client_v2.classify_query_category(query)
+                        _loop = asyncio.get_event_loop()
+                        await _loop.run_in_executor(
+                            None,
+                            lambda: db_client_v2.save_chat_history(
+                                user_query=query,
+                                ai_response=final_text_clean,
+                                leader=leader_name,
+                                status="success",
+                                latency_ms=latency_ms,
+                                visitor_id=visitor_id,
+                                swarm_mode=swarm_mode,
+                            )
+                        )
+                except Exception as e:
+                    logger.warning(f"⚠️ [Stream ChatHistory] 실패 (무시): {e}")
+
+            asyncio.create_task(_bg_verify())
+
+        except Exception as e:
+            METRICS["errors"] += 1
+            ref = datetime.datetime.now().strftime("%H%M%S")
+            logger.error(f"💥 스트리밍 에러 (trace={trace}, ref={ref}): {e}")
+            logger.error(traceback.format_exc())
+            yield _sse("error", {"message": f"⚠️ 시스템 장애가 발생했습니다. (Ref: {ref})"})
+
+    return StreamingResponse(
+        _sse_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
 
 # =============================================================
 # ✅ 전문가용 답변 (Claude 검증 + 전문 용어 유지)
