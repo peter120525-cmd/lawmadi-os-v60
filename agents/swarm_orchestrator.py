@@ -11,12 +11,57 @@ Chapter 3 구현:
 import json
 import os
 import logging
+import time
+import threading
 from typing import Dict, List, Tuple, Optional
 from google import genai
 from google.genai import types as genai_types
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logger = logging.getLogger("LawmadiOS.SwarmOrchestrator")
+
+# Gemini 모델 상수 — main.py의 DEFAULT_GEMINI_MODEL과 동기화
+_DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
+
+
+class GeminiCircuitBreaker:
+    """Gemini API Circuit Breaker — CLOSED/OPEN/HALF_OPEN 3-state"""
+
+    def __init__(self, failure_threshold: int = 5, recovery_timeout: int = 60):
+        self._lock = threading.Lock()
+        self._failure_count = 0
+        self._failure_threshold = failure_threshold
+        self._recovery_timeout = recovery_timeout
+        self._state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
+        self._last_failure_time = 0.0
+
+    @property
+    def state(self) -> str:
+        with self._lock:
+            if self._state == "OPEN" and time.time() - self._last_failure_time >= self._recovery_timeout:
+                self._state = "HALF_OPEN"
+            return self._state
+
+    def allow_request(self) -> bool:
+        s = self.state
+        return s in ("CLOSED", "HALF_OPEN")
+
+    def record_success(self):
+        with self._lock:
+            self._failure_count = 0
+            self._state = "CLOSED"
+
+    def record_failure(self):
+        with self._lock:
+            self._failure_count += 1
+            self._last_failure_time = time.time()
+            if self._failure_count >= self._failure_threshold:
+                self._state = "OPEN"
+                logger.warning(f"🔴 [CircuitBreaker] OPEN — {self._failure_count}회 연속 실패, {self._recovery_timeout}초 후 재시도")
+
+
+# 전역 Circuit Breaker 인스턴스
+_gemini_cb = GeminiCircuitBreaker(failure_threshold=5, recovery_timeout=60)
 
 
 class SwarmOrchestrator:
@@ -211,14 +256,22 @@ class SwarmOrchestrator:
             f"분야 목록:\n" + "\n".join(specialty_list)
         )
 
+        if not _gemini_cb.allow_request():
+            logger.warning(f"⚠️ Gemini Circuit Breaker OPEN — 도메인 분류 스킵")
+            return None
+
         try:
             gc = self.genai_client
+            if gc is None:
+                logger.warning("⚠️ genai_client is None — 도메인 분류 스킵")
+                return None
             resp = gc.models.generate_content(
-                model="gemini-3-flash-preview",
+                model=self.config.get("gemini_model", "gemini-3-flash-preview"),
                 contents=prompt,
                 config=genai_types.GenerateContentConfig(max_output_tokens=50, temperature=0.0),
             )
             text = (resp.text or "").strip().upper()
+            _gemini_cb.record_success()
             # L01~L60 형식 추출
             import re
             match = re.search(r'L(\d{2})', text)
@@ -230,6 +283,7 @@ class SwarmOrchestrator:
             logger.info(f"🤖 Gemini 도메인 분류 결과 없음: {text[:50]}")
             return None
         except Exception as e:
+            _gemini_cb.record_failure()
             logger.warning(f"⚠️ Gemini 도메인 분류 실패 (무시): {e}")
             return None
 
@@ -310,7 +364,7 @@ class SwarmOrchestrator:
         query: str,
         tools: List = None,
         system_instruction_base: str = "",
-        model_name: str = "gemini-3-flash-preview"
+        model_name: str = _DEFAULT_MODEL
     ) -> Dict:
         """
         단일 Leader로 분석 실행
@@ -393,7 +447,12 @@ class SwarmOrchestrator:
             _max_tokens = 800 if clevel_id == "CCO" else 4096
             logger.info(f"🔄 {leader_name} ({leader_specialty}) 분석 시작... (max_tokens={_max_tokens})")
 
+            if not _gemini_cb.allow_request():
+                raise RuntimeError("Gemini Circuit Breaker OPEN")
+
             gc = self.genai_client
+            if gc is None:
+                raise RuntimeError("Gemini 클라이언트 미초기화 (GEMINI_KEY 확인 필요)")
             chat = gc.chats.create(
                 model=model_name,
                 config=genai_types.GenerateContentConfig(
@@ -437,6 +496,7 @@ class SwarmOrchestrator:
                     analysis_text = retry_text
                     logger.info(f"✅ {leader_name} 재시도 성공 ({len(analysis_text)} chars)")
 
+            _gemini_cb.record_success()
             logger.info(f"✅ {leader_name} 분석 완료 ({len(analysis_text)} chars)")
 
             # chat.history에서 tool 호출 메타데이터 수집
@@ -471,6 +531,7 @@ class SwarmOrchestrator:
             }
 
         except Exception as e:
+            _gemini_cb.record_failure()
             logger.error(f"❌ {leader_name} 분석 실패: {e}")
             return {
                 "leader": leader_name,
@@ -486,7 +547,7 @@ class SwarmOrchestrator:
         selected_leaders: List[Dict],
         tools: List = None,
         system_instruction_base: str = "",
-        model_name: str = "gemini-3-flash-preview"
+        model_name: str = _DEFAULT_MODEL
     ) -> List[Dict]:
         """
         여러 Leader로 병렬 분석 실행
@@ -533,7 +594,7 @@ class SwarmOrchestrator:
         self,
         query: str,
         swarm_results: List[Dict],
-        model_name: str = "gemini-3-flash-preview"
+        model_name: str = _DEFAULT_MODEL
     ) -> str:
         """
         여러 Leader의 분석 결과를 통합하여 최종 판단 흐름 생성
@@ -620,6 +681,8 @@ class SwarmOrchestrator:
             logger.info(f"🔄 통합 분석 시작 ({len(successful_analyses)}개 리더 결과 통합)...")
 
             gc = self.genai_client
+            if gc is None:
+                raise RuntimeError("Gemini 클라이언트 미초기화 (GEMINI_KEY 확인 필요)")
             response = gc.models.generate_content(
                 model=model_name,
                 contents=synthesis_prompt,
@@ -643,7 +706,7 @@ class SwarmOrchestrator:
         self,
         query: str,
         swarm_results: list,
-        model_name: str = "gemini-3-flash-preview"
+        model_name: str = _DEFAULT_MODEL
     ):
         """
         여러 Leader의 분석 결과를 통합 — 스트리밍 버전 (async generator)
@@ -724,6 +787,8 @@ class SwarmOrchestrator:
             logger.info(f"🔄 통합 분석 스트리밍 시작 ({len(successful_analyses)}개 리더 결과 통합)...")
 
             gc = self.genai_client
+            if gc is None:
+                raise RuntimeError("Gemini 클라이언트 미초기화 (GEMINI_KEY 확인 필요)")
 
             # generate_content_stream을 별도 스레드에서 실행
             loop = asyncio.get_event_loop()
@@ -846,7 +911,7 @@ class SwarmOrchestrator:
         query: str,
         tools: List = None,
         system_instruction_base: str = "",
-        model_name: str = "gemini-3-flash-preview",
+        model_name: str = _DEFAULT_MODEL,
         force_single: bool = False
     ) -> Dict:
         """

@@ -58,38 +58,47 @@ class DRFConnector:
     # -------------------------------------------------
     # DRF 호출
     # -------------------------------------------------
-    def _call_drf(self, query, target="law"):
+    def _call_drf(self, query, target="law", _retries=3):
         """
-        DRF API 호출 (target 파라미터 지원)
+        DRF API 호출 (target 파라미터 지원, 지수 백오프 재시도)
 
         Args:
             query: 검색어
             target: DRF target (law, prec, admrul, expc, adrule, edulaw, etc.)
+            _retries: 재시도 횟수 (기본 3)
         """
         if not self.drf_key or not self.drf_url:
             raise RuntimeError("DRF not available")
 
         params = {
             "OC": self.drf_key,
-            "target": target,  # 동적 target
-            "type": "JSON",  # DRF는 JSON 형식 사용
+            "target": target,
+            "type": "JSON",
             "query": query
         }
 
-        r = requests.get(self.drf_url, params=params, timeout=self.timeout_sec)
+        last_err = None
+        for attempt in range(_retries):
+            try:
+                r = requests.get(self.drf_url, params=params, timeout=self.timeout_sec)
 
-        if r.status_code != 200:
-            raise RuntimeError(f"DRF HTTP {r.status_code}")
+                if r.status_code != 200:
+                    raise RuntimeError(f"DRF HTTP {r.status_code}")
 
-        content_type = r.headers.get("Content-Type", "")
-        if "json" not in content_type.lower():
-            raise RuntimeError(f"DRF unexpected Content-Type: {content_type}")
+                content_type = r.headers.get("Content-Type", "")
+                if "json" not in content_type.lower():
+                    raise RuntimeError(f"DRF unexpected Content-Type: {content_type}")
 
-        # JSON 파싱
-        try:
-            return r.json()
-        except Exception as e:
-            raise RuntimeError(f"DRF JSON parse error: {e}")
+                return r.json()
+            except Exception as e:
+                last_err = e
+                if attempt < _retries - 1:
+                    import time
+                    wait = (2 ** attempt) * 0.5  # 0.5s, 1s, 2s
+                    logger.warning(f"⚠️ DRF 재시도 {attempt+1}/{_retries} ({target}): {e}, {wait}s 대기")
+                    time.sleep(wait)
+
+        raise RuntimeError(f"DRF {_retries}회 시도 실패: {last_err}")
 
     # -------------------------------------------------
     # data.go.kr 호출
