@@ -89,10 +89,23 @@ class CLevelHandler:
         "장애인", "차별", "인권",
     ]
 
+    # 법률 키워드를 포함하지만 법률 의미가 아닌 복합어 (오탐 방지)
+    _FALSE_POSITIVE_CONTEXTS = [
+        "자기소개",   # "기소" 오탐 방지
+        "소개",       # "소" 관련 오탐 방지
+        "기소개",     # "기소" 오탐 방지 (부분)
+    ]
+
     def _has_legal_domain(self, query: str) -> bool:
-        """질문에 법률 도메인 키워드가 포함되어 있는지 확인"""
+        """질문에 법률 도메인 키워드가 포함되어 있는지 확인 (오탐 방지 포함)"""
         query_lower = query.lower()
-        return any(kw in query_lower for kw in self.LEGAL_DOMAIN_KEYWORDS)
+
+        # 오탐 방지: 복합어를 임시 치환하여 부분 매칭 방지
+        sanitized = query_lower
+        for fp in self._FALSE_POSITIVE_CONTEXTS:
+            sanitized = sanitized.replace(fp, " " * len(fp))
+
+        return any(kw in sanitized for kw in self.LEGAL_DOMAIN_KEYWORDS)
 
     def detect_clevel_call(self, query: str) -> Optional[Tuple[str, str]]:
         """
