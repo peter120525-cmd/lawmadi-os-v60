@@ -66,16 +66,24 @@ def _get_pool() -> queue.Queue:
 
     return _pool
 
+_conn_semaphore = threading.Semaphore(_MAX_CONN)
+
 def get_connection():
     pool = _get_pool()
     if not _db_enabled():
         raise RuntimeError("DB 인프라가 비활성 상태입니다.")
 
+    if not _conn_semaphore.acquire(timeout=10):
+        raise RuntimeError("DB 커넥션 한도 초과 (동시 접속 제한)")
+
     try:
-        # 풀에서 커넥션을 획득하되, 비어있으면 즉시 새로 생성
         conn = pool.get_nowait()
     except queue.Empty:
-        conn = create_connection()
+        try:
+            conn = create_connection()
+        except Exception:
+            _conn_semaphore.release()
+            raise
     return conn
 
 def release_connection(conn):
@@ -91,6 +99,8 @@ def release_connection(conn):
             conn.close()
         except Exception:
             pass
+    finally:
+        _conn_semaphore.release()
 
 def init_tables():
     """[IT 기술: Schema Migration] 앱 부팅 시 테이블 무결성 확인 및 생성"""
