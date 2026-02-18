@@ -7,14 +7,14 @@
     <meta name="description" content="법률 문제로 인한 불안, 60명의 전문 리더가 협업하여 구체적인 행동 계획으로 바꿔드립니다.">
     <!-- SEO: Open Graph (항목 #9) -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Lawmadi OS - AI 법률 의사결정 지원" />
+    <meta property="og:title" content="Lawmadi OS - 법률 의사결정 지원 시스템" />
     <meta property="og:description" content="60명의 전문 리더가 협업하여 법률 문제를 구체적인 행동 계획으로 바꿔드립니다." />
     <meta property="og:url" content="https://lawmadi-db.web.app" />
     <meta property="og:image" content="https://lawmadi-db.web.app/og-image.png" />
     <meta property="og:locale" content="ko_KR" />
     <!-- SEO: Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Lawmadi OS - AI 법률 의사결정 지원" />
+    <meta name="twitter:title" content="Lawmadi OS - 법률 의사결정 지원 시스템" />
     <meta name="twitter:description" content="60명의 전문 리더가 협업하여 법률 문제를 구체적인 행동 계획으로 바꿔드립니다." />
     <!-- SEO: Canonical -->
     <link rel="canonical" href="https://lawmadi-db.web.app" />
@@ -30,7 +30,7 @@
         "@context": "https://schema.org",
         "@type": "WebApplication",
         "name": "Lawmadi OS",
-        "description": "60명의 전문 리더가 협업하여 법률 문제를 구체적인 행동 계획으로 바꿔드리는 AI 법률 의사결정 지원 시스템",
+        "description": "60명의 전문 리더가 협업하여 법률 문제를 구체적인 행동 계획으로 바꿔드리는 Lawmadi OS 법률 의사결정 지원 시스템",
         "url": "https://lawmadi-db.web.app",
         "applicationCategory": "LegalService",
         "operatingSystem": "Web",
@@ -898,7 +898,8 @@
             border: 1px solid rgba(99, 102, 241, 0.25);
             padding: 44px 40px 36px;
             border-radius: 20px;
-            max-width: 90%;
+            max-width: 100%;
+            width: 100%;
             box-shadow:
                 0 2px 4px rgba(99, 102, 241, 0.06),
                 0 8px 24px rgba(99, 102, 241, 0.10),
@@ -933,7 +934,7 @@
 
         /* AI 브랜드 탭 */
         .ai-msg::after {
-            content: '⚖ Lawmadi AI';
+            content: '⚖ Lawmadi OS';
             position: absolute;
             top: 4px;
             left: 24px;
@@ -1403,7 +1404,8 @@
             flex-direction: column;
             gap: 16px;
             align-items: flex-start;
-            max-width: 90%;
+            max-width: 100%;
+            width: 100%;
             position: relative;
             animation: messageSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             overflow: visible;
@@ -1422,7 +1424,7 @@
         }
 
         .typing-indicator::after {
-            content: '⚖ Lawmadi AI';
+            content: '⚖ Lawmadi OS';
             position: absolute;
             top: 4px;
             left: 24px;
@@ -1816,37 +1818,32 @@
         /* ═══════════════════════════════════════════════════
            #### ▶ 섹션 화살표 박스
         ═══════════════════════════════════════════════════ */
+        /* ── H4: 세부 항목 — 인라인 라벨 ── */
         .ai-msg .arrow-section-box {
-            background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 55%, #ede9fe 100%);
-            border: 1px solid rgba(99, 102, 241, 0.18);
-            border-left: 4px solid #4f46e5;
-            padding: 11px 18px 11px 16px;
-            border-radius: 0 12px 12px 0;
-            margin: 18px 0 8px;
+            background: transparent;
+            border: none;
+            border-bottom: 1px dashed rgba(99, 102, 241, 0.2);
+            padding: 8px 0 8px 12px;
+            margin: 12px 0 4px;
             display: flex;
             align-items: center;
-            gap: 10px;
-            box-shadow:
-                0 2px 10px rgba(79, 70, 229, 0.08),
-                inset 0 1px 0 rgba(255, 255, 255, 0.85);
-            animation: slideInLeft 0.35s ease;
+            gap: 8px;
         }
 
         .ai-msg .arrow-section-box .arrow-icon {
-            color: #4f46e5;
-            font-size: 0.85rem;
+            color: #6366f1;
+            font-size: 0.75rem;
             font-weight: 900;
             flex-shrink: 0;
-            filter: drop-shadow(0 0 5px rgba(79, 70, 229, 0.5));
             line-height: 1;
         }
 
         .ai-msg .arrow-section-box .arrow-text {
-            font-size: 0.97rem;
+            font-size: 0.92rem;
             font-weight: 700;
-            color: #312e81;
+            color: #4338ca;
             letter-spacing: -0.01em;
-            line-height: 1.5;
+            line-height: 1.4;
         }
 
         /* ═══════════════════════════════════════════════════
@@ -2005,7 +2002,7 @@
 
             /* ── 타이핑 인디케이터 ── */
             .typing-indicator {
-                max-width: 98%;
+                max-width: 100%;
                 padding: 36px 20px 16px;
             }
 
@@ -2226,12 +2223,23 @@
                 font-size: 0.93rem;
             }
 
+            .ai-msg .section-title {
+                font-size: 0.9rem;
+                padding: 10px 10px;
+                margin: 16px -10px 10px;
+            }
+
+            .ai-msg .subsection-title {
+                font-size: 0.84rem;
+                padding: 7px 10px;
+            }
+
             .ai-msg .arrow-section-box {
-                padding: 9px 12px 9px 10px;
+                padding: 5px 0 5px 6px;
             }
 
             .ai-msg .arrow-section-box .arrow-text {
-                font-size: 0.9rem;
+                font-size: 0.82rem;
             }
         }
 
@@ -2324,7 +2332,12 @@
             background: linear-gradient(135deg, #1e3a5f 0%, #172554 100%) !important;
         }
 
-        body.dark-mode .arrow-section-box {
+        body.dark-mode .ai-msg .arrow-section-box {
+            border-bottom-color: rgba(99, 102, 241, 0.25);
+        }
+        body.dark-mode .ai-msg .arrow-section-box .arrow-text { color: #e2e8f0; }
+        body.dark-mode .ai-msg .arrow-section-box .arrow-icon { color: #818cf8; }
+        body.dark-mode .arrow-section-box.legacy-compat {
             background: #1e293b !important;
             border-color: #334155 !important;
         }
@@ -2394,9 +2407,7 @@
             color: #6ee7b7;
         }
 
-        /* 10. 화살표 섹션 박스 텍스트 + 아이콘 */
-        body.dark-mode .ai-msg .arrow-section-box .arrow-text { color: #e2e8f0; }
-        body.dark-mode .ai-msg .arrow-section-box .arrow-icon { color: #818cf8; }
+        /* 10. 화살표 섹션 박스 — 위 섹션에서 정의 */
 
         /* 11. 체크리스트 아이템 */
         body.dark-mode .ai-msg .checklist-item { border-bottom-color: #334155; }
@@ -3831,56 +3842,71 @@
         ═══════════════════════════════════════════════════ */
 
         /* 0. 섹션/서브섹션 타이틀 (H2/H3 → 볼드 변환) */
+        /* ── H2: 섹션 대제목 — 풀와이드 그라데이션 배너 ── */
         .ai-msg .section-title {
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-size: 1.1rem;
+            gap: 12px;
+            font-size: 1.15rem;
             color: white;
-            background: linear-gradient(135deg, #1e40af 0%, #2563eb 60%, #4f46e5 100%);
-            padding: 13px 22px;
-            border-radius: 12px;
-            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4), 0 1px 3px rgba(37, 99, 235, 0.15), inset 0 1px 0 rgba(255,255,255,0.15);
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #4f46e5 100%);
+            padding: 15px 24px;
+            margin: 28px -40px 16px;
+            border-radius: 0;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35), inset 0 1px 0 rgba(255,255,255,0.12);
             animation: slideInLeft 0.4s ease;
-            text-shadow: 0 1px 3px rgba(0,0,0,0.15);
+            text-shadow: 0 1px 3px rgba(0,0,0,0.2);
             letter-spacing: -0.01em;
+            position: relative;
         }
         .ai-msg .section-title::before {
             content: '';
-            width: 3px;
-            height: 18px;
-            background: rgba(255,255,255,0.55);
+            width: 4px;
+            height: 20px;
+            background: rgba(255,255,255,0.6);
             border-radius: 2px;
             flex-shrink: 0;
         }
+        .ai-msg .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.3), transparent);
+        }
+
+        /* ── H3: 서브섹션 — 좌측 강조 바 ── */
         .ai-msg .subsection-title {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 1.02rem;
-            color: #1e40af;
-            background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+            gap: 10px;
+            font-size: 1rem;
+            color: #1e3a8a;
+            background: linear-gradient(135deg, rgba(219,234,254,0.6) 0%, rgba(238,242,255,0.4) 100%);
             padding: 10px 18px;
-            border-radius: 10px;
-            border-left: 4px solid #2563eb;
-            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1), inset 0 1px 0 rgba(255,255,255,0.8);
+            margin: 20px 0 8px;
+            border-radius: 0 10px 10px 0;
+            border-left: 4px solid #3b82f6;
+            box-shadow: 0 1px 4px rgba(37, 99, 235, 0.08);
+            font-weight: 700;
         }
         .ai-msg .subsection-title::before {
             content: '';
-            width: 7px;
-            height: 7px;
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            width: 6px;
+            height: 6px;
+            background: #3b82f6;
             border-radius: 50%;
-            box-shadow: 0 0 8px rgba(37, 99, 235, 0.6);
             flex-shrink: 0;
         }
 
         /* 다크모드: 섹션/서브섹션 타이틀 */
         body.dark-mode .ai-msg .section-title {
-            background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #4f46e5 100%);
+            background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 50%, #4f46e5 100%);
         }
         body.dark-mode .ai-msg .subsection-title {
-            background: linear-gradient(135deg, #1e293b 0%, #1e3a5f 100%);
+            background: linear-gradient(135deg, rgba(30,58,95,0.5) 0%, rgba(30,41,59,0.3) 100%);
             border-left-color: #3b82f6;
             color: #93c5fd;
         }
@@ -4384,11 +4410,18 @@
         @media (max-width: 768px) {
             .ai-msg .section-title {
                 font-size: 0.95rem;
-                padding: 10px 14px;
+                padding: 12px 14px;
+                margin: 20px -14px 12px;
             }
             .ai-msg .subsection-title {
                 font-size: 0.88rem;
                 padding: 8px 12px;
+            }
+            .ai-msg .arrow-section-box {
+                padding: 6px 0 6px 8px;
+            }
+            .ai-msg .arrow-section-box .arrow-text {
+                font-size: 0.85rem;
             }
             .hero-stats {
                 gap: 10px;
@@ -4541,7 +4574,7 @@
             <div class="hero-section">
                 <div class="hero-badge">
                     <span class="material-symbols-outlined">auto_awesome</span>
-                    AI 기반 법률 의사결정 시스템
+                    Lawmadi OS 법률 의사결정 시스템
                 </div>
 
                 <h1 class="hero-title">
@@ -4566,7 +4599,7 @@
                     </div>
                     <div class="hero-stat-item">
                         <div class="hero-stat-number" data-count="24">0</div>
-                        <div class="hero-stat-label">시간 AI 상담</div>
+                        <div class="hero-stat-label">시간 Lawmadi OS 상담</div>
                     </div>
                     <div class="hero-stat-item">
                         <div class="hero-stat-number" data-count="100" data-suffix="+">0</div>
@@ -4706,7 +4739,7 @@
                         <div class="plan-price">&#8361;0</div>
                         <ul>
                             <li>4시간당 10회 질문</li>
-                            <li>기본 AI 분석</li>
+                            <li>기본 Lawmadi OS 분석</li>
                             <li>60명 리더 협업</li>
                             <li>SSOT 법령 검증</li>
                         </ul>
@@ -4730,8 +4763,8 @@
 
             <!-- Lawyer Consultation CTA -->
             <div class="lawyer-section">
-                <h3>AI가 1차 분석, 전문 변호사가 마무리</h3>
-                <p>AI 분석 결과를 바탕으로 전문 변호사가 최종 자문을 드립니다</p>
+                <h3>Lawmadi OS가 1차 분석, 전문 변호사가 마무리</h3>
+                <p>Lawmadi OS 분석 결과를 바탕으로 전문 변호사가 최종 자문을 드립니다</p>
                 <button class="lawyer-cta-landing" onclick="alert('변호사 연결 서비스 준비 중입니다. 곧 오픈 예정입니다!')">
                     <span class="material-symbols-outlined" style="font-size: 1.1rem; vertical-align: middle;">gavel</span>
                     변호사 상담 신청
@@ -4803,7 +4836,7 @@
         </button>
         <div id="lawyerFormView">
             <h3>변호사 상담 신청</h3>
-            <p class="modal-desc">AI 분석 결과를 바탕으로 전문 변호사가 연락드립니다</p>
+            <p class="modal-desc">Lawmadi OS 분석 결과를 바탕으로 전문 변호사가 연락드립니다</p>
             <form id="lawyerForm" onsubmit="return UI.submitLawyerInquiry(event)">
                 <div class="form-group">
                     <label for="lawyerName">이름 *</label>
