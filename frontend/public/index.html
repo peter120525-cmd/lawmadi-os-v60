@@ -2076,12 +2076,21 @@
 
             /* ── 입력창 ── */
             .input-pipeline-wrapper {
-                padding: 4px 10px;
+                padding: 2px 6px;
             }
 
             .input-container {
                 border-radius: 16px;
                 padding: 4px 8px 4px 14px;
+            }
+
+            /* ── 모바일 세로 스크롤바 숨김 ── */
+            .content-viewport {
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+            .content-viewport::-webkit-scrollbar {
+                display: none;
             }
 
             #userInput {

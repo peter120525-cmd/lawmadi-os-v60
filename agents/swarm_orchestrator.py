@@ -442,7 +442,7 @@ class SwarmOrchestrator:
 """
 
         for idx, result in enumerate(successful_analyses, 1):
-            synthesis_prompt += f"\n━━━ {idx}. {result['leader']} ({result['specialty']}) ━━━\n"
+            synthesis_prompt += f"\n[{idx}. {result['leader']} ({result['specialty']})]\n"
             synthesis_prompt += result['analysis']
             synthesis_prompt += "\n"
 
@@ -457,7 +457,6 @@ class SwarmOrchestrator:
 2. 반드시 아래 헤더로 시작하세요:
    [유나 (CCO) 종합 판단]
    참여 전문가: {leader_list_str}
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 3. 반드시 다음 5단계 계층 구조를 유지하세요:
 
@@ -467,9 +466,7 @@ class SwarmOrchestrator:
 
    2. 법률 근거 분석
       — 리더별로 배지형 구분 사용:
-      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       👤 [리더명] 리더 ([전문분야] 전문)
-      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       2.1, 2.2... 순서로 분야별 법률 근거 정리
       ⚠️ 법률 전략 관련 내용은 서연(CSO)의 분석을 가장 먼저 배치하세요
 
@@ -527,8 +524,6 @@ class SwarmOrchestrator:
         """Fallback 응답 생성"""
         return f"""[유나 (CCO) 종합 판단]
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
 1. 핵심 요약
    1.1 상황 진단
    분석 중 시스템 오류가 발생하여 일부 기능이 제한되었습니다.
@@ -568,7 +563,6 @@ class SwarmOrchestrator:
 
         response = "[유나 (CCO) 종합 판단]\n\n"
         response += f"참여 전문가: {leader_list_str}\n\n"
-        response += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
 
         response += "1. 핵심 요약\n"
         response += f"   1.1 상황 진단\n"
@@ -576,9 +570,7 @@ class SwarmOrchestrator:
 
         response += "2. 법률 근거 분석\n\n"
         for idx, analysis in enumerate(analyses, 1):
-            response += f"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            response += f"   👤 {analysis['leader']} 리더 ({analysis['specialty']} 전문)\n"
-            response += f"   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            response += f"   👤 {analysis['leader']} 리더 ({analysis['specialty']} 전문)\n\n"
             response += f"   2.{idx} {analysis['specialty']} 검토\n"
             response += analysis['analysis']
             response += "\n\n"
