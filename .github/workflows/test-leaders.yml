@@ -1,0 +1,30 @@
+name: Leader Matching Test
+
+on:
+  workflow_dispatch:
+
+env:
+  API_URL: https://lawmadi-os-v60-938146962157.asia-northeast3.run.app
+
+jobs:
+  test-leaders:
+    name: Example Question Leader Matching
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install aiohttp
+
+      - name: Run leader matching test
+        env:
+          ADMIN_KEY: ${{ secrets.MCP_API_KEY }}
+        run: python tests/test_example_questions.py
