@@ -2680,13 +2680,18 @@ async def ask_expert(request: Request):
 {original_response}
 """
 
-        response = client.messages.create(
-            model="claude-sonnet-4-5-20250929",
-            max_tokens=4096,
-            temperature=0,
-            messages=[{"role": "user", "content": expert_prompt}]
-        )
+        import asyncio
 
+        def _call_claude():
+            return client.messages.create(
+                model="claude-sonnet-4-5-20250929",
+                max_tokens=4096,
+                temperature=0,
+                messages=[{"role": "user", "content": expert_prompt}]
+            )
+
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(None, _call_claude)
         expert_text = response.content[0].text
         latency_ms = int((time.time() - start) * 1000)
 
