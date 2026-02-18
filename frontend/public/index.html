@@ -5494,6 +5494,7 @@
             if (!response.ok) throw new Error(`서버 오류 (${response.status})`);
 
             // 스트리밍 메시지 컨테이너 생성 (고유 ID로 충돌 방지)
+            // 첫 chunk 도착 시에만 DOM에 추가하여 이중 박스 방지
             const streamId = 'streaming-msg-' + Date.now();
             const streamDiv = document.createElement('div');
             streamDiv.className = 'ai-msg';
@@ -5501,7 +5502,7 @@
             const streamContent = document.createElement('div');
             streamContent.className = 'stream-content';
             streamDiv.appendChild(streamContent);
-            this.convArea.appendChild(streamDiv);
+            let streamDivAttached = false;
 
             let accumulatedText = '';
             let leaderName = '';
@@ -5567,6 +5568,11 @@
                         } else if (eventType === 'chunk') {
                             if (!accumulatedText) {
                                 this.hideTypingIndicator();
+                                // 첫 chunk에서만 streamDiv를 DOM에 추가 (이중 박스 방지)
+                                if (!streamDivAttached) {
+                                    this.convArea.appendChild(streamDiv);
+                                    streamDivAttached = true;
+                                }
                             }
                             accumulatedText += (payload.text || '');
                             streamContent.innerHTML = this._renderStreamingText(accumulatedText);

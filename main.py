@@ -101,6 +101,48 @@ OS_VERSION = "v60.0.0"
 # Gemini 모델명 통일 상수 (항목 #6)
 DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview"
 
+# ─── Gemini 에러 분류 헬퍼 ───
+def _classify_gemini_error(e: Exception, ref: str = "") -> str:
+    """예외를 분석하여 사용자 친화적 에러 메시지 반환"""
+    err_name = type(e).__name__
+    err_msg = str(e).lower()
+
+    # 1) genai_client가 None (AttributeError: 'NoneType' ...)
+    if isinstance(e, AttributeError) and "'nonetype'" in err_msg:
+        return f"⚠️ AI 엔진이 초기화되지 않았습니다. 서버를 재시작해 주세요. (Ref: {ref})"
+
+    # 2) Gemini API 에러 (google.genai 예외)
+    if "quota" in err_msg or "resource_exhausted" in err_msg or "resourceexhausted" in err_msg:
+        return f"⚠️ AI 사용량 한도에 도달했습니다. 잠시 후 다시 시도해 주세요. (Ref: {ref})"
+    if "429" in err_msg or "rate" in err_msg:
+        return f"⚠️ 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요. (Ref: {ref})"
+    if "404" in err_msg or "not_found" in err_msg or "model" in err_msg and "not found" in err_msg:
+        return f"⚠️ AI 모델을 찾을 수 없습니다. 관리자에게 문의해 주세요. (Ref: {ref})"
+    if "401" in err_msg or "403" in err_msg or "permission" in err_msg or "unauthenticated" in err_msg:
+        return f"⚠️ AI 인증에 실패했습니다. API 키를 확인해 주세요. (Ref: {ref})"
+    if "500" in err_msg or "internal" in err_msg or "unavailable" in err_msg:
+        return f"⚠️ AI 서버가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해 주세요. (Ref: {ref})"
+
+    # 3) 타임아웃
+    if isinstance(e, (TimeoutError, asyncio.TimeoutError)) or "timeout" in err_msg or "timed out" in err_msg:
+        return f"⚠️ AI 응답 시간이 초과되었습니다. 질문을 간결하게 수정 후 다시 시도해 주세요. (Ref: {ref})"
+
+    # 4) 네트워크 오류
+    if isinstance(e, (ConnectionError, OSError)) or "connection" in err_msg or "network" in err_msg:
+        return f"⚠️ 네트워크 연결 오류가 발생했습니다. 잠시 후 다시 시도해 주세요. (Ref: {ref})"
+
+    # 5) 기본 (알 수 없는 에러)
+    return f"⚠️ 시스템 장애가 발생했습니다. 잠시 후 다시 시도해 주세요. (Ref: {ref})"
+
+
+def _ensure_genai_client(runtime: dict) -> object:
+    """RUNTIME에서 genai_client를 가져오고, None이면 예외 발생"""
+    gc = runtime.get("genai_client")
+    if gc is None:
+        raise RuntimeError("Gemini 클라이언트가 초기화되지 않았습니다 (GEMINI_KEY 확인 필요)")
+    return gc
+
+
 # Rate Limiter 설정 (항목 #2)
 limiter = Limiter(key_func=get_remote_address)
 
@@ -2498,7 +2540,7 @@ async def ask(request: Request):
             # C-Level 전용 시스템 지시
             clevel_instruction = clevel.get_clevel_system_instruction(exec_id, SYSTEM_INSTRUCTION_BASE)
 
-            gc = RUNTIME.get("genai_client")
+            gc = _ensure_genai_client(RUNTIME)
             chat = gc.chats.create(
                 model=model_name,
                 config=genai_types.GenerateContentConfig(
@@ -2586,7 +2628,7 @@ async def ask(request: Request):
 
                         try:
                             clevel_instruction = clevel.get_clevel_system_instruction(exec_id, SYSTEM_INSTRUCTION_BASE)
-                            gc = RUNTIME.get("genai_client")
+                            gc = _ensure_genai_client(RUNTIME)
                             clevel_chat = gc.chats.create(
                                 model=model_name,
                                 config=genai_types.GenerateContentConfig(
@@ -2623,7 +2665,7 @@ async def ask(request: Request):
                 leader_specialty = leader.get('specialty', '콘텐츠 설계')
                 swarm_mode = False
 
-                gc = RUNTIME.get("genai_client")
+                gc = _ensure_genai_client(RUNTIME)
                 _is_cco_fallback = leader.get("_clevel") == "CCO"
 
                 # ─── /ask 비법률 즉시 응답 ───
@@ -2874,10 +2916,11 @@ async def ask(request: Request):
     except Exception as e:
         METRICS["errors"] += 1
         ref = datetime.datetime.now().strftime("%H%M%S")
-        logger.error(f"💥 커널 에러 (trace={trace}, ref={ref}): {e}")
+        logger.error(f"💥 커널 에러 (trace={trace}, ref={ref}): {type(e).__name__}: {e}")
         logger.error(traceback.format_exc())
-        _audit("ask_error", {"query": str(locals().get("query", "")), "status": "ERROR", "leader": "SYSTEM", "latency_ms": 0})
-        return {"trace_id": trace, "response": f"⚠️ 시스템 장애가 발생했습니다. (Ref: {ref})", "status": "ERROR"}
+        _audit("ask_error", {"query": str(locals().get("query", "")), "status": "ERROR", "leader": "SYSTEM", "latency_ms": 0, "error_type": type(e).__name__})
+        user_msg = _classify_gemini_error(e, ref)
+        return {"trace_id": trace, "response": user_msg, "status": "ERROR"}
 
 # =============================================================
 # 🔄 SSE 스트리밍 응답 (/ask-stream)
@@ -3033,7 +3076,7 @@ async def ask_stream(request: Request):
 
             now_kst = _now_iso()
             model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
-            gc = RUNTIME.get("genai_client")
+            gc = _ensure_genai_client(RUNTIME)
 
             # ─── 경로 A: C-Level 직접 호출 (스트리밍) ───
             if clevel_decision and clevel_decision.get("mode") == "direct":
@@ -3200,7 +3243,8 @@ async def ask_stream(request: Request):
                             exec_name = clevel.executives.get(exec_id, {}).get("name", exec_id)
                             try:
                                 clevel_instruction = clevel.get_clevel_system_instruction(exec_id, SYSTEM_INSTRUCTION_BASE)
-                                clevel_chat = gc.chats.create(
+                                _gc = _ensure_genai_client(RUNTIME)
+                                clevel_chat = _gc.chats.create(
                                     model=model_name,
                                     config=genai_types.GenerateContentConfig(
                                         system_instruction=clevel_instruction,
@@ -3377,9 +3421,10 @@ async def ask_stream(request: Request):
         except Exception as e:
             METRICS["errors"] += 1
             ref = datetime.datetime.now().strftime("%H%M%S")
-            logger.error(f"💥 스트리밍 에러 (trace={trace}, ref={ref}): {e}")
+            logger.error(f"💥 스트리밍 에러 (trace={trace}, ref={ref}): {type(e).__name__}: {e}")
             logger.error(traceback.format_exc())
-            yield _sse("error", {"message": f"⚠️ 시스템 장애가 발생했습니다. (Ref: {ref})"})
+            user_msg = _classify_gemini_error(e, ref)
+            yield _sse("error", {"message": user_msg})
 
     return StreamingResponse(
         _sse_generator(),
