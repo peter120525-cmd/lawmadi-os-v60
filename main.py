@@ -112,7 +112,7 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     # IP 정보를 절대 노출하지 않음
     return JSONResponse(
         status_code=429,
-        content={"error": "일일 이용 한도에 도달했습니다. 내일 다시 이용해주세요.", "blocked": True}
+        content={"error": "이용 한도에 도달했습니다. 잠시 후 다시 이용해주세요.", "blocked": True}
     )
 
 # [감사 #2.2] CORS 도메인 제한 (원본: allow_origins=["*"])
@@ -238,20 +238,15 @@ def _now_iso() -> str:
     return kst_now.replace(microsecond=0).isoformat() + "+09:00"
 
 # =============================================================
-# 🕐 KST 기반 일일 3회 제한 (IP당)
+# 🕐 4시간당 10회 제한 (IP당, KST 기준)
 # =============================================================
-_DAILY_LIMIT = 10
-_daily_usage: Dict[str, Dict] = {}  # {ip_hash: {"date": "YYYY-MM-DD", "count": int}}
+_WINDOW_LIMIT = 10
+_WINDOW_HOURS = 4
+_rate_usage: Dict[str, List[float]] = {}  # {ip_hash: [timestamp1, timestamp2, ...]}
 
-def _kst_today() -> str:
-    """현재 KST 날짜 문자열 반환"""
-    utc_now = datetime.datetime.utcnow()
-    kst_now = utc_now + datetime.timedelta(hours=9)
-    return kst_now.strftime("%Y-%m-%d")
-
-def _check_daily_limit(request: Request) -> bool:
+def _check_rate_limit(request: Request) -> bool:
     """
-    KST 기준 일일 요청 제한 확인.
+    4시간 슬라이딩 윈도우 기준 요청 제한.
     제한 초과 시 False 반환. IP는 해시로만 저장 (원본 비노출).
     관리자 키(X-Admin-Key 헤더)가 유효하면 제한 우회.
     """
@@ -264,25 +259,26 @@ def _check_daily_limit(request: Request) -> bool:
 
     ip = _get_client_ip(request)
     ip_hash = _sha256(ip)
-    today = _kst_today()
+    now = time.time()
+    window = _WINDOW_HOURS * 3600
 
-    entry = _daily_usage.get(ip_hash)
-    if entry is None or entry["date"] != today:
-        # 새 날짜 → 리셋
-        _daily_usage[ip_hash] = {"date": today, "count": 1}
-        return True
+    timestamps = _rate_usage.get(ip_hash, [])
+    # 윈도우 밖의 오래된 기록 제거
+    timestamps = [t for t in timestamps if now - t < window]
 
-    if entry["count"] >= _DAILY_LIMIT:
+    if len(timestamps) >= _WINDOW_LIMIT:
+        _rate_usage[ip_hash] = timestamps
         return False
 
-    entry["count"] += 1
+    timestamps.append(now)
+    _rate_usage[ip_hash] = timestamps
     return True
 
-def _daily_limit_response():
-    """일일 제한 초과 시 응답"""
+def _rate_limit_response():
+    """제한 초과 시 응답"""
     return JSONResponse(
         status_code=429,
-        content={"error": "일일 이용 한도에 도달했습니다. 내일 다시 이용해주세요.", "blocked": True}
+        content={"error": "이용 한도에 도달했습니다. 잠시 후 다시 이용해주세요.", "blocked": True}
     )
 
 def _trace_id() -> str:
@@ -2273,9 +2269,9 @@ async def get_leader_queries_api(
 @app.post("/ask")
 async def ask(request: Request):
 
-    # KST 기준 일일 3회 제한
-    if not _check_daily_limit(request):
-        return _daily_limit_response()
+    # 4시간당 10회 제한
+    if not _check_rate_limit(request):
+        return _rate_limit_response()
 
     trace = _trace_id()  # [ULTRA]
     start_time = time.time()
@@ -2727,9 +2723,9 @@ async def ask(request: Request):
 async def ask_stream(request: Request):
     """SSE 스트리밍 엔드포인트 — 실시간 토큰 전송"""
 
-    # KST 기준 일일 3회 제한
-    if not _check_daily_limit(request):
-        return _daily_limit_response()
+    # 4시간당 10회 제한
+    if not _check_rate_limit(request):
+        return _rate_limit_response()
 
     trace = _trace_id()
     start_time = time.time()
