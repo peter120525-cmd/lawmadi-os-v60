@@ -2613,13 +2613,16 @@ async def ask_expert(request: Request):
         if not query or not original_response:
             return {"trace_id": trace, "status": "ERROR", "response": "query와 original_response가 필요합니다."}
 
-        # Anthropic 클라이언트 초기화
-        api_key = os.getenv("ANTHROPIC_API_KEY", "")
-        if not api_key:
-            return {"trace_id": trace, "status": "ERROR", "response": "전문가 검증 서비스가 현재 비활성화되어 있습니다."}
+        # ResponseVerifier의 Claude 클라이언트 재사용
+        verifier_module = optional_import("engines.response_verifier")
+        if not verifier_module:
+            return {"trace_id": trace, "status": "ERROR", "response": "전문가 검증 모듈을 불러올 수 없습니다."}
 
-        import anthropic
-        client = anthropic.Anthropic(api_key=api_key)
+        verifier = verifier_module.get_verifier()
+        if not verifier.enabled:
+            return {"trace_id": trace, "status": "ERROR", "response": "전문가 검증 서비스가 현재 비활성화되어 있습니다. (ANTHROPIC_API_KEY 미설정)"}
+
+        client = verifier.client
 
         expert_prompt = f"""당신은 대한민국 법률 전문가 검증관입니다.
 아래 AI 법률 상담 응답을 **전문가 관점**에서 검증하고, 전문가용으로 보강하세요.
@@ -2699,7 +2702,8 @@ async def ask_expert(request: Request):
 
     except Exception as e:
         logger.error(f"❌ [Expert] 전문가 검증 실패 (trace={trace}): {type(e).__name__}: {e}")
-        return {"trace_id": trace, "status": "ERROR", "response": f"전문가 검증 중 오류가 발생했습니다: {type(e).__name__}"}
+        logger.error(traceback.format_exc())
+        return {"trace_id": trace, "status": "ERROR", "response": f"전문가 검증 중 오류가 발생했습니다: {type(e).__name__}: {str(e)[:200]}"}
 
 
 # =============================================================
