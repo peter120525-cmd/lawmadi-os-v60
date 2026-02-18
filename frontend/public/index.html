@@ -259,12 +259,12 @@
             flex-direction: column;
         }
 
-        /* 데스크탑: 랜딩 콘텐츠를 뷰포트 중앙에 배치 */
+        /* 데스크탑: 랜딩 콘텐츠 — 상단부터 자연 배치 (스크롤 허용) */
         .content-viewport > .hero-section {
-            margin-top: auto;
+            margin-top: 0;
         }
         .content-viewport > :last-child {
-            margin-bottom: auto;
+            margin-bottom: 0;
         }
 
         /* ✨ Hero Section - PREMIUM */
@@ -5631,6 +5631,11 @@
 
         // ═══ 스트리밍 텍스트 실시간 렌더링 (경량) ═══
         _renderStreamingText(text) {
+            // think 블록 제거
+            text = text.replace(/<think>[\s\S]*?<\/think>/g, '');
+            text = text.replace(/^think\n(?:[A-Za-z*].*\n)*/gm, '');
+            // ## 헤더 → 볼드
+            text = text.replace(/^#{1,4}\s+(.+)$/gm, '**$1**');
             // 기본 마크다운 변환 (볼드, 줄바꿈)
             return text
                 .replace(/&/g, '&amp;')
