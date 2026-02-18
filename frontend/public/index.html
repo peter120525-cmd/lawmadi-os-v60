@@ -4719,11 +4719,12 @@
                         <span class="step-icon">✍️</span> 답변 생성 중...
                     </div>
                     <div class="typing-step" id="step-5">
-                        <span class="step-icon">🔎</span> 법령 교차 검증 중...
+                        <span class="step-icon">🔎</span> 교차 검증 중...
                     </div>
                     <div class="typing-step" id="step-6">
                         <span class="step-icon">📋</span> 최종 정리 중...
                     </div>
+                    <div class="typing-elapsed" id="typing-elapsed" style="margin-top:6px;font-size:0.7rem;color:var(--text-muted);opacity:0.7;">0초 경과</div>
                 </div>
             `;
             this.convArea.appendChild(typingDiv);
@@ -4733,18 +4734,17 @@
             this._typingStepTimers = [];
             const steps = [
                 { id: 'step-1', delay: 0 },
-                { id: 'step-2', delay: 2000 },
-                { id: 'step-3', delay: 5000 },
-                { id: 'step-4', delay: 9000 },
-                { id: 'step-5', delay: 18000 },
-                { id: 'step-6', delay: 28000 }
+                { id: 'step-2', delay: 1500 },
+                { id: 'step-3', delay: 3500 },
+                { id: 'step-4', delay: 6000 },
+                { id: 'step-5', delay: 12000 },
+                { id: 'step-6', delay: 20000 }
             ];
             steps.forEach((step, idx) => {
                 const timer = setTimeout(() => {
                     const el = document.getElementById(step.id);
                     if (el) {
                         el.classList.add('active');
-                        // 이전 단계를 done 상태로
                         if (idx > 0) {
                             const prev = document.getElementById(steps[idx - 1].id);
                             if (prev) { prev.classList.remove('active'); prev.classList.add('done'); }
@@ -4753,6 +4753,14 @@
                 }, step.delay);
                 this._typingStepTimers.push(timer);
             });
+
+            // 경과 시간 카운터
+            let elapsed = 0;
+            this._elapsedTimer = setInterval(() => {
+                elapsed++;
+                const el = document.getElementById('typing-elapsed');
+                if (el) el.textContent = `${elapsed}초 경과`;
+            }, 1000);
 
             return typingId;
         },
@@ -4813,6 +4821,10 @@
             if (this._typingStepTimers) {
                 this._typingStepTimers.forEach(t => clearTimeout(t));
                 this._typingStepTimers = [];
+            }
+            if (this._elapsedTimer) {
+                clearInterval(this._elapsedTimer);
+                this._elapsedTimer = null;
             }
             const typingDiv = document.getElementById('typing-indicator');
             if (typingDiv) typingDiv.remove();
