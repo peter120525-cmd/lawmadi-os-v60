@@ -339,12 +339,35 @@ class SwarmOrchestrator:
 
             logger.info(f"✅ {leader_name} 분석 완료 ({len(analysis_text)} chars)")
 
+            # chat.history에서 tool 호출 메타데이터 수집
+            tools_used = []
+            tool_results = []
+            try:
+                if hasattr(chat, 'history'):
+                    for turn in chat.history:
+                        if hasattr(turn, 'parts'):
+                            for part in turn.parts:
+                                if hasattr(part, 'function_call') and part.function_call:
+                                    fc = part.function_call
+                                    tools_used.append({
+                                        "name": fc.name,
+                                        "args": dict(fc.args) if fc.args else {}
+                                    })
+                                if hasattr(part, 'function_response') and part.function_response:
+                                    fr = part.function_response
+                                    response_data = dict(fr.response) if fr.response else {}
+                                    tool_results.append(response_data)
+            except Exception as te:
+                logger.warning(f"⚠️ {leader_name} tool 메타데이터 수집 실패 (무시): {te}")
+
             return {
                 "leader": leader_name,
                 "specialty": leader_specialty,
                 "role": leader_role,
                 "analysis": analysis_text,
-                "success": True
+                "success": True,
+                "tools_used": tools_used,
+                "tool_results": tool_results
             }
 
         except Exception as e:
@@ -638,7 +661,9 @@ class SwarmOrchestrator:
                 "leaders": [result["leader"]],
                 "domains": [result["specialty"]],
                 "swarm_mode": False,
-                "leader_count": 1
+                "leader_count": 1,
+                "tools_used": result.get("tools_used", []),
+                "tool_results": result.get("tool_results", [])
             }
 
         # 4. Swarm 모드: 병렬 분석
@@ -664,11 +689,20 @@ class SwarmOrchestrator:
                 model_name
             )
 
+        # 모든 리더의 tool 메타데이터 합산
+        all_tools_used = []
+        all_tool_results = []
+        for r in swarm_results:
+            all_tools_used.extend(r.get("tools_used", []))
+            all_tool_results.extend(r.get("tool_results", []))
+
         return {
             "response": final_response,
             "leaders": [r["leader"] for r in swarm_results],
             "domains": [r["specialty"] for r in swarm_results],
             "swarm_mode": len(successful) > 1,
             "leader_count": len(swarm_results),
-            "detailed_results": swarm_results
+            "detailed_results": swarm_results,
+            "tools_used": all_tools_used,
+            "tool_results": all_tool_results
         }
