@@ -4572,10 +4572,27 @@
                                 panel.className = 'expert-response-panel';
                                 panel.innerHTML = this.formatReport(expertData.response);
                                 msgDiv.appendChild(panel);
-                                expertBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px; color: #a78bfa;">check_circle</span> 검증 완료';
+                                // 검증 상태에 따라 버튼 표시 분기
+                                const vResult = expertData.verification?.result || 'SKIP';
+                                const vScore = expertData.verification?.ssot_compliance_score || 0;
+                                if (vResult === 'PASS') {
+                                    expertBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px; color: #16a34a;">check_circle</span> SSOT 검증 완료 (${vScore}점)`;
+                                    expertBtn.style.borderColor = '#16a34a';
+                                    expertBtn.style.color = '#16a34a';
+                                } else if (vResult === 'WARNING') {
+                                    expertBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px; color: #d97706;">warning</span> SSOT 부분 검증 (${vScore}점)`;
+                                    expertBtn.style.borderColor = '#d97706';
+                                    expertBtn.style.color = '#d97706';
+                                } else if (vResult === 'FAIL') {
+                                    expertBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px; color: #dc2626;">error</span> SSOT 검증 미달 (${vScore}점)`;
+                                    expertBtn.style.borderColor = '#dc2626';
+                                    expertBtn.style.color = '#dc2626';
+                                } else {
+                                    expertBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px; color: #a78bfa;">auto_awesome</span> 전문가 분석 완료';
+                                    expertBtn.style.borderColor = '#7c3aed';
+                                    expertBtn.style.color = '#7c3aed';
+                                }
                                 expertBtn.style.background = 'none';
-                                expertBtn.style.color = '#7c3aed';
-                                expertBtn.style.borderColor = '#7c3aed';
                                 if (expertData.latency_ms) {
                                     expertBtn.innerHTML += ` · ${(expertData.latency_ms / 1000).toFixed(1)}초`;
                                 }
