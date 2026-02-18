@@ -6113,21 +6113,36 @@
                     });
                     g1.appendChild(shareBtn);
 
-                    const exportBtn = this._createToolbarBtn('download', '내보내기', () => {
-                        const now = new Date();
-                        const pad = n => String(n).padStart(2, '0');
-                        const fname = `lawmadi-상담-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.txt`;
-                        let content = `[Lawmadi OS 법률 상담 기록]\n날짜: ${now.toLocaleString('ko-KR')}\n\n`;
-                        content += `[질문]\n${originalQuery}\n\n`;
-                        if (leaderName) content += `[담당 리더] ${leaderName}${leaderSpecialtyFromServer ? ' (' + leaderSpecialtyFromServer + ')' : ''}\n\n`;
-                        content += `[답변]\n${rawResponse}\n\n`;
-                        content += `---\n본 분석은 AI에 의해 자동 생성되었습니다. 최종 결정은 법률 전문가와 상의하시기 바랍니다.\n`;
-                        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a'); a.href = url; a.download = fname; a.click();
-                        URL.revokeObjectURL(url);
-                        exportBtn.querySelector('.material-symbols-outlined').textContent = 'check';
-                        setTimeout(() => { exportBtn.querySelector('.material-symbols-outlined').textContent = 'download'; }, 2000);
+                    const exportBtn = this._createToolbarBtn('picture_as_pdf', 'PDF 저장', async () => {
+                        const icon = exportBtn.querySelector('.material-symbols-outlined');
+                        icon.textContent = 'hourglass_top';
+                        exportBtn.disabled = true;
+                        try {
+                            let pdfTitle = '법률 상담';
+                            if (leaderName) pdfTitle = `${leaderName} 상담`;
+                            let pdfContent = `[질문]\n${originalQuery}\n\n`;
+                            if (leaderName) pdfContent += `[담당] ${leaderName}${leaderSpecialtyFromServer ? ' (' + leaderSpecialtyFromServer + ')' : ''}\n\n`;
+                            pdfContent += `[답변]\n${rawResponse}`;
+                            const pdfRes = await fetch(`${this.BASE_URL}/export-pdf`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ title: pdfTitle, content: pdfContent })
+                            });
+                            if (!pdfRes.ok) throw new Error('PDF 생성 실패');
+                            const blob = await pdfRes.blob();
+                            const url = URL.createObjectURL(blob);
+                            const now = new Date();
+                            const pad = n => String(n).padStart(2, '0');
+                            const fname = `lawmadi-상담-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.pdf`;
+                            const a = document.createElement('a'); a.href = url; a.download = fname; a.click();
+                            URL.revokeObjectURL(url);
+                            icon.textContent = 'check';
+                            setTimeout(() => { icon.textContent = 'picture_as_pdf'; exportBtn.disabled = false; }, 2000);
+                        } catch (e) {
+                            icon.textContent = 'error';
+                            exportBtn.disabled = false;
+                            setTimeout(() => { icon.textContent = 'picture_as_pdf'; }, 2000);
+                        }
                     });
                     g1.appendChild(exportBtn);
                     toolbar.appendChild(g1);
@@ -6492,7 +6507,7 @@
                 updateTabAria(tab);
 
                 if (action === 'chat') {
-                    // 이미 현재 페이지
+                    window.location.href = '/';
                 } else if (action === 'leaders') {
                     window.location.href = 'leaders.html';
                 } else if (action === 'clevel') {
