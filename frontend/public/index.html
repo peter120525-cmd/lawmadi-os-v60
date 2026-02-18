@@ -4416,13 +4416,13 @@
                     if (inList) { html.push('</ul>'); inList = false; }
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
                     if (html.length > 0 && !lastWasH2) html.push('<hr class="fancy">');
-                    html.push('<h2>' + trimmed.substring(3) + '</h2>');
+                    html.push('<h2>' + this.formatInline(trimmed.substring(3)) + '</h2>');
                     lastWasH2 = true;
                 }
                 else if (trimmed.startsWith('### ')) {
                     if (inList) { html.push('</ul>'); inList = false; }
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
-                    html.push('<h3>' + trimmed.substring(4) + '</h3>');
+                    html.push('<h3>' + this.formatInline(trimmed.substring(4)) + '</h3>');
                     lastWasH2 = false;
                 }
                 else if (/^\d+\.\s+/.test(trimmed)) {
@@ -4454,7 +4454,8 @@
         },
 
         formatInline(text) {
-            let result = text;
+            // XSS 방어: 마크다운 변환 전 HTML 이스케이프 적용
+            let result = this.escapeHtml(text);
             result = result.replace(/`([^`]+?)`/g, '<code>$1</code>');
             result = result.replace(/\*\*\*([^*]+?)\*\*\*/g, '<strong><em>$1</em></strong>');
             result = result.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>');
@@ -4486,12 +4487,13 @@
                 const serverSpecialties = leaderSpecialtyFromServer ? leaderSpecialtyFromServer.split(',').map(s => s.trim()) : [];
                 const avatarItems = names.map((name, idx) => {
                     const imgPath = leaderProfileImages[name];
-                    const displayName = clevelTitles[name] ? `${clevelTitles[name]} ${name}` : `${name} 리더`;
+                    const safeName = this.escapeHtml(name);
+                    const displayName = clevelTitles[name] ? `${clevelTitles[name]} ${safeName}` : `${safeName} 리더`;
                     const specialty = serverSpecialties[idx] || leaderSpecialties[name] || '';
-                    const specialtyHtml = specialty ? `<span class="leader-specialty">${specialty}</span>` : '';
+                    const specialtyHtml = specialty ? `<span class="leader-specialty">${this.escapeHtml(specialty)}</span>` : '';
                     const infoHtml = `<div class="leader-info"><span class="leader-name">${displayName}</span>${specialtyHtml}</div>`;
                     if (imgPath) {
-                        return `<div class="leader-avatar-item"><img src="${imgPath}" alt="${name}">${infoHtml}</div>`;
+                        return `<div class="leader-avatar-item"><img src="${imgPath}" alt="${safeName}">${infoHtml}</div>`;
                     }
                     return `<div class="leader-avatar-item">${infoHtml}</div>`;
                 }).join('');
