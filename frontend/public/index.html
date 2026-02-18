@@ -5767,50 +5767,51 @@
         },
 
         formatDocumentAnalysis(analysis, filename) {
-            let html = `<h3>📄 문서 분석 결과: ${this.escapeHtml(filename)}</h3>`;
+            const esc = (s) => this.escapeHtml(String(s || ''));
+            let html = `<h3>📄 문서 분석 결과: ${esc(filename)}</h3>`;
 
             if (analysis.summary) {
-                html += `<h3>요약</h3><p>${analysis.summary}</p>`;
+                html += `<h3>요약</h3><p>${esc(analysis.summary)}</p>`;
             }
 
             if (analysis.document_type || analysis.contract_type) {
                 const docType = analysis.document_type || analysis.contract_type;
-                html += `<p><strong>📋 문서 종류:</strong> ${docType}</p>`;
+                html += `<p><strong>📋 문서 종류:</strong> ${esc(docType)}</p>`;
             }
 
             if (analysis.risk_level) {
                 const riskEmoji = { 'low': '🟢', 'medium': '🟡', 'high': '🟠', 'critical': '🔴' }[analysis.risk_level] || '⚪';
-                const riskText = { 'low': '낮음', 'medium': '중간', 'high': '높음', 'critical': '매우 높음' }[analysis.risk_level] || analysis.risk_level;
+                const riskText = { 'low': '낮음', 'medium': '중간', 'high': '높음', 'critical': '매우 높음' }[analysis.risk_level] || esc(analysis.risk_level);
                 html += `<p><strong>위험도:</strong> ${riskEmoji} ${riskText}</p>`;
             }
 
             if (analysis.legal_category) {
-                html += `<p><strong>법률 분야:</strong> ${analysis.legal_category}</p>`;
+                html += `<p><strong>법률 분야:</strong> ${esc(analysis.legal_category)}</p>`;
             }
 
             if (analysis.legal_issues && analysis.legal_issues.length > 0) {
                 html += `<h3>법률적 쟁점</h3><ul>`;
-                analysis.legal_issues.forEach(issue => { html += `<li>${issue}</li>`; });
+                analysis.legal_issues.forEach(issue => { html += `<li>${esc(issue)}</li>`; });
                 html += `</ul>`;
             }
 
             if (analysis.key_terms && analysis.key_terms.length > 0) {
                 html += `<h3>📋 주요 조항</h3>`;
                 analysis.key_terms.forEach((term, idx) => {
-                    html += `<p><strong>${idx + 1}. ${term.term}</strong></p><p>${term.content}</p>`;
-                    if (term.issue) html += `<p style="color: #f59e0b;">${term.issue}</p>`;
+                    html += `<p><strong>${idx + 1}. ${esc(term.term)}</strong></p><p>${esc(term.content)}</p>`;
+                    if (term.issue) html += `<p style="color: #f59e0b;">${esc(term.issue)}</p>`;
                 });
             }
 
             if (analysis.key_points && analysis.key_points.length > 0) {
                 html += `<h3>핵심 내용</h3><ul>`;
-                analysis.key_points.forEach(point => { html += `<li>${point}</li>`; });
+                analysis.key_points.forEach(point => { html += `<li>${esc(point)}</li>`; });
                 html += `</ul>`;
             }
 
             if (analysis.recommendations && analysis.recommendations.length > 0) {
                 html += `<h3>권고사항</h3><ul>`;
-                analysis.recommendations.forEach(rec => { html += `<li>${rec}</li>`; });
+                analysis.recommendations.forEach(rec => { html += `<li>${esc(rec)}</li>`; });
                 html += `</ul>`;
             }
 

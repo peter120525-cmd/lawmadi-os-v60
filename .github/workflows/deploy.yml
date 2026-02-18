@@ -6,6 +6,10 @@ on:
       - main
   workflow_dispatch:  # 수동 실행 가능
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   PROJECT_ID: lawmadi-db
   REGION: asia-northeast3

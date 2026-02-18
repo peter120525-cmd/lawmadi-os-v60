@@ -282,8 +282,9 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
     window = _WINDOW_HOURS * 3600
 
     timestamps = _rate_usage.get(ip_hash, [])
-    # 윈도우 밖의 오래된 기록 제거
-    timestamps = [t for t in timestamps if now - t < window]
+    # 윈도우 밖의 오래된 기록 제거 + IP당 최대 기록 수 제한
+    _MAX_TIMESTAMPS_PER_IP = 200
+    timestamps = [t for t in timestamps if now - t < window][-_MAX_TIMESTAMPS_PER_IP:]
 
     if len(timestamps) >= window_limit:
         _rate_usage[ip_hash] = timestamps
@@ -296,11 +297,17 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
     timestamps.append(now)
     _rate_usage[ip_hash] = timestamps
 
-    # 메모리 정리: 1000개 초과 시 빈 엔트리 제거
-    if len(_rate_usage) > 1000:
-        stale_keys = [k for k, v in _rate_usage.items() if not v]
+    # 메모리 정리: IP 엔트리 수 제한 (5000개 초과 시 오래된 엔트리 정리)
+    _MAX_RATE_ENTRIES = 5000
+    if len(_rate_usage) > _MAX_RATE_ENTRIES:
+        stale_keys = [k for k, v in _rate_usage.items() if not v or max(v) < now - window]
         for k in stale_keys:
             del _rate_usage[k]
+        # 여전히 초과 시 가장 오래된 50% 삭제
+        if len(_rate_usage) > _MAX_RATE_ENTRIES:
+            sorted_keys = sorted(_rate_usage.keys(), key=lambda k: max(_rate_usage[k], default=0))
+            for k in sorted_keys[:len(_rate_usage) // 2]:
+                del _rate_usage[k]
 
     return True
 
@@ -459,8 +466,8 @@ def _safe_extract_gemini_text(response) -> str:
                 finish_reason = response.candidates[0].finish_reason
                 safety_ratings = getattr(response.candidates[0], 'safety_ratings', None)
                 logger.warning(f"finish_reason: {finish_reason}, safety_ratings: {safety_ratings}")
-        except:
-            pass
+        except (AttributeError, IndexError, TypeError) as inner_e:
+            logger.debug(f"finish_reason 추출 실패: {inner_e}")
 
     return ""
 
@@ -2359,7 +2366,12 @@ async def ask(request: Request):
     start_time = time.time()
 
     try:
-        data = await request.json()
+        body = await request.body()
+        _MAX_BODY_SIZE = 128 * 1024
+        if len(body) > _MAX_BODY_SIZE:
+            return JSONResponse(status_code=413, content={"error": "요청이 너무 큽니다 (128KB 제한)", "blocked": True})
+
+        data = json.loads(body)
         query = (data.get("query", "") or "").strip()
         raw_history = data.get("history", [])
 
@@ -2368,9 +2380,14 @@ async def ask(request: Request):
         if len(query) > MAX_QUERY_LEN:
             query = query[:MAX_QUERY_LEN]
 
+        # history 배열 크기 사전 제한
+        if not isinstance(raw_history, list):
+            raw_history = []
+        raw_history = raw_history[-6:]
+
         # 대화 히스토리 → Gemini Content 형식 변환 (최근 6턴)
         gemini_history = []
-        for msg in raw_history[-6:]:
+        for msg in raw_history:
             role = msg.get("role", "")
             content = msg.get("content", "")
             if role == "user" and content:
@@ -2879,7 +2896,15 @@ async def ask_stream(request: Request):
     start_time = time.time()
 
     try:
-        data = await request.json()
+        body = await request.body()
+        # 요청 본문 크기 제한 (128KB, DoS 방지)
+        _MAX_BODY_SIZE = 128 * 1024
+        if len(body) > _MAX_BODY_SIZE:
+            async def _size_err():
+                yield f"event: error\ndata: {json.dumps({'message': '요청이 너무 큽니다 (128KB 제한)'}, ensure_ascii=False)}\n\n"
+            return StreamingResponse(_size_err(), media_type="text/event-stream")
+
+        data = json.loads(body)
         query = (data.get("query", "") or "").strip()
         raw_history = data.get("history", [])
 
@@ -2888,8 +2913,13 @@ async def ask_stream(request: Request):
         if len(query) > MAX_QUERY_LEN:
             query = query[:MAX_QUERY_LEN]
 
+        # history 배열 크기 사전 제한
+        if not isinstance(raw_history, list):
+            raw_history = []
+        raw_history = raw_history[-6:]
+
         gemini_history = []
-        for msg in raw_history[-6:]:
+        for msg in raw_history:
             role = msg.get("role", "")
             content = msg.get("content", "")
             if role == "user" and content:
@@ -3703,19 +3733,24 @@ async def analyze_document(file_id: str, analysis_type: str = "general", request
     logger.info(f"🔍 [Analyze] trace={trace}, file_id={file_id}, type={analysis_type}")
 
     try:
-        # 1. 파일 찾기 (경로 탐색 방지: 영숫자만 허용)
-        safe_id = re.sub(r'[^a-fA-F0-9]', '', file_id[:16])
+        # 1. 파일 찾기 (경로 탐색 방지: 영숫자만 허용, 정확 매칭)
+        safe_id = re.sub(r'[^a-fA-F0-9]', '', file_id[:64])
         if len(safe_id) < 8:
             raise HTTPException(status_code=400, detail="유효하지 않은 파일 ID입니다.")
-        uploads_dir = Path("uploads")
-        matching_files = list(uploads_dir.glob(f"{safe_id[:8]}*"))
+        uploads_dir = Path("uploads").resolve()
+        matching_files = [
+            f for f in uploads_dir.iterdir()
+            if f.is_file() and f.name.startswith(safe_id)
+        ]
 
         if not matching_files:
             raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
+        if len(matching_files) > 1:
+            logger.warning(f"⚠️ [Analyze] 다중 파일 매칭: {safe_id}, {len(matching_files)}개")
 
         file_path = matching_files[0].resolve()
-        # 경로 탐색 방지: uploads 디렉토리 내부인지 검증
-        if not str(file_path).startswith(str(uploads_dir.resolve())):
+        # 경로 탐색 방지: uploads 디렉토리 내부인지 검증 (symlink 방어 포함)
+        if not file_path.is_relative_to(uploads_dir):
             raise HTTPException(status_code=403, detail="접근이 거부되었습니다.")
         logger.info(f"📄 [Analyze] 파일 발견: {file_path}")
 
