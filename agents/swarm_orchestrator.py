@@ -244,17 +244,25 @@ class SwarmOrchestrator:
             clevel_id = leader.get("_clevel")
 
             if clevel_id == "CCO":
-                # 유나(CCO) 전용: 따뜻하고 친근한 톤
+                # 유나(CCO) 전용: 따뜻하고 친근한 톤 — 비법률 500자 제한
                 system_instruction = (
                     f"{system_instruction_base}\n\n"
                     f"🎯 당신의 역할: 유나 (CCO, Chief Content Officer)\n"
                     f"🎯 전문 분야: 콘텐츠 설계 · 사용자 경험\n"
                     f"🎯 톤: 따뜻하고 친근하며, 사용자의 불안을 공감하고 행동으로 바꿔주는 스타일\n\n"
+                    f"📏 **응답 길이 제한**: 비법률 질문은 반드시 500자 이내로 간결하게 답변하세요.\n\n"
                     f"사용자가 질문하면:\n"
                     f"1. 먼저 공감과 격려로 시작하세요\n"
                     f"2. 법률 관련이면 핵심 쟁점을 쉬운 말로 설명하세요\n"
                     f"3. 구체적인 행동 계획을 안내하세요\n"
                     f"4. 비법률 질문이면 친절하게 안내하되, 법률 상담도 가능함을 알려주세요\n\n"
+                    f"**비법률 질문 목차 구조** (500자 이내):\n"
+                    f"## 💡 핵심 답변\n"
+                    f"(간결한 핵심 답변 1~3문장)\n\n"
+                    f"## 📌 주요 포인트\n"
+                    f"• 핵심 포인트 2~4개\n\n"
+                    f"## 🔍 더 알아보기\n"
+                    f"(관련 팁 또는 추가 안내 1~2문장)\n\n"
                     f"반드시 [유나 (CCO) 콘텐츠 설계]로 시작하세요."
                 )
             elif clevel_id == "CSO":
@@ -276,22 +284,31 @@ class SwarmOrchestrator:
                     f"반드시 [지유 (CTO) 기술 분석]으로 시작하세요."
                 )
             else:
-                # 일반 리더: 기존 로직
+                # 일반 법률 리더: 2000자 제한 + 법률 목차
                 system_instruction = (
                     f"{system_instruction_base}\n\n"
                     f"🎯 당신의 역할: {leader_name} ({leader_role})\n"
                     f"🎯 전문 분야: {leader_specialty}\n"
-                    f"🎯 관점: {leader_specialty} 전문가 관점에서 이 사안을 분석하세요.\n\n"
-                    f"특히 다음에 집중하세요:\n"
-                    f"1. {leader_specialty} 관련 법령 및 규정\n"
-                    f"2. {leader_specialty} 관련 판례 및 해석례\n"
-                    f"3. {leader_specialty} 관점에서의 쟁점 및 위험\n"
-                    f"4. {leader_specialty} 관련 절차 및 대응 방안\n\n"
+                    f"🎯 관점: {leader_specialty} 전문가 관점에서 이 사안을 분석하세요.\n"
+                    f"📏 **응답은 반드시 2000자 이내로 작성하세요.**\n\n"
+                    f"**법률 분석 목차 구조**:\n"
+                    f"## ⚖️ 핵심 쟁점\n"
+                    f"(질문의 핵심 법률 쟁점 요약)\n\n"
+                    f"## 📋 관련 법령\n"
+                    f"(적용 법률·조문 + 핵심 내용)\n\n"
+                    f"## 📌 판례·해석\n"
+                    f"(관련 판례 또는 법령해석 핵심)\n\n"
+                    f"## 🎯 실행 가이드\n"
+                    f"(구체적 절차 + 대응 방안)\n\n"
+                    f"## ℹ️ 참고\n"
+                    f"(무료 법률 지원 기관, 추가 안내)\n\n"
                     f"반드시 [{leader_name} ({leader_specialty}) 분석]으로 시작하세요."
                 )
 
             # 분석 실행 (Function Calling 활성화)
-            logger.info(f"🔄 {leader_name} ({leader_specialty}) 분석 시작...")
+            # 비법률(CCO 단독) → 800 tokens (~500자), 법률 리더 → 4096 tokens (~2000자+)
+            _max_tokens = 800 if clevel_id == "CCO" else 4096
+            logger.info(f"🔄 {leader_name} ({leader_specialty}) 분석 시작... (max_tokens={_max_tokens})")
 
             gc = self.genai_client
             chat = gc.chats.create(
@@ -299,7 +316,7 @@ class SwarmOrchestrator:
                 config=genai_types.GenerateContentConfig(
                     tools=tools or [],
                     system_instruction=system_instruction,
-                    max_output_tokens=4096,
+                    max_output_tokens=_max_tokens,
                     automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
                 ),
             )
@@ -476,36 +493,32 @@ class SwarmOrchestrator:
         synthesis_prompt += f"""
 
 [통합 지침]
+📏 **전체 응답은 반드시 2000자 이내로 작성하세요.**
+
 1. 모든 전문 리더의 분석을 고려하여 종합적인 답변을 작성하세요
 2. 반드시 아래 헤더로 시작하세요:
    [유나 (CCO) 종합 판단]
    참여 전문가: {leader_list_str}
 
-3. 반드시 다음 5단계 계층 구조를 유지하세요:
+3. 반드시 다음 목차 구조를 유지하세요:
 
-   1. 핵심 요약
-      1.1 상황 진단 — 공감과 현황 파악
-      1.2 결론 및 전략 방향 — 서연 CSO의 법률 전략 관점을 최우선으로 반영
+   ## ⚖️ 핵심 쟁점
+   • 상황 진단 + 공감
+   • 핵심 법률 쟁점 요약
 
-   2. 법률 근거 분석
-      — 리더별로 배지형 구분 사용:
-      👤 [리더명] 리더 ([전문분야] 전문)
-      2.1, 2.2... 순서로 분야별 법률 근거 정리
-      ⚠️ 법률 전략 관련 내용은 서연(CSO)의 분석을 가장 먼저 배치하세요
+   ## 📋 법률 근거 분석
+   리더별 배지형 구분:
+   👤 [리더명] 리더 ([전문분야] 전문)
+   • 분야별 법률 근거 정리
 
-   3. 시간축 전략
-      3.1 과거 (상황 정리)
-      3.2 현재 (골든타임) — 시효/기한 강조
-      3.3 미래 (대응 시나리오)
+   ## 🎯 실행 가이드
+   • 즉시 조치 (24시간 내)
+   • 단계별 가이드
+   • □ 체크리스트 항목
 
-   4. 실행 계획
-      4.1 즉시 조치 (24시간 내)
-      4.2 단계별 가이드
-      4.3 체크리스트 — □ 기호로 확인 항목 나열
-
-   5. 추가 정보
-      5.1 무료 법률 지원 (기관명 + 전화번호)
-      5.2 관련 법령 요약
+   ## ℹ️ 참고
+   • 무료 법률 지원 (기관명 + 전화번호)
+   • 관련 법령 요약
 
 4. 여러 전문 분야가 교차하는 복합 사안임을 명시하세요
 5. 전문가 간 의견이 다를 경우 양측 관점을 모두 제시하세요
@@ -530,7 +543,7 @@ class SwarmOrchestrator:
                 config=genai_types.GenerateContentConfig(
                     temperature=0.3,
                     top_p=0.95,
-                    max_output_tokens=4096,
+                    max_output_tokens=3000,
                 ),
             )
             final_response = response.text
@@ -585,36 +598,32 @@ class SwarmOrchestrator:
         synthesis_prompt += f"""
 
 [통합 지침]
+📏 **전체 응답은 반드시 2000자 이내로 작성하세요.**
+
 1. 모든 전문 리더의 분석을 고려하여 종합적인 답변을 작성하세요
 2. 반드시 아래 헤더로 시작하세요:
    [유나 (CCO) 종합 판단]
    참여 전문가: {leader_list_str}
 
-3. 반드시 다음 5단계 계층 구조를 유지하세요:
+3. 반드시 다음 목차 구조를 유지하세요:
 
-   1. 핵심 요약
-      1.1 상황 진단 — 공감과 현황 파악
-      1.2 결론 및 전략 방향 — 서연 CSO의 법률 전략 관점을 최우선으로 반영
+   ## ⚖️ 핵심 쟁점
+   • 상황 진단 + 공감
+   • 핵심 법률 쟁점 요약
 
-   2. 법률 근거 분석
-      — 리더별로 배지형 구분 사용:
-      👤 [리더명] 리더 ([전문분야] 전문)
-      2.1, 2.2... 순서로 분야별 법률 근거 정리
-      ⚠️ 법률 전략 관련 내용은 서연(CSO)의 분석을 가장 먼저 배치하세요
+   ## 📋 법률 근거 분석
+   리더별 배지형 구분:
+   👤 [리더명] 리더 ([전문분야] 전문)
+   • 분야별 법률 근거 정리
 
-   3. 시간축 전략
-      3.1 과거 (상황 정리)
-      3.2 현재 (골든타임) — 시효/기한 강조
-      3.3 미래 (대응 시나리오)
+   ## 🎯 실행 가이드
+   • 즉시 조치 (24시간 내)
+   • 단계별 가이드
+   • □ 체크리스트 항목
 
-   4. 실행 계획
-      4.1 즉시 조치 (24시간 내)
-      4.2 단계별 가이드
-      4.3 체크리스트 — □ 기호로 확인 항목 나열
-
-   5. 추가 정보
-      5.1 무료 법률 지원 (기관명 + 전화번호)
-      5.2 관련 법령 요약
+   ## ℹ️ 참고
+   • 무료 법률 지원 (기관명 + 전화번호)
+   • 관련 법령 요약
 
 4. 여러 전문 분야가 교차하는 복합 사안임을 명시하세요
 5. 전문가 간 의견이 다를 경우 양측 관점을 모두 제시하세요
@@ -643,7 +652,7 @@ class SwarmOrchestrator:
                     config=genai_types.GenerateContentConfig(
                         temperature=0.3,
                         top_p=0.95,
-                        max_output_tokens=4096,
+                        max_output_tokens=3000,
                     ),
                 )
 
@@ -788,9 +797,12 @@ class SwarmOrchestrator:
             and len(selected_leaders) > 1
         )
 
+        # 법률/비법률 판단: CCO 단독이면 비법률
+        _is_legal = not (len(selected_leaders) == 1 and selected_leaders[0].get("_clevel") == "CCO")
+
         if not use_swarm:
             # 단일 리더 모드
-            logger.info(f"🔄 단일 리더 모드: {selected_leaders[0]['name']}")
+            logger.info(f"🔄 단일 리더 모드: {selected_leaders[0]['name']} (is_legal={_is_legal})")
             result = self.analyze_with_leader(
                 selected_leaders[0],
                 query,
@@ -805,6 +817,7 @@ class SwarmOrchestrator:
                 "domains": [result["specialty"]],
                 "swarm_mode": False,
                 "leader_count": 1,
+                "is_legal": _is_legal,
                 "tools_used": result.get("tools_used", []),
                 "tool_results": result.get("tool_results", [])
             }
@@ -845,6 +858,7 @@ class SwarmOrchestrator:
             "domains": [r["specialty"] for r in swarm_results],
             "swarm_mode": len(successful) > 1,
             "leader_count": len(swarm_results),
+            "is_legal": _is_legal,
             "detailed_results": swarm_results,
             "tools_used": all_tools_used,
             "tool_results": all_tool_results
