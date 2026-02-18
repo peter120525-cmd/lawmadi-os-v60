@@ -3909,6 +3909,61 @@
            답변 UI 고퀄리티 개선 — CSS
         ═══════════════════════════════════════════════════ */
 
+        /* 0. 섹션/서브섹션 타이틀 (H2/H3 → 볼드 변환) */
+        .ai-msg .section-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1rem;
+            color: white;
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 60%, #4f46e5 100%);
+            padding: 13px 22px;
+            border-radius: 12px;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4), 0 1px 3px rgba(37, 99, 235, 0.15), inset 0 1px 0 rgba(255,255,255,0.15);
+            animation: slideInLeft 0.4s ease;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.15);
+            letter-spacing: -0.01em;
+        }
+        .ai-msg .section-title::before {
+            content: '';
+            width: 3px;
+            height: 18px;
+            background: rgba(255,255,255,0.55);
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+        .ai-msg .subsection-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.02rem;
+            color: #1e40af;
+            background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+            padding: 10px 18px;
+            border-radius: 10px;
+            border-left: 4px solid #2563eb;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1), inset 0 1px 0 rgba(255,255,255,0.8);
+        }
+        .ai-msg .subsection-title::before {
+            content: '';
+            width: 7px;
+            height: 7px;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(37, 99, 235, 0.6);
+            flex-shrink: 0;
+        }
+
+        /* 다크모드: 섹션/서브섹션 타이틀 */
+        body.dark-mode .ai-msg .section-title {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #4f46e5 100%);
+        }
+        body.dark-mode .ai-msg .subsection-title {
+            background: linear-gradient(135deg, #1e293b 0%, #1e3a5f 100%);
+            border-left-color: #3b82f6;
+            color: #93c5fd;
+        }
+
         /* 1. 법령 인용 칩 */
         .law-cite-chip {
             display: inline;
@@ -4406,6 +4461,14 @@
 
         /* ═══ 모바일: 새 UI 요소 ═══ */
         @media (max-width: 768px) {
+            .ai-msg .section-title {
+                font-size: 0.95rem;
+                padding: 10px 14px;
+            }
+            .ai-msg .subsection-title {
+                font-size: 0.88rem;
+                padding: 8px 12px;
+            }
             .hero-stats {
                 gap: 10px;
             }
@@ -5826,13 +5889,13 @@
                     if (inList) { html.push('</ul>'); inList = false; }
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
                     if (html.length > 0 && !lastWasH2) html.push('<hr class="fancy">');
-                    html.push('<h2>' + this.formatInline(trimmed.substring(3)) + '</h2>');
+                    html.push('<p><strong class="section-title">' + this.formatInline(trimmed.substring(3)) + '</strong></p>');
                     lastWasH2 = true;
                 }
                 else if (trimmed.startsWith('### ')) {
                     if (inList) { html.push('</ul>'); inList = false; }
                     if (inOrderedList) { html.push('</ol>'); inOrderedList = false; }
-                    html.push('<h3>' + this.formatInline(trimmed.substring(4)) + '</h3>');
+                    html.push('<p><strong class="subsection-title">' + this.formatInline(trimmed.substring(4)) + '</strong></p>');
                     lastWasH2 = false;
                 }
                 else if (/^\d+\.\s+/.test(trimmed)) {
@@ -5860,19 +5923,21 @@
             if (inList) html.push('</ul>');
             if (inOrderedList) html.push('</ol>');
 
-            // 섹션 래핑: H2 기준으로 ai-section 래퍼 생성
+            // 섹션 래핑: section-title 기준으로 ai-section 래퍼 생성
             let joined = html.join('\n');
-            const sectionParts = joined.split(/(?=<h2>)/);
+            const sectionMarker = '<strong class="section-title">';
+            const sectionParts = joined.split(/(?=<p><strong class="section-title">)/);
             if (sectionParts.length > 1) {
                 let secIdx = 0;
                 const wrapped = sectionParts.map((part, i) => {
-                    if (part.startsWith('<h2>')) {
+                    if (part.startsWith('<p><strong class="section-title">')) {
                         secIdx++;
-                        const titleMatch = part.match(/<h2>(.*?)<\/h2>/);
+                        const titleMatch = part.match(/<strong class="section-title">(.*?)<\/strong>/);
                         const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '') : '';
-                        const h2Tag = titleMatch ? titleMatch[0] : '';
-                        const body = part.substring(part.indexOf('</h2>') + 5);
-                        return `<div class="ai-section" id="sec-${secIdx}" data-section-title="${this.escapeHtml(title)}"><div class="ai-section-header">${h2Tag}<span class="material-symbols-outlined toggle-icon">expand_less</span></div><div class="ai-section-body">${body}</div></div>`;
+                        const headerEnd = part.indexOf('</p>') + 4;
+                        const headerTag = part.substring(0, headerEnd);
+                        const body = part.substring(headerEnd);
+                        return `<div class="ai-section" id="sec-${secIdx}" data-section-title="${this.escapeHtml(title)}"><div class="ai-section-header">${headerTag}<span class="material-symbols-outlined toggle-icon">expand_less</span></div><div class="ai-section-body">${body}</div></div>`;
                     }
                     return part;
                 });
