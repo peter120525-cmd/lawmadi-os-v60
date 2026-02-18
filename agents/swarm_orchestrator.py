@@ -543,6 +543,149 @@ class SwarmOrchestrator:
             logger.error(f"❌ 통합 분석 실패: {e}")
             return self._fallback_response_with_analyses(query, successful_analyses)
 
+    async def synthesize_swarm_results_stream(
+        self,
+        query: str,
+        swarm_results: list,
+        model_name: str = "gemini-3-flash-preview"
+    ):
+        """
+        여러 Leader의 분석 결과를 통합 — 스트리밍 버전 (async generator)
+        yield: str (텍스트 청크)
+        """
+        import asyncio
+
+        successful_analyses = [r for r in swarm_results if r.get("success", False)]
+
+        if not successful_analyses:
+            logger.warning("⚠️ 모든 Leader 분석 실패 - Fallback 응답 생성")
+            yield self._fallback_response(query)
+            return
+
+        # 통합 프롬프트 생성 (기존 synthesize_swarm_results와 동일)
+        leader_names = [f"{a['leader']} ({a['specialty']})" for a in successful_analyses]
+        leader_list_str = ", ".join(leader_names)
+
+        synthesis_prompt = f"""
+당신은 Lawmadi OS의 유나 (CCO, Chief Content Officer)입니다.
+여러 전문 분야 리더들이 분석한 결과를 따뜻하고 이해하기 쉽게 통합하여 최종 판단 흐름을 생성하세요.
+사용자의 불안에 공감하고, 구체적인 행동으로 바꿔주는 톤을 유지하세요.
+
+[사용자 질문]
+{query}
+
+[전문 리더 분석 결과]
+"""
+
+        for idx, result in enumerate(successful_analyses, 1):
+            synthesis_prompt += f"\n[{idx}. {result['leader']} ({result['specialty']})]\n"
+            synthesis_prompt += result['analysis']
+            synthesis_prompt += "\n"
+
+        synthesis_prompt += f"""
+
+[통합 지침]
+1. 모든 전문 리더의 분석을 고려하여 종합적인 답변을 작성하세요
+2. 반드시 아래 헤더로 시작하세요:
+   [유나 (CCO) 종합 판단]
+   참여 전문가: {leader_list_str}
+
+3. 반드시 다음 5단계 계층 구조를 유지하세요:
+
+   1. 핵심 요약
+      1.1 상황 진단 — 공감과 현황 파악
+      1.2 결론 및 전략 방향 — 서연 CSO의 법률 전략 관점을 최우선으로 반영
+
+   2. 법률 근거 분석
+      — 리더별로 배지형 구분 사용:
+      👤 [리더명] 리더 ([전문분야] 전문)
+      2.1, 2.2... 순서로 분야별 법률 근거 정리
+      ⚠️ 법률 전략 관련 내용은 서연(CSO)의 분석을 가장 먼저 배치하세요
+
+   3. 시간축 전략
+      3.1 과거 (상황 정리)
+      3.2 현재 (골든타임) — 시효/기한 강조
+      3.3 미래 (대응 시나리오)
+
+   4. 실행 계획
+      4.1 즉시 조치 (24시간 내)
+      4.2 단계별 가이드
+      4.3 체크리스트 — □ 기호로 확인 항목 나열
+
+   5. 추가 정보
+      5.1 무료 법률 지원 (기관명 + 전화번호)
+      5.2 관련 법령 요약
+
+4. 여러 전문 분야가 교차하는 복합 사안임을 명시하세요
+5. 전문가 간 의견이 다를 경우 양측 관점을 모두 제시하세요
+6. 마무리에 재질문 유도 + 간결한 면책 포함
+
+🚨 **CRITICAL**: 절대로 마크다운 표(table) 형식을 사용하지 마세요!
+❌ 금지: | 구분 | 내용 | 형식
+✅ 사용: • **항목** - 설명 형식 또는 번호 목록
+
+[응답 형식]
+반드시 "[유나 (CCO) 종합 판단]"으로 시작하세요.
+"""
+
+        try:
+            logger.info(f"🔄 통합 분석 스트리밍 시작 ({len(successful_analyses)}개 리더 결과 통합)...")
+
+            gc = self.genai_client
+
+            # generate_content_stream을 별도 스레드에서 실행
+            loop = asyncio.get_event_loop()
+
+            def _stream_sync():
+                return gc.models.generate_content_stream(
+                    model=model_name,
+                    contents=synthesis_prompt,
+                    config=genai_types.GenerateContentConfig(
+                        temperature=0.3,
+                        top_p=0.95,
+                        max_output_tokens=4096,
+                    ),
+                )
+
+            stream = await loop.run_in_executor(None, _stream_sync)
+
+            total_chars = 0
+            # 동기 이터레이터를 비동기로 소비 (이벤트 루프 블로킹 방지)
+            queue = asyncio.Queue()
+
+            def _consume_stream():
+                try:
+                    for chunk in stream:
+                        text_part = ""
+                        if hasattr(chunk, 'text') and chunk.text:
+                            text_part = chunk.text
+                        elif hasattr(chunk, 'parts'):
+                            for part in chunk.parts:
+                                if hasattr(part, 'text') and part.text:
+                                    text_part += part.text
+                        if text_part:
+                            queue.put_nowait(text_part)
+                    queue.put_nowait(None)  # sentinel
+                except Exception as e:
+                    queue.put_nowait(e)
+
+            loop.run_in_executor(None, _consume_stream)
+
+            while True:
+                item = await queue.get()
+                if item is None:
+                    break
+                if isinstance(item, Exception):
+                    raise item
+                total_chars += len(item)
+                yield item
+
+            logger.info(f"✅ 통합 분석 스트리밍 완료 ({total_chars} chars)")
+
+        except Exception as e:
+            logger.error(f"❌ 통합 분석 스트리밍 실패: {e}")
+            yield self._fallback_response_with_analyses(query, successful_analyses)
+
     def _fallback_response(self, query: str) -> str:
         """Fallback 응답 생성"""
         return f"""[유나 (CCO) 종합 판단]
