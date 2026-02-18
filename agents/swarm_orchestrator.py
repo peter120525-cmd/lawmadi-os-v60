@@ -173,6 +173,52 @@ class SwarmOrchestrator:
 
         return sorted_domains
 
+    def classify_domain_with_gemini(self, query: str) -> Optional[str]:
+        """키워드 매칭 실패/동점 시 Gemini로 법률 분야 분류하여 leader_id 반환"""
+        if not self.genai_client:
+            return None
+
+        # specialty 목록 생성
+        specialty_list = []
+        for lid, info in self.leaders.items():
+            if lid == "L60":
+                continue
+            sp = info.get("specialty", "")
+            if sp:
+                specialty_list.append(f"{lid}:{sp}")
+
+        if not specialty_list:
+            return None
+
+        prompt = (
+            f"다음 질문의 법률 분야를 아래 목록에서 **하나만** 골라 코드(예: L22)만 답하세요.\n"
+            f"해당 없으면 NONE이라고 답하세요.\n\n"
+            f"질문: {query[:500]}\n\n"
+            f"분야 목록:\n" + "\n".join(specialty_list)
+        )
+
+        try:
+            gc = self.genai_client
+            resp = gc.models.generate_content(
+                model="gemini-3-flash-preview",
+                contents=prompt,
+                config=genai_types.GenerateContentConfig(max_output_tokens=50, temperature=0.0),
+            )
+            text = (resp.text or "").strip().upper()
+            # L01~L60 형식 추출
+            import re
+            match = re.search(r'L(\d{2})', text)
+            if match:
+                leader_id = f"L{match.group(1)}"
+                if leader_id in self.leaders and leader_id != "L60":
+                    logger.info(f"🤖 Gemini 도메인 분류: '{query[:30]}...' → {leader_id} ({self.leaders[leader_id].get('specialty', '')})")
+                    return leader_id
+            logger.info(f"🤖 Gemini 도메인 분류 결과 없음: {text[:50]}")
+            return None
+        except Exception as e:
+            logger.warning(f"⚠️ Gemini 도메인 분류 실패 (무시): {e}")
+            return None
+
     def select_leaders(self, query: str, detected_domains: List[Tuple[str, int]] = None) -> List[Dict]:
         """
         Query에 적합한 Leader 선택
@@ -197,9 +243,28 @@ class SwarmOrchestrator:
             detected_domains = self.detect_domains(query)
 
         if not detected_domains:
-            # 도메인 미탐지 → 유나(CCO)가 따뜻하게 맞이
+            # 도메인 미탐지 → Gemini 1차 분류 시도
+            gemini_leader_id = self.classify_domain_with_gemini(query)
+            if gemini_leader_id:
+                leader_info = self.leaders.get(gemini_leader_id, {})
+                leader_info["_id"] = gemini_leader_id
+                leader_info["_score"] = 50  # Gemini 분류
+                logger.info(f"✅ Gemini 분류 리더 선택: {leader_info.get('name', '?')}({gemini_leader_id})")
+                return [leader_info]
+            # Gemini도 실패 → 유나(CCO)가 따뜻하게 맞이
             logger.info("🎯 도메인 미탐지 → 유나(CCO) 응대")
             return [{"name": "유나", "role": "Chief Content Officer", "specialty": "콘텐츠 설계", "_clevel": "CCO"}]
+
+        # 상위 2개 동점 검사 → Gemini 분류로 해소
+        if len(detected_domains) >= 2 and detected_domains[0][1] == detected_domains[1][1]:
+            gemini_leader_id = self.classify_domain_with_gemini(query)
+            if gemini_leader_id:
+                # Gemini가 선택한 리더를 최상위로
+                leader_info = self.leaders.get(gemini_leader_id, {})
+                leader_info["_id"] = gemini_leader_id
+                leader_info["_score"] = detected_domains[0][1] + 5  # 동점 해소
+                logger.info(f"✅ Gemini 동점 해소: {leader_info.get('name', '?')}({gemini_leader_id})")
+                return [leader_info]
 
         # 상위 N개 도메인의 Leader 선택
         selected_leaders = []
