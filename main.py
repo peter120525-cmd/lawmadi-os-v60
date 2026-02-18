@@ -41,7 +41,8 @@ from typing import Any, List, Dict, Optional, Union
 from importlib import import_module
 
 import asyncio
-import google.generativeai as genai
+from google import genai
+from google.genai import types as genai_types
 from fastapi import FastAPI, Request, Header, HTTPException, File, UploadFile, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
@@ -98,7 +99,7 @@ logger.info("✅ 필수 디렉토리 확인 완료: temp/, logs/, uploads/")
 OS_VERSION = "v60.0.0"
 
 # Gemini 모델명 통일 상수 (항목 #6)
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025"
+DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview"
 
 # Rate Limiter 설정 (항목 #2)
 limiter = Limiter(key_func=get_remote_address)
@@ -1717,7 +1718,7 @@ async def startup():
                 except Exception as e:
                     logger.warning(f"leaders.json 로드 실패: {e}")
 
-            swarm_orchestrator = SwarmOrchestrator(leader_reg, config)
+            swarm_orchestrator = SwarmOrchestrator(leader_reg, config, genai_client=None)
             logger.info(f"✅ SwarmOrchestrator initialized ({len(leader_reg)} leaders)")
         except Exception as e:
             logger.warning(f"🟡 SwarmOrchestrator degraded: {e}")
@@ -1748,9 +1749,13 @@ async def startup():
     # [감사 #4.1] 모델명 환경변수화
     # --------------------------------------------------
     gemini_key = os.getenv("GEMINI_KEY")
+    genai_client = None
     if gemini_key:
-        genai.configure(api_key=gemini_key)
-        logger.info("✅ Gemini configured")
+        genai_client = genai.Client(api_key=gemini_key)
+        logger.info("✅ Gemini client initialized (google-genai SDK)")
+        # SwarmOrchestrator에 genai_client 주입 (초기화 순서 이슈 해결)
+        if swarm_orchestrator:
+            swarm_orchestrator.genai_client = genai_client
     else:
         logger.warning("⚠️ GEMINI_KEY 누락 (FAIL_CLOSED)")
 
@@ -1834,6 +1839,7 @@ async def startup():
         "swarm": swarm,
         "swarm_orchestrator": swarm_orchestrator,
         "clevel_handler": clevel_handler,
+        "genai_client": genai_client,
     })
 
     METRICS["boot_time"] = _now_iso()
@@ -2238,14 +2244,17 @@ async def ask(request: Request):
             # C-Level 전용 시스템 지시
             clevel_instruction = clevel.get_clevel_system_instruction(exec_id, SYSTEM_INSTRUCTION_BASE)
 
-            model = genai.GenerativeModel(
-                model_name=model_name,
-                tools=tools,
-                system_instruction=clevel_instruction,
-                generation_config={"max_output_tokens": 4096}
+            gc = RUNTIME.get("genai_client")
+            chat = gc.chats.create(
+                model=model_name,
+                config=genai_types.GenerateContentConfig(
+                    tools=tools,
+                    system_instruction=clevel_instruction,
+                    max_output_tokens=4096,
+                    automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
+                ),
+                history=gemini_history,
             )
-
-            chat = model.start_chat(history=gemini_history, enable_automatic_function_calling=True)
             resp = chat.send_message(
                 f"now_kst={now_kst}\n"
                 f"ssot_available={ssot_available}\n"
@@ -2292,11 +2301,13 @@ async def ask(request: Request):
 
                         try:
                             clevel_instruction = clevel.get_clevel_system_instruction(exec_id, SYSTEM_INSTRUCTION_BASE)
-                            clevel_model = genai.GenerativeModel(
-                                model_name=model_name,
-                                system_instruction=clevel_instruction
+                            gc = RUNTIME.get("genai_client")
+                            clevel_chat = gc.chats.create(
+                                model=model_name,
+                                config=genai_types.GenerateContentConfig(
+                                    system_instruction=clevel_instruction,
+                                ),
                             )
-                            clevel_chat = clevel_model.start_chat()
                             clevel_resp = clevel_chat.send_message(
                                 f"다음은 법률 리더들의 분석 결과입니다:\n\n{final_text}\n\n"
                                 f"위 분석에 대해 {exec_name}({exec_id}) 관점에서 전략적 보강 의견을 2~3문장으로 추가하세요.\n"
@@ -2327,20 +2338,24 @@ async def ask(request: Request):
                 leader_specialty = leader.get('specialty', '콘텐츠 설계')
                 swarm_mode = False
 
-                model = genai.GenerativeModel(
-                    model_name=model_name,
-                    tools=tools,
-                    system_instruction=(
-                        f"{SYSTEM_INSTRUCTION_BASE}\n"
-                        f"현재 당신은 '{leader['name']}({leader['role']})' 노드입니다.\n"
-                        f"🎯 전문 분야: {leader.get('specialty', '통합')}\n"
-                        f"🎯 관점: {leader.get('specialty', '통합')} 전문가 관점에서 이 사안을 분석하세요.\n"
-                        f"반드시 [{leader['name']} ({leader.get('specialty', '통합')}) 답변]으로 시작하세요."
-                    ),
-                    generation_config={"max_output_tokens": 4096},
+                gc = RUNTIME.get("genai_client")
+                fallback_instruction = (
+                    f"{SYSTEM_INSTRUCTION_BASE}\n"
+                    f"현재 당신은 '{leader['name']}({leader['role']})' 노드입니다.\n"
+                    f"🎯 전문 분야: {leader.get('specialty', '통합')}\n"
+                    f"🎯 관점: {leader.get('specialty', '통합')} 전문가 관점에서 이 사안을 분석하세요.\n"
+                    f"반드시 [{leader['name']} ({leader.get('specialty', '통합')}) 답변]으로 시작하세요."
                 )
-
-                chat = model.start_chat(history=gemini_history, enable_automatic_function_calling=True)
+                chat = gc.chats.create(
+                    model=model_name,
+                    config=genai_types.GenerateContentConfig(
+                        tools=tools,
+                        system_instruction=fallback_instruction,
+                        max_output_tokens=4096,
+                        automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
+                    ),
+                    history=gemini_history,
+                )
 
                 resp = chat.send_message(
                     f"now_kst={now_kst}\n"
@@ -2713,12 +2728,10 @@ async def analyze_document(file_id: str, analysis_type: str = "general"):
         file_path = matching_files[0]
         logger.info(f"📄 [Analyze] 파일 발견: {file_path}")
 
-        # 2. Gemini 모델 준비
-        gemini_key = os.getenv("GEMINI_API_KEY")
-        if not gemini_key:
+        # 2. Gemini 클라이언트 확인
+        gc = RUNTIME.get("genai_client")
+        if not gc:
             raise HTTPException(status_code=500, detail="Gemini API Key가 설정되지 않았습니다.")
-
-        genai.configure(api_key=gemini_key)
 
         # 3. 파일 타입에 따라 처리
         file_ext = file_path.suffix.lower()
@@ -2786,10 +2799,7 @@ async def _analyze_image_document(file_path: Path, analysis_type: str) -> Dict[s
     """
     logger.info(f"🖼️ [Analyze] 이미지 분석 시작: {file_path.name}")
 
-    # Gemini Vision 모델
-    model = genai.GenerativeModel(
-        model_name=os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
-    )
+    gc = RUNTIME.get("genai_client")
 
     # 이미지 파일 읽기
     with open(file_path, "rb") as f:
@@ -2853,10 +2863,11 @@ async def _analyze_image_document(file_path: Path, analysis_type: str) -> Dict[s
 """
 
     # Gemini Vision 호출
-    response = model.generate_content([
-        prompt,
-        {"mime_type": f"image/{file_path.suffix[1:]}", "data": image_data}
-    ])
+    image_part = genai_types.Part.from_bytes(data=image_data, mime_type=f"image/{file_path.suffix[1:]}")
+    response = gc.models.generate_content(
+        model=os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
+        contents=[prompt, image_part],
+    )
 
     # 응답 파싱
     result_text = response.text.strip()
@@ -2907,9 +2918,7 @@ async def _analyze_pdf_document(file_path: Path, analysis_type: str) -> Dict[str
         logger.info(f"📄 [Analyze] PDF 텍스트 추출 완료: {len(text)} chars")
 
         # Gemini로 텍스트 분석
-        model = genai.GenerativeModel(
-            model_name=os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
-        )
+        gc = RUNTIME.get("genai_client")
 
         prompt = f"""
 다음 PDF 문서를 법률적 관점에서 분석해주세요.
@@ -2929,7 +2938,10 @@ async def _analyze_pdf_document(file_path: Path, analysis_type: str) -> Dict[str
 }}
 """
 
-        response = model.generate_content(prompt)
+        response = gc.models.generate_content(
+            model=os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
+            contents=prompt,
+        )
         result_text = response.text.strip()
 
         # JSON 추출

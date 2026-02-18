@@ -150,7 +150,7 @@ def main():
     packages = [
         "fastapi",
         "uvicorn",
-        "google.generativeai",
+        "google.genai",
         "PyPDF2",
     ]
 

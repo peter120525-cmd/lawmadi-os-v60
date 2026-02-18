@@ -206,19 +206,20 @@ try:
 
     if gemini_key:
         # API 키가 있으면 모델 초기화만 테스트
-        import google.generativeai as genai
-        genai.configure(api_key=gemini_key)
-
-        model = genai.GenerativeModel('gemini-2.0-flash-exp')
-        test("Gemini 모델 초기화", True, "gemini-2.0-flash-exp")
+        from google import genai as genai_sdk
+        client = genai_sdk.Client(api_key=gemini_key)
+        test("Gemini 클라이언트 초기화", True, "google-genai SDK")
 
         # 실제 API 호출은 선택적 (네트워크 문제 등으로 실패 가능)
         try:
-            response = model.generate_content("Hello")
+            response = client.models.generate_content(
+                model='gemini-3-flash-preview',
+                contents="Hello"
+            )
             test("Gemini API 응답", bool(response.text),
                  response.text[:50] + "..." if response.text else "")
         except Exception as e:
-            # API 호출 실패는 허용 (키가 있고 모델 초기화가 되면 OK)
+            # API 호출 실패는 허용 (키가 있고 클라이언트 초기화가 되면 OK)
             test("Gemini API 응답", True, f"Cloud Run에서 정상 작동 (로컬: {str(e)[:30]})")
     else:
         test("Gemini 모델 초기화", False, "API Key 미설정")

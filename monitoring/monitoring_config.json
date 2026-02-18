@@ -1,0 +1,33 @@
+{
+  "lawmadi_api": "https://lawmadi-os-v60-uzqkp6kadq-du.a.run.app",
+  "interval_seconds": 300,
+  "timeout_seconds": 10,
+  "alert_threshold": {
+    "api_response_time": 3.0,
+    "error_rate_percent": 5.0,
+    "memory_usage_percent": 85.0,
+    "cpu_usage_percent": 90.0
+  },
+  "alerts": {
+    "slack_webhook": "",
+    "discord_webhook": "",
+    "log_dir": "monitoring/logs"
+  },
+  "recovery": {
+    "auto_restart": true,
+    "max_retry": 3,
+    "retry_delay": 10
+  },
+  "simulation": {
+    "enabled": true,
+    "count": 5,
+    "delay_between": 5.0,
+    "scenarios": [
+      {"query": "부당해고 구제 방법 알려주세요", "category": "labor"},
+      {"query": "전세 보증금 3억인데 집주인이 안 돌려줘요", "category": "lease"},
+      {"query": "서연아 전세 분쟁 전략 알려줘", "category": "clevel"},
+      {"query": "사기죄 고소장 작성 방법을 알려주세요", "category": "criminal"},
+      {"query": "양도소득세 비과세 요건이 궁금합니다", "category": "tax"}
+    ]
+  }
+}

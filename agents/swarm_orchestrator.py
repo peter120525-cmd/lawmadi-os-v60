@@ -12,7 +12,8 @@ import json
 import os
 import logging
 from typing import Dict, List, Tuple, Optional
-import google.generativeai as genai
+from google import genai
+from google.genai import types as genai_types
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logger = logging.getLogger("LawmadiOS.SwarmOrchestrator")
@@ -29,9 +30,10 @@ class SwarmOrchestrator:
     4. 결과 통합 → 종합 판단 흐름 생성
     """
 
-    def __init__(self, leaders_registry: Dict, config: Dict = None):
+    def __init__(self, leaders_registry: Dict, config: Dict = None, genai_client=None):
         self.leaders = leaders_registry
         self.config = config or {}
+        self.genai_client = genai_client
 
         # Leader별 도메인 키워드 매핑
         self._build_domain_index()
@@ -225,7 +227,7 @@ class SwarmOrchestrator:
         query: str,
         tools: List = None,
         system_instruction_base: str = "",
-        model_name: str = "gemini-2.5-flash-preview-09-2025"
+        model_name: str = "gemini-3-flash-preview"
     ) -> Dict:
         """
         단일 Leader로 분석 실행
@@ -288,21 +290,19 @@ class SwarmOrchestrator:
                     f"반드시 [{leader_name} ({leader_specialty}) 분석]으로 시작하세요."
                 )
 
-            # Gemini 모델 생성 (max_output_tokens 제한 → 응답 속도 개선)
-            model = genai.GenerativeModel(
-                model_name=model_name,
-                tools=tools or [],
-                system_instruction=system_instruction,
-                generation_config={
-                    "max_output_tokens": 4096,
-                }
-            )
-
             # 분석 실행 (Function Calling 활성화)
             logger.info(f"🔄 {leader_name} ({leader_specialty}) 분석 시작...")
 
-            # Function calling 사용 시 chat 세션 필요
-            chat = model.start_chat(enable_automatic_function_calling=True)
+            gc = self.genai_client
+            chat = gc.chats.create(
+                model=model_name,
+                config=genai_types.GenerateContentConfig(
+                    tools=tools or [],
+                    system_instruction=system_instruction,
+                    max_output_tokens=4096,
+                    automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
+                ),
+            )
             response = chat.send_message(query)
 
             # 응답 텍스트 추출
@@ -363,7 +363,7 @@ class SwarmOrchestrator:
         selected_leaders: List[Dict],
         tools: List = None,
         system_instruction_base: str = "",
-        model_name: str = "gemini-2.5-flash-preview-09-2025"
+        model_name: str = "gemini-3-flash-preview"
     ) -> List[Dict]:
         """
         여러 Leader로 병렬 분석 실행
@@ -410,7 +410,7 @@ class SwarmOrchestrator:
         self,
         query: str,
         swarm_results: List[Dict],
-        model_name: str = "gemini-2.5-flash-preview-09-2025"
+        model_name: str = "gemini-3-flash-preview"
     ) -> str:
         """
         여러 Leader의 분석 결과를 통합하여 최종 판단 흐름 생성
@@ -474,16 +474,16 @@ class SwarmOrchestrator:
             # 통합 모델 실행
             logger.info(f"🔄 통합 분석 시작 ({len(successful_analyses)}개 리더 결과 통합)...")
 
-            synthesis_model = genai.GenerativeModel(
-                model_name=model_name,
-                generation_config={
-                    "temperature": 0.3,
-                    "top_p": 0.95,
-                    "max_output_tokens": 4096,
-                }
+            gc = self.genai_client
+            response = gc.models.generate_content(
+                model=model_name,
+                contents=synthesis_prompt,
+                config=genai_types.GenerateContentConfig(
+                    temperature=0.3,
+                    top_p=0.95,
+                    max_output_tokens=4096,
+                ),
             )
-
-            response = synthesis_model.generate_content(synthesis_prompt)
             final_response = response.text
 
             logger.info(f"✅ 통합 분석 완료 ({len(final_response)} chars)")
@@ -537,7 +537,7 @@ class SwarmOrchestrator:
         query: str,
         tools: List = None,
         system_instruction_base: str = "",
-        model_name: str = "gemini-2.5-flash-preview-09-2025",
+        model_name: str = "gemini-3-flash-preview",
         force_single: bool = False
     ) -> Dict:
         """

@@ -1,0 +1,110 @@
+{
+  "check_number": 1,
+  "timestamp": "2026-02-18T01:10:25.046263",
+  "health": [
+    {
+      "component": "FastAPI",
+      "status": "OK",
+      "latency_ms": 229.1,
+      "message": "vv60.0.0 online"
+    },
+    {
+      "component": "Gemini API",
+      "status": "OK",
+      "latency_ms": 0,
+      "message": "API Key 설정됨"
+    },
+    {
+      "component": "DRF(법제처)",
+      "status": "WARN",
+      "latency_ms": 0,
+      "message": "LAWGO_DRF_OC 미설정 (로컬 환경)"
+    },
+    {
+      "component": "시스템 리소스",
+      "status": "OK",
+      "latency_ms": 0,
+      "message": "정상"
+    },
+    {
+      "component": "Swarm Leaders",
+      "status": "OK",
+      "latency_ms": 0,
+      "message": "60명 리더 로드됨"
+    }
+  ],
+  "anomalies": [
+    {
+      "severity": "HIGH",
+      "pattern": "error_rate",
+      "count": 7,
+      "message": "에러율 12.5% > 임계값 5.0% (요청 56건 중 7건 실패)"
+    },
+    {
+      "severity": "MEDIUM",
+      "pattern": "simulation_fail_rate",
+      "count": 1,
+      "message": "시뮬레이션 일부 실패 20% (1/5건)"
+    }
+  ],
+  "recovery": [],
+  "simulation": {
+    "total": 5,
+    "pass_count": 4,
+    "fail_count": 1,
+    "results": [
+      {
+        "id": 1,
+        "query": "부당해고 구제 방법 알려주세요",
+        "category": "labor",
+        "status_code": 200,
+        "latency": 0.9,
+        "response_length": 178,
+        "leader": "담우",
+        "pass": true
+      },
+      {
+        "id": 2,
+        "query": "전세 보증금 3억인데 집주인이 안 돌려줘요",
+        "category": "lease",
+        "status_code": 200,
+        "latency": 0.8,
+        "response_length": 178,
+        "leader": "온유",
+        "pass": true
+      },
+      {
+        "id": 3,
+        "query": "서연아 전세 분쟁 전략 알려줘",
+        "category": "clevel",
+        "status_code": 200,
+        "latency": 0.7,
+        "response_length": 32,
+        "leader": "?",
+        "pass": false
+      },
+      {
+        "id": 4,
+        "query": "사기죄 고소장 작성 방법을 알려주세요",
+        "category": "criminal",
+        "status_code": 200,
+        "latency": 0.7,
+        "response_length": 178,
+        "leader": "무결",
+        "pass": true
+      },
+      {
+        "id": 5,
+        "query": "양도소득세 비과세 요건이 궁금합니다",
+        "category": "tax",
+        "status_code": 200,
+        "latency": 0.8,
+        "response_length": 180,
+        "leader": "찬솔",
+        "pass": true
+      }
+    ]
+  },
+  "duration_ms": 25602.3,
+  "overall_status": "HIGH"
+}
