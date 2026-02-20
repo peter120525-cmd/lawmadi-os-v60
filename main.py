@@ -2012,34 +2012,33 @@ TIER_ANALYSIS_PROMPT = """당신은 Lawmadi OS의 질문 분류 엔진입니다.
 {{"tier": 1, "complexity": "simple", "is_document": false, "leader_id": "L08", "leader_name": "온유", "leader_specialty": "임대차", "summary": "전세 보증금 반환 문제", "is_legal": true}}"""
 
 
-async def _claude_analyze_query(query: str) -> Dict[str, Any]:
-    """Claude로 질문 분석/분류/리더 배정 (답변 X)"""
-    claude_client = RUNTIME.get("claude_client")
-    if not claude_client:
-        logger.warning("⚠️ Claude 클라이언트 없음 → 키워드 기반 fallback")
-        return None
-
-    leader_summary = _build_leader_summary_for_claude()
+async def _gemini_classify_query(query: str) -> Dict[str, Any]:
+    """Gemini Flash로 빠른 질문 분류/리더 배정 (~1-2초, Claude 대체)"""
     try:
-        resp = claude_client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=300,
-            messages=[{"role": "user", "content": f"질문: {query}"}],
-            system=TIER_ANALYSIS_PROMPT.format(leader_summary=leader_summary),
+        gc = _ensure_genai_client(RUNTIME)
+        model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+        leader_summary = _build_leader_summary_for_claude()
+        resp = gc.models.generate_content(
+            model=model_name,
+            contents=f"질문: {query}",
+            config=genai_types.GenerateContentConfig(
+                system_instruction=TIER_ANALYSIS_PROMPT.format(leader_summary=leader_summary),
+                max_output_tokens=200,
+                temperature=0,
+            ),
         )
-        text = resp.content[0].text.strip()
-        # JSON 추출 (코드블록 안에 있을 수 있음)
+        text = resp.text.strip() if resp.text else ""
         json_match = re.search(r'\{[^{}]+\}', text, re.DOTALL)
         if json_match:
             result = json.loads(json_match.group())
-            logger.info(f"🎯 [Tier Router] Claude 분석: tier={result.get('tier')}, "
+            logger.info(f"⚡ [Tier Router] Gemini 분류: tier={result.get('tier')}, "
                        f"leader={result.get('leader_name')}({result.get('leader_id')}), "
-                       f"complexity={result.get('complexity')}, is_document={result.get('is_document')}")
+                       f"complexity={result.get('complexity')}")
             return result
-        logger.warning(f"⚠️ Claude 분석 JSON 파싱 실패: {text[:200]}")
+        logger.warning(f"⚠️ Gemini 분류 JSON 파싱 실패: {text[:200]}")
         return None
     except Exception as e:
-        logger.warning(f"⚠️ Claude 분석 실패: {e}")
+        logger.warning(f"⚠️ Gemini 분류 실패: {e}")
         return None
 
 
@@ -2086,50 +2085,33 @@ def _fallback_tier_classification(query: str) -> Dict[str, Any]:
 async def _tier1_gemini_respond(query: str, analysis: Dict, tools: list,
                                  gemini_history: list, now_kst: str,
                                  ssot_available: bool) -> str:
-    """Tier 1: Gemini Flash 단독 응답 (나중에 LawmadiLM으로 교체 가능)"""
+    """
+    Tier 1: Gemini Flash 단독 응답 (DRF 도구 미사용 → 3~5초)
+    캐시 컨텍스트만으로 응답. 나중에 LawmadiLM으로 교체 가능.
+    """
     gc = _ensure_genai_client(RUNTIME)
     model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
     leader_name = analysis.get("leader_name", "마디")
     leader_specialty = analysis.get("leader_specialty", "통합")
 
-    # 캐시 컨텍스트: 관련 SSOT 소스 사전 매칭 (토큰 90% 절약)
+    # 캐시 컨텍스트: 관련 SSOT 소스 사전 매칭 (DRF 도구 대체)
     cache_ctx = build_cache_context(query)
 
-    # Gemini Context Caching 제약: cached_content와 tools/system_instruction 동시 사용 불가
-    # → tools가 있으면(DRF 활성) 캐시 미사용, tools 없으면 캐시 사용
-    cached_content_name = RUNTIME.get("gemini_cached_content")
-    use_cache = cached_content_name and not tools  # tools 있으면 캐시 미사용
+    instruction = (
+        f"{SYSTEM_INSTRUCTION_BASE}\n"
+        f"현재 당신은 '{leader_name}' 리더입니다.\n"
+        f"전문 분야: {leader_specialty}\n"
+        f"질문 요약: {analysis.get('summary', '')}\n"
+        f"반드시 [{leader_name} ({leader_specialty}) 분석]으로 시작하세요."
+    )
+    if cache_ctx:
+        instruction += f"\n\n{cache_ctx}"
 
-    if use_cache:
-        # 캐시에 SYSTEM_INSTRUCTION_BASE 포함 → 리더 정보만 추가
-        instruction = (
-            f"현재 당신은 '{leader_name}' 리더입니다.\n"
-            f"전문 분야: {leader_specialty}\n"
-            f"질문 요약: {analysis.get('summary', '')}\n"
-            f"반드시 [{leader_name} ({leader_specialty}) 분석]으로 시작하세요."
-        )
-        if cache_ctx:
-            instruction += f"\n\n{cache_ctx}"
-        gen_config = genai_types.GenerateContentConfig(
-            cached_content=cached_content_name,
-            max_output_tokens=3000,
-        )
-    else:
-        instruction = (
-            f"{SYSTEM_INSTRUCTION_BASE}\n"
-            f"현재 당신은 '{leader_name}' 리더입니다.\n"
-            f"전문 분야: {leader_specialty}\n"
-            f"질문 요약: {analysis.get('summary', '')}\n"
-            f"반드시 [{leader_name} ({leader_specialty}) 분석]으로 시작하세요."
-        )
-        if cache_ctx:
-            instruction += f"\n\n{cache_ctx}"
-        gen_config = genai_types.GenerateContentConfig(
-            tools=tools,
-            system_instruction=instruction,
-            max_output_tokens=3000,
-            automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
-        )
+    # Tier 1: DRF 도구 없이 단일 Gemini 호출 (AFC 오버헤드 제거 → 3~5초)
+    gen_config = genai_types.GenerateContentConfig(
+        system_instruction=instruction,
+        max_output_tokens=3000,
+    )
 
     chat = gc.chats.create(
         model=model_name,
@@ -2137,17 +2119,48 @@ async def _tier1_gemini_respond(query: str, analysis: Dict, tools: list,
         history=gemini_history,
     )
     resp = chat.send_message(
-        f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
+        f"now_kst={now_kst}\n사용자 질문: {query}"
     )
+    return _safe_extract_gemini_text(resp)
+
+
+async def _tier2_gemini_with_tools(query: str, analysis: Dict, tools: list,
+                                    gemini_history: list, now_kst: str,
+                                    ssot_available: bool) -> str:
+    """Tier 2 전용: Gemini Flash + DRF 도구 사용 (정밀 검색)"""
+    gc = _ensure_genai_client(RUNTIME)
+    model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+    leader_name = analysis.get("leader_name", "마디")
+    leader_specialty = analysis.get("leader_specialty", "통합")
+    cache_ctx = build_cache_context(query)
+
+    instruction = (
+        f"{SYSTEM_INSTRUCTION_BASE}\n"
+        f"현재 당신은 '{leader_name}' 리더입니다.\n"
+        f"전문 분야: {leader_specialty}\n"
+        f"질문 요약: {analysis.get('summary', '')}\n"
+        f"반드시 [{leader_name} ({leader_specialty}) 분석]으로 시작하세요."
+    )
+    if cache_ctx:
+        instruction += f"\n\n{cache_ctx}"
+
+    gen_config = genai_types.GenerateContentConfig(
+        tools=tools,
+        system_instruction=instruction,
+        max_output_tokens=3000,
+        automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
+    )
+    chat = gc.chats.create(model=model_name, config=gen_config, history=gemini_history)
+    resp = chat.send_message(f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}")
     return _safe_extract_gemini_text(resp)
 
 
 async def _tier2_gemini_plus_claude(query: str, analysis: Dict, tools: list,
                                      gemini_history: list, now_kst: str,
                                      ssot_available: bool) -> str:
-    """Tier 2: Gemini Flash 초안 + Claude 보강/검증"""
-    # Step 1: Gemini 초안
-    gemini_draft = await _tier1_gemini_respond(query, analysis, tools, gemini_history, now_kst, ssot_available)
+    """Tier 2: Gemini Flash(DRF 도구) 초안 + Claude 보강/검증"""
+    # Step 1: Gemini 초안 (DRF 도구 포함)
+    gemini_draft = await _tier2_gemini_with_tools(query, analysis, tools, gemini_history, now_kst, ssot_available)
 
     # Step 2: Claude 보강
     claude_client = RUNTIME.get("claude_client")
@@ -3012,9 +3025,9 @@ async def ask(request: Request):
         now_kst = _now_iso()
 
         # -------------------------------------------------
-        # 4) 🎯 Claude 분석 → 티어/리더 배정
+        # 4) ⚡ Gemini Flash 분류 → 티어/리더 배정 (Claude 대체, ~1초)
         # -------------------------------------------------
-        analysis = await _claude_analyze_query(query)
+        analysis = await _gemini_classify_query(query)
         if not analysis:
             analysis = _fallback_tier_classification(query)
             logger.info(f"🔄 키워드 기반 fallback 분류: tier={analysis['tier']}")
@@ -3132,19 +3145,33 @@ async def ask(request: Request):
             final_text = leader_header + final_text
 
         # -------------------------------------------------
-        # 6) 헌법 준수 검증 (모든 티어 공통)
+        # 6) 헌법 준수 검증
+        # Rule-based: 모든 티어 (즉시)
+        # Claude 검증: Tier 2/3만 동기, Tier 1은 백그라운드 fire-and-forget
         # -------------------------------------------------
         if not validate_constitutional_compliance(final_text):
             _audit("ask_fail_closed", {"query": query, "status": "GOVERNANCE", "leader": leader_name})
             return {"trace_id": trace, "response": "⚠️ 시스템 무결성 정책에 의해 답변이 제한되었습니다.", "status": "FAIL_CLOSED"}
 
-        # Claude 헌법 검증 (백그라운드 비동기)
-        const_check = await _claude_constitutional_check(query, final_text)
-        if const_check.get("warning"):
-            final_text += f"\n\n---\n⚖️ **헌법 검증 참고사항:** {const_check['warning']}"
-        if not const_check.get("passed", True):
-            logger.warning(f"🚨 [헌법 검증 경고] {const_check}")
-            final_text += "\n\n> ⚠️ 이 답변에는 헌법적 검토가 필요한 사항이 포함되어 있습니다. 전문가 상담을 권장합니다."
+        const_check = {"passed": True, "warning": None}
+        if tier >= 2:
+            # Tier 2/3: Claude 헌법 검증 동기 (정밀 검증 필요)
+            const_check = await _claude_constitutional_check(query, final_text)
+            if const_check.get("warning"):
+                final_text += f"\n\n---\n⚖️ **헌법 검증 참고사항:** {const_check['warning']}"
+            if not const_check.get("passed", True):
+                logger.warning(f"🚨 [헌법 검증 경고] {const_check}")
+                final_text += "\n\n> ⚠️ 이 답변에는 헌법적 검토가 필요한 사항이 포함되어 있습니다. 전문가 상담을 권장합니다."
+        else:
+            # Tier 1: Claude 헌법 검증은 백그라운드 (응답 속도 우선)
+            async def _bg_constitutional():
+                try:
+                    bg_check = await _claude_constitutional_check(query, final_text)
+                    if not bg_check.get("passed", True):
+                        logger.warning(f"🚨 [Tier1 백그라운드 헌법 경고] {bg_check}")
+                except Exception:
+                    pass
+            asyncio.create_task(_bg_constitutional())
 
         latency_ms = int((time.time() - start_time) * 1000)
 
