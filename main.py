@@ -3044,18 +3044,14 @@ async def ask(request: Request):
         now_kst = _now_iso()
 
         # -------------------------------------------------
-        # 4) ⚡ 2단계 분류: 키워드 즉시(0ms) → Tier 2/3일 때만 Gemini 정밀 분류
+        # 4) Gemini Flash 분류 (모든 티어)
         # -------------------------------------------------
-        # Step 1: 키워드 기반 즉시 분류 (API 호출 0회)
-        analysis = _fallback_tier_classification(query)
-        initial_tier = analysis.get("tier", 1)
-
-        # Step 2: Tier 2/3 의심 시에만 Gemini 정밀 분류 (~1-2초)
-        if initial_tier >= 2:
-            gemini_analysis = await _gemini_classify_query(query)
-            if gemini_analysis:
-                analysis = gemini_analysis
-            logger.info(f"🔍 Gemini 정밀 분류: tier={analysis.get('tier')}")
+        analysis = await _gemini_classify_query(query)
+        if not analysis:
+            analysis = _fallback_tier_classification(query)
+            logger.info(f"⚠️ Gemini 분류 실패 → 키워드 fallback")
+        else:
+            logger.info(f"🔍 Gemini 분류: tier={analysis.get('tier')}, leader={analysis.get('leader_name')}")
 
         tier = analysis.get("tier", 1)
         leader_name = analysis.get("leader_name", "마디")
