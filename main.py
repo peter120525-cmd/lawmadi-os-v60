@@ -3566,6 +3566,16 @@ async def ask_stream(request: Request):
                             accumulated += text_part
                             yield _sse("chunk", {"text": text_part})
 
+                        # AFC로 인해 스트림 텍스트가 비었으면 non-stream fallback
+                        if len(accumulated.strip()) < 10:
+                            logger.warning(f"⚠️ [Stream] 단일리더 스트림 텍스트 비어있음 → non-stream fallback")
+                            fallback_resp = chat.send_message(
+                                f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
+                            )
+                            accumulated = _safe_extract_gemini_text(fallback_resp)
+                            if accumulated:
+                                yield _sse("chunk", {"text": accumulated})
+
                         final_text = accumulated
 
                     else:
