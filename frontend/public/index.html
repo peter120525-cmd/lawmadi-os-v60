@@ -261,14 +261,23 @@
             flex-direction: column;
         }
 
-        /* 랜딩페이지 스크롤바 숨김 */
+        /* 랜딩페이지: 스크롤 없이 뷰포트에 맞춤 */
         #landing-content {
-            overflow-y: auto;
-            scrollbar-width: none;          /* Firefox */
-            -ms-overflow-style: none;       /* IE/Edge */
+            overflow: hidden;
+            padding: 4px 12px;
         }
-        #landing-content::-webkit-scrollbar {
-            display: none;                  /* Chrome/Safari */
+        #landing-content .example-questions {
+            max-height: 100%;
+            overflow: hidden;
+        }
+        /* 데스크탑: 4열 x 3행 = 뷰포트 안에 맞춤 */
+        #landing-content .example-card-grid {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        /* 12번째 이후 카드 숨김 (4x3=12 → 모두 표시) */
+        #landing-content .example-card:nth-child(n+13) {
+            display: none;
         }
 
         /* 랜딩: 예시질문만 표시 — Hero/Pricing/Lawyer/Trust/CoreFeatures 숨김 */
@@ -531,9 +540,9 @@
         /* Example Questions */
         .example-questions {
             max-width: 100%;
-            margin: 1.2rem auto;
+            margin: 0.5rem auto;
             text-align: center;
-            padding: 1rem 20px;
+            padding: 0.8rem 16px;
             background: linear-gradient(135deg, rgba(15, 23, 42, 0.03) 0%, rgba(30, 41, 59, 0.06) 100%);
             border-radius: 20px;
             border: 1px solid var(--border);
@@ -542,7 +551,7 @@
         .example-questions h3 {
             font-size: 1.1rem;
             font-weight: 800;
-            margin-bottom: 0.8rem;
+            margin-bottom: 0.5rem;
             color: var(--text-main);
         }
 
@@ -4457,19 +4466,31 @@
 
             .example-card-grid {
                 display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 10px;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 6px;
             }
             .example-card {
-                padding: 12px 8px;
+                padding: 8px 4px;
                 flex-direction: column;
                 align-items: center;
                 text-align: center;
-                gap: 5px;
+                gap: 3px;
             }
-            .example-card-icon { font-size: 1.8rem; }
-            .example-card-title { font-size: 1.18rem; }
+            .example-card-icon { font-size: 1.4rem; }
+            .example-card-title { font-size: 0.8rem; }
             .example-card-desc { display: none; }
+            /* 모바일: 4열 x 3행 = 12개 표시 (뷰포트 맞춤) */
+            #landing-content .example-card-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            #landing-content .example-questions {
+                margin: 0 auto;
+                padding: 0.4rem 2px;
+            }
+            #landing-content .example-questions h3 {
+                font-size: 1.1rem;
+                margin-bottom: 0.4rem;
+            }
 
             .ai-toc {
                 padding: 8px 10px;
