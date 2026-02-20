@@ -56,6 +56,7 @@ import shutil
 from pathlib import Path
 import mimetypes
 import anthropic  # Tier routing: Claude 분석/검증용
+import httpx      # LawmadiLM API 호출용
 
 # =============================================================
 # FAIL-SOFT OPTIONAL IMPORT [ULTRA]
@@ -101,6 +102,9 @@ OS_VERSION = "v60.0.0"
 
 # Gemini 모델명 통일 상수 (항목 #6)
 DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview"
+
+# LawmadiLM API 설정 (모든 티어 공통 — 주력 50%)
+LAWMADILM_API_URL = os.getenv("LAWMADILM_API_URL", "https://lawmadilm-api-938146962157.asia-northeast3.run.app")
 
 # ─── Gemini 에러 분류 헬퍼 ───
 def _classify_gemini_error(e: Exception, ref: str = "") -> str:
@@ -2083,10 +2087,40 @@ def _fallback_tier_classification(query: str) -> Dict[str, Any]:
     }
 
 
+async def _call_lawmadilm(query: str, analysis: Dict) -> str:
+    """LawmadiLM API 호출 (모든 티어 공통 — 주력 50%)"""
+    leader_name = analysis.get("leader_name", "마디")
+    leader_specialty = analysis.get("leader_specialty", "통합")
+
+    payload = {
+        "messages": [{"role": "user", "content": query}],
+        "system_prompt": (
+            f"당신은 대한민국 법률 전문 AI 어시스턴트 'LawmadiLM'입니다. "
+            f"현재 당신은 '{leader_name}' 리더입니다. 전문 분야: {leader_specialty}. "
+            f"국가법령정보센터(law.go.kr)의 현행 법령과 판례에 근거하여 답변하세요. "
+            f"근거 법령 조문을 반드시 인용하고, 확실하지 않은 내용은 솔직히 밝히세요. "
+            f"3000자 이내로 답변하세요. /no_think"
+        ),
+        "max_tokens": 2048,
+        "temperature": 0.6,
+    }
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(f"{LAWMADILM_API_URL}/chat", json=payload)
+        resp.raise_for_status()
+        data = resp.json()
+
+    content = data.get("answer", "")
+    elapsed = data.get("usage", {}).get("elapsed_seconds", 0)
+    tokens = data.get("usage", {}).get("completion_tokens", 0)
+    logger.info(f"🤖 [LawmadiLM] 응답 완료 ({elapsed}s, {tokens} tokens)")
+    return content
+
+
 async def _tier1_gemini_respond(query: str, analysis: Dict, tools: list,
                                  gemini_history: list, now_kst: str,
                                  ssot_available: bool) -> str:
-    """Tier 1: Gemini Flash 단독 응답 (나중에 LawmadiLM으로 교체 가능)"""
+    """Tier 1: Gemini Flash 단독 응답 (LawmadiLM fallback)"""
     gc = _ensure_genai_client(RUNTIME)
     model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
     leader_name = analysis.get("leader_name", "마디")
@@ -2313,6 +2347,7 @@ def _diagnostic_snapshot() -> Dict[str, Any]:
             "swarm_orchestrator": bool(RUNTIME.get("swarm_orchestrator")),
             "clevel_handler": bool(RUNTIME.get("clevel_handler")),
             "claude_client": bool(RUNTIME.get("claude_client")),
+            "lawmadilm_api": LAWMADILM_API_URL,
             "tier_router": "active" if RUNTIME.get("claude_client") else "fallback_keyword",
             "law_cache": f"{len(LAW_CACHE)} types, {len(_KEYWORD_INDEX)} keywords" if LAW_CACHE else "not_loaded",
             "db_client": bool(db_client),
@@ -3092,33 +3127,52 @@ async def ask(request: Request):
             leader_specialty = clevel.executives.get(exec_id, {}).get("role", exec_id)
 
         # -------------------------------------------------
-        # 5) 🎯 티어별 응답 생성
+        # 5) 🎯 통합 응답 생성: LawmadiLM(50%) → Gemini 보강(45%) → Claude 검증(5%)
         # -------------------------------------------------
         else:
-            if tier == 1:
-                # Tier 1 (90%): Gemini Flash 단독 (나중에 LawmadiLM 교체 가능)
-                logger.info(f"⚡ [Tier 1] Gemini Flash 단독 응답")
-                final_text = await _tier1_gemini_respond(
+            # Step 1: LawmadiLM 주력 응답 (50%)
+            lawmadilm_text = None
+            try:
+                logger.info(f"🤖 [Step 1/3] LawmadiLM 주력 응답 시도")
+                lawmadilm_text = await _call_lawmadilm(query, analysis)
+            except Exception as e:
+                logger.warning(f"⚠️ LawmadiLM 실패 ({e}) → Gemini 100% 대체")
+
+            # Step 2: Gemini 보강/검증 (45%)
+            if lawmadilm_text and len(lawmadilm_text.strip()) > 30:
+                # LawmadiLM 성공 → Gemini가 보강
+                logger.info(f"⚡ [Step 2/3] Gemini Flash 보강/검증")
+                gemini_text = await _tier1_gemini_respond(
                     query, analysis, tools, gemini_history, now_kst, ssot_available
                 )
-
-            elif tier == 2:
-                # Tier 2 (8%): Gemini Flash + Claude 보강/검증
-                logger.info(f"🔍 [Tier 2] Gemini Flash + Claude 보강")
-                final_text = await _tier2_gemini_plus_claude(
-                    query, analysis, tools, gemini_history, now_kst, ssot_available
+                # LawmadiLM 초안 + Gemini 보강을 병합
+                leader_name_tag = analysis.get("leader_name", "마디")
+                leader_spec_tag = analysis.get("leader_specialty", "통합")
+                final_text = (
+                    f"[{leader_name_tag} ({leader_spec_tag}) 분석]\n\n"
+                    f"{lawmadilm_text}\n\n"
+                    f"---\n\n"
+                    f"**[Gemini 보강 검증]**\n{gemini_text}"
                 )
-
             else:
-                # Tier 3 (2%): Claude Sonnet 직접 (법률 충돌/교차/문서작성)
-                logger.info(f"🏛️ [Tier 3] Claude Sonnet 직접 응답 (document={is_document})")
-                final_text = await _tier3_claude_respond(
-                    query, analysis, tools, now_kst, ssot_available
-                )
+                # LawmadiLM 실패 → Gemini 100% 대체
+                logger.info(f"⚡ [Gemini 100% 대체] Tier={tier}")
+                if tier <= 1:
+                    final_text = await _tier1_gemini_respond(
+                        query, analysis, tools, gemini_history, now_kst, ssot_available
+                    )
+                elif tier == 2:
+                    final_text = await _tier2_gemini_plus_claude(
+                        query, analysis, tools, gemini_history, now_kst, ssot_available
+                    )
+                else:
+                    final_text = await _tier3_claude_respond(
+                        query, analysis, tools, now_kst, ssot_available
+                    )
 
-            # 응답이 너무 짧으면 1회 재시도 (Tier 1만)
-            if tier == 1 and len(final_text.strip()) < 50:
-                logger.warning(f"⚠️ 응답 너무 짧음 ({len(final_text)}자), Tier 2로 업그레이드")
+            # 응답이 너무 짧으면 Gemini 재시도
+            if len(final_text.strip()) < 50:
+                logger.warning(f"⚠️ 응답 너무 짧음 ({len(final_text)}자), Gemini 재시도")
                 final_text = await _tier2_gemini_plus_claude(
                     query, analysis, tools, gemini_history, now_kst, ssot_available
                 )
