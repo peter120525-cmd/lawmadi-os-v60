@@ -2090,15 +2090,24 @@ async def _tier1_gemini_respond(query: str, analysis: Dict, tools: list,
     # 캐시 컨텍스트: 관련 SSOT 소스 사전 매칭 (토큰 90% 절약)
     cache_ctx = build_cache_context(query)
 
-    # Gemini Context Cache 사용 가능 시: 시스템 인스트럭션 축소 (이미 캐시됨)
+    # Gemini Context Caching 제약: cached_content와 tools/system_instruction 동시 사용 불가
+    # → tools가 있으면(DRF 활성) 캐시 미사용, tools 없으면 캐시 사용
     cached_content_name = RUNTIME.get("gemini_cached_content")
-    if cached_content_name:
-        # 캐시에 SYSTEM_INSTRUCTION_BASE가 포함되어 있으므로 리더 정보만 추가
+    use_cache = cached_content_name and not tools  # tools 있으면 캐시 미사용
+
+    if use_cache:
+        # 캐시에 SYSTEM_INSTRUCTION_BASE 포함 → 리더 정보만 추가
         instruction = (
             f"현재 당신은 '{leader_name}' 리더입니다.\n"
             f"전문 분야: {leader_specialty}\n"
             f"질문 요약: {analysis.get('summary', '')}\n"
             f"반드시 [{leader_name} ({leader_specialty}) 분석]으로 시작하세요."
+        )
+        if cache_ctx:
+            instruction += f"\n\n{cache_ctx}"
+        gen_config = genai_types.GenerateContentConfig(
+            cached_content=cached_content_name,
+            max_output_tokens=3000,
         )
     else:
         instruction = (
@@ -2108,17 +2117,14 @@ async def _tier1_gemini_respond(query: str, analysis: Dict, tools: list,
             f"질문 요약: {analysis.get('summary', '')}\n"
             f"반드시 [{leader_name} ({leader_specialty}) 분석]으로 시작하세요."
         )
-    if cache_ctx:
-        instruction += f"\n\n{cache_ctx}"
-
-    gen_config = genai_types.GenerateContentConfig(
-        tools=tools,
-        system_instruction=instruction,
-        max_output_tokens=3000,
-        automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
-    )
-    if cached_content_name:
-        gen_config.cached_content = cached_content_name
+        if cache_ctx:
+            instruction += f"\n\n{cache_ctx}"
+        gen_config = genai_types.GenerateContentConfig(
+            tools=tools,
+            system_instruction=instruction,
+            max_output_tokens=3000,
+            automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
+        )
 
     chat = gc.chats.create(
         model=model_name,
