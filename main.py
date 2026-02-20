@@ -1841,7 +1841,12 @@ SYSTEM_INSTRUCTION_BASE = f"""
 # =============================================================
 
 def select_swarm_leader(query: str, leaders: Dict) -> Dict:
-    registry = leaders if leaders else LEADER_REGISTRY
+    raw = leaders if leaders else LEADER_REGISTRY
+    # leaders.json 구조: {swarm_engine_config: {leader_registry: {L01:..., L08:...}}}
+    registry = raw.get("swarm_engine_config", {}).get("leader_registry", {})
+    if not registry:
+        # 직접 L01 키가 있는 경우 (flat 구조)
+        registry = {k: v for k, v in raw.items() if k.startswith("L") and isinstance(v, dict)}
 
     # 1) 이름 또는 별칭 명시적 매칭 (긴 이름 우선 + 앞쪽 위치 우선 → 오탐 방지)
     name_matches = []
