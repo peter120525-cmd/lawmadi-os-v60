@@ -4526,14 +4526,14 @@
            초소형 모바일 (≤480px) — 어른 가독성 강화
         ═══════════════════════════════════════════════════ */
         @media (max-width: 480px) {
-            /* 예시 카드: 3열 → 2열, 터치/가독성 개선 */
+            /* 예시 카드: 3열x4행 유지, 가독성 개선 */
             .example-card-grid {
-                grid-template-columns: repeat(2, 1fr) !important;
+                grid-template-columns: repeat(3, 1fr) !important;
                 gap: 10px !important;
                 padding: 0 12px;
             }
             #landing-content .example-card-grid {
-                grid-template-columns: repeat(2, 1fr) !important;
+                grid-template-columns: repeat(3, 1fr) !important;
             }
             #landing-content .example-card:nth-child(n+13) {
                 display: none;
