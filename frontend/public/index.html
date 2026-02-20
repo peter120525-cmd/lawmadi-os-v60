@@ -261,6 +261,16 @@
             flex-direction: column;
         }
 
+        /* 랜딩페이지 스크롤바 숨김 */
+        #landing-content {
+            overflow-y: auto;
+            scrollbar-width: none;          /* Firefox */
+            -ms-overflow-style: none;       /* IE/Edge */
+        }
+        #landing-content::-webkit-scrollbar {
+            display: none;                  /* Chrome/Safari */
+        }
+
         /* 랜딩: 예시질문만 표시 — Hero/Pricing/Lawyer/Trust/CoreFeatures 숨김 */
         .content-viewport .hero-section,
         .content-viewport .core-features-section,
@@ -6719,8 +6729,45 @@
     var isIOS = /iPad|iPhone|iPod/.test(ua);
     var isAndroid = /Android/i.test(ua);
     var isSamsung = /SamsungBrowser/i.test(ua);
+    var isInApp = /KAKAOTALK|FBAN|FBAV|Instagram|Line\/|NAVER|Snapchat|Twitter/i.test(ua);
 
-    if (isIOS) {
+    if (isInApp) {
+        // 인앱 브라우저: 외부 브라우저로 열기 안내
+        var titleEl = promptEl.querySelector('.install-prompt-title');
+        if (titleEl) titleEl.textContent = '외부 브라우저에서 열기';
+        if (isIOS) {
+            guideText.innerHTML = '우측 하단 <b>···</b> 또는 <b>Safari로 열기</b>를 눌러주세요';
+        } else {
+            guideText.innerHTML = '우측 상단 <b>⋮</b> → <b>"다른 브라우저로 열기"</b>를 눌러주세요';
+        }
+        // 인앱에서는 확인 버튼 옆에 "링크 복사" 버튼 추가
+        var actionsEl = promptEl.querySelector('.install-prompt-actions');
+        if (actionsEl && !document.getElementById('copyLinkBtn')) {
+            var copyBtn = document.createElement('button');
+            copyBtn.id = 'copyLinkBtn';
+            copyBtn.className = 'install-btn install-btn-dismiss';
+            copyBtn.textContent = '링크 복사';
+            copyBtn.setAttribute('aria-label', '링크 복사');
+            actionsEl.insertBefore(copyBtn, dismissBtn);
+            copyBtn.addEventListener('click', function() {
+                navigator.clipboard.writeText(window.location.href).then(function() {
+                    copyBtn.textContent = '복사됨!';
+                    setTimeout(function() { copyBtn.textContent = '링크 복사'; }, 2000);
+                }).catch(function() {
+                    // clipboard API 미지원 시 fallback
+                    var ta = document.createElement('textarea');
+                    ta.value = window.location.href;
+                    ta.style.cssText = 'position:fixed;opacity:0';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    copyBtn.textContent = '복사됨!';
+                    setTimeout(function() { copyBtn.textContent = '링크 복사'; }, 2000);
+                });
+            });
+        }
+    } else if (isIOS) {
         guideText.textContent = '하단 공유 버튼(□↑) → "홈 화면에 추가"를 눌러주세요';
     } else if (isSamsung) {
         guideText.textContent = '우측 하단 ≡ 메뉴 → "홈 화면에 추가"를 눌러주세요';
@@ -6728,11 +6775,12 @@
         guideText.textContent = '우측 상단 ⋮ 메뉴 → "홈 화면에 추가"를 눌러주세요';
     }
 
-    // 이전에 닫은 적이 있으면 7일 후에만 다시 표시
+    // 이전에 닫은 적이 있으면 7일 후에만 다시 표시 (인앱은 3일)
     var dismissed = localStorage.getItem('shortcut-dismissed');
-    if (dismissed && Date.now() - parseInt(dismissed) < 604800000) return;
+    var cooldown = isInApp ? 259200000 : 604800000; // 인앱 3일, 일반 7일
+    if (dismissed && Date.now() - parseInt(dismissed) < cooldown) return;
 
-    setTimeout(function() { promptEl.classList.add('show'); }, 4000);
+    setTimeout(function() { promptEl.classList.add('show'); }, isInApp ? 2000 : 4000);
 
     dismissBtn.addEventListener('click', function() {
         promptEl.classList.remove('show');
