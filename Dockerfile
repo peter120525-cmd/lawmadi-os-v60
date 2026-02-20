@@ -28,6 +28,7 @@ COPY connectors/ ./connectors/
 COPY main.py .
 COPY config.json .
 COPY leaders.json .
+COPY law_cache.json .
 COPY agents/ ./agents/
 COPY engines/ ./engines/
 COPY services/ ./services/
