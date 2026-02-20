@@ -3805,7 +3805,7 @@ async def ask_expert(request: Request):
 
         model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
 
-        # ── Step 1: Gemini가 전문가용 답변 재생성 ──
+        # ── Step 1: Gemini가 DRF 도구 + 전문가용 답변 재생성 ──
         expert_system = """당신은 대한민국 법률 전문가입니다. 변호사/법무사가 실무에서 참고할 수 있는 전문가 수준의 분석 리포트를 작성하세요.
 
 # 작성 원칙
@@ -3814,6 +3814,14 @@ async def ask_expert(request: Request):
 - 각 법률 분야별로 전문가가 구체적으로 분석
 - 반대 해석/예외 사항, 상대방 반론 가능성 포함
 - 소송 전략, 증거 확보, 시효 계산, 비용 예측 포함
+
+# DRF API 활용 원칙
+- 반드시 DRF API 도구를 호출하여 법령/판례를 실시간 검증하세요
+- search_law_drf: 현행법령 검색 (조문 원문 확인 필수)
+- search_precedents_drf: 판례 검색 (판례번호 실시간 확인)
+- search_constitutional_drf: 헌재결정례 검색
+- search_expc_drf: 법령해석례 검색
+- DRF API로 확인되지 않은 판례번호는 절대 인용 금지
 
 # 응답 형식
 
@@ -3859,6 +3867,7 @@ async def ask_expert(request: Request):
 """
 
         expert_query = f"""아래 일반인용 AI 답변을 바탕으로, 변호사가 사건 검토 시 참고할 전문가용 분석 리포트를 작성하세요.
+반드시 DRF API 도구를 호출하여 관련 법령과 판례를 실시간 검증한 후 인용하세요.
 
 [사용자 질문]
 {query}
@@ -3866,18 +3875,52 @@ async def ask_expert(request: Request):
 [원본 일반인용 답변]
 {original_response}"""
 
-        gemini_response = gc.models.generate_content(
-            model=model_name,
-            contents=expert_query,
-            config=genai_types.GenerateContentConfig(
-                system_instruction=expert_system,
-                temperature=0.2,
-                top_p=0.95,
-                max_output_tokens=4096,
-            ),
+        # DRF 도구 구성 (SSOT 실시간 검증)
+        expert_tools = []
+        ssot_ok = RUNTIME.get("drf_available", False)
+        if ssot_ok:
+            expert_tools = [
+                search_law_drf,
+                search_precedents_drf,
+                search_admrul_drf,
+                search_expc_drf,
+                search_constitutional_drf,
+                search_ordinance_drf,
+                search_legal_term_drf,
+            ]
+
+        # 캐시 컨텍스트 추가
+        cache_ctx = build_cache_context(query)
+        if cache_ctx:
+            expert_system += f"\n\n{cache_ctx}"
+
+        gen_config = genai_types.GenerateContentConfig(
+            tools=expert_tools if expert_tools else None,
+            system_instruction=expert_system,
+            temperature=0.2,
+            top_p=0.95,
+            max_output_tokens=4096,
+            automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False) if expert_tools else None,
         )
-        expert_text = gemini_response.text
+
+        chat = gc.chats.create(model=model_name, config=gen_config, history=[])
+        gemini_response = chat.send_message(expert_query)
+        expert_text = _safe_extract_gemini_text(gemini_response)
         gemini_latency = int((time.time() - start) * 1000)
+
+        # DRF 도구 사용 내역 수집
+        expert_tools_used = []
+        expert_tool_results = []
+        if hasattr(chat, '_curated_history'):
+            for msg in chat._curated_history:
+                if hasattr(msg, 'parts'):
+                    for part in msg.parts:
+                        if hasattr(part, 'function_call') and part.function_call:
+                            fc = part.function_call
+                            expert_tools_used.append({"name": fc.name, "args": dict(fc.args) if fc.args else {}})
+                        if hasattr(part, 'function_response') and part.function_response:
+                            fr = part.function_response
+                            expert_tool_results.append({"result": "FOUND", "source": fr.name, "data": str(fr.response)[:500]})
 
         logger.info(f"✅ [Expert] Gemini 전문가 재생성 완료 (trace={trace}, {gemini_latency}ms, {len(expert_text)} chars)")
 
@@ -3891,13 +3934,15 @@ async def ask_expert(request: Request):
                 try:
                     import asyncio
                     loop = asyncio.get_event_loop()
+                    _eu = expert_tools_used
+                    _er = expert_tool_results
                     verification_result = await loop.run_in_executor(
                         None,
                         lambda: verifier.verify_response(
                             user_query=query,
                             gemini_response=expert_text,
-                            tools_used=[{"name": "expert_regeneration", "args": {"source": "original_response", "query": query[:100]}}],
-                            tool_results=[{"result": "FOUND", "source": "원본 AI 응답 기반 전문가 재생성 (DRF API는 원본 생성 시 사용됨)"}]
+                            tools_used=_eu if _eu else [{"name": "no_drf_tools", "args": {}}],
+                            tool_results=_er if _er else [{"result": "NO_DATA", "source": "DRF 도구 미사용"}]
                         )
                     )
                     logger.info(f"✅ [Expert] Claude 검증 완료: {verification_result.get('result')} (점수: {verification_result.get('ssot_compliance_score')})")
