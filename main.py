@@ -2023,7 +2023,7 @@ async def _gemini_classify_query(query: str) -> Dict[str, Any]:
             contents=f"질문: {query}",
             config=genai_types.GenerateContentConfig(
                 system_instruction=TIER_ANALYSIS_PROMPT.format(leader_summary=leader_summary),
-                max_output_tokens=200,
+                max_output_tokens=300,
                 temperature=0,
             ),
         )
