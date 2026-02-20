@@ -2088,24 +2088,24 @@ def _fallback_tier_classification(query: str) -> Dict[str, Any]:
 
 
 async def _call_lawmadilm(query: str, analysis: Dict) -> str:
-    """LawmadiLM API 호출 (모든 티어 공통 — 주력 50%)"""
+    """Stage 2: LawmadiLM 법률 초안 (핵심 내용 간결하게)"""
     leader_name = analysis.get("leader_name", "마디")
     leader_specialty = analysis.get("leader_specialty", "통합")
 
     payload = {
         "messages": [{"role": "user", "content": query}],
         "system_prompt": (
-            f"당신은 대한민국 법률 전문 AI 어시스턴트 'LawmadiLM'입니다. "
+            f"당신은 대한민국 법률 전문 AI 'LawmadiLM'입니다. "
             f"현재 당신은 '{leader_name}' 리더입니다. 전문 분야: {leader_specialty}. "
-            f"국가법령정보센터(law.go.kr)의 현행 법령과 판례에 근거하여 답변하세요. "
-            f"근거 법령 조문을 반드시 인용하고, 확실하지 않은 내용은 솔직히 밝히세요. "
-            f"3000자 이내로 답변하세요. /no_think"
+            f"아래 질문에 대해 핵심 법률 내용을 간결하게 정리하세요: "
+            f"적용 법률, 관련 조문, 핵심 판례, 실무 결론을 빠짐없이 포함하되 최대한 간결하게. "
+            f"/no_think"
         ),
-        "max_tokens": 2048,
+        "max_tokens": 150,
         "temperature": 0.6,
     }
 
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.post(f"{LAWMADILM_API_URL}/chat", json=payload)
         resp.raise_for_status()
         data = resp.json()
@@ -2113,55 +2113,70 @@ async def _call_lawmadilm(query: str, analysis: Dict) -> str:
     content = data.get("answer", "")
     elapsed = data.get("usage", {}).get("elapsed_seconds", 0)
     tokens = data.get("usage", {}).get("completion_tokens", 0)
-    logger.info(f"🤖 [LawmadiLM] 응답 완료 ({elapsed}s, {tokens} tokens)")
+    logger.info(f"🤖 [Stage 2] LawmadiLM 초안 완료 ({elapsed}s, {tokens} tokens)")
     return content
 
 
-async def _tier1_gemini_respond(query: str, analysis: Dict, tools: list,
-                                 gemini_history: list, now_kst: str,
-                                 ssot_available: bool) -> str:
-    """Tier 1: Gemini Flash 단독 응답 (LawmadiLM fallback)"""
+async def _step3_gemini_compose(query: str, analysis: Dict, draft: str,
+                                 tools: list, gemini_history: list,
+                                 now_kst: str, ssot_available: bool) -> str:
+    """Stage 3: Gemini Flash 콘텐츠 작성 (메인 응답, max_output_tokens=800)"""
     gc = _ensure_genai_client(RUNTIME)
     model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
     leader_name = analysis.get("leader_name", "마디")
     leader_specialty = analysis.get("leader_specialty", "통합")
 
-    # 캐시 컨텍스트: 관련 SSOT 소스 사전 매칭 (토큰 90% 절약)
+    # 캐시 컨텍스트: 관련 SSOT 소스 사전 매칭
     cache_ctx = build_cache_context(query)
 
     # Gemini Context Caching 제약: cached_content와 tools/system_instruction 동시 사용 불가
-    # → tools가 있으면(DRF 활성) 캐시 미사용, tools 없으면 캐시 사용
     cached_content_name = RUNTIME.get("gemini_cached_content")
-    use_cache = cached_content_name and not tools  # tools 있으면 캐시 미사용
+    use_cache = cached_content_name and not tools
+
+    # draft가 있으면 system_instruction에 포함
+    draft_section = ""
+    if draft and draft.strip():
+        draft_section = (
+            f"\n[LawmadiLM 초안]\n{draft}\n\n"
+            f"위 초안을 바탕으로 사용자에게 전달할 완성된 법률 답변을 작성하세요.\n"
+            f"- 초안의 법률 근거(조문, 판례)를 검증하고 보완하세요\n"
+            f"- DRF API 도구로 법령/판례를 실시간 확인하세요\n"
+            f"- [{leader_name} ({leader_specialty}) 분석]으로 시작하세요"
+        )
+    else:
+        draft_section = (
+            f"\n사용자에게 전달할 완성된 법률 답변을 직접 작성하세요.\n"
+            f"- DRF API 도구로 법령/판례를 실시간 확인하세요\n"
+            f"- [{leader_name} ({leader_specialty}) 분석]으로 시작하세요"
+        )
 
     if use_cache:
-        # 캐시에 SYSTEM_INSTRUCTION_BASE 포함 → 리더 정보만 추가
         instruction = (
             f"현재 당신은 '{leader_name}' 리더입니다.\n"
             f"전문 분야: {leader_specialty}\n"
-            f"질문 요약: {analysis.get('summary', '')}\n"
-            f"반드시 [{leader_name} ({leader_specialty}) 분석]으로 시작하세요."
+            f"질문 요약: {analysis.get('summary', '')}"
+            f"{draft_section}"
         )
         if cache_ctx:
             instruction += f"\n\n{cache_ctx}"
         gen_config = genai_types.GenerateContentConfig(
             cached_content=cached_content_name,
-            max_output_tokens=3000,
+            max_output_tokens=800,
         )
     else:
         instruction = (
             f"{SYSTEM_INSTRUCTION_BASE}\n"
             f"현재 당신은 '{leader_name}' 리더입니다.\n"
             f"전문 분야: {leader_specialty}\n"
-            f"질문 요약: {analysis.get('summary', '')}\n"
-            f"반드시 [{leader_name} ({leader_specialty}) 분석]으로 시작하세요."
+            f"질문 요약: {analysis.get('summary', '')}"
+            f"{draft_section}"
         )
         if cache_ctx:
             instruction += f"\n\n{cache_ctx}"
         gen_config = genai_types.GenerateContentConfig(
             tools=tools,
             system_instruction=instruction,
-            max_output_tokens=3000,
+            max_output_tokens=800,
             automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
         )
 
@@ -2176,17 +2191,12 @@ async def _tier1_gemini_respond(query: str, analysis: Dict, tools: list,
     return _safe_extract_gemini_text(resp)
 
 
-async def _tier2_gemini_plus_claude(query: str, analysis: Dict, tools: list,
-                                     gemini_history: list, now_kst: str,
-                                     ssot_available: bool) -> str:
-    """Tier 2: Gemini Flash 초안 + Claude 보강/검증"""
-    # Step 1: Gemini 초안
-    gemini_draft = await _tier1_gemini_respond(query, analysis, tools, gemini_history, now_kst, ssot_available)
-
-    # Step 2: Claude 보강
+async def _step4_claude_enhance(query: str, analysis: Dict,
+                                 gemini_text: str) -> str:
+    """Stage 4: Claude Sonnet 4 보강/보완 (max_tokens=200)"""
     claude_client = RUNTIME.get("claude_client")
     if not claude_client:
-        return gemini_draft  # Claude 없으면 Gemini만 반환
+        return ""
 
     leader_name = analysis.get("leader_name", "마디")
     leader_specialty = analysis.get("leader_specialty", "통합")
@@ -2194,100 +2204,35 @@ async def _tier2_gemini_plus_claude(query: str, analysis: Dict, tools: list,
     try:
         enhance_resp = claude_client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=1500,
+            max_tokens=200,
             system=(
-                f"당신은 Lawmadi OS의 법률 검증 엔진입니다.\n"
+                f"당신은 Lawmadi OS의 법률 품질 보강 엔진입니다.\n"
                 f"담당 리더: {leader_name} ({leader_specialty})\n"
-                f"아래 AI 초안을 검증하고 보강하세요.\n"
+                f"아래 AI 응답을 검토하여 부족한 부분만 보완하세요:\n"
+                f"- 누락된 중요 조문이나 판례가 있으면 추가\n"
                 f"- 법적 오류가 있으면 수정\n"
-                f"- 누락된 중요 판례/조문이 있으면 추가\n"
-                f"- 원래 형식과 톤을 유지\n"
-                f"- 보강한 최종 응답 전문만 출력 (메타 설명 X)"
+                f"- 추가할 내용이 없으면 '보완 없음'만 출력\n"
+                f"보완 내용만 간결하게 출력하세요."
             ),
             messages=[{
                 "role": "user",
-                "content": f"사용자 질문: {query}\n\nAI 초안:\n{gemini_draft}"
+                "content": f"사용자 질문: {query}\n\nAI 응답:\n{gemini_text}"
             }],
         )
         enhanced = enhance_resp.content[0].text.strip()
-        if len(enhanced) > 100:
-            return enhanced
+        if "보완 없음" in enhanced:
+            return ""
+        return enhanced
     except Exception as e:
-        logger.warning(f"⚠️ Tier2 Claude 보강 실패: {e}")
+        logger.warning(f"⚠️ [Stage 4] Claude 보강 실패 (무시): {e}")
+        return ""
 
-    return gemini_draft
 
-
-async def _tier3_claude_respond(query: str, analysis: Dict, tools: list,
-                                 now_kst: str, ssot_available: bool) -> str:
-    """Tier 3: Claude Sonnet 직접 응답 (법률 충돌/교차/문서작성)"""
+async def _step5_claude_verify(query: str, response_text: str) -> Dict[str, Any]:
+    """Stage 5: 헌법 검증 + 교정 (max_tokens=300)"""
     claude_client = RUNTIME.get("claude_client")
     if not claude_client:
-        logger.warning("⚠️ Tier3에 Claude 없음 → Gemini fallback")
-        return await _tier1_gemini_respond(query, analysis, tools, [], now_kst, ssot_available)
-
-    leader_name = analysis.get("leader_name", "마디")
-    leader_specialty = analysis.get("leader_specialty", "통합")
-    is_document = analysis.get("is_document", False)
-
-    if is_document:
-        system_msg = (
-            f"당신은 Lawmadi OS의 법률문서 작성 전문 엔진입니다.\n"
-            f"담당 리더: {leader_name} ({leader_specialty})\n"
-            f"사용자가 요청한 법률문서를 작성하세요.\n"
-            f"- 실무에서 바로 사용 가능한 수준으로 작성\n"
-            f"- 문서 본문은 ```코드블록``` 안에 작성\n"
-            f"- 작성 전후로 주의사항과 활용 가이드 포함\n"
-            f"- [{leader_name} ({leader_specialty}) 문서작성]으로 시작\n"
-            f"현재 시각: {now_kst}"
-        )
-    else:
-        system_msg = (
-            f"당신은 Lawmadi OS의 최고 수준 법률 분석 엔진입니다.\n"
-            f"담당 리더: {leader_name} ({leader_specialty})\n"
-            f"법률 간 충돌, 헌법 쟁점, 다중 이해관계가 얽힌 고난도 질문을 분석합니다.\n"
-            f"- 관련 법률 간 충돌 지점 명시\n"
-            f"- 헌법적 쟁점이 있으면 반드시 기술\n"
-            f"- 대법원/헌재 판례 근거 제시\n"
-            f"- [{leader_name} ({leader_specialty}) 심층분석]으로 시작\n"
-            f"현재 시각: {now_kst}"
-        )
-
-    # 캐시 컨텍스트 (SSOT 10종 사전 매칭) + DRF 실시간 검색 보완
-    law_context = ""
-    cache_ctx = build_cache_context(query)
-    if cache_ctx:
-        law_context += f"\n\n{cache_ctx}"
-    if ssot_available:
-        try:
-            law_result = search_law_drf(query)
-            if law_result.get("result") == "FOUND":
-                law_context += f"\n\n[DRF 실시간 검색 결과]\n{json.dumps(law_result.get('content', {}), ensure_ascii=False)[:2000]}"
-        except Exception:
-            pass
-
-    try:
-        resp = claude_client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=4000,
-            system=system_msg,
-            messages=[{
-                "role": "user",
-                "content": f"사용자 질문: {query}{law_context}"
-            }],
-        )
-        return resp.content[0].text.strip()
-    except Exception as e:
-        logger.error(f"❌ Tier3 Claude 응답 실패: {e}")
-        # Fallback to Gemini
-        return await _tier1_gemini_respond(query, analysis, tools, [], now_kst, ssot_available)
-
-
-async def _claude_constitutional_check(query: str, response_text: str) -> Dict[str, Any]:
-    """헌법 준수 검증 (모든 티어 공통, Claude 최종 검증)"""
-    claude_client = RUNTIME.get("claude_client")
-    if not claude_client:
-        return {"passed": True, "warning": None}
+        return {"passed": True, "warning": None, "corrected_text": None}
 
     try:
         resp = claude_client.messages.create(
@@ -2309,12 +2254,90 @@ async def _claude_constitutional_check(query: str, response_text: str) -> Dict[s
         )
         text = resp.content[0].text.strip()
         json_match = re.search(r'\{[^{}]+\}', text, re.DOTALL)
+        result = {"passed": True, "warning": None, "corrected_text": None}
         if json_match:
-            return json.loads(json_match.group())
-    except Exception as e:
-        logger.warning(f"⚠️ 헌법 검증 실패 (무시): {e}")
+            result = json.loads(json_match.group())
+            result.setdefault("corrected_text", None)
 
-    return {"passed": True, "warning": None}
+        # FAIL 시 교정 (차단 아님)
+        if not result.get("passed", True):
+            try:
+                corrected = claude_client.messages.create(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=300,
+                    system="헌법 위배 사항을 수정하여 교정된 답변을 출력하세요.",
+                    messages=[{
+                        "role": "user",
+                        "content": f"원본: {response_text}\n위반사항: {result.get('warning')}"
+                    }],
+                )
+                result["corrected_text"] = corrected.content[0].text.strip()
+                logger.info(f"✅ [Stage 5] 헌법 위반 교정 완료")
+            except Exception as ce:
+                logger.warning(f"⚠️ [Stage 5] 헌법 교정 실패: {ce}")
+
+        return result
+    except Exception as e:
+        logger.warning(f"⚠️ [Stage 5] 헌법 검증 실패 (무시): {e}")
+
+    return {"passed": True, "warning": None, "corrected_text": None}
+
+
+async def _run_legal_pipeline(query: str, analysis: Dict, tools: list,
+                               gemini_history: list, now_kst: str,
+                               ssot_available: bool) -> str:
+    """5-Stage Legal Pipeline: LawmadiLM 초안 → Gemini 작성 → Claude 보강 → Claude 검증"""
+    leader_name = analysis.get("leader_name", "마디")
+    leader_specialty = analysis.get("leader_specialty", "통합")
+
+    # ── Stage 2: LawmadiLM 법률 초안 ──
+    draft = ""
+    try:
+        logger.info(f"🤖 [Stage 2/5] LawmadiLM 법률 초안 생성")
+        draft = await _call_lawmadilm(query, analysis)
+        if not draft or len(draft.strip()) < 10:
+            logger.warning(f"⚠️ [Stage 2] LawmadiLM 초안 너무 짧음 → Stage 3에서 Gemini 단독 처리")
+            draft = ""
+    except Exception as e:
+        logger.warning(f"⚠️ [Stage 2] LawmadiLM 실패 ({e}) → Stage 3에서 Gemini 단독 처리")
+        draft = ""
+
+    # ── Stage 3: Gemini Flash 콘텐츠 작성 ──
+    logger.info(f"⚡ [Stage 3/5] Gemini Flash 콘텐츠 작성 (draft={'있음' if draft else '없음'})")
+    gemini_text = await _step3_gemini_compose(
+        query, analysis, draft, tools, gemini_history, now_kst, ssot_available
+    )
+
+    # 응답이 너무 짧으면 draft 없이 재시도
+    if len(gemini_text.strip()) < 50 and draft:
+        logger.warning(f"⚠️ [Stage 3] 응답 너무 짧음 ({len(gemini_text)}자), draft 없이 재시도")
+        gemini_text = await _step3_gemini_compose(
+            query, analysis, "", tools, gemini_history, now_kst, ssot_available
+        )
+
+    # ── Stage 4: Claude 보강/보완 ──
+    logger.info(f"🔍 [Stage 4/5] Claude 보강/보완")
+    enhancement = await _step4_claude_enhance(query, analysis, gemini_text)
+
+    final_text = gemini_text
+    if enhancement:
+        final_text += f"\n\n---\n**[보강]**\n{enhancement}"
+
+    # ── Stage 5: 헌법 검증 + 교정 ──
+    logger.info(f"⚖️ [Stage 5/5] 헌법 검증 + 교정")
+    verification = await _step5_claude_verify(query, final_text)
+
+    if not verification.get("passed", True):
+        logger.warning(f"🚨 [Stage 5] 헌법 검증 경고: {verification}")
+        if verification.get("corrected_text"):
+            final_text = verification["corrected_text"]
+            final_text += "\n\n> ⚠️ 이 답변은 헌법 검증 후 교정되었습니다. 전문가 상담을 권장합니다."
+        else:
+            final_text += "\n\n> ⚠️ 이 답변에는 헌법적 검토가 필요한 사항이 포함되어 있습니다. 전문가 상담을 권장합니다."
+    elif verification.get("warning"):
+        final_text += f"\n\n---\n⚖️ **헌법 검증 참고사항:** {verification['warning']}"
+
+    return final_text
 
 
 # =============================================================
@@ -3127,56 +3150,12 @@ async def ask(request: Request):
             leader_specialty = clevel.executives.get(exec_id, {}).get("role", exec_id)
 
         # -------------------------------------------------
-        # 5) 🎯 통합 응답 생성: LawmadiLM(50%) → Gemini 보강(45%) → Claude 검증(5%)
+        # 5) 🎯 5-Stage Legal Pipeline
         # -------------------------------------------------
         else:
-            # Step 1: LawmadiLM 주력 응답 (50%)
-            lawmadilm_text = None
-            try:
-                logger.info(f"🤖 [Step 1/3] LawmadiLM 주력 응답 시도")
-                lawmadilm_text = await _call_lawmadilm(query, analysis)
-            except Exception as e:
-                logger.warning(f"⚠️ LawmadiLM 실패 ({e}) → Gemini 100% 대체")
-
-            # Step 2: Gemini 보강/검증 (45%)
-            if lawmadilm_text and len(lawmadilm_text.strip()) > 30:
-                # LawmadiLM 성공 → Gemini가 보강
-                logger.info(f"⚡ [Step 2/3] Gemini Flash 보강/검증")
-                gemini_text = await _tier1_gemini_respond(
-                    query, analysis, tools, gemini_history, now_kst, ssot_available
-                )
-                # LawmadiLM 초안 + Gemini 보강을 병합
-                leader_name_tag = analysis.get("leader_name", "마디")
-                leader_spec_tag = analysis.get("leader_specialty", "통합")
-                final_text = (
-                    f"[{leader_name_tag} ({leader_spec_tag}) 분석]\n\n"
-                    f"{lawmadilm_text}\n\n"
-                    f"---\n\n"
-                    f"**[Gemini 보강 검증]**\n{gemini_text}"
-                )
-            else:
-                # LawmadiLM 실패 → Gemini 100% 대체
-                logger.info(f"⚡ [Gemini 100% 대체] Tier={tier}")
-                if tier <= 1:
-                    final_text = await _tier1_gemini_respond(
-                        query, analysis, tools, gemini_history, now_kst, ssot_available
-                    )
-                elif tier == 2:
-                    final_text = await _tier2_gemini_plus_claude(
-                        query, analysis, tools, gemini_history, now_kst, ssot_available
-                    )
-                else:
-                    final_text = await _tier3_claude_respond(
-                        query, analysis, tools, now_kst, ssot_available
-                    )
-
-            # 응답이 너무 짧으면 Gemini 재시도
-            if len(final_text.strip()) < 50:
-                logger.warning(f"⚠️ 응답 너무 짧음 ({len(final_text)}자), Gemini 재시도")
-                final_text = await _tier2_gemini_plus_claude(
-                    query, analysis, tools, gemini_history, now_kst, ssot_available
-                )
-                tier = 2
+            final_text = await _run_legal_pipeline(
+                query, analysis, tools, gemini_history, now_kst, ssot_available
+            )
 
         # -------------------------------------------------
         # 5.5) 담당 리더 정보 헤더 삽입
@@ -3186,19 +3165,13 @@ async def ask(request: Request):
             final_text = leader_header + final_text
 
         # -------------------------------------------------
-        # 6) 헌법 준수 검증 (모든 티어 공통)
+        # 6) 규칙 기반 헌법 준수 검증 (Claude 검증은 Stage 5에서 처리)
         # -------------------------------------------------
         if not validate_constitutional_compliance(final_text):
             _audit("ask_fail_closed", {"query": query, "status": "GOVERNANCE", "leader": leader_name})
             return {"trace_id": trace, "response": "⚠️ 시스템 무결성 정책에 의해 답변이 제한되었습니다.", "status": "FAIL_CLOSED"}
 
-        # Claude 헌법 검증 (백그라운드 비동기)
-        const_check = await _claude_constitutional_check(query, final_text)
-        if const_check.get("warning"):
-            final_text += f"\n\n---\n⚖️ **헌법 검증 참고사항:** {const_check['warning']}"
-        if not const_check.get("passed", True):
-            logger.warning(f"🚨 [헌법 검증 경고] {const_check}")
-            final_text += "\n\n> ⚠️ 이 답변에는 헌법적 검토가 필요한 사항이 포함되어 있습니다. 전문가 상담을 권장합니다."
+        const_check = {"passed": True}  # Stage 5에서 이미 처리됨
 
         latency_ms = int((time.time() - start_time) * 1000)
 
@@ -3840,7 +3813,7 @@ async def ask_stream(request: Request):
 @limiter.limit("10/minute")
 async def ask_expert(request: Request):
     """
-    전문가용 답변: Gemini가 변호사 참고 수준으로 재생성 → Claude가 검증.
+    전문가용 답변: 5-Stage Legal Pipeline 통합 사용.
     """
     trace = str(uuid.uuid4())[:8]
     start = time.time()
@@ -3850,90 +3823,19 @@ async def ask_expert(request: Request):
         query = str(body.get("query", "")).strip()
         original_response = str(body.get("original_response", "")).strip()
 
-        if not query or not original_response:
-            return {"trace_id": trace, "status": "ERROR", "response": "query와 original_response가 필요합니다."}
+        if not query:
+            return {"trace_id": trace, "status": "ERROR", "response": "query가 필요합니다."}
 
-        gc = RUNTIME.get("genai_client")
-        if not gc:
-            return {"trace_id": trace, "status": "ERROR", "response": "Gemini 클라이언트가 초기화되지 않았습니다."}
+        # 질문 분석 (Stage 1)
+        analysis = await _claude_analyze_query(query)
+        if not analysis:
+            analysis = _fallback_tier_classification(query)
 
-        model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
-
-        # ── Step 1: Gemini가 DRF 도구 + 전문가용 답변 재생성 ──
-        expert_system = """당신은 대한민국 법률 전문가입니다. 변호사/법무사가 실무에서 참고할 수 있는 전문가 수준의 분석 리포트를 작성하세요.
-
-# 작성 원칙
-- 법률 용어를 그대로 사용 (일반인 풀이 불필요, 조문 원문 인용)
-- 판례 정밀 인용: 대법원/헌재 판례번호, 선고일자, 핵심 판시사항
-- 각 법률 분야별로 전문가가 구체적으로 분석
-- 반대 해석/예외 사항, 상대방 반론 가능성 포함
-- 소송 전략, 증거 확보, 시효 계산, 비용 예측 포함
-
-# DRF API 활용 원칙
-- 반드시 DRF API 도구를 호출하여 법령/판례를 실시간 검증하세요
-- search_law_drf: 현행법령 검색 (조문 원문 확인 필수)
-- search_precedents_drf: 판례 검색 (판례번호 실시간 확인)
-- search_constitutional_drf: 헌재결정례 검색
-- search_expc_drf: 법령해석례 검색
-- DRF API로 확인되지 않은 판례번호는 절대 인용 금지
-
-# 응답 형식
-
-🔬 전문가용 분석 리포트
-
-1. 사건 개요 및 쟁점 정리
-   — 법적 쟁점 요약 (전문 용어)
-   — 적용 법률 및 관할
-
-2. 분야별 전문가 분석
-   (각 관련 법률 분야별로 구분하여 깊이 있게 작성)
-
-   👤 [분야명] 전문 분석
-   【적용 조문】 법령명 제○조 제○항 제○호
-   【관련 판례】 대법원 20○○. ○. ○. 선고 20○○다○○○○ 판결
-     — 판시사항 및 본 사안 시사점
-   【학설/통설】 해당 쟁점 학계 입장
-   【실무 포인트】 변호사 유의사항
-
-3. 소송 전략 검토
-   3.1 청구 취지 검토
-   3.2 입증 책임 및 증거 확보
-   3.3 상대방 예상 반론 및 재반박
-   3.4 시효/기한 정밀 계산
-
-4. 증거 확보 실무 가이드
-   — 필요한 증거 목록 및 확보 방법 (예: 블랙박스 영상, CCTV, 진단서)
-   — 감정 의뢰 절차: 어디에 어떻게 신청하는지 (법원 감정인, 민간 감정기관)
-   — 기술적 분석 방법 안내 (예: TTC 분석, 속도 감정, 필적 감정 등 해당 시)
-   — 증거 보전 신청 방법 및 시기
-
-5. 위험 요소 및 예외
-   — 과도한 단순화 지적
-   — 판례 변경 가능성
-   — 관할/절차적 리스크
-
-6. 전문가 체크리스트
-   □ [변호사 확인 항목들]
-
-🚨 절대 마크다운 표(table) 사용 금지.
-🚨 판례 인용 시: DRF API로 확인된 판례만 인용. 미확인 판례는 "관련 판례 확인 필요"로 표기.
-🚨 도표/기준표 인용 시: 발행 기관 + 발행 연도 + 개정 여부 함께 표기.
-"""
-
-        expert_query = f"""아래 일반인용 AI 답변을 바탕으로, 변호사가 사건 검토 시 참고할 전문가용 분석 리포트를 작성하세요.
-반드시 DRF API 도구를 호출하여 관련 법령과 판례를 실시간 검증한 후 인용하세요.
-
-[사용자 질문]
-{query}
-
-[원본 일반인용 답변]
-{original_response}"""
-
-        # DRF 도구 구성 (SSOT 실시간 검증)
-        expert_tools = []
-        ssot_ok = RUNTIME.get("drf_available", False)
-        if ssot_ok:
-            expert_tools = [
+        # SSOT/DRF 도구 설정
+        ssot_available = RUNTIME.get("drf_healthy", False)
+        tools = []
+        if ssot_available:
+            tools = [
                 search_law_drf,
                 search_precedents_drf,
                 search_admrul_drf,
@@ -3941,85 +3843,23 @@ async def ask_expert(request: Request):
                 search_constitutional_drf,
                 search_ordinance_drf,
                 search_legal_term_drf,
+                search_admin_appeals_drf,
+                search_treaty_drf,
             ]
 
-        # 캐시 컨텍스트 추가
-        cache_ctx = build_cache_context(query)
-        if cache_ctx:
-            expert_system += f"\n\n{cache_ctx}"
+        now_kst = _now_iso()
 
-        gen_config = genai_types.GenerateContentConfig(
-            tools=expert_tools if expert_tools else None,
-            system_instruction=expert_system,
-            temperature=0.2,
-            top_p=0.95,
-            max_output_tokens=4096,
-            automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False) if expert_tools else None,
+        # 5-Stage Pipeline 실행
+        final_text = await _run_legal_pipeline(
+            query, analysis, tools, [], now_kst, ssot_available
         )
 
-        chat = gc.chats.create(model=model_name, config=gen_config, history=[])
-        gemini_response = chat.send_message(expert_query)
-        expert_text = _safe_extract_gemini_text(gemini_response)
-        gemini_latency = int((time.time() - start) * 1000)
-
-        # DRF 도구 사용 내역 수집
-        expert_tools_used = []
-        expert_tool_results = []
-        if hasattr(chat, '_curated_history'):
-            for msg in chat._curated_history:
-                if hasattr(msg, 'parts'):
-                    for part in msg.parts:
-                        if hasattr(part, 'function_call') and part.function_call:
-                            fc = part.function_call
-                            expert_tools_used.append({"name": fc.name, "args": dict(fc.args) if fc.args else {}})
-                        if hasattr(part, 'function_response') and part.function_response:
-                            fr = part.function_response
-                            expert_tool_results.append({"result": "FOUND", "source": fr.name, "data": str(fr.response)[:500]})
-
-        logger.info(f"✅ [Expert] Gemini 전문가 재생성 완료 (trace={trace}, {gemini_latency}ms, {len(expert_text)} chars)")
-
-        # ── Step 2: Claude가 검증 ──
-        verification_result = {"result": "SKIP", "ssot_compliance_score": 0, "feedback": "검증 모듈 비활성화"}
-
-        verifier_module = optional_import("engines.response_verifier")
-        if verifier_module:
-            verifier = verifier_module.get_verifier()
-            if verifier.enabled:
-                try:
-                    import asyncio
-                    loop = asyncio.get_event_loop()
-                    _eu = expert_tools_used
-                    _er = expert_tool_results
-                    verification_result = await loop.run_in_executor(
-                        None,
-                        lambda: verifier.verify_response(
-                            user_query=query,
-                            gemini_response=expert_text,
-                            tools_used=_eu if _eu else [{"name": "no_drf_tools", "args": {}}],
-                            tool_results=_er if _er else [{"result": "NO_DATA", "source": "DRF 도구 미사용"}]
-                        )
-                    )
-                    logger.info(f"✅ [Expert] Claude 검증 완료: {verification_result.get('result')} (점수: {verification_result.get('ssot_compliance_score')})")
-                except Exception as ve:
-                    logger.warning(f"⚠️ [Expert] Claude 검증 실패 (무시): {ve}")
-
         latency_ms = int((time.time() - start) * 1000)
-
-        # 검증 결과를 응답 상단에 추가
-        v_result = verification_result.get("result", "SKIP")
-        v_score = verification_result.get("ssot_compliance_score", 0)
-        v_badge = {"PASS": "✅ PASS", "WARNING": "⚠️ WARNING", "FAIL": "❌ FAIL"}.get(v_result, "⏭️ SKIP")
-
-        verified_header = f"**Claude 검증**: {v_badge} | **SSOT 점수**: {v_score}/100\n\n"
-        final_response = verified_header + expert_text
-
         return {
             "trace_id": trace,
-            "response": final_response,
+            "response": final_text,
             "status": "SUCCESS",
             "latency_ms": latency_ms,
-            "verified_by": "claude-sonnet-4-5",
-            "verification": verification_result
         }
 
     except Exception as e:
