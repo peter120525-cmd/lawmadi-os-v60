@@ -89,6 +89,7 @@
             font-family: 'Pretendard', sans-serif;
             background-color: var(--bg);
             color: var(--text-main);
+            height: 100vh; /* fallback for in-app browsers */
             height: 100dvh;
             display: flex;
             overflow: hidden;
@@ -209,6 +210,7 @@
             flex: 0 0 auto;
             height: 72px;
             background: rgba(255, 255, 255, 0.95);
+            -webkit-backdrop-filter: blur(20px);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border);
             display: flex;
@@ -434,6 +436,7 @@
 
         .feature-badge {
             background: rgba(30, 41, 59, 0.8);
+            -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             padding: 12px 24px;
@@ -620,6 +623,7 @@
             gap: 10px;
             padding: 10px 12px;
             background: rgba(30, 41, 59, 0.6);
+            -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             border-radius: 16px;
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -853,6 +857,7 @@
             position: fixed;
             inset: 0;
             background: rgba(0,0,0,0.5);
+            -webkit-backdrop-filter: blur(8px);
             backdrop-filter: blur(8px);
             z-index: 950;
         }
@@ -1117,6 +1122,7 @@
             border-radius: 10px;
             border: 1px solid rgba(99, 102, 241, 0.1);
             transition: all 0.2s ease;
+            -webkit-backdrop-filter: blur(4px);
             backdrop-filter: blur(4px);
         }
 
@@ -1276,6 +1282,7 @@
                 0 4px 16px rgba(37, 99, 235, 0.12),
                 inset 0 1px 0 rgba(255,255,255,0.9);
             position: relative;
+            -webkit-backdrop-filter: blur(4px);
             backdrop-filter: blur(4px);
         }
 
@@ -1542,6 +1549,7 @@
             align-items: flex-start;
             font-size: 0.95em;
             line-height: 1.6;
+            -webkit-backdrop-filter: blur(8px);
             backdrop-filter: blur(8px);
         }
 
@@ -2579,6 +2587,7 @@
             border-radius: 20px;
             padding: 20px 24px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            -webkit-backdrop-filter: blur(20px);
             backdrop-filter: blur(20px);
             max-width: 360px;
             width: calc(100% - 32px);
@@ -3546,6 +3555,7 @@
             padding: 12px 14px;
             border-radius: 12px;
             background: rgba(30, 41, 59, 0.6);
+            -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.08);
             transition: all 0.3s ease;
@@ -4184,6 +4194,7 @@
         }
         .hero-stat-item {
             background: rgba(30, 41, 59, 0.6);
+            -webkit-backdrop-filter: blur(12px);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 10px;
@@ -4474,9 +4485,74 @@
             .trust-live-item { font-size: 0.75rem; }
         }
 
+        /* ═══════════════════════════════════════════════════
+           In-App Browser Fixes (KakaoTalk, Facebook, Instagram)
+        ═══════════════════════════════════════════════════ */
+        body.is-inapp-browser {
+            height: 100vh;
+            height: -webkit-fill-available;
+            position: relative;
+        }
+
+        body.is-inapp-browser .layout-container {
+            height: 100vh;
+            height: -webkit-fill-available;
+        }
+
+        /* backdrop-filter fallback for WebViews */
+        body.is-inapp-browser header.top-status {
+            background: rgba(255, 255, 255, 0.98);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        body.is-inapp-browser .overlay {
+            background: rgba(0,0,0,0.6);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        body.is-inapp-browser .input-pipeline-wrapper {
+            background: rgba(255, 255, 255, 0.98);
+        }
+
+        /* in-app browser keyboard handling */
+        body.is-inapp-browser.keyboard-open .mobile-tab-bar {
+            display: none !important;
+        }
+
+        body.is-inapp-browser.keyboard-open .input-pipeline-wrapper {
+            margin-bottom: 0;
+            padding-bottom: 8px;
+        }
+
     </style>
 </head>
 <body>
+<script>
+// In-app browser detection & viewport fix
+(function() {
+    var ua = navigator.userAgent || '';
+    var isInApp = /KAKAOTALK|FBAN|FBAV|Instagram|Line\/|NAVER|Snapchat|Twitter/i.test(ua);
+    if (isInApp) {
+        document.body.classList.add('is-inapp-browser');
+        // Fix viewport height for in-app browsers that miscalculate dvh/vh
+        function setVH() {
+            var vh = window.innerHeight;
+            document.documentElement.style.setProperty('--app-height', vh + 'px');
+            document.body.style.height = vh + 'px';
+        }
+        setVH();
+        window.addEventListener('resize', setVH);
+        // Virtual keyboard detection
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', function() {
+                var kbOpen = window.visualViewport.height < window.innerHeight * 0.75;
+                document.body.classList.toggle('keyboard-open', kbOpen);
+                document.body.style.height = window.visualViewport.height + 'px';
+            });
+        }
+    }
+})();
+</script>
 
 <!-- 접근성: Skip to content -->
 <a href="#userInput" class="skip-to-content">본문으로 건너뛰기</a>
@@ -6521,31 +6597,17 @@
         });
     };
 
-    // Service Worker 등록 + 자동 업데이트
+    // Service Worker 정리 (PWA → 홈화면 바로가기 전환)
+    // 기존 설치된 SW 캐시 정리 후 해제
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').then((reg) => {
-            // 새 SW 발견 시 즉시 적용
-            reg.addEventListener('updatefound', () => {
-                const newWorker = reg.installing;
-                if (newWorker) {
-                    newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
-                            // 새 버전 활성화됨 → 페이지 새로고침으로 적용
-                            if (document.hidden) {
-                                // 백그라운드 탭이면 다음 포커스 시 새로고침
-                                document.addEventListener('visibilitychange', () => {
-                                    if (!document.hidden) window.location.reload();
-                                }, { once: true });
-                            } else {
-                                window.location.reload();
-                            }
-                        }
-                    });
-                }
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+            regs.forEach(function(reg) { reg.unregister(); });
+        });
+        if (caches) {
+            caches.keys().then(function(keys) {
+                keys.forEach(function(k) { caches.delete(k); });
             });
-            // 주기적 업데이트 확인 (30분마다)
-            setInterval(() => reg.update(), 30 * 60 * 1000);
-        }).catch(() => {});
+        }
     }
 </script>
 
@@ -6571,21 +6633,17 @@
     </div>
 </nav>
 
-<!-- A2HS 설치 프롬프트 -->
-<div id="installPrompt" class="install-prompt" role="dialog" aria-label="앱 설치 안내" aria-modal="true">
+<!-- 홈화면 바로가기 안내 -->
+<div id="installPrompt" class="install-prompt" role="dialog" aria-label="홈화면 바로가기 안내" aria-modal="true">
     <div class="install-prompt-header">
         <div class="install-prompt-icon">⚖️</div>
         <div>
-            <div class="install-prompt-title">홈 화면에 추가</div>
-            <div class="install-prompt-desc">앱처럼 빠르게 접근하세요</div>
+            <div class="install-prompt-title">홈화면에 바로가기 추가</div>
+            <div class="install-prompt-desc" id="shortcutGuideText">브라우저 메뉴에서 "홈 화면에 추가"를 눌러주세요</div>
         </div>
     </div>
     <div class="install-prompt-actions">
-        <button class="install-btn install-btn-dismiss" id="installDismiss" aria-label="설치 나중에 하기">나중에</button>
-        <button class="install-btn install-btn-primary" id="installAccept" aria-label="홈 화면에 설치하기">
-            <span class="material-symbols-outlined" style="font-size: 18px; vertical-align: middle;">add_to_home_screen</span>
-            설치하기
-        </button>
+        <button class="install-btn install-btn-primary" id="installDismiss" aria-label="확인">확인</button>
     </div>
 </div>
 
@@ -6642,67 +6700,44 @@
 </script>
 
 <script>
-// ═══ PWA Install Prompt (A2HS) ═══
+// ═══ 홈화면 바로가기 안내 ═══
 (function() {
-    let deferredPrompt = null;
-    const promptEl = document.getElementById('installPrompt');
-    const acceptBtn = document.getElementById('installAccept');
-    const dismissBtn = document.getElementById('installDismiss');
+    var promptEl = document.getElementById('installPrompt');
+    var dismissBtn = document.getElementById('installDismiss');
+    var guideText = document.getElementById('shortcutGuideText');
+    if (!promptEl || !dismissBtn) return;
 
-    // 브라우저의 beforeinstallprompt 이벤트 가로채기
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        // 이전에 닫은 적이 있으면 24시간 후에만 다시 표시
-        const dismissed = localStorage.getItem('a2hs-dismissed');
-        if (dismissed && Date.now() - parseInt(dismissed) < 86400000) return;
-        setTimeout(() => promptEl.classList.add('show'), 3000);
-    });
+    // 이미 홈화면에서 열린 경우 표시 안 함
+    var isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+    if (isStandalone) return;
 
-    if (acceptBtn) {
-        acceptBtn.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const result = await deferredPrompt.userChoice;
-                if (result.outcome === 'accepted') {
-                    if (typeof gtag === 'function') gtag('event', 'pwa_install');
-                }
-                deferredPrompt = null;
-            }
-            promptEl.classList.remove('show');
-        });
+    // beforeinstallprompt 차단 (앱 설치 방지)
+    window.addEventListener('beforeinstallprompt', function(e) { e.preventDefault(); });
+
+    // 플랫폼별 안내 메시지
+    var ua = navigator.userAgent || '';
+    var isIOS = /iPad|iPhone|iPod/.test(ua);
+    var isAndroid = /Android/i.test(ua);
+    var isSamsung = /SamsungBrowser/i.test(ua);
+
+    if (isIOS) {
+        guideText.textContent = '하단 공유 버튼(□↑) → "홈 화면에 추가"를 눌러주세요';
+    } else if (isSamsung) {
+        guideText.textContent = '우측 하단 ≡ 메뉴 → "홈 화면에 추가"를 눌러주세요';
+    } else if (isAndroid) {
+        guideText.textContent = '우측 상단 ⋮ 메뉴 → "홈 화면에 추가"를 눌러주세요';
     }
 
-    if (dismissBtn) {
-        dismissBtn.addEventListener('click', () => {
-            promptEl.classList.remove('show');
-            localStorage.setItem('a2hs-dismissed', Date.now().toString());
-        });
-    }
+    // 이전에 닫은 적이 있으면 7일 후에만 다시 표시
+    var dismissed = localStorage.getItem('shortcut-dismissed');
+    if (dismissed && Date.now() - parseInt(dismissed) < 604800000) return;
 
-    // 이미 설치된 경우 표시하지 않음
-    window.addEventListener('appinstalled', () => {
+    setTimeout(function() { promptEl.classList.add('show'); }, 4000);
+
+    dismissBtn.addEventListener('click', function() {
         promptEl.classList.remove('show');
-        deferredPrompt = null;
+        localStorage.setItem('shortcut-dismissed', Date.now().toString());
     });
-
-    // iOS Safari용 수동 안내 (beforeinstallprompt 미지원)
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
-    if (isIOS && !isStandalone) {
-        const dismissed = localStorage.getItem('a2hs-dismissed');
-        if (!dismissed || Date.now() - parseInt(dismissed) >= 86400000) {
-            setTimeout(() => {
-                if (!deferredPrompt) {
-                    // iOS에서는 수동 안내
-                    const descEl = promptEl.querySelector('.install-prompt-desc');
-                    if (descEl) descEl.textContent = '공유 버튼 → "홈 화면에 추가"를 눌러주세요';
-                    if (acceptBtn) acceptBtn.style.display = 'none';
-                    promptEl.classList.add('show');
-                }
-            }, 5000);
-        }
-    }
 })();
 </script>
 

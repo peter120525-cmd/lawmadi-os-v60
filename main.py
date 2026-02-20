@@ -55,6 +55,7 @@ import aiofiles
 import shutil
 from pathlib import Path
 import mimetypes
+import anthropic  # Tier routing: Claude 분석/검증용
 
 # =============================================================
 # FAIL-SOFT OPTIONAL IMPORT [ULTRA]
@@ -236,6 +237,106 @@ try:
 except Exception as e:
     logger.warning(f"leaders.json load failed: {e}")
     LEADER_REGISTRY = {}
+
+# =============================================================
+# 📦 [LAW_CACHE] SSOT 10종 사전 캐시 (법률별 TOP 100 핵심 조문)
+# =============================================================
+LAW_CACHE: Dict[str, Any] = {}
+try:
+    _cache_path = os.path.join(os.path.dirname(__file__), "law_cache.json")
+    if os.path.exists(_cache_path):
+        with open(_cache_path, "r", encoding="utf-8") as f:
+            LAW_CACHE = json.load(f)
+        _total_entries = sum(d.get("entry_count", 0) for d in LAW_CACHE.values())
+        logger.info(f"✅ LAW_CACHE loaded: {len(LAW_CACHE)} types, {_total_entries} entries")
+    else:
+        logger.warning("⚠️ law_cache.json 미존재: DRF 실시간 검색만 사용")
+except Exception as _e:
+    logger.warning(f"⚠️ law_cache.json 로드 실패: {_e}")
+
+# 역 인덱스: keyword → [(ssot_type, law_name, score)] 빌드
+_KEYWORD_INDEX: Dict[str, list] = {}  # keyword -> [(type, law, qa_count)]
+
+def _build_keyword_index():
+    """LAW_CACHE에서 역 인덱스 빌드 (startup 시 1회)"""
+    global _KEYWORD_INDEX
+    _KEYWORD_INDEX.clear()
+    for stype, type_data in LAW_CACHE.items():
+        entries = type_data.get("entries", {})
+        for law_name, law_info in entries.items():
+            qa = law_info.get("qa_count", 0)
+            for kw in law_info.get("keywords", []):
+                _KEYWORD_INDEX.setdefault(kw, []).append((stype, law_name, qa))
+            # 법률명 자체도 인덱스
+            _KEYWORD_INDEX.setdefault(law_name, []).append((stype, law_name, qa))
+    logger.info(f"✅ Keyword index built: {len(_KEYWORD_INDEX)} keywords")
+
+if LAW_CACHE:
+    _build_keyword_index()
+
+
+def match_ssot_sources(query: str, top_k: int = 5) -> list:
+    """
+    질문 → 10종 캐시에서 관련 소스 매칭.
+    Returns: [{"type": "law", "law": "근로기준법", "label": "현행법령",
+               "target": "law", "endpoint": "lawSearch.do",
+               "key_articles": [...top5...], "score": 150}, ...]
+    """
+    import re as _re
+    tokens = _re.findall(r'[가-힣]{2,8}', query)
+    if not tokens:
+        return []
+
+    # (type, law) → 누적 점수
+    scores: Dict[tuple, int] = {}
+    for token in tokens:
+        hits = _KEYWORD_INDEX.get(token, [])
+        for stype, law_name, qa in hits:
+            key = (stype, law_name)
+            scores[key] = scores.get(key, 0) + qa
+
+    if not scores:
+        return []
+
+    # 상위 top_k 추출
+    ranked = sorted(scores.items(), key=lambda x: -x[1])[:top_k]
+    results = []
+    for (stype, law_name), score in ranked:
+        type_data = LAW_CACHE.get(stype, {})
+        law_info = type_data.get("entries", {}).get(law_name, {})
+        results.append({
+            "type": stype,
+            "law": law_name,
+            "label": type_data.get("label", ""),
+            "target": type_data.get("target", ""),
+            "endpoint": type_data.get("endpoint", ""),
+            "key_articles": law_info.get("key_articles", [])[:5],  # 상위 5조문만 전달
+            "keywords": law_info.get("keywords", [])[:5],
+            "score": score,
+        })
+    return results
+
+
+def build_cache_context(query: str) -> str:
+    """
+    질문 → 관련 SSOT 소스 요약 텍스트 (Gemini/Claude에 주입).
+    토큰 절약: 핵심 조문만 포함 (전체 법령 대신 관련 3~5개 조문).
+    """
+    sources = match_ssot_sources(query, top_k=5)
+    if not sources:
+        return ""
+
+    lines = ["[사전 캐시 매칭 결과 — 관련 SSOT 소스]"]
+    for s in sources:
+        arts = s.get("key_articles", [])
+        art_strs = [f"{a['조문']}({a.get('제목','')})" for a in arts if a.get("조문")]
+        lines.append(
+            f"• [{s['label']}] {s['law']}: "
+            f"핵심 조문={', '.join(art_strs) if art_strs else '없음'} "
+            f"(DRF target={s['target']}, endpoint={s['endpoint']})"
+        )
+    lines.append("[위 캐시를 참고하되, 정확한 조문은 반드시 DRF 도구로 실시간 검증하세요]")
+    return "\n".join(lines)
 
 # =============================================================
 # UTILITIES [ULTRA 추가]
@@ -1855,6 +1956,323 @@ def select_swarm_leader(query: str, leaders: Dict) -> Dict:
     return {"name": "유나", "role": "Chief Content Officer", "specialty": "콘텐츠 설계", "_clevel": "CCO"}
 
 # =============================================================
+# 🎯 [TIER ROUTER] Claude 분석 → 티어 분류 → 리더 배정
+# Gemini 98%, Claude 2% 구조
+# T1(90%): Gemini Flash 단독 | T2(8%): Gemini+Claude 보강 | T3(2%): Claude 직접(법률충돌/문서작성)
+# 모듈화: T1을 나중에 LawmadiLM으로 교체 가능
+# =============================================================
+
+def _build_leader_summary_for_claude() -> str:
+    """리더 레지스트리에서 Claude 분석용 요약 생성"""
+    lines = []
+    reg = LEADER_REGISTRY
+    if not reg:
+        return "리더 정보 없음"
+    # leaders.json은 swarm_engine_config.leader_registry 또는 직접 L01 키 구조
+    leader_data = reg.get("swarm_engine_config", {}).get("leader_registry", {})
+    if not leader_data:
+        # leaders_registry.json 형식 (leaders 키)
+        leader_data = reg.get("leaders", {})
+    if not leader_data:
+        # 직접 L01 키가 있는 경우
+        leader_data = {k: v for k, v in reg.items() if k.startswith("L")}
+    for lid, info in sorted(leader_data.items()):
+        name = info.get("name", "")
+        spec = info.get("specialty", "")
+        laws = info.get("laws", [])
+        if isinstance(laws, list):
+            laws_str = ", ".join(laws[:3])
+        else:
+            laws_str = str(laws)
+        lines.append(f"{lid} {name} | {spec} | {laws_str}")
+    return "\n".join(lines) if lines else "리더 정보 없음"
+
+TIER_ANALYSIS_PROMPT = """당신은 Lawmadi OS의 질문 분류 엔진입니다.
+사용자의 법률 질문을 분석하여 JSON으로 응답하세요. 답변은 절대 하지 마세요.
+
+## 60인 리더 목록
+{leader_summary}
+
+## 분류 기준
+- complexity: "simple" (단일 법률, 조문 확인, 용어 설명) | "complex" (2개 이상 법률, 판례 필요) | "critical" (법률 간 충돌, 헌법 쟁점, 다중 이해관계)
+- is_document: true (고소장/소장/답변서/내용증명/고소취하서/합의서/계약서 등 법률문서 작성 요청인 경우)
+- tier: 1 (simple이고 문서작성 아님) | 2 (complex이고 문서작성 아님) | 3 (critical이거나 문서작성 요청)
+- leader_id: 가장 적합한 리더 1명의 ID (예: "L08")
+- leader_name: 해당 리더 이름
+- leader_specialty: 전문 분야
+- summary: 질문 핵심 요약 (1문장)
+- is_legal: true (법률 질문) | false (비법률 질문)
+
+반드시 아래 JSON 형식만 출력하세요:
+{{"tier": 1, "complexity": "simple", "is_document": false, "leader_id": "L08", "leader_name": "온유", "leader_specialty": "임대차", "summary": "전세 보증금 반환 문제", "is_legal": true}}"""
+
+
+async def _claude_analyze_query(query: str) -> Dict[str, Any]:
+    """Claude로 질문 분석/분류/리더 배정 (답변 X)"""
+    claude_client = RUNTIME.get("claude_client")
+    if not claude_client:
+        logger.warning("⚠️ Claude 클라이언트 없음 → 키워드 기반 fallback")
+        return None
+
+    leader_summary = _build_leader_summary_for_claude()
+    try:
+        resp = claude_client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=300,
+            messages=[{"role": "user", "content": f"질문: {query}"}],
+            system=TIER_ANALYSIS_PROMPT.format(leader_summary=leader_summary),
+        )
+        text = resp.content[0].text.strip()
+        # JSON 추출 (코드블록 안에 있을 수 있음)
+        json_match = re.search(r'\{[^{}]+\}', text, re.DOTALL)
+        if json_match:
+            result = json.loads(json_match.group())
+            logger.info(f"🎯 [Tier Router] Claude 분석: tier={result.get('tier')}, "
+                       f"leader={result.get('leader_name')}({result.get('leader_id')}), "
+                       f"complexity={result.get('complexity')}, is_document={result.get('is_document')}")
+            return result
+        logger.warning(f"⚠️ Claude 분석 JSON 파싱 실패: {text[:200]}")
+        return None
+    except Exception as e:
+        logger.warning(f"⚠️ Claude 분석 실패: {e}")
+        return None
+
+
+def _fallback_tier_classification(query: str) -> Dict[str, Any]:
+    """Claude 실패 시 키워드 기반 fallback 분류"""
+    leader = select_swarm_leader(query, LEADER_REGISTRY)
+    leader_name = leader.get("name", "마디")
+    leader_specialty = leader.get("specialty", "시스템 총괄")
+
+    # 문서 작성 키워드 감지
+    doc_keywords = ["작성해", "써줘", "만들어", "초안", "양식", "서식",
+                     "고소장", "소장", "답변서", "내용증명", "고소취하서", "합의서", "계약서"]
+    is_document = any(kw in query for kw in doc_keywords)
+
+    # 복잡도 판단
+    complex_keywords = ["판례", "사례", "대법원", "헌법재판소", "법률 충돌", "위헌"]
+    critical_keywords = ["헌법", "위헌", "기본권", "법률 간 충돌", "헌법소원"]
+
+    if is_document or any(kw in query for kw in critical_keywords):
+        tier = 3
+        complexity = "critical"
+    elif sum(1 for kw in complex_keywords if kw in query) >= 1:
+        tier = 2
+        complexity = "complex"
+    else:
+        tier = 1
+        complexity = "simple"
+
+    # CCO fallback은 비법률
+    is_legal = leader.get("_clevel") != "CCO"
+
+    return {
+        "tier": tier,
+        "complexity": complexity,
+        "is_document": is_document,
+        "leader_id": "L60",
+        "leader_name": leader_name,
+        "leader_specialty": leader_specialty,
+        "summary": query[:50],
+        "is_legal": is_legal,
+    }
+
+
+async def _tier1_gemini_respond(query: str, analysis: Dict, tools: list,
+                                 gemini_history: list, now_kst: str,
+                                 ssot_available: bool) -> str:
+    """Tier 1: Gemini Flash 단독 응답 (나중에 LawmadiLM으로 교체 가능)"""
+    gc = _ensure_genai_client(RUNTIME)
+    model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+    leader_name = analysis.get("leader_name", "마디")
+    leader_specialty = analysis.get("leader_specialty", "통합")
+
+    # 캐시 컨텍스트: 관련 SSOT 소스 사전 매칭 (토큰 90% 절약)
+    cache_ctx = build_cache_context(query)
+
+    # Gemini Context Cache 사용 가능 시: 시스템 인스트럭션 축소 (이미 캐시됨)
+    cached_content_name = RUNTIME.get("gemini_cached_content")
+    if cached_content_name:
+        # 캐시에 SYSTEM_INSTRUCTION_BASE가 포함되어 있으므로 리더 정보만 추가
+        instruction = (
+            f"현재 당신은 '{leader_name}' 리더입니다.\n"
+            f"전문 분야: {leader_specialty}\n"
+            f"질문 요약: {analysis.get('summary', '')}\n"
+            f"반드시 [{leader_name} ({leader_specialty}) 분석]으로 시작하세요."
+        )
+    else:
+        instruction = (
+            f"{SYSTEM_INSTRUCTION_BASE}\n"
+            f"현재 당신은 '{leader_name}' 리더입니다.\n"
+            f"전문 분야: {leader_specialty}\n"
+            f"질문 요약: {analysis.get('summary', '')}\n"
+            f"반드시 [{leader_name} ({leader_specialty}) 분석]으로 시작하세요."
+        )
+    if cache_ctx:
+        instruction += f"\n\n{cache_ctx}"
+
+    gen_config = genai_types.GenerateContentConfig(
+        tools=tools,
+        system_instruction=instruction,
+        max_output_tokens=3000,
+        automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
+    )
+    if cached_content_name:
+        gen_config.cached_content = cached_content_name
+
+    chat = gc.chats.create(
+        model=model_name,
+        config=gen_config,
+        history=gemini_history,
+    )
+    resp = chat.send_message(
+        f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
+    )
+    return _safe_extract_gemini_text(resp)
+
+
+async def _tier2_gemini_plus_claude(query: str, analysis: Dict, tools: list,
+                                     gemini_history: list, now_kst: str,
+                                     ssot_available: bool) -> str:
+    """Tier 2: Gemini Flash 초안 + Claude 보강/검증"""
+    # Step 1: Gemini 초안
+    gemini_draft = await _tier1_gemini_respond(query, analysis, tools, gemini_history, now_kst, ssot_available)
+
+    # Step 2: Claude 보강
+    claude_client = RUNTIME.get("claude_client")
+    if not claude_client:
+        return gemini_draft  # Claude 없으면 Gemini만 반환
+
+    leader_name = analysis.get("leader_name", "마디")
+    leader_specialty = analysis.get("leader_specialty", "통합")
+
+    try:
+        enhance_resp = claude_client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1500,
+            system=(
+                f"당신은 Lawmadi OS의 법률 검증 엔진입니다.\n"
+                f"담당 리더: {leader_name} ({leader_specialty})\n"
+                f"아래 AI 초안을 검증하고 보강하세요.\n"
+                f"- 법적 오류가 있으면 수정\n"
+                f"- 누락된 중요 판례/조문이 있으면 추가\n"
+                f"- 원래 형식과 톤을 유지\n"
+                f"- 보강한 최종 응답 전문만 출력 (메타 설명 X)"
+            ),
+            messages=[{
+                "role": "user",
+                "content": f"사용자 질문: {query}\n\nAI 초안:\n{gemini_draft}"
+            }],
+        )
+        enhanced = enhance_resp.content[0].text.strip()
+        if len(enhanced) > 100:
+            return enhanced
+    except Exception as e:
+        logger.warning(f"⚠️ Tier2 Claude 보강 실패: {e}")
+
+    return gemini_draft
+
+
+async def _tier3_claude_respond(query: str, analysis: Dict, tools: list,
+                                 now_kst: str, ssot_available: bool) -> str:
+    """Tier 3: Claude Sonnet 직접 응답 (법률 충돌/교차/문서작성)"""
+    claude_client = RUNTIME.get("claude_client")
+    if not claude_client:
+        logger.warning("⚠️ Tier3에 Claude 없음 → Gemini fallback")
+        return await _tier1_gemini_respond(query, analysis, tools, [], now_kst, ssot_available)
+
+    leader_name = analysis.get("leader_name", "마디")
+    leader_specialty = analysis.get("leader_specialty", "통합")
+    is_document = analysis.get("is_document", False)
+
+    if is_document:
+        system_msg = (
+            f"당신은 Lawmadi OS의 법률문서 작성 전문 엔진입니다.\n"
+            f"담당 리더: {leader_name} ({leader_specialty})\n"
+            f"사용자가 요청한 법률문서를 작성하세요.\n"
+            f"- 실무에서 바로 사용 가능한 수준으로 작성\n"
+            f"- 문서 본문은 ```코드블록``` 안에 작성\n"
+            f"- 작성 전후로 주의사항과 활용 가이드 포함\n"
+            f"- [{leader_name} ({leader_specialty}) 문서작성]으로 시작\n"
+            f"현재 시각: {now_kst}"
+        )
+    else:
+        system_msg = (
+            f"당신은 Lawmadi OS의 최고 수준 법률 분석 엔진입니다.\n"
+            f"담당 리더: {leader_name} ({leader_specialty})\n"
+            f"법률 간 충돌, 헌법 쟁점, 다중 이해관계가 얽힌 고난도 질문을 분석합니다.\n"
+            f"- 관련 법률 간 충돌 지점 명시\n"
+            f"- 헌법적 쟁점이 있으면 반드시 기술\n"
+            f"- 대법원/헌재 판례 근거 제시\n"
+            f"- [{leader_name} ({leader_specialty}) 심층분석]으로 시작\n"
+            f"현재 시각: {now_kst}"
+        )
+
+    # 캐시 컨텍스트 (SSOT 10종 사전 매칭) + DRF 실시간 검색 보완
+    law_context = ""
+    cache_ctx = build_cache_context(query)
+    if cache_ctx:
+        law_context += f"\n\n{cache_ctx}"
+    if ssot_available:
+        try:
+            law_result = search_law_drf(query)
+            if law_result.get("result") == "FOUND":
+                law_context += f"\n\n[DRF 실시간 검색 결과]\n{json.dumps(law_result.get('content', {}), ensure_ascii=False)[:2000]}"
+        except Exception:
+            pass
+
+    try:
+        resp = claude_client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=4000,
+            system=system_msg,
+            messages=[{
+                "role": "user",
+                "content": f"사용자 질문: {query}{law_context}"
+            }],
+        )
+        return resp.content[0].text.strip()
+    except Exception as e:
+        logger.error(f"❌ Tier3 Claude 응답 실패: {e}")
+        # Fallback to Gemini
+        return await _tier1_gemini_respond(query, analysis, tools, [], now_kst, ssot_available)
+
+
+async def _claude_constitutional_check(query: str, response_text: str) -> Dict[str, Any]:
+    """헌법 준수 검증 (모든 티어 공통, Claude 최종 검증)"""
+    claude_client = RUNTIME.get("claude_client")
+    if not claude_client:
+        return {"passed": True, "warning": None}
+
+    try:
+        resp = claude_client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=300,
+            system=(
+                "당신은 헌법 준수 검증 엔진입니다. 아래 법률 AI 응답이 헌법을 위배하는지 검증하세요.\n"
+                "검증 항목:\n"
+                "1. 기본권(자유권, 평등권, 사회권) 침해 가능성\n"
+                "2. 위헌 판례가 있는 조항 인용 여부\n"
+                "3. 법률 조언이 헌법 가치에 반하는지 여부\n\n"
+                "JSON으로만 응답:\n"
+                '{{"passed": true/false, "warning": "경고 메시지 또는 null", "unconstitutional_refs": []}}'
+            ),
+            messages=[{
+                "role": "user",
+                "content": f"질문: {query}\n\n응답:\n{response_text[:3000]}"
+            }],
+        )
+        text = resp.content[0].text.strip()
+        json_match = re.search(r'\{[^{}]+\}', text, re.DOTALL)
+        if json_match:
+            return json.loads(json_match.group())
+    except Exception as e:
+        logger.warning(f"⚠️ 헌법 검증 실패 (무시): {e}")
+
+    return {"passed": True, "warning": None}
+
+
+# =============================================================
 # ⚙️ [CONFIG] load
 # =============================================================
 
@@ -1883,8 +2301,12 @@ def _diagnostic_snapshot() -> Dict[str, Any]:
             "swarm": bool(RUNTIME.get("swarm")),
             "swarm_orchestrator": bool(RUNTIME.get("swarm_orchestrator")),
             "clevel_handler": bool(RUNTIME.get("clevel_handler")),
+            "claude_client": bool(RUNTIME.get("claude_client")),
+            "tier_router": "active" if RUNTIME.get("claude_client") else "fallback_keyword",
+            "law_cache": f"{len(LAW_CACHE)} types, {len(_KEYWORD_INDEX)} keywords" if LAW_CACHE else "not_loaded",
             "db_client": bool(db_client),
             "gemini_key": bool(os.getenv("GEMINI_KEY")),
+            "anthropic_key": bool(os.getenv("ANTHROPIC_API_KEY")),
         },
         "metrics": METRICS,
     }
@@ -2105,6 +2527,20 @@ async def startup():
     # --------------------------------------------------
     # 9️⃣ RUNTIME SSOT 등록
     # --------------------------------------------------
+    # --------------------------------------------------
+    # 9.5️⃣ Claude Client (Tier Router용)
+    # --------------------------------------------------
+    claude_client = None
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    if anthropic_key:
+        try:
+            claude_client = anthropic.Anthropic(api_key=anthropic_key)
+            logger.info("✅ Claude client initialized (Tier Router)")
+        except Exception as e:
+            logger.warning(f"🟡 Claude client degraded: {e}")
+    else:
+        logger.warning("⚠️ ANTHROPIC_API_KEY 미설정: Tier Router가 키워드 기반 fallback으로 동작")
+
     RUNTIME.update({
         "config": config,
         "drf": drf_conn,
@@ -2115,7 +2551,44 @@ async def startup():
         "swarm_orchestrator": swarm_orchestrator,
         "clevel_handler": clevel_handler,
         "genai_client": genai_client,
+        "claude_client": claude_client,
     })
+
+    # --------------------------------------------------
+    # 10️⃣ Gemini Context Caching (SSOT 법률 캐시 사전 토큰화)
+    # 1시간 TTL, SYSTEM_INSTRUCTION + law_cache 요약을 사전 캐싱
+    # → 매 요청 시 ~90% 토큰 절약 (동일 시스템 인스트럭션 재전송 방지)
+    # --------------------------------------------------
+    RUNTIME["gemini_cached_content"] = None
+    if genai_client and LAW_CACHE:
+        try:
+            # 법률 캐시 요약 생성 (상위 30개 법률의 핵심 조문)
+            cache_summary_lines = ["[SSOT 10종 법률 캐시 — 주요 법률 핵심 조문 요약]"]
+            for stype in ["law", "prec", "decis", "admrul", "ordin"]:
+                type_data = LAW_CACHE.get(stype, {})
+                entries = type_data.get("entries", {})
+                if not entries:
+                    continue
+                cache_summary_lines.append(f"\n## {type_data.get('label', stype)} (target={type_data.get('target', '')})")
+                for law_name, law_info in list(entries.items())[:6]:
+                    arts = law_info.get("key_articles", [])[:3]
+                    art_str = ", ".join(f"{a['조문']}({a.get('제목','')})" for a in arts)
+                    cache_summary_lines.append(f"  • {law_name}: {art_str}")
+            cache_text = "\n".join(cache_summary_lines)
+
+            cached_content = genai_client.caches.create(
+                model=os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
+                config=genai_types.CreateCachedContentConfig(
+                    display_name="lawmadi_ssot_cache",
+                    system_instruction=SYSTEM_INSTRUCTION_BASE,
+                    contents=[{"role": "user", "parts": [{"text": cache_text}]}],
+                    ttl="3600s",
+                ),
+            )
+            RUNTIME["gemini_cached_content"] = cached_content.name
+            logger.info(f"✅ Gemini Context Cache 생성: {cached_content.name} (TTL=1h)")
+        except Exception as cache_err:
+            logger.warning(f"⚠️ Gemini Context Cache 실패 (무시): {cache_err}")
 
     METRICS["boot_time"] = _now_iso()
     logger.info(f"✅ Lawmadi OS {OS_VERSION} Online")
@@ -2494,13 +2967,13 @@ async def ask(request: Request):
                 return {"trace_id": trace, "response": "🚫 보안 정책에 의해 차단되었습니다.", "status": "BLOCKED"}
 
         # -------------------------------------------------
-        # 2) C-Level 임원 호출 확인
+        # 2) 🎯 TIER ROUTER: Claude 분석 → 티어 분류 → 리더 배정
         # -------------------------------------------------
         clevel = RUNTIME.get("clevel_handler")
         clevel_decision = None
         if clevel:
             clevel_decision = clevel.should_invoke_clevel(query)
-            if clevel_decision.get("invoke"):
+            if clevel_decision and clevel_decision.get("invoke"):
                 logger.info(f"🎯 C-Level 호출: {clevel_decision.get('executive_id')} - {clevel_decision.get('reason')}")
 
         # -------------------------------------------------
@@ -2509,8 +2982,7 @@ async def ask(request: Request):
         ssot_available = RUNTIME.get("drf_healthy", False)
 
         # -------------------------------------------------
-        # 3) LLM Tool 설정 (SSOT 살아있을 때만 활성화)
-        # [감사 #4.1] GEMINI_MODEL 환경변수화
+        # 3.5) LLM Tool 설정 (SSOT 살아있을 때만 활성화)
         # -------------------------------------------------
         tools = []
         if ssot_available:
@@ -2527,20 +2999,72 @@ async def ask(request: Request):
             ]
 
         now_kst = _now_iso()
-        model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
 
         # -------------------------------------------------
-        # 4) C-Level 직접 호출 처리
+        # 4) 🎯 Claude 분석 → 티어/리더 배정
+        # -------------------------------------------------
+        analysis = await _claude_analyze_query(query)
+        if not analysis:
+            analysis = _fallback_tier_classification(query)
+            logger.info(f"🔄 키워드 기반 fallback 분류: tier={analysis['tier']}")
+
+        tier = analysis.get("tier", 1)
+        leader_name = analysis.get("leader_name", "마디")
+        leader_specialty = analysis.get("leader_specialty", "통합")
+        is_legal = analysis.get("is_legal", True)
+        is_document = analysis.get("is_document", False)
+        swarm_mode = False
+
+        # 📦 SSOT 10종 캐시 매칭
+        matched_sources = match_ssot_sources(query, top_k=5)
+        if matched_sources:
+            _src_strs = [s["type"] + ":" + s["law"] for s in matched_sources[:3]]
+            logger.info(f"📦 [Cache] 매칭: {', '.join(_src_strs)}")
+
+        logger.info(f"🎯 [Tier {tier}] leader={leader_name}({leader_specialty}), "
+                    f"legal={is_legal}, document={is_document}")
+
+        # -------------------------------------------------
+        # 4.1) 비법률 즉시 응답
+        # -------------------------------------------------
+        if not is_legal:
+            instant_msg = (
+                f"[유나 (CCO) 콘텐츠 설계]\n\n"
+                "## 💡 핵심 답변\n"
+                "말씀하신 내용은 법률 분야가 아닌 일반 질문으로 판단됩니다. "
+                "저는 법률 AI 시스템이라 전문적인 답변이 어려울 수 있지만, "
+                "간단히 안내드릴게요.\n\n"
+                "## 📌 주요 포인트\n"
+                "• Lawmadi OS는 **대한민국 법률 상담 전문 AI**입니다\n"
+                "• 60명의 전문 리더가 법률 분야별로 정밀 분석해 드려요\n"
+                "• 임대차, 이혼, 상속, 형사, 노동법 등 다양한 분야를 다룹니다\n\n"
+                "## 🔍 더 알아보기\n"
+                "법률과 관련된 고민이 있으시다면 구체적으로 질문해 주세요! "
+                "예를 들어 \"전세 보증금을 못 돌려받고 있어요\" 같은 질문이면 "
+                "전문 리더가 즉시 분석을 시작합니다."
+            )
+            latency = int((time.time() - start_time) * 1000)
+            METRICS["requests"] += 1
+            return JSONResponse(content={
+                "trace_id": trace,
+                "response": instant_msg,
+                "leader": "유나",
+                "leader_specialty": "콘텐츠 설계",
+                "tier": 0,
+                "status": "SUCCESS",
+                "latency_ms": latency,
+                "swarm_mode": False,
+            })
+
+        # -------------------------------------------------
+        # 4.2) C-Level 직접 호출 처리 (기존 호환)
         # -------------------------------------------------
         if clevel_decision and clevel_decision.get("mode") == "direct":
-            # C-Level 임원 직접 호출
             exec_id = clevel_decision.get("executive_id")
             logger.info(f"🎯 C-Level 직접 모드: {exec_id}")
-
-            # C-Level 전용 시스템 지시
             clevel_instruction = clevel.get_clevel_system_instruction(exec_id, SYSTEM_INSTRUCTION_BASE)
-
             gc = _ensure_genai_client(RUNTIME)
+            model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
             chat = gc.chats.create(
                 model=model_name,
                 config=genai_types.GenerateContentConfig(
@@ -2551,221 +3075,74 @@ async def ask(request: Request):
                 ),
                 history=gemini_history,
             )
-            resp = chat.send_message(
-                f"now_kst={now_kst}\n"
-                f"ssot_available={ssot_available}\n"
-                f"사용자 질문: {query}"
-            )
-
+            resp = chat.send_message(f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}")
             final_text = _safe_extract_gemini_text(resp)
             leader_name = clevel.executives.get(exec_id, {}).get("name", exec_id)
             leader_specialty = clevel.executives.get(exec_id, {}).get("role", exec_id)
-            swarm_mode = False
-
-            logger.info(f"✅ C-Level 분석 완료: {leader_name}")
 
         # -------------------------------------------------
-        # 5) SwarmOrchestrator 우선 사용 (60 Leader 협업)
+        # 5) 🎯 티어별 응답 생성
         # -------------------------------------------------
-        elif not (clevel_decision and clevel_decision.get("mode") == "direct"):
-            orchestrator = RUNTIME.get("swarm_orchestrator")
-
-            if orchestrator and os.getenv("USE_SWARM", "true").lower() == "true":
-                # Swarm 모드: 진정한 다중 Leader 협업
-                logger.info("🐝 SwarmOrchestrator 모드 활성화")
-
-                # ─── /ask 비법률 즉시 응답 (Swarm 경로) ───
-                _pre_domains = orchestrator.detect_domains(query)
-                _pre_leaders = orchestrator.select_leaders(query, _pre_domains)
-                if len(_pre_leaders) == 1 and _pre_leaders[0].get("_clevel") == "CCO" and not _pre_domains:
-                    instant_msg = (
-                        "[유나 (CCO) 콘텐츠 설계]\n\n"
-                        "## 💡 핵심 답변\n"
-                        "말씀하신 내용은 법률 분야가 아닌 일반 질문으로 판단됩니다. "
-                        "저는 법률 AI 시스템이라 전문적인 답변이 어려울 수 있지만, "
-                        "간단히 안내드릴게요.\n\n"
-                        "## 📌 주요 포인트\n"
-                        "• Lawmadi OS는 **대한민국 법률 상담 전문 AI**입니다\n"
-                        "• 60명의 전문 리더가 법률 분야별로 정밀 분석해 드려요\n"
-                        "• 임대차, 이혼, 상속, 형사, 노동법 등 다양한 분야를 다룹니다\n\n"
-                        "## 🔍 더 알아보기\n"
-                        "법률과 관련된 고민이 있으시다면 구체적으로 질문해 주세요! "
-                        "예를 들어 \"전세 보증금을 못 돌려받고 있어요\" 같은 질문이면 "
-                        "전문 리더가 즉시 분석을 시작합니다."
-                    )
-                    latency = int((time.time() - start_time) * 1000)
-                    METRICS["requests"] += 1
-                    return JSONResponse(content={
-                        "trace_id": trace,
-                        "response": instant_msg,
-                        "leader": "유나",
-                        "leader_specialty": "콘텐츠 설계",
-                        "status": "SUCCESS",
-                        "latency_ms": latency,
-                        "swarm_mode": False,
-                    })
-
-                try:
-                    swarm_result = orchestrator.orchestrate(
-                        query=query,
-                        tools=tools,
-                        system_instruction_base=SYSTEM_INSTRUCTION_BASE,
-                        model_name=model_name,
-                        force_single=False
-                    )
-
-                    final_text = swarm_result["response"]
-                    leader_names = swarm_result.get("leaders", ["유나"])
-                    leader_name = ", ".join(leader_names[:3]) + (f" 외 {len(leader_names)-3}명" if len(leader_names) > 3 else "")
-                    leader_specialty = ", ".join(swarm_result.get("domains", ["콘텐츠 설계"])[:3])
-                    swarm_mode = swarm_result.get("swarm_mode", False)
-
-                    # C-Level "swarm" 모드: Swarm 결과에 C-Level 관점 보강
-                    if clevel and clevel_decision and clevel_decision.get("mode") == "swarm":
-                        exec_id = clevel_decision.get("executive_id", "CSO")
-                        exec_name = clevel.executives.get(exec_id, {}).get("name", exec_id)
-                        logger.info(f"🎯 C-Level swarm 보강: {exec_name}({exec_id}) 관점 추가")
-
-                        try:
-                            clevel_instruction = clevel.get_clevel_system_instruction(exec_id, SYSTEM_INSTRUCTION_BASE)
-                            gc = _ensure_genai_client(RUNTIME)
-                            clevel_chat = gc.chats.create(
-                                model=model_name,
-                                config=genai_types.GenerateContentConfig(
-                                    system_instruction=clevel_instruction,
-                                ),
-                            )
-                            clevel_resp = clevel_chat.send_message(
-                                f"다음은 법률 리더들의 분석 결과입니다:\n\n{final_text}\n\n"
-                                f"위 분석에 대해 {exec_name}({exec_id}) 관점에서 전략적 보강 의견을 2~3문장으로 추가하세요.\n"
-                                f"사용자 원래 질문: {query}"
-                            )
-                            clevel_opinion = _safe_extract_gemini_text(clevel_resp)
-                            if clevel_opinion:
-                                final_text += f"\n\n---\n**[{exec_name} ({exec_id}) 전략 보강]**\n{clevel_opinion}"
-                                leader_names.append(exec_name)
-                                leader_name += f", {exec_name}"
-                            logger.info(f"✅ C-Level swarm 보강 완료: {exec_name}")
-                        except Exception as ce:
-                            logger.warning(f"⚠️ C-Level swarm 보강 실패 (무시): {ce}")
-
-                    logger.info(f"✅ Swarm 분석 완료: {leader_name} ({swarm_result.get('leader_count', 1)}명 협업)")
-
-                except Exception as e:
-                    logger.error(f"❌ SwarmOrchestrator 실패, Fallback: {e}")
-                    # Fallback to single leader
-                    orchestrator = None
-
-            if not orchestrator or os.getenv("USE_SWARM", "true").lower() != "true":
-                # 기존 단일 Leader 모드 (Fallback)
-                logger.info("🔄 단일 Leader 모드 (Fallback)")
-
-                leader = select_swarm_leader(query, LEADER_REGISTRY)
-                leader_name = leader['name']
-                leader_specialty = leader.get('specialty', '콘텐츠 설계')
-                swarm_mode = False
-
-                gc = _ensure_genai_client(RUNTIME)
-                _is_cco_fallback = leader.get("_clevel") == "CCO"
-
-                # ─── /ask 비법률 즉시 응답 ───
-                if _is_cco_fallback:
-                    instant_msg = (
-                        "[유나 (CCO) 콘텐츠 설계]\n\n"
-                        "## 💡 핵심 답변\n"
-                        "말씀하신 내용은 법률 분야가 아닌 일반 질문으로 판단됩니다. "
-                        "저는 법률 AI 시스템이라 전문적인 답변이 어려울 수 있지만, "
-                        "간단히 안내드릴게요.\n\n"
-                        "## 📌 주요 포인트\n"
-                        "• Lawmadi OS는 **대한민국 법률 상담 전문 AI**입니다\n"
-                        "• 60명의 전문 리더가 법률 분야별로 정밀 분석해 드려요\n"
-                        "• 임대차, 이혼, 상속, 형사, 노동법 등 다양한 분야를 다룹니다\n\n"
-                        "## 🔍 더 알아보기\n"
-                        "법률과 관련된 고민이 있으시다면 구체적으로 질문해 주세요! "
-                        "예를 들어 \"전세 보증금을 못 돌려받고 있어요\" 같은 질문이면 "
-                        "전문 리더가 즉시 분석을 시작합니다."
-                    )
-                    latency = int((time.time() - start_time) * 1000)
-                    METRICS["requests"] += 1
-                    return JSONResponse(content={
-                        "trace_id": trace,
-                        "response": instant_msg,
-                        "leader": "유나",
-                        "leader_specialty": "콘텐츠 설계",
-                        "status": "SUCCESS",
-                        "latency_ms": latency,
-                        "swarm_mode": False,
-                    })
-
-                _fb_max_tokensens = 3000
-                fallback_instruction = (
-                    f"{SYSTEM_INSTRUCTION_BASE}\n"
-                    f"현재 당신은 '{leader['name']}({leader['role']})' 노드입니다.\n"
-                    f"🎯 전문 분야: {leader.get('specialty', '통합')}\n"
-                    f"🎯 관점: {leader.get('specialty', '통합')} 전문가 관점에서 이 사안을 분석하세요.\n"
-                )
-                if _is_cco_fallback:
-                    fallback_instruction += (
-                        f"📏 **비법률 질문은 반드시 500자 이내로 간결하게 답변하세요.**\n"
-                        f"**비법률 목차**: ## 💡 핵심 답변 → ## 📌 주요 포인트 → ## 🔍 더 알아보기\n"
-                    )
-                fallback_instruction += f"반드시 [{leader['name']} ({leader.get('specialty', '통합')}) 답변]으로 시작하세요."
-                chat = gc.chats.create(
-                    model=model_name,
-                    config=genai_types.GenerateContentConfig(
-                        tools=tools,
-                        system_instruction=fallback_instruction,
-                        max_output_tokens=_fb_max_tokensens,
-                        automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
-                    ),
-                    history=gemini_history,
+        else:
+            if tier == 1:
+                # Tier 1 (90%): Gemini Flash 단독 (나중에 LawmadiLM 교체 가능)
+                logger.info(f"⚡ [Tier 1] Gemini Flash 단독 응답")
+                final_text = await _tier1_gemini_respond(
+                    query, analysis, tools, gemini_history, now_kst, ssot_available
                 )
 
-                try:
-                    resp = chat.send_message(
-                        f"now_kst={now_kst}\n"
-                        f"ssot_available={ssot_available}\n"
-                        f"사용자 질문: {query}"
-                    )
-                    final_text = _safe_extract_gemini_text(resp)
-                except Exception as gemini_err:
-                    logger.error(f"💥 Gemini API 호출 실패 (fallback): {gemini_err}")
-                    final_text = f"[{leader['name']} ({leader.get('specialty', '통합')}) 답변]\n\n⚠️ AI 엔진 응답 생성 중 일시적 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+            elif tier == 2:
+                # Tier 2 (8%): Gemini Flash + Claude 보강/검증
+                logger.info(f"🔍 [Tier 2] Gemini Flash + Claude 보강")
+                final_text = await _tier2_gemini_plus_claude(
+                    query, analysis, tools, gemini_history, now_kst, ssot_available
+                )
 
-                # 응답이 너무 짧으면 1회 재시도
-                if len(final_text.strip()) < 50:
-                    logger.warning(f"⚠️ 응답 너무 짧음 ({len(final_text)}자), 재시도...")
-                    retry_resp = chat.send_message(
-                        f"이전 응답이 너무 짧습니다. 다음 질문에 대해 상세하게 분석해주세요:\n{query}"
-                    )
-                    retry_text = _safe_extract_gemini_text(retry_resp)
-                    if len(retry_text.strip()) > len(final_text.strip()):
-                        final_text = retry_text
-                        logger.info(f"✅ 재시도 성공 ({len(final_text)}자)")
+            else:
+                # Tier 3 (2%): Claude Sonnet 직접 (법률 충돌/교차/문서작성)
+                logger.info(f"🏛️ [Tier 3] Claude Sonnet 직접 응답 (document={is_document})")
+                final_text = await _tier3_claude_respond(
+                    query, analysis, tools, now_kst, ssot_available
+                )
+
+            # 응답이 너무 짧으면 1회 재시도 (Tier 1만)
+            if tier == 1 and len(final_text.strip()) < 50:
+                logger.warning(f"⚠️ 응답 너무 짧음 ({len(final_text)}자), Tier 2로 업그레이드")
+                final_text = await _tier2_gemini_plus_claude(
+                    query, analysis, tools, gemini_history, now_kst, ssot_available
+                )
+                tier = 2
 
         # -------------------------------------------------
-        # 5) Governance 검증
+        # 5.5) 담당 리더 정보 헤더 삽입
+        # -------------------------------------------------
+        leader_header = f"**담당: {leader_name} ({leader_specialty} 전문)**\n\n"
+        if not final_text.startswith(f"[{leader_name}") and not final_text.startswith(f"**담당:"):
+            final_text = leader_header + final_text
+
+        # -------------------------------------------------
+        # 6) 헌법 준수 검증 (모든 티어 공통)
         # -------------------------------------------------
         if not validate_constitutional_compliance(final_text):
-            _audit("ask_fail_closed", {
-                "query": query,
-                "status": "GOVERNANCE",
-                "leader": leader_name,
-            })
-            return {
-                "trace_id": trace,
-                "response": "⚠️ 시스템 무결성 정책에 의해 답변이 제한되었습니다.",
-                "status": "FAIL_CLOSED",
-            }
+            _audit("ask_fail_closed", {"query": query, "status": "GOVERNANCE", "leader": leader_name})
+            return {"trace_id": trace, "response": "⚠️ 시스템 무결성 정책에 의해 답변이 제한되었습니다.", "status": "FAIL_CLOSED"}
+
+        # Claude 헌법 검증 (백그라운드 비동기)
+        const_check = await _claude_constitutional_check(query, final_text)
+        if const_check.get("warning"):
+            final_text += f"\n\n---\n⚖️ **헌법 검증 참고사항:** {const_check['warning']}"
+        if not const_check.get("passed", True):
+            logger.warning(f"🚨 [헌법 검증 경고] {const_check}")
+            final_text += "\n\n> ⚠️ 이 답변에는 헌법적 검토가 필요한 사항이 포함되어 있습니다. 전문가 상담을 권장합니다."
 
         latency_ms = int((time.time() - start_time) * 1000)
 
-        # 느린 쿼리 로깅 (항목 #15)
+        # 느린 쿼리 로깅
         if latency_ms > 10000:
-            logger.warning(f"🐌 [SLOW_REQUEST] {latency_ms}ms | query={query[:80]} | leader={leader_name}")
+            logger.warning(f"🐌 [SLOW_REQUEST] {latency_ms}ms | tier={tier} | query={query[:80]} | leader={leader_name}")
 
         # -------------------------------------------------
-        # 6) Metrics [ULTRA]
+        # 7) Metrics
         # -------------------------------------------------
         METRICS["requests"] += 1
         req_count = METRICS["requests"]
@@ -2773,59 +3150,27 @@ async def ask(request: Request):
         METRICS["avg_latency_ms"] = int(((prev_avg * (req_count - 1)) + latency_ms) / max(req_count, 1))
 
         # -------------------------------------------------
-        # 7) Audit
+        # 8) Audit
         # -------------------------------------------------
         _audit("ask", {
             "query": query,
             "leader": leader_name,
+            "tier": tier,
+            "complexity": analysis.get("complexity", ""),
+            "is_document": is_document,
             "status": "SUCCESS",
             "latency_ms": latency_ms,
             "response_sha256": _sha256(final_text),
-            "swarm_mode": swarm_mode if 'swarm_mode' in locals() else False,
+            "swarm_mode": False,
+            "cache_sources": [f"{s['type']}:{s['law']}" for s in matched_sources[:3]],
         })
 
         # -------------------------------------------------
-        # 8) Claude 검증 + DB 저장 (백그라운드 비동기 처리)
+        # 9) 백그라운드 검증 + DB 저장
         # -------------------------------------------------
-        # 응답 속도 최적화: 검증/저장을 백그라운드로 이동하여 2~4초 절감
-        _swarm_mode_val = swarm_mode if 'swarm_mode' in locals() else False
-        _leader_names_val = leader_names if (swarm_mode and 'leader_names' in locals()) else None
-        _chat_history = None
-        if 'chat' in locals() and hasattr(chat, 'history'):
-            _chat_history = chat.history
-        _swarm_result_exists = 'swarm_result' in locals()
-        # Swarm 결과에서 tool 메타데이터 추출
-        _swarm_tools_used = swarm_result.get("tools_used", []) if _swarm_result_exists and 'swarm_result' in locals() else []
-        _swarm_tool_results = swarm_result.get("tool_results", []) if _swarm_result_exists and 'swarm_result' in locals() else []
-
         async def _background_verify_and_save():
-            """백그라운드에서 Claude 검증 + DB 저장 수행"""
+            """백그라운드에서 SSOT 검증 + DB 저장 수행"""
             try:
-                # Tool 호출 정보 추적
-                tools_used = []
-                tool_results = []
-
-                # 1순위: Swarm 결과에서 수집된 tool 메타데이터
-                if _swarm_tools_used:
-                    tools_used = _swarm_tools_used
-                    tool_results = _swarm_tool_results
-                # 2순위: Fallback 모드의 chat history
-                elif _chat_history:
-                    for turn in _chat_history:
-                        if hasattr(turn, 'parts'):
-                            for part in turn.parts:
-                                if hasattr(part, 'function_call'):
-                                    fc = part.function_call
-                                    tools_used.append({
-                                        "name": fc.name,
-                                        "args": dict(fc.args) if fc.args else {}
-                                    })
-                                if hasattr(part, 'function_response'):
-                                    fr = part.function_response
-                                    response_data = dict(fr.response) if fr.response else {}
-                                    tool_results.append(response_data)
-
-                # Claude 검증 수행 (별도 스레드에서 실행)
                 verifier_module = optional_import("engines.response_verifier")
                 if verifier_module:
                     verifier = verifier_module.get_verifier()
@@ -2835,44 +3180,32 @@ async def ask(request: Request):
                         lambda: verifier.verify_response(
                             user_query=query,
                             gemini_response=final_text,
-                            tools_used=tools_used,
-                            tool_results=tool_results
+                            tools_used=[],
+                            tool_results=[]
                         )
                     )
-
                     v_result = verification_result.get("result", "SKIP")
                     v_score = verification_result.get("ssot_compliance_score", 0)
                     v_issues = verification_result.get("issues", [])
-
                     if v_result == "FAIL":
                         logger.warning(f"🚨 [SSOT 검증 실패] 점수: {v_score}, 문제: {v_issues}")
-                    elif v_result == "WARNING":
-                        logger.info(f"⚠️ [SSOT 경고] 점수: {v_score}, 문제: {v_issues}")
                     else:
                         logger.info(f"✅ [SSOT 검증 통과] 점수: {v_score}")
 
-                    # 검증 결과 DB 저장
                     db_client_v2 = optional_import("connectors.db_client_v2")
                     if db_client_v2 and hasattr(db_client_v2, "save_verification_result"):
                         await loop.run_in_executor(
                             None,
                             lambda: db_client_v2.save_verification_result(
-                                session_id=trace,
-                                user_query=query,
-                                gemini_response=final_text,
-                                tools_used=tools_used,
-                                tool_results=tool_results,
-                                verification_result=v_result,
-                                ssot_compliance_score=v_score,
-                                issues_found=v_issues,
-                                claude_feedback=verification_result.get("feedback", "")
+                                session_id=trace, user_query=query, gemini_response=final_text,
+                                tools_used=[], tool_results=[],
+                                verification_result=v_result, ssot_compliance_score=v_score,
+                                issues_found=v_issues, claude_feedback=verification_result.get("feedback", "")
                             )
                         )
-
             except Exception as verify_error:
                 logger.warning(f"⚠️ [Verification] 백그라운드 검증 실패 (무시): {verify_error}")
 
-            # Chat History 저장
             try:
                 db_client_v2 = optional_import("connectors.db_client_v2")
                 if db_client_v2 and hasattr(db_client_v2, "save_chat_history"):
@@ -2881,24 +3214,17 @@ async def ask(request: Request):
                     await loop.run_in_executor(
                         None,
                         lambda: db_client_v2.save_chat_history(
-                            user_query=query,
-                            ai_response=final_text,
-                            leader=leader_name,
-                            status="success",
-                            latency_ms=latency_ms,
-                            visitor_id=visitor_id,
-                            swarm_mode=_swarm_mode_val,
-                            leaders_used=_leader_names_val,
-                            query_category=query_category
+                            user_query=query, ai_response=final_text, leader=leader_name,
+                            status="success", latency_ms=latency_ms, visitor_id=visitor_id,
+                            swarm_mode=False, leaders_used=None, query_category=query_category
                         )
                     )
             except Exception as log_error:
                 logger.warning(f"⚠️ [ChatHistory] 백그라운드 저장 실패 (무시): {log_error}")
 
-        # 백그라운드 태스크 시작 (응답 반환을 블로킹하지 않음)
         asyncio.create_task(_background_verify_and_save())
 
-        # 후처리: think 블록 → 표 → 구분선 제거 (## 헤더는 프론트엔드에서 섹션 타이틀로 변환)
+        # 후처리: think 블록 → 표 → 구분선 제거
         final_text_clean = _remove_think_blocks(final_text)
         final_text_clean = _remove_markdown_tables(final_text_clean)
         final_text_clean = _remove_separator_lines(final_text_clean)
@@ -2907,10 +3233,13 @@ async def ask(request: Request):
             "trace_id": trace,
             "response": final_text_clean,
             "leader": leader_name,
-            "leader_specialty": leader_specialty if 'leader_specialty' in locals() else "",
+            "leader_specialty": leader_specialty,
+            "tier": tier,
             "status": "SUCCESS",
             "latency_ms": latency_ms,
-            "swarm_mode": swarm_mode if 'swarm_mode' in locals() else False,
+            "swarm_mode": False,
+            "constitutional_check": "PASS" if const_check.get("passed", True) else "WARNING",
+            "ssot_sources": [f"{s['type']}:{s['law']}" for s in matched_sources[:3]] if matched_sources else [],
         }
 
     except Exception as e:
