@@ -2099,9 +2099,9 @@ async def _call_lawmadilm(query: str, analysis: Dict) -> str:
             f"현재 당신은 '{leader_name}' 리더입니다. 전문 분야: {leader_specialty}. "
             f"국가법령정보센터(law.go.kr)의 현행 법령과 판례에 근거하여 답변하세요. "
             f"근거 법령 조문을 반드시 인용하고, 확실하지 않은 내용은 솔직히 밝히세요. "
-            f"3000자 이내로 답변하세요. /no_think"
+            f"500자 이내로 간결하게 답변하세요. /no_think"
         ),
-        "max_tokens": 2048,
+        "max_tokens": 512,
         "temperature": 0.6,
     }
 
