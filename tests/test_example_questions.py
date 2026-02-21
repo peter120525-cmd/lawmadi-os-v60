@@ -2,7 +2,7 @@
 """예시 질문 9개 → 리더 매칭 + 응답 길이 검증"""
 import asyncio, aiohttp, json, time, os
 
-BASE = 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app'
+BASE = os.getenv('LAWMADI_OS_API_URL', 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app')
 ADMIN_KEY = os.getenv('ADMIN_KEY', '')
 
 # 예시 질문 → 기대 리더

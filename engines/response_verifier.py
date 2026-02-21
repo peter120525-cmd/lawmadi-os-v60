@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
 Response Verification Engine
-Claude API를 사용하여 Gemini 응답의 SSOT 준수 여부를 검증
+Gemini API를 사용하여 응답의 SSOT 준수 여부를 검증
 """
 import os
 import logging
-import anthropic
+from google import genai
+from google.genai import types as genai_types
 from typing import Dict, Any, List, Optional
 import json
+from core.constants import DEFAULT_GEMINI_MODEL
 
 logger = logging.getLogger(__name__)
 
@@ -20,14 +22,15 @@ class ResponseVerifier:
     """
 
     def __init__(self):
-        self.api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        self.api_key = os.getenv("GEMINI_KEY", "")
         self.enabled = bool(self.api_key)
+        self.model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
 
         if self.enabled:
-            self.client = anthropic.Anthropic(api_key=self.api_key)
-            logger.info("✅ [Verifier] Claude API 초기화 완료")
+            self.client = genai.Client(api_key=self.api_key)
+            logger.info("✅ [Verifier] Gemini API 초기화 완료")
         else:
-            logger.warning("⚠️ [Verifier] ANTHROPIC_API_KEY 미설정 - 검증 비활성화")
+            logger.warning("⚠️ [Verifier] GEMINI_KEY 미설정 - 검증 비활성화")
 
     def verify_response(
         self,
@@ -57,28 +60,28 @@ class ResponseVerifier:
             return {
                 "result": "SKIP",
                 "issues": [],
-                "feedback": "검증기 비활성화됨 (ANTHROPIC_API_KEY 미설정)",
+                "feedback": "검증기 비활성화됨 (GEMINI_KEY 미설정)",
                 "ssot_compliance_score": 0
             }
 
         try:
-            # Claude에게 검증 요청
+            # Gemini에게 검증 요청
             verification_prompt = self._build_verification_prompt(
                 user_query, gemini_response, tools_used, tool_results
             )
 
-            response = self.client.messages.create(
-                model="claude-sonnet-4-5-20250929",
-                max_tokens=2000,
-                temperature=0,  # 일관된 검증을 위해 temperature=0
-                messages=[{
-                    "role": "user",
-                    "content": verification_prompt
-                }]
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=verification_prompt,
+                config=genai_types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.0,
+                    max_output_tokens=2000,
+                ),
             )
 
-            # Claude의 응답 파싱
-            verification_text = response.content[0].text
+            # Gemini의 응답 파싱
+            verification_text = response.text or ""
             result = self._parse_verification_result(verification_text)
 
             logger.info(f"✅ [Verifier] 검증 완료: {result['result']} (점수: {result['ssot_compliance_score']})")
@@ -193,7 +196,7 @@ JSON만 응답하십시오."""
         return prompt
 
     def _parse_verification_result(self, text: str) -> Dict[str, Any]:
-        """Claude의 검증 응답 파싱"""
+        """Gemini의 검증 응답 파싱"""
         try:
             # JSON 추출 (```json ``` 마크다운 제거)
             if "```json" in text:

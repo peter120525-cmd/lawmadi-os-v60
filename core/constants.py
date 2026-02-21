@@ -15,3 +15,6 @@ DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview"
 
 # LawmadiLM API 설정 (모든 티어 공통 — 주력 50%)
 LAWMADILM_API_URL = os.getenv("LAWMADILM_API_URL", "https://lawmadilm-api-938146962157.asia-northeast3.run.app")
+
+# Lawmadi OS 메인 API URL (테스트/모니터링/스크립트 공통)
+LAWMADI_OS_API_URL = os.getenv("LAWMADI_OS_API_URL", "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app")

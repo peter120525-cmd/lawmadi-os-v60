@@ -10,6 +10,7 @@ Lawmadi OS 200건 종합 테스트
 import asyncio
 import aiohttp
 import json
+import os
 import time
 import sys
 from dataclasses import dataclass, field
@@ -18,7 +19,7 @@ from typing import List, Dict, Optional
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 설정
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-BASE_URL = "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app"
+BASE_URL = os.getenv("LAWMADI_OS_API_URL", "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app")
 ASK_URL = f"{BASE_URL}/ask"
 STREAM_URL = f"{BASE_URL}/ask-stream"
 BATCH_SIZE = 3           # 동시 요청 수 (서버 부하 방지)

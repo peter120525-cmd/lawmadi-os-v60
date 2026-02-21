@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """보안 패치 후 20건 테스트 (5건 × 4 카테고리)"""
-import asyncio, aiohttp, json, time, sys
+import asyncio, aiohttp, json, time, sys, os
 
-BASE = 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app'
+BASE = os.getenv('LAWMADI_OS_API_URL', 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app')
 
 TESTS = {
     "정상": [

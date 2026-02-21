@@ -8,10 +8,12 @@ import requests
 import json
 import time
 import sys
+import os
 from datetime import datetime
 
-API_URL = "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app/ask"
-HEALTH_URL = "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app/health"
+_API_BASE = os.getenv("LAWMADI_OS_API_URL", "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app")
+API_URL = f"{_API_BASE}/ask"
+HEALTH_URL = f"{_API_BASE}/health"
 
 # ═══════════════════════════════════════════════════════
 # 100가지 시뮬레이션 시나리오

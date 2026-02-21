@@ -4,9 +4,9 @@ Lawmadi OS 40건 테스트 (각 카테고리 10건)
 - 10 정상질문 / 10 비정상질문 / 10 법률질문 / 10 비법률질문
 순차 실행 (1건씩) + /ask-stream SSE 검증
 """
-import asyncio, aiohttp, json, time, sys
+import asyncio, aiohttp, json, time, sys, os
 
-BASE = "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app"
+BASE = os.getenv("LAWMADI_OS_API_URL", "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app")
 TIMEOUT = 180
 
 NORMAL = [

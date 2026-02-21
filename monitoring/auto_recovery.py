@@ -38,7 +38,7 @@ class AutoRecovery:
         self.max_retry = recovery_config.get("max_retry", 3)
         self.retry_delay = recovery_config.get("retry_delay", 10)
         self.auto_restart = recovery_config.get("auto_restart", True)
-        self.api_url = config.get("lawmadi_api", "https://lawmadi-os-v60-uzqkp6kadq-du.a.run.app")
+        self.api_url = config.get("lawmadi_api", os.getenv("LAWMADI_OS_API_URL", "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app"))
         self.history: List[RecoveryAttempt] = []
 
     def attempt_recovery(self, anomalies: List) -> List[RecoveryAttempt]:

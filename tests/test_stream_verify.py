@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """이전 실패 질문 스트리밍 재검증"""
-import asyncio, aiohttp, json, time
+import asyncio, aiohttp, json, time, os
 
-BASE = 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app'
+BASE = os.getenv('LAWMADI_OS_API_URL', 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app')
 
 test_queries = [
     ('정상#01', '이혼 절차가 궁금합니다'),

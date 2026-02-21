@@ -27,7 +27,7 @@ from utils.helpers import (
 )
 from core.constitutional import validate_constitutional_compliance
 from core.classifier import (
-    _claude_analyze_query,
+    _gemini_analyze_query,
     _fallback_tier_classification,
     select_swarm_leader,
 )
@@ -282,7 +282,7 @@ async def ask(request: Request):
                 return {"trace_id": trace, "response": blocked_msg, "status": "BLOCKED"}
 
         # -------------------------------------------------
-        # 2) 🎯 TIER ROUTER: Claude 분석 → 티어 분류 → 리더 배정
+        # 2) 🎯 TIER ROUTER: Gemini 분석 → 티어 분류 → 리더 배정
         # -------------------------------------------------
         clevel = _RUNTIME.get("clevel_handler")
         clevel_decision = None
@@ -304,14 +304,14 @@ async def ask(request: Request):
         now_kst = _now_iso()
 
         # -------------------------------------------------
-        # 4) 📦 SSOT 캐시 매칭 → Claude 분석 → 리더 배정
+        # 4) 📦 SSOT 캐시 매칭 → Gemini 분석 → 리더 배정
         # -------------------------------------------------
         matched_sources = _match_ssot_sources_fn(query, top_k=5)
         if matched_sources:
             _src_strs = [s["type"] + ":" + s["law"] for s in matched_sources[:3]]
             logger.info(f"📦 [Cache] 매칭: {', '.join(_src_strs)}")
 
-        analysis = await _claude_analyze_query(query)
+        analysis = await _gemini_analyze_query(query)
         if not analysis:
             analysis = _fallback_tier_classification(query)
             logger.info(f"🔄 키워드 기반 fallback 분류: tier={analysis['tier']}")
@@ -1156,7 +1156,7 @@ async def ask_stream(request: Request):
 
 
 # =============================================================
-# ✅ 전문가용 답변 (Claude 검증 + 전문 용어 유지)
+# ✅ 전문가용 답변 (Gemini 검증 + 전문 용어 유지)
 # =============================================================
 
 @router.post("/ask-expert")
@@ -1175,7 +1175,7 @@ async def ask_expert(request: Request):
             return {"trace_id": trace, "status": "ERROR", "response": "query가 필요합니다."}
 
         # 질문 분석 (Stage 1)
-        analysis = await _claude_analyze_query(query)
+        analysis = await _gemini_analyze_query(query)
         if not analysis:
             analysis = _fallback_tier_classification(query)
 

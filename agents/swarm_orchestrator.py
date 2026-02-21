@@ -434,7 +434,7 @@ class SwarmOrchestrator:
                 logger.warning("⚠️ genai_client is None — 도메인 분류 스킵")
                 return None
             resp = gc.models.generate_content(
-                model=self.config.get("gemini_model", "gemini-3-flash-preview"),
+                model=self.config.get("gemini_model", _DEFAULT_MODEL),
                 contents=prompt,
                 config=genai_types.GenerateContentConfig(max_output_tokens=50, temperature=0.0),
             )
