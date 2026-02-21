@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>C-Level Executives - Lawmadi OS</title>
     <meta name="description" content="Meet the executive team leading Lawmadi OS. World-class experts in strategy, technology, and content.">
     <link rel="canonical" href="https://lawmadi-db.web.app/clevel-en.html" />
@@ -72,6 +72,7 @@
             display: flex; align-items: center; gap: 8px;
             padding: 12px 24px;
             background: rgba(255, 255, 255, 0.1);
+            -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 12px; color: white;
@@ -112,6 +113,7 @@
         .executive-card {
             position: relative;
             background: rgba(30, 41, 59, 0.8);
+            -webkit-backdrop-filter: blur(20px);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 24px; padding: 60px;
@@ -129,6 +131,11 @@
             transform: translateY(-10px);
             box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
             border-color: var(--accent-color);
+        }
+
+        .executive-card:active {
+            transform: scale(0.98);
+            transition: transform 0.1s;
         }
 
         .executive-card.cso { --accent-color: #3b82f6; }
@@ -275,7 +282,7 @@
 
         @media (max-width: 768px) {
             .container { padding: 20px 16px; }
-            .back-button { top: 12px; left: 12px; padding: 8px 14px; font-size: 0.85rem; }
+            .back-button { top: 12px; left: 12px; padding: 8px 14px; font-size: 0.85rem; min-height: 44px; }
             .header { margin-top: 40px; }
             .header h1 { font-size: 2rem; }
             .header p { font-size: 1rem; }
@@ -287,6 +294,10 @@
             .executive-profile { font-size: 1rem; }
             .executive-details { grid-template-columns: 1fr; }
             .stats-section { grid-template-columns: 1fr; padding: 20px; }
+            .executive-name-group {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
         }
     </style>
 </head>

@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>C-Level 임원진 - Lawmadi OS</title>
     <meta name="description" content="Lawmadi OS를 이끄는 최고 경영진. 전략·기술·콘텐츠 분야의 세계적 전문가들을 만나보세요.">
     <link rel="canonical" href="https://lawmadi-db.web.app/clevel.html" />
@@ -100,6 +100,7 @@
             gap: 8px;
             padding: 12px 24px;
             background: rgba(255, 255, 255, 0.1);
+            -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 12px;
@@ -156,6 +157,7 @@
         .executive-card {
             position: relative;
             background: rgba(30, 41, 59, 0.8);
+            -webkit-backdrop-filter: blur(20px);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 24px;
@@ -179,6 +181,11 @@
             transform: translateY(-10px);
             box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
             border-color: var(--accent-color);
+        }
+
+        .executive-card:active {
+            transform: scale(0.98);
+            transition: transform 0.1s;
         }
 
         .executive-card.cso { --accent-color: #3b82f6; }
@@ -430,6 +437,7 @@
                 left: 12px;
                 padding: 8px 14px;
                 font-size: 0.85rem;
+                min-height: 44px;
             }
 
             .header {
