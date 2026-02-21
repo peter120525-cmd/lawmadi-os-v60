@@ -47,7 +47,7 @@ ACTION_PLANS = {
         "title": "인증/권한 실패",
         "actions": [
             "1. GCP Secret Manager에서 API 키 만료 확인",
-            "2. GEMINI_KEY, ANTHROPIC_API_KEY 유효성 검증",
+            "2. GEMINI_KEY 유효성 검증",
             "3. MCP_API_KEY Bearer 토큰 확인",
             "4. Cloud Run IAM 권한 확인",
         ],
