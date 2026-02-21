@@ -3,6 +3,7 @@ import os
 import logging
 from google import genai
 from google.genai import types as genai_types
+from core.constants import DEFAULT_GEMINI_MODEL
 
 # IT 기술: 고가용성 로깅 및 트레이싱 시스템 설정
 logger = logging.getLogger("LawmadiOS.LawSelector")
@@ -65,7 +66,7 @@ class LawSelector:
         try:
             # Gemini 3의 Structured Output 추론 실행
             response = self.client.models.generate_content(
-                model="gemini-3-flash-preview",
+                model=os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
                 contents=prompt,
                 config=genai_types.GenerateContentConfig(
                     response_mime_type="application/json",

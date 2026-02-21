@@ -6,8 +6,7 @@
   },
   "required_env_vars": [
     "LAWGO_DRF_OC",
-    "GEMINI_KEY",
-    "ANTHROPIC_API_KEY"
+    "GEMINI_KEY"
   ],
   "ARCHITECTURE_LAYERS": {
     "L0_KERNEL": {

@@ -458,29 +458,30 @@ async def _step3_gemini_compose(query: str, analysis: Dict, draft: str,
 
 
 # =============================================================
-# Stage 4: Claude 보강
+# Stage 4: Gemini 보강
 # =============================================================
 
-async def _step4_claude_enhance(query: str, analysis: Dict,
+async def _step4_gemini_enhance(query: str, analysis: Dict,
                                  gemini_text: str, mode: str = "general") -> str:
-    """Stage 4: Claude 보강 -- Gemini 메인 응답의 구조/가독성/법률 정확성을 보강 (원본 유지 기반)"""
-    claude_client = _RUNTIME.get("claude_client")
-    if not claude_client:
+    """Stage 4: Gemini 보강 -- 메인 응답의 구조/가독성/법률 정확성을 보강 (원본 유지 기반)"""
+    gc = _RUNTIME.get("genai_client")
+    if not gc:
         return ""
 
-    # Gemini 응답이 너무 짧으면 보강 불필요
+    # 응답이 너무 짧으면 보강 불필요
     if len(gemini_text.strip()) < 100:
         return ""
 
     leader_name = analysis.get("leader_name", "마디")
     leader_specialty = analysis.get("leader_specialty", "통합")
+    model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
 
     try:
         if mode == "expert":
             max_tokens = 5000
             enhance_instruction = (
                 f"당신은 Lawmadi OS의 법률 품질 보강 엔진입니다.\n"
-                f"아래 Gemini 메인 응답을 **원본 구조와 내용을 유지하면서** 보강하세요.\n\n"
+                f"아래 메인 응답을 **원본 구조와 내용을 유지하면서** 보강하세요.\n\n"
                 f"[보강 규칙]\n"
                 f"1. 원본의 법률 근거(조문, 판례)를 그대로 유지하세요.\n"
                 f"2. 빠진 섹션이 있으면 추가하세요: 사안의 쟁점, 관련 법령, 판례 검토, 실무 대응 절차, 쟁점별 검토 의견, 결론 및 권고, 법률 근거\n"
@@ -492,7 +493,7 @@ async def _step4_claude_enhance(query: str, analysis: Dict,
             max_tokens = 3000
             enhance_instruction = (
                 f"당신은 Lawmadi OS의 법률 품질 보강 엔진입니다.\n"
-                f"아래 Gemini 메인 응답을 **원본 구조와 내용을 유지하면서** 보강하세요.\n\n"
+                f"아래 메인 응답을 **원본 구조와 내용을 유지하면서** 보강하세요.\n\n"
                 f"[보강 규칙]\n"
                 f"1. 원본의 법률 근거(조문, 판례)를 그대로 유지하세요.\n"
                 f"2. 빠진 섹션이 있으면 추가하세요: 결론부터 말씀드리면, 왜 그런가요?, 지금 바로 하실 수 있는 일, 그래도 해결이 안 되면, 혼자 하기 어려우시면, 지금 해야 할 행동 3가지, 법률 근거\n"
@@ -502,22 +503,21 @@ async def _step4_claude_enhance(query: str, analysis: Dict,
                 f"6. 담당: {leader_name} 리더 ({leader_specialty} 전문)\n"
             )
 
-        enhance_resp = claude_client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=max_tokens,
-            system=enhance_instruction,
-            messages=[{
-                "role": "user",
-                "content": f"사용자 질문: {query}\n\n[Gemini 메인 응답]\n{gemini_text}\n\n위 응답을 보강하세요."
-            }],
+        resp = gc.models.generate_content(
+            model=model_name,
+            contents=f"사용자 질문: {query}\n\n[메인 응답]\n{gemini_text}\n\n위 응답을 보강하세요.",
+            config={
+                "system_instruction": enhance_instruction,
+                "max_output_tokens": max_tokens,
+                "temperature": 0.3,
+            },
         )
-        enhanced = enhance_resp.content[0].text.strip()
+        enhanced = resp.text.strip() if resp.text else ""
         if not enhanced or len(enhanced) < len(gemini_text) * 0.5:
-            # 보강 결과가 원본보다 크게 짧으면 원본 유지
             return ""
         return enhanced
     except Exception as e:
-        logger.warning(f"[Stage 4] Claude 보강 실패 (Gemini 원본 유지): {e}")
+        logger.warning(f"[Stage 4] Gemini 보강 실패 (원본 유지): {e}")
         return ""
 
 
@@ -556,39 +556,42 @@ def _drf_verify_law_refs(text: str) -> list:
 # Stage 5: 헌법 검증 + 법률 품질 검증 + 교정
 # =============================================================
 
-async def _step5_claude_verify(query: str, response_text: str, drf_results: list = None) -> Dict[str, Any]:
-    """Stage 5: 헌법 검증 + 법률 품질 검증 + 교정 (max_tokens=300)"""
-    claude_client = _RUNTIME.get("claude_client")
-    if not claude_client:
-        return {"passed": False, "warning": "Claude 검증 엔진 미초기화 (Fail-Closed)", "corrected_text": None}
+async def _step5_gemini_verify(query: str, response_text: str, drf_results: list = None) -> Dict[str, Any]:
+    """Stage 5: 헌법 검증 + 법률 품질 검증 + 교정 (Gemini)"""
+    gc = _RUNTIME.get("genai_client")
+    if not gc:
+        return {"passed": False, "warning": "Gemini 검증 엔진 미초기화 (Fail-Closed)", "corrected_text": None}
 
     if drf_results is None:
         drf_results = []
 
+    model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+
     try:
-        resp = claude_client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=300,
-            system=(
-                "당신은 헌법 준수 및 법률 품질 검증 엔진입니다. 아래 법률 응답을 검증하세요.\n"
-                "검증 항목:\n"
-                "1. 헌법 준수: 기본권 침해, 위헌 판례 인용 여부\n"
-                "2. 법률 정확성: 조문번호 오류, 폐지/개정 법률 인용 여부\n"
-                "3. 실무 유용성: 구체적 행동 가이드 포함 여부\n\n"
-                f"[DRF 검증 결과]\n{json.dumps(drf_results, ensure_ascii=False)}\n\n"
-                "JSON으로만 응답:\n"
-                '{"passed": true/false, "constitutional": "PASS/FAIL", '
-                '"accuracy": "PASS/FAIL", "usefulness": "PASS/FAIL", '
-                '"warning": "경고 메시지 또는 null"}'
-            ),
-            messages=[{
-                "role": "user",
-                "content": f"질문: {query}\n\n응답:\n{response_text[:3000]}"
-            }],
+        verify_instruction = (
+            "당신은 헌법 준수 및 법률 품질 검증 엔진입니다. 아래 법률 응답을 검증하세요.\n"
+            "검증 항목:\n"
+            "1. 헌법 준수: 기본권 침해, 위헌 판례 인용 여부\n"
+            "2. 법률 정확성: 조문번호 오류, 폐지/개정 법률 인용 여부\n"
+            "3. 실무 유용성: 구체적 행동 가이드 포함 여부\n\n"
+            f"[DRF 검증 결과]\n{json.dumps(drf_results, ensure_ascii=False)}\n\n"
+            "JSON으로만 응답:\n"
+            '{"passed": true/false, "constitutional": "PASS/FAIL", '
+            '"accuracy": "PASS/FAIL", "usefulness": "PASS/FAIL", '
+            '"warning": "경고 메시지 또는 null"}'
         )
-        text = resp.content[0].text.strip()
+        resp = gc.models.generate_content(
+            model=model_name,
+            contents=f"질문: {query}\n\n응답:\n{response_text[:3000]}",
+            config={
+                "system_instruction": verify_instruction,
+                "max_output_tokens": 300,
+                "temperature": 0.1,
+            },
+        )
+        text = resp.text.strip() if resp.text else ""
         parsed = _safe_extract_json(text)
-        result = {"passed": False, "warning": "Claude 검증 JSON 파싱 실패 (Fail-Closed)", "corrected_text": None}
+        result = {"passed": False, "warning": "Gemini 검증 JSON 파싱 실패 (Fail-Closed)", "corrected_text": None}
         if parsed:
             result = parsed
             result.setdefault("corrected_text", None)
@@ -596,16 +599,16 @@ async def _step5_claude_verify(query: str, response_text: str, drf_results: list
         # FAIL 시 교정 (차단 아님)
         if not result.get("passed", False):
             try:
-                corrected = claude_client.messages.create(
-                    model="claude-sonnet-4-20250514",
-                    max_tokens=300,
-                    system="헌법 위배 사항을 수정하여 교정된 답변을 출력하세요.",
-                    messages=[{
-                        "role": "user",
-                        "content": f"원본: {response_text}\n위반사항: {result.get('warning')}"
-                    }],
+                corrected = gc.models.generate_content(
+                    model=model_name,
+                    contents=f"원본: {response_text}\n위반사항: {result.get('warning')}",
+                    config={
+                        "system_instruction": "헌법 위배 사항을 수정하여 교정된 답변을 출력하세요.",
+                        "max_output_tokens": 300,
+                        "temperature": 0.1,
+                    },
                 )
-                result["corrected_text"] = corrected.content[0].text.strip()
+                result["corrected_text"] = corrected.text.strip() if corrected.text else None
                 logger.info("[Stage 5] 헌법 위반 교정 완료")
             except Exception as ce:
                 logger.warning(f"[Stage 5] 헌법 교정 실패: {ce}")
@@ -614,7 +617,7 @@ async def _step5_claude_verify(query: str, response_text: str, drf_results: list
     except Exception as e:
         logger.warning(f"[Stage 5] 헌법 검증 실패 (Fail-Closed): {e}")
 
-    return {"passed": False, "warning": "Claude 검증 예외 발생 (Fail-Closed)", "corrected_text": None}
+    return {"passed": False, "warning": "Gemini 검증 예외 발생 (Fail-Closed)", "corrected_text": None}
 
 
 # =============================================================
@@ -625,52 +628,77 @@ async def _run_legal_pipeline(query: str, analysis: Dict, tools: list,
                                gemini_history: list, now_kst: str,
                                ssot_available: bool, lang: str = "",
                                mode: str = "general") -> str:
-    """5-Stage Legal Pipeline: LawmadiLM 초안 -> Gemini 작성 -> Claude 보강 -> Claude 검증"""
+    """5-Stage Legal Pipeline: LawmadiLM 초안 -> Gemini 작성 -> Gemini 보강 -> Gemini 검증
+    SSOT 위반 시 Stage 2부터 최대 3회 재시도."""
     leader_name = analysis.get("leader_name", "마디")
     leader_specialty = analysis.get("leader_specialty", "통합")
 
-    # -- Stage 2: LawmadiLM 법률 초안 --
-    draft = ""
-    try:
-        logger.info("[Stage 2/5] LawmadiLM 법률 초안 생성")
-        draft = await _call_lawmadilm(query, analysis)
-        draft = _postprocess_lawmadilm(draft, query)  # 후처리
-        if not draft:
-            logger.warning("[Stage 2] 후처리 -> None -> Gemini 전담")
-            draft = ""
-    except Exception as e:
-        logger.warning(f"[Stage 2] LawmadiLM 실패 ({e}) -> Stage 3에서 Gemini 단독 처리")
+    MAX_RETRIES = 3
+    final_text = ""
+    verification = {}
+
+    for attempt in range(1, MAX_RETRIES + 1):
+        if attempt > 1:
+            logger.warning(f"🔄 [SSOT 재시도 {attempt}/{MAX_RETRIES}] Stage 2부터 재시작")
+
+        # -- Stage 2: LawmadiLM 법률 초안 --
         draft = ""
+        try:
+            logger.info(f"[Stage 2/5] LawmadiLM 법률 초안 생성 (시도 {attempt}/{MAX_RETRIES})")
+            draft = await _call_lawmadilm(query, analysis)
+            draft = _postprocess_lawmadilm(draft, query)
+            if not draft:
+                logger.warning("[Stage 2] 후처리 -> None -> Gemini 전담")
+                draft = ""
+        except Exception as e:
+            logger.warning(f"[Stage 2] LawmadiLM 실패 ({e}) -> Stage 3에서 Gemini 단독 처리")
+            draft = ""
 
-    # -- Stage 3: Gemini Flash 콘텐츠 작성 --
-    logger.info(f"[Stage 3/5] Gemini Flash 콘텐츠 작성 (draft={'있음' if draft else '없음'})")
-    gemini_text = await _step3_gemini_compose(
-        query, analysis, draft, tools, gemini_history, now_kst, ssot_available, lang=lang, mode=mode
-    )
-
-    # 응답이 너무 짧으면 draft 없이 재시도
-    if len(gemini_text.strip()) < 50 and draft:
-        logger.warning(f"[Stage 3] 응답 너무 짧음 ({len(gemini_text)}자), draft 없이 재시도")
+        # -- Stage 3: Gemini Flash 콘텐츠 작성 --
+        logger.info(f"[Stage 3/5] Gemini Flash 콘텐츠 작성 (draft={'있음' if draft else '없음'})")
         gemini_text = await _step3_gemini_compose(
-            query, analysis, "", tools, gemini_history, now_kst, ssot_available, lang=lang, mode=mode
+            query, analysis, draft, tools, gemini_history, now_kst, ssot_available, lang=lang, mode=mode
         )
 
-    # -- Stage 4: Claude 모드별 답변 생성 --
-    logger.info(f"[Stage 4/5] Claude 모드별 답변 생성 (mode={mode})")
-    enhanced_text = await _step4_claude_enhance(query, analysis, gemini_text, mode=mode)
+        # 응답이 너무 짧으면 draft 없이 재시도
+        if len(gemini_text.strip()) < 50 and draft:
+            logger.warning(f"[Stage 3] 응답 너무 짧음 ({len(gemini_text)}자), draft 없이 재시도")
+            gemini_text = await _step3_gemini_compose(
+                query, analysis, "", tools, gemini_history, now_kst, ssot_available, lang=lang, mode=mode
+            )
 
-    if enhanced_text:
-        final_text = enhanced_text  # 대체 (append 아님)
-    else:
-        final_text = gemini_text    # 실패 시 원본 유지
+        # -- Stage 4: Gemini 모드별 답변 보강 --
+        logger.info(f"[Stage 4/5] Gemini 모드별 답변 보강 (mode={mode})")
+        enhanced_text = await _step4_gemini_enhance(query, analysis, gemini_text, mode=mode)
 
-    # -- Stage 5: DRF 검증 + 헌법 검증 + 교정 --
-    logger.info("[Stage 5/5] DRF 검증 + 헌법 검증 + 교정")
-    drf_results = _drf_verify_law_refs(final_text)
-    verification = await _step5_claude_verify(query, final_text, drf_results)
+        if enhanced_text:
+            final_text = enhanced_text
+        else:
+            final_text = gemini_text
 
+        # -- Stage 5: DRF 검증 + 헌법 검증 + 교정 --
+        logger.info(f"[Stage 5/5] DRF 검증 + 헌법 검증 + 교정 (시도 {attempt}/{MAX_RETRIES})")
+        drf_results = _drf_verify_law_refs(final_text)
+        verification = await _step5_gemini_verify(query, final_text, drf_results)
+
+        # 검증 통과 시 루프 종료
+        if verification.get("passed", False):
+            logger.info(f"✅ [Stage 5] 검증 통과 (시도 {attempt}/{MAX_RETRIES})")
+            break
+
+        # SSOT 위반 (accuracy FAIL) → 재시도 대상
+        accuracy = verification.get("accuracy", "PASS")
+        if accuracy == "FAIL" and attempt < MAX_RETRIES:
+            logger.warning(f"⚠️ [Stage 5] SSOT 위반 감지 (accuracy=FAIL) → Stage 2부터 재시도 ({attempt}/{MAX_RETRIES})")
+            continue
+
+        # 헌법 위반 등 다른 사유이거나 마지막 시도 → 교정 후 종료
+        logger.warning(f"[Stage 5] 검증 미통과 (시도 {attempt}/{MAX_RETRIES}): {verification.get('warning', '')}")
+        break
+
+    # 최종 검증 결과 처리
     if not verification.get("passed", False):
-        logger.warning(f"[Stage 5] 헌법 검증 경고: {verification}")
+        logger.warning(f"[Stage 5] 최종 검증 경고: {verification}")
         if verification.get("corrected_text"):
             final_text = verification["corrected_text"]
             final_text += "\n\n> 이 답변은 헌법 검증 후 교정되었습니다. 전문가 확인을 권장합니다."

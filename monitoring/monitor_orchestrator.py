@@ -51,7 +51,7 @@ def load_config(config_path: str = None) -> Dict[str, Any]:
 def get_default_config() -> Dict[str, Any]:
     """기본 설정"""
     return {
-        "lawmadi_api": "https://lawmadi-os-v60-uzqkp6kadq-du.a.run.app",
+        "lawmadi_api": os.getenv("LAWMADI_OS_API_URL", "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app"),
         "interval_seconds": 300,
         "timeout_seconds": 10,
         "alert_threshold": {

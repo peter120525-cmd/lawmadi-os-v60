@@ -4,13 +4,15 @@ main.py에서 분리됨.
 
 사용법:
     from core.classifier import set_runtime, set_leader_registry
-    from core.classifier import _claude_analyze_query, _fallback_tier_classification, select_swarm_leader
+    from core.classifier import _gemini_analyze_query, _fallback_tier_classification, select_swarm_leader
     set_runtime(RUNTIME)
     set_leader_registry(LEADER_REGISTRY)
 """
+import os
 import logging
 from typing import Any, Dict, List, Optional
 
+from core.constants import DEFAULT_GEMINI_MODEL
 from utils.helpers import _safe_extract_json
 
 logger = logging.getLogger("LawmadiOS.Classifier")
@@ -178,14 +180,14 @@ def select_swarm_leader(query: str, leaders: Dict) -> Dict:
 
 
 # =============================================================
-# [TIER ROUTER] Claude 분석 -> 티어 분류 -> 리더 배정
-# Gemini 98%, Claude 2% 구조
-# T1(90%): Gemini Flash 단독 | T2(8%): Gemini+Claude 보강 | T3(2%): Claude 직접(법률충돌/문서작성)
+# [TIER ROUTER] Gemini 분석 -> 티어 분류 -> 리더 배정
+# Gemini 100% 구조
+# T1(90%): Gemini Flash 단독 | T2(8%): Gemini 보강 | T3(2%): Gemini 심층(법률충돌/문서작성)
 # 모듈화: T1을 나중에 LawmadiLM으로 교체 가능
 # =============================================================
 
-def _build_leader_summary_for_claude() -> str:
-    """리더 레지스트리에서 Claude 분석용 요약 생성"""
+def _build_leader_summary_for_gemini() -> str:
+    """리더 레지스트리에서 Gemini 분석용 요약 생성"""
     lines = []
     reg = _LEADER_REGISTRY
     if not reg:
@@ -230,38 +232,42 @@ TIER_ANALYSIS_PROMPT = """당신은 Lawmadi OS의 질문 분류 엔진입니다.
 {{"tier": 1, "complexity": "simple", "is_document": false, "leader_id": "L08", "leader_name": "온유", "leader_specialty": "임대차", "summary": "전세 보증금 반환 문제", "is_legal": true}}"""
 
 
-async def _claude_analyze_query(query: str) -> Optional[Dict[str, Any]]:
-    """Claude로 질문 분석/분류/리더 배정 (답변 X)"""
-    claude_client = _RUNTIME.get("claude_client")
-    if not claude_client:
-        logger.warning("Claude 클라이언트 없음 -> 키워드 기반 fallback")
+async def _gemini_analyze_query(query: str) -> Optional[Dict[str, Any]]:
+    """Gemini로 질문 분석/분류/리더 배정 (답변 X)"""
+    genai_client = _RUNTIME.get("genai_client")
+    if not genai_client:
+        logger.warning("Gemini 클라이언트 없음 -> 키워드 기반 fallback")
         return None
 
-    leader_summary = _build_leader_summary_for_claude()
+    leader_summary = _build_leader_summary_for_gemini()
+    model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
     try:
-        resp = claude_client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=300,
-            messages=[{"role": "user", "content": f"질문: {query}"}],
-            system=TIER_ANALYSIS_PROMPT.format(leader_summary=leader_summary),
+        resp = genai_client.models.generate_content(
+            model=model_name,
+            contents=f"질문: {query}",
+            config={
+                "system_instruction": TIER_ANALYSIS_PROMPT.format(leader_summary=leader_summary),
+                "max_output_tokens": 300,
+                "temperature": 0.1,
+            },
         )
-        text = resp.content[0].text.strip()
+        text = resp.text.strip() if resp.text else ""
         # JSON 추출 (중첩 JSON 및 코드블록 지원)
         result = _safe_extract_json(text)
         if result:
-            logger.info(f"[Tier Router] Claude 분석: tier={result.get('tier')}, "
+            logger.info(f"[Tier Router] Gemini 분석: tier={result.get('tier')}, "
                        f"leader={result.get('leader_name')}({result.get('leader_id')}), "
                        f"complexity={result.get('complexity')}, is_document={result.get('is_document')}")
             return result
-        logger.warning(f"Claude 분석 JSON 파싱 실패: {text[:200]}")
+        logger.warning(f"Gemini 분석 JSON 파싱 실패: {text[:200]}")
         return None
     except Exception as e:
-        logger.warning(f"Claude 분석 실패: {e}")
+        logger.warning(f"Gemini 분석 실패: {e}")
         return None
 
 
 def _fallback_tier_classification(query: str) -> Dict[str, Any]:
-    """Claude 실패 시 키워드 기반 fallback 분류"""
+    """Gemini 실패 시 키워드 기반 fallback 분류"""
     leader = select_swarm_leader(query, _LEADER_REGISTRY)
     leader_name = leader.get("name", "마디")
     leader_specialty = leader.get("specialty", "시스템 총괄")

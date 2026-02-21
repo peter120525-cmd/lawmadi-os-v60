@@ -18,25 +18,25 @@ from core.constitutional import validate_constitutional_compliance as cc_validat
 # 1) Fail-Closed 동작 검증
 # ===========================================================================
 class TestFailClosed:
-    """Claude 검증 엔진 미초기화 시 passed=False 반환 확인"""
+    """Gemini 검증 엔진 미초기화 시 passed=False 반환 확인"""
 
     def test_step5_returns_fail_when_no_client(self):
-        """_step5_claude_verify에서 Claude 없을 때 passed=False"""
+        """_step5_gemini_verify에서 Gemini 없을 때 passed=False"""
         import main
-        original = main.RUNTIME.get("claude_client")
+        original = main.RUNTIME.get("genai_client")
         try:
-            main.RUNTIME["claude_client"] = None
+            main.RUNTIME["genai_client"] = None
             import asyncio
             result = asyncio.get_event_loop().run_until_complete(
-                main._step5_claude_verify("테스트 질문", "테스트 응답")
+                main._step5_gemini_verify("테스트 질문", "테스트 응답")
             )
             assert result["passed"] is False
             assert "Fail-Closed" in (result.get("warning") or "")
         finally:
             if original is not None:
-                main.RUNTIME["claude_client"] = original
+                main.RUNTIME["genai_client"] = original
             else:
-                main.RUNTIME.pop("claude_client", None)
+                main.RUNTIME.pop("genai_client", None)
 
     def test_default_passed_is_false(self):
         """JSON 파싱 실패 시에도 passed 기본값은 False"""

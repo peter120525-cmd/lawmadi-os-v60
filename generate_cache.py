@@ -5,7 +5,7 @@
 """
 import json, sys, time, os, requests
 
-API_URL = sys.argv[1] if len(sys.argv) > 1 else "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app"
+API_URL = sys.argv[1] if len(sys.argv) > 1 else os.getenv("LAWMADI_OS_API_URL", "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app")
 ADMIN_KEY = os.getenv("ADMIN_KEY", "")
 
 # 63명 대표 질문 (CSO, CTO, CCO + L01~L60)

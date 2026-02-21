@@ -55,7 +55,7 @@ import aiofiles
 import shutil
 from pathlib import Path
 import mimetypes
-import anthropic  # Tier routing: Claude 분석/검증용
+# anthropic 제거: Tier routing/검증을 Gemini로 통합
 import httpx      # LawmadiLM API 호출용
 
 # =============================================================
@@ -117,18 +117,18 @@ from tools.drf_tools import (
 # =============================================================
 # [Phase 6] Import extracted modules
 # =============================================================
-from core.constants import OS_VERSION, DEFAULT_GEMINI_MODEL, LAWMADILM_API_URL
+from core.constants import OS_VERSION, DEFAULT_GEMINI_MODEL, LAWMADILM_API_URL, LAWMADI_OS_API_URL
 from core.classifier import (
     set_runtime as _set_classifier_runtime,
     set_leader_registry as _set_classifier_leader_registry,
     _fallback_tier_classification,
-    _claude_analyze_query,
+    _gemini_analyze_query,
     select_swarm_leader,
 )
 from core.pipeline import (
     set_runtime as _set_pipeline_runtime,
     set_law_cache as _set_pipeline_law_cache,
-    _step5_claude_verify,
+    _step5_gemini_verify,
     _run_legal_pipeline,
 )
 from prompts.system_instructions import build_system_instruction as _build_system_instruction
@@ -269,7 +269,7 @@ async def security_headers_middleware(request: Request, call_next):
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' https: data:; "
-        "connect-src 'self' https://lawmadi-os-v60-938146962157.asia-northeast3.run.app https://www.google-analytics.com https://region1.google-analytics.com; "
+        f"connect-src 'self' {LAWMADI_OS_API_URL} https://www.google-analytics.com https://region1.google-analytics.com; "
         "frame-ancestors 'none'; "
         "object-src 'none'; "
         "base-uri 'self'"
@@ -1219,18 +1219,9 @@ async def startup():
     # 9️⃣ RUNTIME SSOT 등록
     # --------------------------------------------------
     # --------------------------------------------------
-    # 9.5️⃣ Claude Client (Tier Router용)
+    # 9.5️⃣ Tier Router/검증은 Gemini로 통합 (Claude 제거)
     # --------------------------------------------------
-    claude_client = None
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
-    if anthropic_key:
-        try:
-            claude_client = anthropic.Anthropic(api_key=anthropic_key)
-            logger.info("✅ Claude client initialized (Tier Router)")
-        except Exception as e:
-            logger.warning(f"🟡 Claude client degraded: {e}")
-    else:
-        logger.warning("⚠️ ANTHROPIC_API_KEY 미설정: Tier Router가 키워드 기반 fallback으로 동작")
+    logger.info("✅ Tier Router/검증 엔진: Gemini 통합 사용")
 
     RUNTIME.update({
         "config": config,
@@ -1241,7 +1232,6 @@ async def startup():
         "swarm_orchestrator": swarm_orchestrator,
         "clevel_handler": clevel_handler,
         "genai_client": genai_client,
-        "claude_client": claude_client,
     })
 
     # [Item 7] 분리된 DRF 도구 모듈에 RUNTIME 주입

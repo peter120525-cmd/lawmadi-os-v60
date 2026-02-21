@@ -55,10 +55,6 @@ class TestEnvironmentVariables:
         key = os.getenv("LAWGO_DRF_OC", "")
         assert key, "LAWGO_DRF_OC 미설정"
 
-    def test_anthropic_api_key(self):
-        key = os.getenv("ANTHROPIC_API_KEY", "")
-        assert key, "ANTHROPIC_API_KEY 미설정"
-
     def test_database_url(self):
         url = os.getenv("DATABASE_URL", "")
         assert url, "DATABASE_URL 미설정"
@@ -189,8 +185,9 @@ class TestGeminiAPI:
         from google import genai as genai_sdk
         client = genai_sdk.Client(api_key=key)
         try:
+            from core.constants import DEFAULT_GEMINI_MODEL
             response = client.models.generate_content(
-                model="gemini-3-flash-preview",
+                model=os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
                 contents="Hello"
             )
             assert response.text

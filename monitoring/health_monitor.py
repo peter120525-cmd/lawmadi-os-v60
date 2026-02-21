@@ -30,7 +30,7 @@ class HealthMonitor:
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.api_url = config.get("lawmadi_api", "https://lawmadi-os-v60-uzqkp6kadq-du.a.run.app")
+        self.api_url = config.get("lawmadi_api", os.getenv("LAWMADI_OS_API_URL", "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app"))
         self.drf_oc = os.getenv("LAWGO_DRF_OC", "")
         self.thresholds = config.get("alert_threshold", {})
         self.timeout = config.get("timeout_seconds", 10)
