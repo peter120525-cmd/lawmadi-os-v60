@@ -6843,6 +6843,8 @@
                     window.location.href = 'leaders.html';
                 } else if (action === 'clevel') {
                     window.location.href = 'clevel.html';
+                } else if (action === 'about') {
+                    window.location.href = 'about.html';
                 } else if (action === 'favorites') {
                     UI.toggleFavorites();
                     // 저장 탭은 토글이므로 chat 활성 유지
@@ -6880,6 +6882,10 @@
         <button class="tab-item" data-tab="clevel" id="tabClevel" role="tab" aria-selected="false" aria-label="C-Level 임원">
             <span class="material-symbols-outlined" aria-hidden="true">groups</span>
             <span class="tab-label">임원</span>
+        </button>
+        <button class="tab-item" data-tab="about" id="tabAbout" role="tab" aria-selected="false" aria-label="Lawmadi OS 소개">
+            <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            <span class="tab-label">소개</span>
         </button>
         <button class="tab-item" data-tab="favorites" id="tabFavorites" role="tab" aria-selected="false" aria-label="저장된 답변">
             <span class="material-symbols-outlined" aria-hidden="true">bookmark</span>
