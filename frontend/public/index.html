@@ -294,10 +294,10 @@
             align-items: center;
         }
 
-        /* 데스크탑: 예시질문 중앙 배치 */
+        /* 데스크탑: 예시질문 중앙 배치 — 여백 + 꽉 차게 */
         @media (min-width: 769px) {
             .content-viewport {
-                padding: 20px 32px;
+                padding: 20px 40px;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
@@ -305,12 +305,12 @@
             }
             .examples-section {
                 margin: 0 !important; padding: 0 !important;
-                max-width: 720px;
+                max-width: 960px;
                 width: 100%;
             }
             .examples-section h3 { font-size: 1.5rem; margin-bottom: 16px; }
-            .example-card-grid { gap: 14px; }
-            .example-card { padding: 16px 20px; border-radius: 16px; gap: 12px; }
+            .example-card-grid { gap: 16px; }
+            .example-card { padding: 18px 22px; border-radius: 16px; gap: 12px; }
             .example-card-icon { font-size: 1.85rem; }
             .example-card-title { font-size: 1.32rem; }
             .example-card-desc { font-size: 1.18rem; }
