@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>리더 프로필 - Lawmadi OS</title>
+    <meta name="description" content="Lawmadi OS 전문 리더의 상세 프로필을 확인하세요.">
+    <link rel="canonical" href="https://lawmadi-db.web.app/leader-profile.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="리더 프로필 - Lawmadi OS" />
+    <meta property="og:description" content="Lawmadi OS 전문 리더의 상세 프로필을 확인하세요." />
+    <meta property="og:image" content="https://lawmadi-db.web.app/og-image.png" />
+    <meta property="og:url" content="https://lawmadi-db.web.app/leader-profile.html" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #2563eb;
+            --gold: #f59e0b;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --accent: #3b82f6;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* Animated Background */
+        .animated-bg {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .floating-shape {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.04;
+            animation: float 25s infinite ease-in-out;
+        }
+
+        .shape1 { width: 350px; height: 350px; background: #3b82f6; top: 8%; left: 8%; animation-delay: 0s; }
+        .shape2 { width: 250px; height: 250px; background: #f59e0b; top: 55%; right: 8%; animation-delay: 7s; }
+        .shape3 { width: 300px; height: 300px; background: #8b5cf6; bottom: 8%; left: 45%; animation-delay: 14s; }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(30px, -30px) rotate(90deg); }
+            50% { transform: translate(-20px, 20px) rotate(180deg); }
+            75% { transform: translate(20px, 30px) rotate(270deg); }
+        }
+
+        /* Hero Section */
+        .hero-section {
+            position: relative;
+            z-index: 1;
+            min-height: 420px;
+            display: flex;
+            align-items: flex-end;
+            overflow: hidden;
+        }
+
+        .hero-banner {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            opacity: 0.35;
+            filter: blur(2px);
+        }
+
+        .hero-gradient {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: linear-gradient(180deg,
+                rgba(15,23,42,0.3) 0%,
+                rgba(15,23,42,0.7) 60%,
+                rgba(15,23,42,1) 100%);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 24px 48px;
+            width: 100%;
+            display: flex;
+            align-items: flex-end;
+            gap: 32px;
+        }
+
+        .hero-profile-img {
+            width: 160px;
+            height: 160px;
+            border-radius: 20px;
+            object-fit: cover;
+            object-position: center top;
+            border: 3px solid rgba(255,255,255,0.2);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+            flex-shrink: 0;
+        }
+
+        .hero-text { flex: 1; }
+
+        .hero-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: var(--accent);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .hero-name {
+            font-size: 2.8rem;
+            font-weight: 900;
+            color: white;
+            letter-spacing: -1px;
+            margin-bottom: 4px;
+        }
+
+        .hero-role {
+            font-size: 1.1rem;
+            color: var(--accent);
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .hero-statement {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            font-weight: 500;
+        }
+
+        /* Back Button */
+        .back-button {
+            position: fixed;
+            top: 20px; left: 20px;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: rgba(15, 23, 42, 0.8);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 12px;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .back-button:hover {
+            background: rgba(30, 41, 59, 0.9);
+            transform: translateX(-4px);
+        }
+
+        /* Content Area */
+        .content {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+
+        /* Section Styles */
+        .profile-section {
+            margin-bottom: 48px;
+            opacity: 0;
+            transform: translateY(24px);
+            transition: all 0.6s ease;
+        }
+
+        .profile-section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .section-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 16px;
+        }
+
+        .section-label .material-symbols-outlined {
+            font-size: 1.1rem;
+        }
+
+        .section-card {
+            background: rgba(30, 41, 59, 0.7);
+            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 36px;
+        }
+
+        .section-card p {
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+
+        /* Identity Section */
+        .identity-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .identity-box {
+            background: rgba(0,0,0,0.2);
+            border-radius: 16px;
+            padding: 28px;
+            border-left: 4px solid var(--accent);
+        }
+
+        .identity-box h4 {
+            font-size: 0.85rem;
+            color: var(--accent);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .identity-box p {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* What We Solve */
+        .solve-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .solve-item {
+            background: rgba(0,0,0,0.2);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+        }
+
+        .solve-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 1.3rem;
+        }
+
+        .solve-item:nth-child(1) .solve-icon { background: rgba(239,68,68,0.15); color: #ef4444; }
+        .solve-item:nth-child(2) .solve-icon { background: rgba(245,158,11,0.15); color: #f59e0b; }
+        .solve-item:nth-child(3) .solve-icon { background: rgba(16,185,129,0.15); color: #10b981; }
+
+        .solve-item h4 {
+            font-size: 0.9rem;
+            color: white;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .solve-item p {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Expertise Grid */
+        .expertise-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .expertise-item {
+            background: rgba(0,0,0,0.2);
+            border-radius: 14px;
+            padding: 24px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            transition: all 0.3s;
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+
+        .expertise-item:hover {
+            background: rgba(0,0,0,0.3);
+            border-color: rgba(59,130,246,0.2);
+        }
+
+        .expertise-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            background: rgba(59,130,246,0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: var(--accent);
+        }
+
+        .expertise-icon .material-symbols-outlined {
+            font-size: 1.3rem;
+        }
+
+        .expertise-label {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 4px;
+        }
+
+        .expertise-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* Philosophy / Impact / Vision - text cards */
+        .text-card p {
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            line-height: 1.85;
+        }
+
+        /* Vision special */
+        .vision-card {
+            background: linear-gradient(135deg, rgba(59,130,246,0.1) 0%, rgba(139,92,246,0.1) 100%);
+            border-color: rgba(59,130,246,0.2);
+        }
+
+        .vision-card p {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        /* CTA */
+        .cta-section {
+            text-align: center;
+            padding: 48px 24px;
+        }
+
+        .cta-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 16px 36px;
+            background: var(--accent);
+            border: none;
+            border-radius: 14px;
+            color: white;
+            font-size: 1.05rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.3s;
+            box-shadow: 0 8px 24px rgba(59,130,246,0.3);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(59,130,246,0.4);
+        }
+
+        /* Loading / Error */
+        .loading-state, .error-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 60vh;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading-spinner {
+            width: 48px; height: 48px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-section { min-height: 360px; }
+
+            .hero-content {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 20px;
+                padding: 32px 20px 40px;
+            }
+
+            .hero-profile-img {
+                width: 120px;
+                height: 120px;
+            }
+
+            .hero-name { font-size: 2rem; }
+            .hero-role { font-size: 1rem; }
+            .hero-statement { font-size: 1rem; }
+
+            .back-button {
+                top: 12px; left: 12px;
+                padding: 8px 16px;
+                font-size: 0.85rem;
+                min-height: 44px;
+            }
+
+            .content { padding: 0 16px 60px; }
+
+            .section-card { padding: 24px; }
+
+            .identity-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .expertise-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .solve-item { flex-direction: column; gap: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="animated-bg">
+        <div class="floating-shape shape1"></div>
+        <div class="floating-shape shape2"></div>
+        <div class="floating-shape shape3"></div>
+    </div>
+
+    <a href="leaders.html" class="back-button">
+        <span class="material-symbols-outlined">arrow_back</span>
+        리더 목록
+    </a>
+
+    <!-- Loading State -->
+    <div class="loading-state" id="loadingState">
+        <div class="loading-spinner"></div>
+        <p style="color: var(--text-secondary);">프로필을 불러오는 중...</p>
+    </div>
+
+    <!-- Error State -->
+    <div class="error-state" id="errorState" style="display:none;">
+        <span class="material-symbols-outlined" style="font-size:4rem; color:var(--text-secondary); margin-bottom:16px;">error_outline</span>
+        <h2 style="margin-bottom:8px;">프로필을 찾을 수 없습니다</h2>
+        <p style="color:var(--text-secondary); margin-bottom:24px;">잘못된 경로이거나 존재하지 않는 리더입니다.</p>
+        <a href="leaders.html" class="cta-button">리더 목록으로 돌아가기</a>
+    </div>
+
+    <!-- Main Profile Content (hidden until loaded) -->
+    <div id="profileContent" style="display:none;">
+        <!-- Hero -->
+        <section class="hero-section" id="heroSection">
+            <img class="hero-banner" id="heroBanner" src="" alt="">
+            <div class="hero-gradient"></div>
+            <div class="hero-content">
+                <img class="hero-profile-img" id="heroProfileImg" src="" alt="">
+                <div class="hero-text">
+                    <div class="hero-badge" id="heroBadge"></div>
+                    <h1 class="hero-name" id="heroName"></h1>
+                    <div class="hero-role" id="heroRole"></div>
+                    <p class="hero-statement" id="heroStatement"></p>
+                </div>
+            </div>
+        </section>
+
+        <div class="content">
+            <!-- Identity -->
+            <section class="profile-section" id="sectionIdentity">
+                <div class="section-label">
+                    <span class="material-symbols-outlined">person</span>
+                    IDENTITY
+                </div>
+                <div class="section-card">
+                    <div class="identity-grid" id="identityGrid"></div>
+                </div>
+            </section>
+
+            <!-- What We Solve -->
+            <section class="profile-section" id="sectionSolve">
+                <div class="section-label">
+                    <span class="material-symbols-outlined">lightbulb</span>
+                    WHAT WE SOLVE
+                </div>
+                <div class="section-card">
+                    <div class="solve-grid" id="solveGrid"></div>
+                </div>
+            </section>
+
+            <!-- Expertise -->
+            <section class="profile-section" id="sectionExpertise">
+                <div class="section-label">
+                    <span class="material-symbols-outlined">workspace_premium</span>
+                    CORE EXPERTISE
+                </div>
+                <div class="section-card">
+                    <div class="expertise-grid" id="expertiseGrid"></div>
+                </div>
+            </section>
+
+            <!-- Philosophy -->
+            <section class="profile-section" id="sectionPhilosophy">
+                <div class="section-label">
+                    <span class="material-symbols-outlined">auto_awesome</span>
+                    PHILOSOPHY
+                </div>
+                <div class="section-card text-card" id="philosophyCard"></div>
+            </section>
+
+            <!-- Impact -->
+            <section class="profile-section" id="sectionImpact">
+                <div class="section-label">
+                    <span class="material-symbols-outlined">trending_up</span>
+                    IMPACT
+                </div>
+                <div class="section-card text-card" id="impactCard"></div>
+            </section>
+
+            <!-- Vision -->
+            <section class="profile-section" id="sectionVision">
+                <div class="section-label">
+                    <span class="material-symbols-outlined">rocket_launch</span>
+                    VISION
+                </div>
+                <div class="section-card vision-card" id="visionCard"></div>
+            </section>
+
+            <!-- CTA -->
+            <div class="cta-section">
+                <a href="leaders.html" class="cta-button">
+                    <span class="material-symbols-outlined">groups</span>
+                    전체 리더 보기
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (async function() {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('id');
+
+            if (!id) { showError(); return; }
+
+            try {
+                const [leadersRes, profilesRes] = await Promise.all([
+                    fetch('leaders.json'),
+                    fetch('leader-profiles.json')
+                ]);
+
+                if (!leadersRes.ok || !profilesRes.ok) throw new Error('Data load failed');
+
+                const leadersData = await leadersRes.json();
+                const profilesData = await profilesRes.json();
+
+                // Find leader basic info
+                let basic = null;
+                const code = id.toUpperCase();
+
+                if (leadersData.core_registry && leadersData.core_registry[code]) {
+                    basic = leadersData.core_registry[code];
+                    basic.code = code;
+                } else if (leadersData.swarm_engine_config?.leader_registry?.[code]) {
+                    basic = leadersData.swarm_engine_config.leader_registry[code];
+                    basic.code = code;
+                }
+
+                const profile = profilesData[code];
+
+                if (!basic || !profile) { showError(); return; }
+
+                renderProfile(basic, profile, code);
+            } catch (err) {
+                console.error('Profile load error:', err);
+                showError();
+            }
+        })();
+
+        function showError() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'flex';
+        }
+
+        function renderProfile(basic, profile, code) {
+            // Update page title
+            document.title = `${basic.name} - ${basic.specialty || basic.role} | Lawmadi OS`;
+
+            // Hero
+            const imgs = profile.images || {};
+            document.getElementById('heroBanner').src = imgs.banner || '';
+            document.getElementById('heroProfileImg').src = imgs.profile || '';
+            document.getElementById('heroProfileImg').alt = basic.name;
+            document.getElementById('heroBadge').textContent = basic.specialty
+                ? `${code} · ${basic.specialty}`
+                : code;
+            document.getElementById('heroName').textContent = basic.name;
+            document.getElementById('heroRole').textContent = basic.role;
+            document.getElementById('heroStatement').textContent = profile.hero || '';
+
+            // Identity
+            const identityGrid = document.getElementById('identityGrid');
+            if (profile.identity) {
+                identityGrid.innerHTML = `
+                    <div class="identity-box">
+                        <h4>What We Do</h4>
+                        <p>${profile.identity.what}</p>
+                    </div>
+                    <div class="identity-box">
+                        <h4>Why We Exist</h4>
+                        <p>${profile.identity.why}</p>
+                    </div>
+                `;
+            }
+
+            // What We Solve
+            const solveGrid = document.getElementById('solveGrid');
+            if (profile.whatWeSolve) {
+                const ws = profile.whatWeSolve;
+                solveGrid.innerHTML = `
+                    <div class="solve-item">
+                        <div class="solve-icon"><span class="material-symbols-outlined">report_problem</span></div>
+                        <div>
+                            <h4>기존의 문제</h4>
+                            <p>${ws.problem}</p>
+                        </div>
+                    </div>
+                    <div class="solve-item">
+                        <div class="solve-icon"><span class="material-symbols-outlined">block</span></div>
+                        <div>
+                            <h4>기존의 한계</h4>
+                            <p>${ws.limit}</p>
+                        </div>
+                    </div>
+                    <div class="solve-item">
+                        <div class="solve-icon"><span class="material-symbols-outlined">tips_and_updates</span></div>
+                        <div>
+                            <h4>우리의 접근</h4>
+                            <p>${ws.approach}</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Expertise
+            const expertiseGrid = document.getElementById('expertiseGrid');
+            if (profile.expertise && profile.expertise.length) {
+                expertiseGrid.innerHTML = profile.expertise.map(e => `
+                    <div class="expertise-item">
+                        <div class="expertise-icon">
+                            <span class="material-symbols-outlined">${e.icon}</span>
+                        </div>
+                        <div>
+                            <div class="expertise-label">${e.label}</div>
+                            <div class="expertise-desc">${e.desc}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Philosophy
+            if (profile.philosophy) {
+                document.getElementById('philosophyCard').innerHTML = `<p>${profile.philosophy}</p>`;
+            }
+
+            // Impact
+            if (profile.impact) {
+                document.getElementById('impactCard').innerHTML = `<p>${profile.impact}</p>`;
+            }
+
+            // Vision
+            if (profile.vision) {
+                document.getElementById('visionCard').innerHTML = `<p>${profile.vision}</p>`;
+            }
+
+            // Show content
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('profileContent').style.display = 'block';
+
+            // Scroll reveal
+            requestAnimationFrame(() => {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('visible');
+                        }
+                    });
+                }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+                document.querySelectorAll('.profile-section').forEach(s => observer.observe(s));
+            });
+        }
+
+        // Page load animation
+        window.addEventListener('load', () => {
+            document.body.style.opacity = '0';
+            setTimeout(() => {
+                document.body.style.transition = 'opacity 0.5s';
+                document.body.style.opacity = '1';
+            }, 100);
+        });
+    </script>
+    <script>
+    document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    </script>
+</body>
+</html>

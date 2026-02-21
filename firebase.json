@@ -64,6 +64,10 @@
         "destination": "/clevel-en.html"
       },
       {
+        "source": "/leader",
+        "destination": "/leader-profile.html"
+      },
+      {
         "source": "/api/**",
         "function": "api"
       }
