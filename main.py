@@ -137,7 +137,7 @@ from prompts.system_instructions import build_system_instruction as _build_syste
 from routes.static import router as static_router
 from routes.health import router as health_router, set_dependencies as _set_health_deps
 from routes.analytics import router as analytics_router, set_dependencies as _set_analytics_deps
-from routes.legal import router as legal_router, set_dependencies as _set_legal_deps
+from routes.legal import router as legal_router, set_dependencies as _set_legal_deps, ask as _legal_ask, search as _legal_search
 from routes.files import router as files_router, set_dependencies as _set_files_deps
 from routes.user import router as user_router, set_dependencies as _set_user_deps
 from routes.admin import router as admin_router
@@ -969,261 +969,12 @@ def validate_constitutional_compliance(response_text: str) -> bool:
     return True
 
 # =============================================================
-# 🛠️ [L3 SHORT_SYNC] Gemini 전용 지능형 도구 (Law & Precedent)
-# [원본버그 수정] svc.get_best_law_verified() → svc.search_law()
-#   (SearchService에 get_best_law_verified 메서드 없음)
+# 🛠️ [L3 SHORT_SYNC] DRF 도구 — tools/drf_tools.py에서 import 완료
+# 인라인 복사본 제거 (Phase 6). setter 주입으로 RUNTIME 참조.
 # =============================================================
+# (removed: 9 inline DRF tool functions — now in tools/drf_tools.py)
 
-def search_law_drf(query: str) -> Dict[str, Any]:
-    logger.info(f"🛠️ [L3 Strike] 법령 검색 호출: '{query}'")
-    try:
-        svc = RUNTIME.get("search_service")
-        if not svc:
-            return {"result": "ERROR", "message": "SearchService 미초기화."}
-        raw = svc.search_law(query)
-        if not raw:
-            return {"result": "NO_DATA", "message": "해당 키워드와 일치하는 법령이 없습니다."}
-        return {"result": "FOUND", "content": raw, "source": "국가법령정보센터(법령)"}
-    except Exception as e:
-        return {"result": "ERROR", "message": str(e)}
-
-def search_precedents_drf(query: str) -> Dict[str, Any]:
-    logger.info(f"🛠️ [L3 Strike] 판례 검색 호출: '{query}'")
-    try:
-        drf_inst = RUNTIME.get("drf")
-        if not drf_inst:
-            return {"result": "ERROR", "message": "DRF 커넥터 미초기화."}
-
-        raw_result = drf_inst.law_search(query)
-        items = _extract_best_dict_list(raw_result)
-        if not items:
-            return {"result": "NO_DATA", "message": "해당 키워드와 일치하는 판례가 없습니다."}
-
-        summary_list = []
-        for it in items[:3]:
-            title = it.get("사건명", "제목 없음")
-            case_no = it.get("사건번호", "번호 없음")
-            content_keys = ["판시사항", "판결요지", "이유"]
-            texts = _collect_texts_by_keys(it, content_keys)
-            summary = "\n".join(_dedup_keep_order(texts))[:1000]
-            summary_list.append(f"【사건명: {title} ({case_no})】\n{summary}")
-
-        combined_content = "\n\n".join(summary_list)
-        return {"result": "FOUND", "content": combined_content, "source": "국가법령정보센터(판례)"}
-    except Exception as e:
-        logger.error(f"🛠️ 판례 검색 실패: {e}")
-        return {"result": "ERROR", "message": str(e)}
-
-def search_admrul_drf(query: str) -> Dict[str, Any]:
-    """행정규칙 검색 - DRF를 통해 훈령·예규·고시·지침 검색 (SSOT #2)"""
-    logger.info(f"🛠️ [L3 Strike] 행정규칙 검색 호출: '{query}'")
-    try:
-        svc = RUNTIME.get("search_service")
-        if not svc:
-            return {"result": "ERROR", "message": "SearchService 미초기화."}
-
-        raw = svc.search_admrul(query)
-        if not raw:
-            return {"result": "NO_DATA", "message": "해당 키워드와 일치하는 행정규칙이 없습니다."}
-
-        return {"result": "FOUND", "content": raw, "source": "국가법령정보센터(행정규칙)"}
-    except Exception as e:
-        logger.error(f"🛠️ 행정규칙 검색 실패: {e}")
-        return {"result": "ERROR", "message": str(e)}
-
-def search_expc_drf(query: str) -> Dict[str, Any]:
-    """법령해석례 검색 - 법제처 법령 해석 검색 (SSOT #7)"""
-    logger.info(f"🛠️ [L3 Strike] 법령해석례 검색 호출: '{query}'")
-    try:
-        svc = RUNTIME.get("search_service")
-        if not svc:
-            return {"result": "ERROR", "message": "SearchService 미초기화."}
-
-        raw = svc.search_expc(query)
-        if not raw:
-            return {"result": "NO_DATA", "message": "해당 키워드와 일치하는 법령해석례가 없습니다."}
-
-        return {"result": "FOUND", "content": raw, "source": "국가법령정보센터(법령해석례)"}
-    except Exception as e:
-        logger.error(f"🛠️ 법령해석례 검색 실패: {e}")
-        return {"result": "ERROR", "message": str(e)}
-
-def search_constitutional_drf(query: str) -> Dict[str, Any]:
-    """헌재결정례 검색 - 헌법재판소 결정례 검색 (SSOT #6)"""
-    logger.info(f"🛠️ [L3 Strike] 헌재결정례 검색 호출: '{query}'")
-    try:
-        svc = RUNTIME.get("search_service")
-        if not svc:
-            return {"result": "ERROR", "message": "SearchService 미초기화."}
-
-        raw = svc.search_constitutional(query)
-        if not raw:
-            return {"result": "NO_DATA", "message": "해당 키워드와 일치하는 헌재결정례가 없습니다."}
-
-        # 판례와 동일한 포맷으로 정리
-        items = _extract_best_dict_list(raw)
-        if not items:
-            return {"result": "NO_DATA", "message": "헌재결정례를 찾을 수 없습니다."}
-
-        summary_list = []
-        for it in items[:3]:
-            title = it.get("사건명", "제목 없음")
-            case_no = it.get("사건번호", "번호 없음")
-            content_keys = ["판시사항", "결정요지", "이유"]
-            texts = _collect_texts_by_keys(it, content_keys)
-            summary = "\n".join(_dedup_keep_order(texts))[:1000]
-            summary_list.append(f"【사건명: {title} ({case_no})】\n{summary}")
-
-        combined_content = "\n\n".join(summary_list)
-        return {"result": "FOUND", "content": combined_content, "source": "국가법령정보센터(헌재결정례)"}
-    except Exception as e:
-        logger.error(f"🛠️ 헌재결정례 검색 실패: {e}")
-        return {"result": "ERROR", "message": str(e)}
-
-def search_ordinance_drf(query: str) -> Dict[str, Any]:
-    """자치법규 검색 - 지방자치단체 조례·규칙 검색 (SSOT #4)"""
-    logger.info(f"🛠️ [L3 Strike] 자치법규 검색 호출: '{query}'")
-    try:
-        svc = RUNTIME.get("search_service")
-        if not svc:
-            return {"result": "ERROR", "message": "SearchService 미초기화."}
-
-        raw = svc.search_ordinance(query)
-        if not raw:
-            return {"result": "NO_DATA", "message": "해당 키워드와 일치하는 자치법규가 없습니다."}
-
-        return {"result": "FOUND", "content": raw, "source": "국가법령정보센터(자치법규)"}
-    except Exception as e:
-        logger.error(f"🛠️ 자치법규 검색 실패: {e}")
-        return {"result": "ERROR", "message": str(e)}
-
-def search_legal_term_drf(query: str) -> Dict[str, Any]:
-    """법령용어 검색 - 법령용어 정의 및 설명 검색 (SSOT #10)"""
-    logger.info(f"🛠️ [L3 Strike] 법령용어 검색 호출: '{query}'")
-    try:
-        svc = RUNTIME.get("search_service")
-        if not svc:
-            return {"result": "ERROR", "message": "SearchService 미초기화."}
-
-        raw = svc.search_legal_term(query)
-        if not raw:
-            return {"result": "NO_DATA", "message": "해당 키워드와 일치하는 법령용어가 없습니다."}
-
-        # 응답 구조 확인 및 정리
-        if isinstance(raw, dict) and "LsTrmService" in raw:
-            term_data = raw["LsTrmService"]
-            # 용어 정보 추출
-            term_name_ko = term_data.get("법령용어명_한글", "")
-            term_name_cn = term_data.get("법령용어명_한자", "")
-            term_def = term_data.get("법령용어정의", "")
-            term_source = term_data.get("출처", "")
-
-            # 정리된 형식으로 반환
-            formatted = f"【{term_name_ko}】"
-            if term_name_cn:
-                formatted += f" ({term_name_cn})"
-            formatted += f"\n\n정의: {term_def}"
-            if term_source:
-                formatted += f"\n출처: {term_source}"
-
-            return {"result": "FOUND", "content": formatted, "source": "국가법령정보센터(법령용어)", "raw": raw}
-
-        return {"result": "FOUND", "content": raw, "source": "국가법령정보센터(법령용어)"}
-    except Exception as e:
-        logger.error(f"🛠️ 법령용어 검색 실패: {e}")
-        return {"result": "ERROR", "message": str(e)}
-
-def search_admin_appeals_drf(doc_id: str) -> Dict[str, Any]:
-    """행정심판례 검색 - 행정심판 결정례 조회 (SSOT #8)
-
-    ⚠️ 중요: 키워드 검색 미지원, 정확한 심판례 ID 필수
-    예시 ID: "223311", "223310", "223312"
-
-    Args:
-        doc_id: 행정심판례 문서 ID (문자열)
-    """
-    logger.info(f"🛠️ [L3 Strike] 행정심판례 검색 호출: ID={doc_id}")
-    try:
-        svc = RUNTIME.get("search_service")
-        if not svc:
-            return {"result": "ERROR", "message": "SearchService 미초기화."}
-
-        raw = svc.search_admin_appeals(doc_id)
-        if not raw:
-            return {"result": "NO_DATA", "message": f"ID {doc_id}에 해당하는 행정심판례를 찾을 수 없습니다."}
-
-        # 응답 구조 확인 (PrecService 형식)
-        if isinstance(raw, dict) and "PrecService" in raw:
-            prec_data = raw["PrecService"]
-            case_name = prec_data.get("사건명", "제목 없음")
-            case_no = prec_data.get("사건번호", "")
-            decision_date = prec_data.get("선고일자", "")
-            content = prec_data.get("사건개요", "") or prec_data.get("결정요지", "") or str(prec_data)[:500]
-
-            formatted = f"【{case_name}】\n"
-            if case_no:
-                formatted += f"사건번호: {case_no}\n"
-            if decision_date:
-                formatted += f"결정일자: {decision_date}\n"
-            formatted += f"\n{content[:1000]}"
-
-            return {"result": "FOUND", "content": formatted, "source": "국가법령정보센터(행정심판례)", "raw": raw}
-
-        return {"result": "FOUND", "content": raw, "source": "국가법령정보센터(행정심판례)"}
-    except Exception as e:
-        logger.error(f"🛠️ 행정심판례 검색 실패: {e}")
-        return {"result": "ERROR", "message": str(e)}
-
-def search_treaty_drf(doc_id: str) -> Dict[str, Any]:
-    """조약 검색 - 대한민국 체결 조약 조회 (SSOT #9)
-
-    ⚠️ 중요: 키워드 검색 미지원, 정확한 조약 ID 필수
-    예시 ID: "983", "2120", "1000", "2000"
-
-    Args:
-        doc_id: 조약 문서 ID (문자열)
-    """
-    logger.info(f"🛠️ [L3 Strike] 조약 검색 호출: ID={doc_id}")
-    try:
-        svc = RUNTIME.get("search_service")
-        if not svc:
-            return {"result": "ERROR", "message": "SearchService 미초기화."}
-
-        raw = svc.search_treaty(doc_id)
-        if not raw:
-            return {"result": "NO_DATA", "message": f"ID {doc_id}에 해당하는 조약을 찾을 수 없습니다."}
-
-        # 응답 구조 확인 (BothTrtyService 또는 MultTrtyService)
-        treaty_data = None
-        if isinstance(raw, dict):
-            if "BothTrtyService" in raw:
-                treaty_data = raw["BothTrtyService"]
-            elif "MultTrtyService" in raw:
-                treaty_data = raw["MultTrtyService"]
-
-        if treaty_data:
-            treaty_name_ko = treaty_data.get("조약한글명", "") or treaty_data.get("조약명", "")
-            treaty_name_en = treaty_data.get("조약영문명", "")
-            treaty_no = treaty_data.get("조약번호", "")
-            sign_date = treaty_data.get("서명일자", "")
-            effect_date = treaty_data.get("발효일자", "")
-
-            formatted = f"【{treaty_name_ko}】\n"
-            if treaty_name_en:
-                formatted += f"영문명: {treaty_name_en}\n"
-            if treaty_no:
-                formatted += f"조약번호: {treaty_no}\n"
-            if sign_date:
-                formatted += f"서명일자: {sign_date}\n"
-            if effect_date:
-                formatted += f"발효일자: {effect_date}\n"
-
-            return {"result": "FOUND", "content": formatted, "source": "국가법령정보센터(조약)", "raw": raw}
-
-        return {"result": "FOUND", "content": raw, "source": "국가법령정보센터(조약)"}
-    except Exception as e:
-        logger.error(f"🛠️ 조약 검색 실패: {e}")
-        return {"result": "ERROR", "message": str(e)}
+INLINE_DRF_REMOVED = True  # marker for verification
 
 
 def _resolve_leader_from_ssot(matched_sources: list) -> Optional[Dict[str, str]]:
@@ -1523,7 +1274,7 @@ async def startup():
         optional_import_fn=optional_import,
     )
     _set_files_deps(RUNTIME, limiter)
-    _set_user_deps(RUNTIME, limiter, ask_fn=None, search_fn=None)
+    _set_user_deps(RUNTIME, limiter, ask_fn=_legal_ask, search_fn=_legal_search)
 
     # Admin tables init
     db_v2 = optional_import("connectors.db_client_v2")
