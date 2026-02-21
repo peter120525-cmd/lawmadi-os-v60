@@ -4772,7 +4772,7 @@
                 </p>
 
                 <div class="cta-section">
-                    <button class="cta-primary" id="startChatBtn" aria-label="법률 상담 시작하기">
+                    <button class="cta-primary" id="startChatBtn" aria-label="법률 분석 시작하기">
                         <span style="position: relative; z-index: 1;">지금 무료로 체험하기</span>
                     </button>
                 </div>
@@ -4784,7 +4784,7 @@
                     </div>
                     <div class="hero-stat-item">
                         <div class="hero-stat-number" data-count="24">0</div>
-                        <div class="hero-stat-label">시간 Lawmadi OS 상담</div>
+                        <div class="hero-stat-label">시간 Lawmadi OS 분석</div>
                     </div>
                     <div class="hero-stat-item">
                         <div class="hero-stat-number" data-count="100" data-suffix="+">0</div>
@@ -5918,7 +5918,7 @@
 
                 const uploadData = await uploadResponse.json();
 
-                this.updateMessage(statusId, '<p>🔍 <b>문서 분석 중...</b> (2/2)</p><p>AI가 문서를 법률적 관점에서 분석하고 있습니다...</p>');
+                this.updateMessage(statusId, '<p>🔍 <b>문서 분석 중...</b> (2/2)</p><p>문서를 법률적 관점에서 분석하고 있습니다...</p>');
 
                 const analysisType = this.detectAnalysisType(file.name, additionalQuery);
 
@@ -6007,7 +6007,7 @@
             }
 
             html += `<p style="margin-top: 24px; padding-top: 16px; border-top: 2px solid var(--border); color: var(--text-muted); font-size: 0.9rem;">
-                이 분석 결과는 AI에 의해 자동 생성되었습니다. 최종 결정은 반드시 법률 전문가와 상의하시기 바랍니다.
+                이 분석 결과는 Lawmadi OS에 의해 자동 생성되었습니다. 최종 결정은 반드시 법률 전문가와 상의하시기 바랍니다.
             </p>`;
 
             return html;
@@ -6303,8 +6303,8 @@
                         icon.textContent = 'hourglass_top';
                         exportBtn.disabled = true;
                         try {
-                            let pdfTitle = '법률 상담';
-                            if (leaderName) pdfTitle = `${leaderName} 상담`;
+                            let pdfTitle = '법률 분석';
+                            if (leaderName) pdfTitle = `${leaderName} 분석`;
                             let pdfContent = `[질문]\n${originalQuery}\n\n`;
                             if (leaderName) pdfContent += `[담당] ${leaderName}${leaderSpecialtyFromServer ? ' (' + leaderSpecialtyFromServer + ')' : ''}\n\n`;
                             pdfContent += `[답변]\n${rawResponse}`;
@@ -6318,7 +6318,7 @@
                             const url = URL.createObjectURL(blob);
                             const now = new Date();
                             const pad = n => String(n).padStart(2, '0');
-                            const fname = `lawmadi-상담-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.pdf`;
+                            const fname = `lawmadi-분석-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.pdf`;
                             const a = document.createElement('a'); a.href = url; a.download = fname; a.click();
                             URL.revokeObjectURL(url);
                             icon.textContent = 'check';
