@@ -1,3 +1,5 @@
+# NOTE: 이 모듈은 프로덕션 코드(main.py)에서 import되지 않음.
+# 향후 L5 Kernel 통합 시 활성화 예정. 삭제하지 말 것.
 import re
 import json
 import logging

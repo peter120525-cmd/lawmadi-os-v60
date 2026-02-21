@@ -121,8 +121,14 @@ class AlertSystem:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         alerts_config = config.get("alerts", {})
-        self.slack_webhook = alerts_config.get("slack_webhook", "")
-        self.discord_webhook = alerts_config.get("discord_webhook", "")
+        self.slack_webhook = (
+            alerts_config.get("slack_webhook", "")
+            or os.getenv("SLACK_WEBHOOK_URL", "")
+        )
+        self.discord_webhook = (
+            alerts_config.get("discord_webhook", "")
+            or os.getenv("DISCORD_WEBHOOK_URL", "")
+        )
         self.log_dir = alerts_config.get("log_dir", "monitoring/logs")
         os.makedirs(self.log_dir, exist_ok=True)
 

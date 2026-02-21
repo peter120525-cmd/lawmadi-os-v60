@@ -39,6 +39,10 @@ jobs:
           pip install -r requirements.txt
           pip install pytest httpx
 
+      - name: Run unit tests (pure functions)
+        run: |
+          python -m pytest tests/test_unit_pure.py -v --tb=short
+
       - name: Run system integrity tests
         run: |
           python -m pytest tests/test_system_integrity.py -v --tb=short
@@ -68,10 +72,11 @@ jobs:
               print('✅ main.py: syntax valid')
           "
 
-  deploy-backend:
-    name: Deploy to Cloud Run
+  # ─── Staging: 프로덕션 전 스모크 테스트 ───
+  deploy-staging:
+    name: Deploy to Staging (Smoke Test)
     runs-on: ubuntu-latest
-    needs: test  # 테스트 통과 후 배포
+    needs: test
 
     permissions:
       contents: read
@@ -113,14 +118,81 @@ jobs:
           docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:latest
 
+      - name: Deploy to Staging
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }}-staging \
+            --image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --platform=managed \
+            --region=${{ env.REGION }} \
+            --allow-unauthenticated \
+            --memory=2Gi \
+            --cpu=2 \
+            --timeout=300 \
+            --concurrency=80 \
+            --min-instances=0 \
+            --max-instances=2 \
+            --set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest,GEMINI_KEY=GEMINI_KEY:latest,LAWGO_DRF_OC=LAWGO_DRF_OC:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,CLOUD_SQL_INSTANCE=CLOUD_SQL_INSTANCE:latest,DB_USER=DB_USER:latest,DB_PASS=DB_PASS:latest,DB_NAME=DB_NAME:latest,MCP_API_KEY=MCP_API_KEY:latest,API_KEYS=API_KEYS:latest"
+
+      - name: Get Staging URL
+        id: staging
+        run: |
+          STAGING_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }}-staging \
+            --region=${{ env.REGION }} \
+            --format='value(status.url)')
+          echo "url=$STAGING_URL" >> $GITHUB_OUTPUT
+          echo "🧪 Staging deployed to: $STAGING_URL"
+
+      - name: Smoke test staging
+        run: |
+          sleep 10
+          STAGING_URL="${{ steps.staging.outputs.url }}"
+          echo "🔍 Running smoke tests on staging..."
+          # Health check
+          curl -f "$STAGING_URL/health" || exit 1
+          echo "✅ /health passed"
+          # Diagnostics check
+          curl -sf "$STAGING_URL/diagnostics" | python3 -c "import sys,json; d=json.load(sys.stdin); assert d.get('os_version'), 'Missing version'" || exit 1
+          echo "✅ /diagnostics passed"
+          echo "🎉 All staging smoke tests passed"
+
+  # ─── Production: 수동 승인 게이트 ───
+  deploy-backend:
+    name: Deploy to Production (Cloud Run)
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    environment: production  # GitHub Environment 수동 승인 게이트
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_JSON }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
       # 항목 #19: 롤백용 stable 태그 보존
       - name: Tag previous stable for rollback
         run: |
+          docker pull ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           docker tag ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
                      ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:stable
           docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:stable
 
-      - name: Deploy to Cloud Run
+      - name: Deploy to Cloud Run (Production)
         run: |
           gcloud run deploy ${{ env.SERVICE_NAME }} \
             --image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
@@ -144,11 +216,11 @@ jobs:
           echo "url=$SERVICE_URL" >> $GITHUB_OUTPUT
           echo "🚀 Deployed to: $SERVICE_URL"
 
-      - name: Verify deployment
+      - name: Verify production deployment
         run: |
           sleep 10
           curl -f ${{ steps.deploy.outputs.url }}/health || exit 1
-          echo "✅ Health check passed"
+          echo "✅ Production health check passed"
 
   deploy-frontend:
     name: Deploy to Firebase Hosting
@@ -190,13 +262,13 @@ jobs:
   notify:
     name: Send deployment notification
     runs-on: ubuntu-latest
-    needs: [deploy-backend, deploy-frontend]
+    needs: [deploy-staging, deploy-backend, deploy-frontend]
     if: always()
 
     steps:
       - name: Deployment summary
         run: |
           echo "🎉 Deployment completed!"
-          echo "Backend: Cloud Run (${{ env.SERVICE_NAME }})"
-          echo "Frontend: https://lawmadi-db.web.app"
-          echo "Status: ${{ needs.deploy-backend.result }} / ${{ needs.deploy-frontend.result }}"
+          echo "Staging: ${{ needs.deploy-staging.result }}"
+          echo "Backend: Cloud Run (${{ env.SERVICE_NAME }}) — ${{ needs.deploy-backend.result }}"
+          echo "Frontend: https://lawmadi-db.web.app — ${{ needs.deploy-frontend.result }}"

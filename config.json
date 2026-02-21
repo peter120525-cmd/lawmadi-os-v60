@@ -105,6 +105,7 @@
   },
   "SWARM_ENGINE": {
     "version": "2.1",
+    "_note": "config.json에는 대표 리더 5명만 기록. 전체 60명은 leaders.json이 SSOT. 여기 5명은 leaders.json 로드 실패 시 폴백용.",
     "leader_registry": {
       "L01": {
         "name": "휘율",
@@ -213,6 +214,7 @@
     "block_invalid_json": true
   },
   "ssot_registry": {
+    "_summary": "전체 10종 중 활성 8개(SSOT_01,02,04,05,06,07,08,09,10), ID전용 2개(SSOT_08,09), 비활성 1개(SSOT_03 학칙공단). SSOT_08/09는 키워드 검색 미지원(ID 기반만 가능).",
     "SSOT_01": {
       "name": "현행법령",
       "target": "law",

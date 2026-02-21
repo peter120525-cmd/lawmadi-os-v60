@@ -9,7 +9,7 @@
 - **Version**: v60.0.0
 - **Type**: Korean Legal AI Decision Operating System
 - **Description**: 대한민국 법령·판례·행정규칙 기반 법률 자문 멀티에이전트 AI 운영체제.
-  60인의 법률 전문 AI 리더가 병렬 협업하여 사용자 질의에 대한 법적 분석 및 경로를 제공한다.
+  60개 도메인 특화 라우팅(키워드 + Gemini 분류)으로 사용자 질의에 대한 법적 분석 및 경로를 제공한다.
 - **Copyright**: Copyright (c) 2026 Jainam Choe (최재남). All Rights Reserved.
 - **License**: LAWMADI OS COMPREHENSIVE PROPRIETARY LICENSE v2.0.0 (비공개 독점 라이선스)
 - **Governing Law**: Republic of Korea (대한민국 법)
