@@ -62,6 +62,9 @@ L7 RENDERER    → Legal vs Reference Output Segregation (Section Divider, Discl
 | Runtime | Python 3.10+ |
 | Primary LLM | Google Gemini 3 Flash (gemini-3-flash-preview) |
 | Constitutional Verifier | Anthropic Claude (claude-sonnet series) |
+| Legal Draft LLM | LawmadiLM v4.0 (Qwen3-1.7B QLoRA, GGUF Q4_K_M ~1.19GB) |
+| LLM Serving | llama.cpp (OpenAI-compatible /v1/chat/completions) |
+| RAG Engine | ChromaDB + intfloat/multilingual-e5-large |
 | Cloud Platform | GCP Cloud Run (asia-northeast3) |
 | Cloud Resources | 2 vCPU / 2 GiB RAM / max 10 instances / concurrency 80 / timeout 300s |
 | Frontend | Firebase Hosting (Static HTML/CSS/JS — Korean + English) |
@@ -168,6 +171,90 @@ USE_SWARM    = controlled via environment variable
 
 ---
 
+## LAWMADILM — LEGAL DOMAIN LLM
+
+LawmadiLM is a fine-tuned Korean legal language model that generates Stage 2 legal drafts.
+
+### Model Specifications
+```
+Base Model:       Qwen3-1.7B
+Fine-tuning:      QLoRA (4-bit NF4, LoRA r=40, α=80)
+Training Data:    85,909 Q&A pairs (126 Korean laws)
+Inference Format: GGUF Q4_K_M (~1.19GB)
+Serving Engine:   llama.cpp (llama-server)
+API:              OpenAI-compatible /v1/chat/completions
+Max Tokens:       150 (draft), Context: 4096
+```
+
+### Training Data Composition (v4.0)
+| Category | Count | Percentage |
+|----------|-------|------------|
+| Basic Law Q&A (126 laws) | 78,116 | 90.9% |
+| Supreme Court Precedents | 2,640 | 3.1% |
+| Constitutional Court Decisions | 1,730 | 2.0% |
+| C-Level CSO (Risk Analysis) | 1,141 | 1.3% |
+| C-Level CTO (Cross-Validation) | 1,141 | 1.3% |
+| C-Level CCO (Simple Explanation) | 1,141 | 1.3% |
+| **Total** | **85,909** | **100%** |
+
+### Cloud Run Services
+| Service | CPU | Memory | Instances | Role |
+|---------|-----|--------|-----------|------|
+| lawmadilm-llm | 4 vCPU | 16 GiB | 1–2 | LLM inference (llama.cpp) |
+| lawmadilm-rag | 2 vCPU | 8 GiB | 0–3 | RAG vector search (ChromaDB) |
+
+### Data Pipeline
+```
+국가법령정보센터 API → collect_laws_v35.py (126 laws)
+                    → collect_v40.py (4,726 precedents + 2,049 constitutional decisions)
+                    → convert_to_qa_v35.py (articles → Q&A)
+                    → run_clevel_v40.py (C-Level 3,450 via Gemini 2.5 Flash)
+                    → merge_v40.py (dedup + validate → 85,909 pairs)
+                    → train_v40_light.py (QLoRA → GGUF)
+                    → Cloud Run deploy (llm + rag)
+```
+
+---
+
+## 5-STAGE LEGAL PIPELINE
+
+Every `/ask` and `/ask-stream` request flows through this pipeline:
+
+```
+Stage 1: SECURITY & PRE-PROCESSING
+  ├─ Rate limiting (Free: 50/4h, Premium: 200/4h)
+  ├─ Low Signal filter (test/greeting queries → CCO Yuna response)
+  ├─ SafetyGuard.check() → CRISIS / BLOCKED / PASS
+  ├─ Claude Sonnet analysis → tier (1-3), leader (L01-L60), specialty
+  └─ SSOT availability check (Gemini key, DRF connectivity)
+
+Stage 2: LAWMADILM DRAFT
+  ├─ Async call to LawmadiLM API (max 150 tokens, timeout 15s)
+  ├─ Draft: law name, key articles, precedent references, conclusion
+  └─ Fallback: skip if unavailable (pipeline continues without draft)
+
+Stage 3: GEMINI FLASH COMPOSITION (Primary)
+  ├─ System instruction = SYSTEM_INSTRUCTION_BASE + leader persona + law_cache context
+  ├─ 9 DRF tools with automatic_function_calling enabled
+  ├─ LawmadiLM draft injected as reference (if available)
+  ├─ Max output: 800 tokens
+  └─ Retry without draft if response < 50 chars
+
+Stage 4: CLAUDE ENHANCEMENT
+  ├─ Claude Sonnet 4 review (accuracy, missing articles, practical advice)
+  ├─ Max 200 tokens supplementary content
+  └─ Appended only if meaningful enhancement exists
+
+Stage 5: DRF VERIFICATION + CONSTITUTIONAL CHECK
+  ├─ Extract law references from response
+  ├─ DRF real-time cross-verification
+  ├─ Constitutional compliance validation (6 principles)
+  ├─ Warning/correction injection if violation detected
+  └─ Audit logging to Cloud SQL
+```
+
+---
+
 ## CONSTITUTIONAL PRINCIPLES (6 Core Principles)
 
 | # | Principle | Rule |
@@ -208,6 +295,33 @@ USE_SWARM    = controlled via environment variable
 | SSOT_08 | 행정심판례 | decc | lawService.do | Active (ID parameter required; e.g. ID=223311) |
 | SSOT_09 | 조약 | trty | lawService.do | Active (ID parameter required; e.g. ID=983) |
 | SSOT_10 | 법령용어 | lstrm | lawSearch.do | Active |
+
+### Law Cache (law_cache.json)
+
+Zero-cost keyword matching cache loaded into server memory at startup.
+
+```
+Total SSOT Types:  10
+Total Entries:     548
+Total Keywords:    18,961
+Total Articles:    20,798
+File Size:         4.12 MB
+```
+
+| Type | Label | Entries | Keywords | Articles |
+|------|-------|---------|----------|----------|
+| law | 현행법령 | 103 | 3,413 | 7,882 |
+| prec | 판례 | 88 | 3,151 | 4,697 |
+| ordin | 자치법규 | 72 | 2,677 | 1,806 |
+| unlaw | 훈령/예규/고시 | 62 | 2,223 | 1,452 |
+| admrul | 행정규칙 | 60 | 2,090 | 1,670 |
+| lstrm | 법령용어 | 52 | 1,514 | 194 |
+| decc | 행정심판례 | 37 | 1,304 | 1,195 |
+| decis | 헌재결정례 | 34 | 1,181 | 976 |
+| trty | 조약 | 32 | 1,166 | 851 |
+| expc | 법령해석례 | 8 | 242 | 75 |
+
+Usage: Query keywords matched against reverse index → top matching articles sent as context to Gemini (Stage 3).
 
 ---
 
@@ -384,6 +498,14 @@ Max Instances: 10
 Min Instances: 1 (cold start 방지)
 Concurrency: 80
 Request Timeout: 300s
+```
+
+### Cloud Run Services (4 Total)
+```
+lawmadi-os-v60    — Main API (FastAPI)          | 2 vCPU, 2 GiB  | 1–10 instances
+lawmadilm-llm     — LLM inference (llama.cpp)   | 4 vCPU, 16 GiB | 1–2 instances
+lawmadilm-rag     — RAG search (ChromaDB)        | 2 vCPU, 8 GiB  | 0–3 instances
+lawmadilm-api     — Legacy API gateway           | 1 vCPU, 512 MiB | 0–1 instances
 ```
 
 ### CI/CD Pipeline (GitHub Actions)

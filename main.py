@@ -2210,10 +2210,6 @@ async def _step3_gemini_compose(query: str, analysis: Dict, draft: str,
     # 캐시 컨텍스트: 관련 SSOT 소스 사전 매칭
     cache_ctx = build_cache_context(query)
 
-    # Gemini Context Caching 제약: cached_content와 tools/system_instruction 동시 사용 불가
-    cached_content_name = RUNTIME.get("gemini_cached_content")
-    use_cache = cached_content_name and not tools
-
     # draft가 있으면 system_instruction에 포함
     draft_section = ""
     if draft and draft.strip():
@@ -2240,37 +2236,22 @@ async def _step3_gemini_compose(query: str, analysis: Dict, draft: str,
     if lang == "en":
         lang_instruction = "\n\nIMPORTANT: Respond entirely in English. Translate Korean legal terms with the original Korean in parentheses."
 
-    if use_cache:
-        instruction = (
-            f"현재 당신은 '{leader_name}' 리더입니다.\n"
-            f"전문 분야: {leader_specialty}\n"
-            f"질문 요약: {analysis.get('summary', '')}"
-            f"{draft_section}"
-            f"{lang_instruction}"
-        )
-        if cache_ctx:
-            instruction += f"\n\n{cache_ctx}"
-        gen_config = genai_types.GenerateContentConfig(
-            cached_content=cached_content_name,
-            max_output_tokens=800,
-        )
-    else:
-        instruction = (
-            f"{SYSTEM_INSTRUCTION_BASE}\n"
-            f"현재 당신은 '{leader_name}' 리더입니다.\n"
-            f"전문 분야: {leader_specialty}\n"
-            f"질문 요약: {analysis.get('summary', '')}"
-            f"{draft_section}"
-            f"{lang_instruction}"
-        )
-        if cache_ctx:
-            instruction += f"\n\n{cache_ctx}"
-        gen_config = genai_types.GenerateContentConfig(
-            tools=tools,
-            system_instruction=instruction,
-            max_output_tokens=800,
-            automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
-        )
+    instruction = (
+        f"{SYSTEM_INSTRUCTION_BASE}\n"
+        f"현재 당신은 '{leader_name}' 리더입니다.\n"
+        f"전문 분야: {leader_specialty}\n"
+        f"질문 요약: {analysis.get('summary', '')}"
+        f"{draft_section}"
+        f"{lang_instruction}"
+    )
+    if cache_ctx:
+        instruction += f"\n\n{cache_ctx}"
+    gen_config = genai_types.GenerateContentConfig(
+        tools=tools,
+        system_instruction=instruction,
+        max_output_tokens=800,
+        automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
+    )
 
     chat = gc.chats.create(
         model=model_name,
@@ -2751,42 +2732,6 @@ async def startup():
         "genai_client": genai_client,
         "claude_client": claude_client,
     })
-
-    # --------------------------------------------------
-    # 10️⃣ Gemini Context Caching (SSOT 법률 캐시 사전 토큰화)
-    # 1시간 TTL, SYSTEM_INSTRUCTION + law_cache 요약을 사전 캐싱
-    # → 매 요청 시 ~90% 토큰 절약 (동일 시스템 인스트럭션 재전송 방지)
-    # --------------------------------------------------
-    RUNTIME["gemini_cached_content"] = None
-    if genai_client and LAW_CACHE:
-        try:
-            # 법률 캐시 요약 생성 (상위 30개 법률의 핵심 조문)
-            cache_summary_lines = ["[SSOT 10종 법률 캐시 — 주요 법률 핵심 조문 요약]"]
-            for stype in ["law", "prec", "decis", "admrul", "ordin"]:
-                type_data = LAW_CACHE.get(stype, {})
-                entries = type_data.get("entries", {})
-                if not entries:
-                    continue
-                cache_summary_lines.append(f"\n## {type_data.get('label', stype)} (target={type_data.get('target', '')})")
-                for law_name, law_info in list(entries.items())[:6]:
-                    arts = law_info.get("key_articles", [])[:3]
-                    art_str = ", ".join(f"{a['조문']}({a.get('제목','')})" for a in arts)
-                    cache_summary_lines.append(f"  • {law_name}: {art_str}")
-            cache_text = "\n".join(cache_summary_lines)
-
-            cached_content = genai_client.caches.create(
-                model=os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
-                config=genai_types.CreateCachedContentConfig(
-                    display_name="lawmadi_ssot_cache",
-                    system_instruction=SYSTEM_INSTRUCTION_BASE,
-                    contents=[{"role": "user", "parts": [{"text": cache_text}]}],
-                    ttl="3600s",
-                ),
-            )
-            RUNTIME["gemini_cached_content"] = cached_content.name
-            logger.info(f"✅ Gemini Context Cache 생성: {cached_content.name} (TTL=1h)")
-        except Exception as cache_err:
-            logger.warning(f"⚠️ Gemini Context Cache 실패 (무시): {cache_err}")
 
     METRICS["boot_time"] = _now_iso()
     logger.info(f"✅ Lawmadi OS {OS_VERSION} Online")
