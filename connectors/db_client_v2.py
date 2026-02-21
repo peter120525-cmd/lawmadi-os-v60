@@ -317,6 +317,53 @@ def init_visitor_stats_table():
         if conn: release_connection(conn)
 
 
+def init_admin_tables():
+    """Admin 비즈니스 메트릭 테이블 초기화 (lawyer_inquiries, feedback)"""
+    if not _db_enabled():
+        return
+
+    conn = None
+    cur = None
+    try:
+        conn = get_connection()
+        if conn is None:
+            logger.warning("⚠️ [Admin] DB 연결 실패로 테이블 초기화 스킵")
+            return
+        cur = conn.cursor()
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS lawyer_inquiries (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100),
+                phone VARCHAR(30),
+                query_summary TEXT,
+                leader VARCHAR(50),
+                status VARCHAR(20) DEFAULT 'pending',
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS feedback (
+                id SERIAL PRIMARY KEY,
+                trace_id VARCHAR(64),
+                rating VARCHAR(10),
+                comment TEXT,
+                query TEXT,
+                leader VARCHAR(50),
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        """)
+
+        conn.commit()
+        logger.info("✅ [Admin] lawyer_inquiries, feedback 테이블 초기화 완료")
+    except Exception as e:
+        logger.error(f"⚠️ [Admin] 테이블 생성 실패: {e}")
+    finally:
+        if cur: cur.close()
+        if conn: release_connection(conn)
+
+
 def record_visit(visitor_id: str) -> Dict[str, Any]:
     """
     방문 기록
@@ -892,3 +939,252 @@ def get_visitor_stats() -> Dict[str, Any]:
         if cur: cur.close()
         if conn: release_connection(conn)
 
+
+# =====================================================
+# 📊 Admin Business Metrics (Phase 5)
+# =====================================================
+
+def get_dashboard_metrics(days: int = 7) -> dict:
+    """DAU, 일/주/월 쿼리 수, 평균 latency, 에러율, 상위 법률 카테고리"""
+    try:
+        # Daily active users
+        dau_result = execute(
+            """SELECT COUNT(DISTINCT visitor_id) as dau
+               FROM chat_history
+               WHERE created_at >= NOW() - INTERVAL '%s days'""",
+            (days,), fetch="one"
+        )
+        dau = dau_result.get("data", [0])[0] if dau_result.get("ok") else 0
+
+        # Query counts
+        query_result = execute(
+            """SELECT
+                COUNT(*) as total_queries,
+                COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '1 day') as daily_queries,
+                COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') as weekly_queries,
+                COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days') as monthly_queries,
+                COALESCE(AVG(latency_ms), 0) as avg_latency,
+                COUNT(*) FILTER (WHERE status = 'error') as error_count
+               FROM chat_history
+               WHERE created_at >= NOW() - INTERVAL '%s days'""",
+            (days,), fetch="one"
+        )
+
+        # Top categories
+        cat_result = execute(
+            """SELECT query_category, COUNT(*) as cnt
+               FROM chat_history
+               WHERE created_at >= NOW() - INTERVAL '%s days' AND query_category IS NOT NULL
+               GROUP BY query_category
+               ORDER BY cnt DESC
+               LIMIT 10""",
+            (days,), fetch="all"
+        )
+
+        data = query_result.get("data", [0]*6) if query_result.get("ok") else [0]*6
+        categories = []
+        if cat_result.get("ok") and cat_result.get("data"):
+            categories = [{"category": r[0], "count": r[1]} for r in cat_result["data"]]
+
+        total = data[0] or 1
+        return {
+            "ok": True,
+            "period_days": days,
+            "dau": dau,
+            "daily_queries": data[1] or 0,
+            "weekly_queries": data[2] or 0,
+            "monthly_queries": data[3] or 0,
+            "avg_latency_ms": round(float(data[4] or 0), 1),
+            "error_rate": round(float(data[5] or 0) / total * 100, 2),
+            "top_categories": categories,
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+def get_conversion_metrics(days: int = 30) -> dict:
+    """총 쿼리 수, 변호사 문의 수, 피드백 수, 전환율"""
+    try:
+        q_result = execute(
+            "SELECT COUNT(*) FROM chat_history WHERE created_at >= NOW() - INTERVAL '%s days'",
+            (days,), fetch="one"
+        )
+        li_result = execute(
+            "SELECT COUNT(*) FROM lawyer_inquiries WHERE created_at >= NOW() - INTERVAL '%s days'",
+            (days,), fetch="one"
+        )
+        fb_result = execute(
+            "SELECT COUNT(*) FROM feedback WHERE created_at >= NOW() - INTERVAL '%s days'",
+            (days,), fetch="one"
+        )
+
+        total_queries = q_result.get("data", [0])[0] if q_result.get("ok") else 0
+        lawyer_inquiries = li_result.get("data", [0])[0] if li_result.get("ok") else 0
+        feedback_count = fb_result.get("data", [0])[0] if fb_result.get("ok") else 0
+
+        conversion_rate = round(lawyer_inquiries / max(total_queries, 1) * 100, 2)
+
+        return {
+            "ok": True,
+            "period_days": days,
+            "total_queries": total_queries or 0,
+            "lawyer_inquiries": lawyer_inquiries or 0,
+            "feedback_count": feedback_count or 0,
+            "conversion_rate": conversion_rate,
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+def get_retention_metrics() -> dict:
+    """재방문율, 평균 방문 횟수, 사용자 분포"""
+    try:
+        result = execute(
+            """SELECT
+                visitor_id,
+                COUNT(*) as visit_count
+               FROM chat_history
+               WHERE visitor_id IS NOT NULL
+                 AND created_at >= NOW() - INTERVAL '30 days'
+               GROUP BY visitor_id""",
+            fetch="all"
+        )
+
+        if not result.get("ok") or not result.get("data"):
+            return {"ok": True, "total_users": 0, "returning_users": 0, "return_rate": 0,
+                    "avg_visits": 0, "distribution": {"one_time": 0, "light": 0, "heavy": 0}}
+
+        rows = result["data"]
+        total_users = len(rows)
+        returning = sum(1 for r in rows if r[1] > 1)
+        total_visits = sum(r[1] for r in rows)
+
+        one_time = sum(1 for r in rows if r[1] == 1)
+        light = sum(1 for r in rows if 2 <= r[1] <= 5)
+        heavy = sum(1 for r in rows if r[1] > 5)
+
+        return {
+            "ok": True,
+            "total_users": total_users,
+            "returning_users": returning,
+            "return_rate": round(returning / max(total_users, 1) * 100, 2),
+            "avg_visits": round(total_visits / max(total_users, 1), 1),
+            "distribution": {"one_time": one_time, "light_2_5": light, "heavy_5_plus": heavy},
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+def get_feedback_summary(days: int = 30) -> dict:
+    """총 피드백, 긍정/부정 비율, 리더별 분포"""
+    try:
+        total_result = execute(
+            """SELECT
+                COUNT(*) as total,
+                COUNT(*) FILTER (WHERE rating = 'up') as positive,
+                COUNT(*) FILTER (WHERE rating = 'down') as negative
+               FROM feedback
+               WHERE created_at >= NOW() - INTERVAL '%s days'""",
+            (days,), fetch="one"
+        )
+
+        leader_result = execute(
+            """SELECT leader, rating, COUNT(*) as cnt
+               FROM feedback
+               WHERE created_at >= NOW() - INTERVAL '%s days' AND leader IS NOT NULL
+               GROUP BY leader, rating
+               ORDER BY cnt DESC""",
+            (days,), fetch="all"
+        )
+
+        data = total_result.get("data", [0, 0, 0]) if total_result.get("ok") else [0, 0, 0]
+        total = data[0] or 0
+        positive = data[1] or 0
+        negative = data[2] or 0
+
+        leader_dist = {}
+        if leader_result.get("ok") and leader_result.get("data"):
+            for row in leader_result["data"]:
+                leader = row[0]
+                if leader not in leader_dist:
+                    leader_dist[leader] = {"up": 0, "down": 0}
+                leader_dist[leader][row[1]] = row[2]
+
+        return {
+            "ok": True,
+            "period_days": days,
+            "total_feedback": total,
+            "positive": positive,
+            "negative": negative,
+            "positive_rate": round(positive / max(total, 1) * 100, 1),
+            "leader_distribution": leader_dist,
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+def get_cost_estimate(days: int = 7) -> dict:
+    """Gemini/Claude API 호출 수, 추정 비용"""
+    try:
+        result = execute(
+            """SELECT COUNT(*) as total_calls
+               FROM chat_history
+               WHERE created_at >= NOW() - INTERVAL '%s days'""",
+            (days,), fetch="one"
+        )
+
+        total_calls = result.get("data", [0])[0] if result.get("ok") else 0
+        total_calls = total_calls or 0
+
+        # Rough cost estimates (per call averages)
+        gemini_cost_per_call = 0.002  # ~$0.002 per Gemini Flash call
+        claude_cost_per_call = 0.01   # ~$0.01 per Claude Sonnet call (tier analysis + verify)
+
+        gemini_calls = total_calls  # Every query uses Gemini
+        claude_calls = int(total_calls * 0.3)  # ~30% use Claude (tier 2+3)
+
+        return {
+            "ok": True,
+            "period_days": days,
+            "total_api_calls": total_calls,
+            "gemini_calls": gemini_calls,
+            "claude_calls": claude_calls,
+            "estimated_cost_usd": round(gemini_calls * gemini_cost_per_call + claude_calls * claude_cost_per_call, 2),
+            "cost_breakdown": {
+                "gemini": round(gemini_calls * gemini_cost_per_call, 2),
+                "claude": round(claude_calls * claude_cost_per_call, 2),
+            },
+            "note": "Estimated based on average token usage. Actual costs may vary.",
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+def save_lawyer_inquiry(name: str, phone: str, query_summary: str, leader: str, status: str = "pending") -> dict:
+    """변호사 문의를 DB에 저장"""
+    try:
+        result = execute(
+            """INSERT INTO lawyer_inquiries (name, phone, query_summary, leader, status)
+               VALUES (%s, %s, %s, %s, %s)
+               RETURNING id""",
+            (name, phone, query_summary, leader, status),
+            fetch="one"
+        )
+        return result
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+def save_feedback(trace_id: str, rating: str, query: str, leader: str, comment: str = "") -> dict:
+    """피드백을 DB에 저장"""
+    try:
+        result = execute(
+            """INSERT INTO feedback (trace_id, rating, query, leader, comment)
+               VALUES (%s, %s, %s, %s, %s)
+               RETURNING id""",
+            (trace_id, rating, query, leader, comment),
+            fetch="one"
+        )
+        return result
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
