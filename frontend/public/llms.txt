@@ -1,5 +1,5 @@
 # Lawmadi OS — LLM System Specification
-> Version: v60.0.0 | Last Updated: 2026-02-18 | Format: llms.txt/1.0
+> Version: v60.0.0 | Last Updated: 2026-02-21 | Format: llms.txt/1.0
 
 ---
 
@@ -16,6 +16,8 @@
 - **Contact**: choepeter@outlook.kr
 - **Production URL**: https://lawmadi.com
 - **Frontend Hosting**: https://lawmadi-db.web.app (Firebase Hosting)
+- **Languages**: Korean (default `/`), English (`/en`)
+- **Multilingual API**: Pass `lang: "en"` in `/ask` and `/ask-stream` body for English responses
 
 ---
 
@@ -62,7 +64,9 @@ L7 RENDERER    → Legal vs Reference Output Segregation (Section Divider, Discl
 | Constitutional Verifier | Anthropic Claude (claude-sonnet series) |
 | Cloud Platform | GCP Cloud Run (asia-northeast3) |
 | Cloud Resources | 2 vCPU / 2 GiB RAM / max 10 instances / concurrency 80 / timeout 300s |
-| Frontend | Firebase Hosting (Static HTML/CSS/JS) |
+| Frontend | Firebase Hosting (Static HTML/CSS/JS — Korean + English) |
+| Splash Screen | Premium: Aurora gradient + 20 particles + glow icon + letter animation + progress bar |
+| PWA Icons | Custom PNG icons: 192x192 + 512x512 (resized from 1024x1024 source) |
 | Database | Cloud SQL (PostgreSQL) via cloud-sql-python-connector |
 | Secret Management | GCP Secret Manager |
 | CI/CD | GitHub Actions (3-job pipeline: Backend → Frontend → Notify) |
@@ -232,12 +236,14 @@ USE_SWARM    = controlled via environment variable
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/` | Static frontend (index.html) |
+| GET | `/` | Static frontend — Korean (index.html) |
+| GET | `/en` | Static frontend — English (index-en.html) |
 | GET | `/health` | Health check: `{"status": "online", "os_version": "v60.0.0"}` |
 | GET | `/leaders` | 60 리더 전체 목록 반환 |
 | GET | `/metrics` | 시스템 메트릭 (요청 수, 평균 레이턴시) |
 | GET | `/diagnostics` | 시스템 진단 정보 |
-| POST | `/ask` | 법률 질의 처리 (메인 AI 엔드포인트) |
+| POST | `/ask` | 법률 질의 처리 (메인 AI 엔드포인트). `lang: "en"` 파라미터로 영어 응답 |
+| POST | `/ask-stream` | SSE 스트리밍 법률 답변. `lang: "en"` 파라미터로 영어 응답 |
 | POST | `/ask-expert` | 전문가용 답변 (Gemini 재생성 + Claude SSOT 검증) |
 | POST | `/upload` | 법률 문서 파일 업로드 |
 | GET | `/analyze-document/{file_id}` | 업로드된 문서 분석 |
@@ -249,6 +255,28 @@ USE_SWARM    = controlled via environment variable
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/admin/*` | 관리자 전용 엔드포인트 (인증 필요) |
+
+---
+
+## MULTILINGUAL SUPPORT
+
+### Supported Languages
+| Language | Frontend Path | API Parameter | Status |
+|----------|--------------|---------------|--------|
+| Korean (한국어) | `/` (index.html) | default (no param) | Primary |
+| English | `/en` (index-en.html) | `lang: "en"` | Active |
+
+### English Response Behavior
+When `lang: "en"` is passed in `/ask` or `/ask-stream` request body:
+- All fixed messages (Low Signal, Crisis, Non-legal, Blocked, Error) respond in English
+- Gemini system prompt includes: "IMPORTANT: Respond entirely in English. Translate Korean legal terms with the original Korean in parentheses."
+- Leader header format: "**Assigned: {name} ({specialty} Expert)**"
+- Korean legal citations are preserved with English translations
+
+### Frontend i18n
+- `index-en.html`: Complete English translation of all UI text, example questions, pricing, sidebar, mobile tab bar, loading steps, error messages
+- Language toggle: KO/EN button in header with hreflang SEO tags
+- Fetch requests from English page include `lang: 'en'` in request body
 
 ---
 
@@ -415,4 +443,4 @@ engines.response_verifier  → ResponseVerifier (Claude SSOT 검증)
 ---
 
 *This llms.txt file conforms to the llms.txt/1.0 specification for machine-readable AI system documentation.*
-*Generated: 2026-02-18 | Lawmadi OS v60.0.0*
+*Generated: 2026-02-21 | Lawmadi OS v60.0.0*
