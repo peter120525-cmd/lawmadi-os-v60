@@ -18,25 +18,43 @@ from core.constitutional import validate_constitutional_compliance as cc_validat
 # 1) Fail-Closed 동작 검증
 # ===========================================================================
 class TestFailClosed:
-    """Gemini 검증 엔진 미초기화 시 passed=False 반환 확인"""
+    """FAIL_CLOSED 동작 검증: DRF 미검증 비율에 따른 응답 차단/태깅"""
 
-    def test_step5_returns_fail_when_no_client(self):
-        """_step5_gemini_verify에서 Gemini 없을 때 passed=False"""
-        import main
-        original = main.RUNTIME.get("genai_client")
-        try:
-            main.RUNTIME["genai_client"] = None
-            import asyncio
-            result = asyncio.get_event_loop().run_until_complete(
-                main._step5_gemini_verify("테스트 질문", "테스트 응답")
-            )
-            assert result["passed"] is False
-            assert "Fail-Closed" in (result.get("warning") or "")
-        finally:
-            if original is not None:
-                main.RUNTIME["genai_client"] = original
-            else:
-                main.RUNTIME.pop("genai_client", None)
+    def test_fail_closed_blocks_when_over_30_percent(self):
+        """미검증 비율 30% 초과 시 FAIL_CLOSED 응답 반환"""
+        from core.pipeline import _apply_fail_closed, VerificationResult
+        vr = VerificationResult()
+        vr.verified_refs = [{"ref": "민법 제750조"}]
+        vr.unverified_refs = [
+            {"ref": "민법 제9999조", "reason": "미존재"},
+            {"ref": "형법 제8888조", "reason": "미존재"},
+        ]
+        vr.total_refs = 3
+        vr.all_passed = False
+        result = _apply_fail_closed("테스트 응답", vr)
+        assert "법률 정보 검증 실패" in result
+
+    def test_partial_unverified_tags_refs(self):
+        """미검증 비율 30% 이하 시 미검증 조문 태깅"""
+        from core.pipeline import _apply_fail_closed, VerificationResult
+        vr = VerificationResult()
+        vr.verified_refs = [{"ref": "A"}, {"ref": "B"}, {"ref": "C"}, {"ref": "D"}]
+        vr.unverified_refs = [{"ref": "E", "reason": "test"}]
+        vr.total_refs = 5
+        vr.all_passed = False
+        result = _apply_fail_closed("테스트 응답 with E", vr)
+        assert "확인 중" in result
+        assert "법률 정보 검증 실패" not in result
+
+    def test_all_verified_passes(self):
+        """모두 검증 통과 시 원본 텍스트 그대로 반환"""
+        from core.pipeline import _apply_fail_closed, VerificationResult
+        vr = VerificationResult()
+        vr.verified_refs = [{"ref": "민법 제750조"}]
+        vr.total_refs = 1
+        vr.all_passed = True
+        result = _apply_fail_closed("원본 텍스트", vr)
+        assert result == "원본 텍스트"
 
     def test_default_passed_is_false(self):
         """JSON 파싱 실패 시에도 passed 기본값은 False"""

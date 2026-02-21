@@ -31,7 +31,18 @@ from core.classifier import (
     _fallback_tier_classification,
     select_swarm_leader,
 )
-from core.pipeline import _run_legal_pipeline
+from core.pipeline import (
+    _run_legal_pipeline,
+    run_pipeline_stage1,
+    run_pipeline_stage2,
+    run_pipeline_stage3,
+    build_stage4_system_instruction,
+    _apply_fail_closed,
+    _drf_verify_law_refs,
+    VerificationResult,
+    RAGContext,
+)
+from core.constants import FAIL_CLOSED_RESPONSE
 from prompts.system_instructions import build_system_instruction as _build_system_instruction
 from tools.drf_tools import (
     search_law_drf,
@@ -139,6 +150,99 @@ def _get_drf_tools() -> list:
         search_admin_appeals_drf,
         search_treaty_drf,
     ]
+
+
+# ---------------------------------------------------------------------------
+# 비법률 질문용 Gemini 응답 생성 (유나 CCO)
+# ---------------------------------------------------------------------------
+async def _generate_yuna_response(query: str, lang: str = "") -> str:
+    """비법률 질문에 대해 Gemini를 사용하여 유나(CCO)가 간결하게 응답"""
+    gc = _RUNTIME.get("genai_client")
+    if not gc:
+        return _build_yuna_fallback(lang)
+
+    model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+
+    if lang == "en":
+        sys_instr = (
+            "You are Yuna (유나), the Chief Content Officer of Lawmadi OS, a Korean legal analysis system.\n\n"
+            "The user asked a NON-LEGAL question. Your job:\n"
+            "1. Briefly and helpfully answer their question (2-3 sentences max)\n"
+            "2. Then gently mention that Lawmadi OS specializes in Korean law\n"
+            "3. Give 1-2 example legal questions they could ask\n\n"
+            "Format:\n"
+            "[Yuna (CCO) Content Design]\n\n"
+            "## 💡 Answer\n(brief answer)\n\n"
+            "## 📌 By the way...\n(Lawmadi OS intro + example questions)\n\n"
+            "Keep total response under 500 characters. Be warm and friendly."
+        )
+    else:
+        sys_instr = (
+            "당신은 Lawmadi OS의 최고콘텐츠책임자 유나(CCO)입니다.\n"
+            "Lawmadi OS는 대한민국 법률 분석 전문 시스템입니다.\n\n"
+            "사용자가 비법률 질문을 했습니다. 당신의 역할:\n"
+            "1. 사용자의 질문에 간결하고 친절하게 답변하세요 (2~3문장)\n"
+            "2. Lawmadi OS는 법률 전문 시스템임을 부드럽게 안내하세요\n"
+            "3. 법률 질문 예시를 1~2개 제시하세요\n\n"
+            "응답 형식:\n"
+            "[유나 (CCO) 콘텐츠 설계]\n\n"
+            "## 💡 답변\n(간단한 답변)\n\n"
+            "## 📌 참고로...\nLawmadi OS 소개 + 법률 질문 예시\n\n"
+            "총 500자 이내로 작성하세요. 따뜻하고 친근한 톤으로."
+        )
+
+    try:
+        resp = gc.models.generate_content(
+            model=model_name,
+            contents=f"사용자 질문: {query}",
+            config={
+                "system_instruction": sys_instr,
+                "max_output_tokens": 400,
+                "temperature": 0.7,
+            },
+        )
+        text = resp.text.strip() if resp.text else ""
+        if text and len(text) > 20:
+            return text
+    except Exception as e:
+        logger.warning(f"⚠️ [Yuna] Gemini 응답 생성 실패: {e}")
+
+    return _build_yuna_fallback(lang)
+
+
+def _build_yuna_fallback(lang: str = "") -> str:
+    """Gemini 실패 시 유나 기본 응답"""
+    if lang == "en":
+        return (
+            "[Yuna (CCO) Content Design]\n\n"
+            "## 💡 Key Answer\n"
+            "Your question appears to be a general inquiry rather than a legal matter. "
+            "As a legal analysis system, I may not be able to provide a specialized answer, "
+            "but let me briefly guide you.\n\n"
+            "## 📌 Key Points\n"
+            "- Lawmadi OS is a **Korean legal analysis system**\n"
+            "- 60 expert leaders provide detailed analysis by legal field\n"
+            "- We cover lease, divorce, inheritance, criminal, labor law, and more\n\n"
+            "## 🔍 Learn More\n"
+            "If you have a legal concern, please ask a specific question! "
+            "For example, \"I can't get my lease deposit back\" — "
+            "an expert leader will begin analysis immediately."
+        )
+    return (
+        "[유나 (CCO) 콘텐츠 설계]\n\n"
+        "## 💡 핵심 답변\n"
+        "말씀하신 내용은 법률 분야가 아닌 일반 질문으로 판단됩니다. "
+        "저는 법률 분석 시스템이라 전문적인 답변이 어려울 수 있지만, "
+        "간단히 안내드릴게요.\n\n"
+        "## 📌 주요 포인트\n"
+        "- Lawmadi OS는 **대한민국 법률 분석 전문 시스템**입니다\n"
+        "- 60명의 전문 리더가 법률 분야별로 정밀 분석해 드려요\n"
+        "- 임대차, 이혼, 상속, 형사, 노동법 등 다양한 분야를 다룹니다\n\n"
+        "## 🔍 더 알아보기\n"
+        "법률과 관련된 고민이 있으시다면 구체적으로 질문해 주세요! "
+        "예를 들어 \"전세 보증금을 못 돌려받고 있어요\" 같은 질문이면 "
+        "전문 리더가 즉시 분석을 시작합니다."
+    )
 
 
 # =============================================================
@@ -337,43 +441,13 @@ async def ask(request: Request):
                     f"legal={is_legal}, document={is_document}")
 
         # -------------------------------------------------
-        # 4.1) 비법률 즉시 응답
+        # 4.1) 비법률 질문: 유나(CCO) Gemini 응답
         # -------------------------------------------------
         if not is_legal:
-            if lang == "en":
-                instant_msg = (
-                    f"[Yuna (CCO) Content Design]\n\n"
-                    "## 💡 Key Answer\n"
-                    "Your question appears to be a general inquiry rather than a legal matter. "
-                    "As a legal analysis system, I may not be able to provide a specialized answer, "
-                    "but let me briefly guide you.\n\n"
-                    "## 📌 Key Points\n"
-                    "• Lawmadi OS is a **Korean legal analysis system**\n"
-                    "• 60 expert leaders provide detailed analysis by legal field\n"
-                    "• We cover lease, divorce, inheritance, criminal, labor law, and more\n\n"
-                    "## 🔍 Learn More\n"
-                    "If you have a legal concern, please ask a specific question! "
-                    "For example, \"I can't get my lease deposit back\" — "
-                    "an expert leader will begin analysis immediately."
-                )
-            else:
-                instant_msg = (
-                    f"[유나 (CCO) 콘텐츠 설계]\n\n"
-                    "## 💡 핵심 답변\n"
-                    "말씀하신 내용은 법률 분야가 아닌 일반 질문으로 판단됩니다. "
-                    "저는 법률 분석 시스템이라 전문적인 답변이 어려울 수 있지만, "
-                    "간단히 안내드릴게요.\n\n"
-                    "## 📌 주요 포인트\n"
-                    "• Lawmadi OS는 **대한민국 법률 분석 전문 시스템**입니다\n"
-                    "• 60명의 전문 리더가 법률 분야별로 정밀 분석해 드려요\n"
-                    "• 임대차, 이혼, 상속, 형사, 노동법 등 다양한 분야를 다룹니다\n\n"
-                    "## 🔍 더 알아보기\n"
-                    "법률과 관련된 고민이 있으시다면 구체적으로 질문해 주세요! "
-                    "예를 들어 \"전세 보증금을 못 돌려받고 있어요\" 같은 질문이면 "
-                    "전문 리더가 즉시 분석을 시작합니다."
-                )
+            instant_msg = await _generate_yuna_response(query, lang)
             latency = int((time.time() - start_time) * 1000)
             _METRICS["requests"] += 1
+            _audit_fn("ask_non_legal", {"query": query, "status": "SUCCESS_NON_LEGAL", "leader": "유나", "latency_ms": latency})
             return JSONResponse(content={
                 "trace_id": trace,
                 "response": instant_msg,
@@ -410,7 +484,7 @@ async def ask(request: Request):
             leader_specialty = clevel.executives.get(exec_id, {}).get("role", exec_id)
 
         # -------------------------------------------------
-        # 5) 🎯 5-Stage Legal Pipeline
+        # 5) 🎯 4-Stage Legal Pipeline
         # -------------------------------------------------
         else:
             final_text = await _run_legal_pipeline(
@@ -435,7 +509,7 @@ async def ask(request: Request):
             _audit_fn("ask_fail_closed", {"query": query, "status": "GOVERNANCE", "leader": leader_name})
             return {"trace_id": trace, "response": gov_msg, "status": "FAIL_CLOSED"}
 
-        const_check = {"passed": True}  # Stage 5에서 이미 처리됨
+        const_check = {"passed": True}  # Stage 3+4에서 이미 처리됨
 
         latency_ms = int((time.time() - start_time) * 1000)
 
@@ -746,6 +820,30 @@ async def ask_stream(request: Request):
             model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
             gc = _ensure_genai_client_fn(_RUNTIME)
 
+            # 4) 질문 분류 (법률/비법률/정상/비정상)
+            from core.classifier import _gemini_analyze_query, _fallback_tier_classification
+            analysis = await _gemini_analyze_query(query)
+            if not analysis:
+                analysis = _fallback_tier_classification(query)
+            is_legal = analysis.get("is_legal", True)
+
+            # ─── 비법률 질문: 유나(CCO) Gemini 응답 ───
+            if not is_legal:
+                msg = await _generate_yuna_response(query, lang)
+                yield _sse("chunk", {"text": msg})
+                final_text = msg
+                leader_name = "유나"
+                leader_specialty = "콘텐츠 설계"
+                latency_ms = int((time.time() - start_time) * 1000)
+                _METRICS["requests"] += 1
+                yield _sse("done", {
+                    "leader": "유나", "leader_specialty": "콘텐츠 설계",
+                    "latency_ms": latency_ms, "trace_id": trace,
+                    "swarm_mode": False, "response": msg, "status": "SUCCESS",
+                })
+                _audit_fn("ask_stream", {"query": query, "leader": "유나", "status": "SUCCESS_NON_LEGAL", "latency_ms": latency_ms, "swarm_mode": False})
+                return
+
             # ─── 경로 A: C-Level 직접 호출 (스트리밍) ───
             if clevel_decision and clevel_decision.get("mode") == "direct":
                 exec_id = clevel_decision.get("executive_id")
@@ -780,281 +878,94 @@ async def ask_stream(request: Request):
                 final_text = accumulated
                 swarm_mode = False
 
-            # ─── 경로 B: Swarm 모드 ───
-            elif not (clevel_decision and clevel_decision.get("mode") == "direct"):
-                orchestrator = _RUNTIME.get("swarm_orchestrator")
+            # ─── 경로 B: 4-Stage Hybrid Pipeline (스트리밍) ───
+            else:
+                leader_name = analysis.get("leader_name", "마디")
+                leader_specialty = analysis.get("leader_specialty", "통합")
 
-                if orchestrator and os.getenv("USE_SWARM", "true").lower() == "true":
-                    yield _sse("status", {"step": "detecting_domain"})
+                # Stage 1: RAG 조문 검색
+                yield _sse("status", {"step": "searching_laws", "leader": leader_name})
+                rag_context = await run_pipeline_stage1(query)
 
-                    _stream_matched = _match_ssot_sources_fn(query, top_k=5)
-                    detected_domains = orchestrator.detect_domains(query, ssot_sources=_stream_matched)
-                    selected_leaders = orchestrator.select_leaders(query, detected_domains, ssot_sources=_stream_matched)
+                # Stage 2: LawmadiLM 주력 답변
+                yield _sse("status", {"step": "analyzing", "leader": leader_name})
+                lawmadilm_answer = await run_pipeline_stage2(query, analysis, rag_context)
 
-                    use_swarm = (
-                        orchestrator.swarm_enabled
-                        and len(selected_leaders) > 1
+                # Stage 3: DRF 전수 검증
+                drf_verification = VerificationResult()
+                if lawmadilm_answer:
+                    yield _sse("status", {"step": "verifying", "leader": leader_name})
+                    loop = asyncio.get_event_loop()
+                    drf_verification = await loop.run_in_executor(
+                        None, lambda: run_pipeline_stage3(lawmadilm_answer)
                     )
 
-                    leader_names_list = [l.get("name", "?") for l in selected_leaders]
-                    yield _sse("status", {"step": "analyzing", "leader": ", ".join(leader_names_list)})
-
-                    if not use_swarm:
-                        # 단일 리더
-                        leader = selected_leaders[0]
-                        leader_name = leader.get("name", "유나")
-                        leader_specialty = leader.get("specialty", "콘텐츠 설계")
-                        swarm_mode = False
-
-                        clevel_id = leader.get("_clevel")
-
-                        # ─── 비법률 질문 즉시 응답 (CCO fallback, 스트리밍 없이) ───
-                        if clevel_id == "CCO" and not detected_domains:
-                            if lang == "en":
-                                msg = (
-                                    f"[Yuna (CCO) Content Design]\n\n"
-                                    f"## 💡 Key Answer\n"
-                                    f"Your question appears to be a general inquiry rather than a legal matter. "
-                                    f"As a legal analysis system, I may not be able to provide a specialized answer, "
-                                    f"but let me briefly guide you.\n\n"
-                                    f"## 📌 Key Points\n"
-                                    f"• Lawmadi OS is a **Korean legal analysis system**\n"
-                                    f"• 60 expert leaders provide detailed analysis by legal field\n"
-                                    f"• We cover lease, divorce, inheritance, criminal, labor law, and more\n\n"
-                                    f"## 🔍 Learn More\n"
-                                    f"If you have a legal concern, please ask a specific question! "
-                                    f"For example, \"I can't get my lease deposit back\" — "
-                                    f"an expert leader will begin analysis immediately."
-                                )
-                            else:
-                                msg = (
-                                    f"[유나 (CCO) 콘텐츠 설계]\n\n"
-                                    f"## 💡 핵심 답변\n"
-                                    f"말씀하신 내용은 법률 분야가 아닌 일반 질문으로 판단됩니다. "
-                                    f"저는 법률 분석 시스템이라 전문적인 답변이 어려울 수 있지만, "
-                                    f"간단히 안내드릴게요.\n\n"
-                                    f"## 📌 주요 포인트\n"
-                                    f"• Lawmadi OS는 **대한민국 법률 분석 전문 시스템**입니다\n"
-                                    f"• 60명의 전문 리더가 법률 분야별로 정밀 분석해 드려요\n"
-                                    f"• 임대차, 이혼, 상속, 형사, 노동법 등 다양한 분야를 다룹니다\n\n"
-                                    f"## 🔍 더 알아보기\n"
-                                    f"법률과 관련된 고민이 있으시다면 구체적으로 질문해 주세요! "
-                                    f"예를 들어 \"전세 보증금을 못 돌려받고 있어요\" 같은 질문이면 "
-                                    f"전문 리더가 즉시 분석을 시작합니다."
-                                )
-                            yield _sse("chunk", {"text": msg})
-                            final_text = msg
-                            latency_ms = int((time.time() - start_time) * 1000)
-                            _METRICS["requests"] += 1
-                            yield _sse("done", {
-                                "leader": "유나", "leader_specialty": "콘텐츠 설계",
-                                "latency_ms": latency_ms, "trace_id": trace,
-                                "swarm_mode": False, "response": msg, "status": "SUCCESS",
-                            })
-                            _audit_fn("ask_stream", {"query": query, "leader": "유나", "status": "SUCCESS_INSTANT", "latency_ms": latency_ms, "swarm_mode": False})
-                            return
-
-                        _lang_suffix = "\n\nIMPORTANT: Respond entirely in English. Translate Korean legal terms with the original Korean in parentheses." if lang == "en" else ""
-                        if clevel_id:
-                            sys_instr = orchestrator._build_clevel_instruction(leader, _build_system_instruction(stream_mode)) if hasattr(orchestrator, '_build_clevel_instruction') else _build_system_instruction(stream_mode)
-                            sys_instr += _lang_suffix
-                        else:
-                            sys_instr = (
-                                f"{_build_system_instruction(stream_mode)}\n\n"
-                                f"🎯 당신의 역할: {leader.get('name', '')} ({leader.get('role', '')})\n"
-                                f"🎯 전문 분야: {leader_specialty}\n"
-                                f"🎯 관점: {leader_specialty} 전문가 관점에서 이 사안을 분석하세요.\n\n"
-                                f"반드시 [{leader.get('name', '')} ({leader_specialty}) 분석]으로 시작하세요."
-                                f"{_lang_suffix}"
-                            )
-
-                        chat = gc.chats.create(
-                            model=model_name,
-                            config=genai_types.GenerateContentConfig(
-                                tools=tools,
-                                system_instruction=sys_instr,
-                                max_output_tokens=4096,
-                                automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
-                            ),
-                            history=gemini_history,
-                        )
-
-                        accumulated = ""
-                        async for text_part in _async_stream_chunks(
-                            chat.send_message_stream(
-                                f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
-                            )
-                        ):
-                            accumulated += text_part
-                            yield _sse("chunk", {"text": text_part})
-
-                        # AFC로 인해 스트림 텍스트가 비었으면 non-stream fallback
-                        if len(accumulated.strip()) < 10:
-                            logger.warning(f"⚠️ [Stream] 단일리더 스트림 텍스트 비어있음 → non-stream fallback")
-                            fallback_resp = chat.send_message(
-                                f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
-                            )
-                            accumulated = _safe_extract_gemini_text(fallback_resp)
-                            if accumulated:
-                                yield _sse("chunk", {"text": accumulated})
-
-                        final_text = accumulated
-
-                    else:
-                        # 다중 리더: 병렬 분석 → synthesis만 스트리밍
-                        yield _sse("status", {"step": "parallel_analysis", "leaders": leader_names_list})
-
-                        loop = asyncio.get_event_loop()
-                        swarm_results = await loop.run_in_executor(
-                            None,
-                            lambda: orchestrator.parallel_swarm_analysis(
-                                query, selected_leaders, tools,
-                                _build_system_instruction(stream_mode), model_name
-                            )
-                        )
-
-                        successful = [r for r in swarm_results if r.get("success", False)]
-                        leader_name = ", ".join([r["leader"] for r in swarm_results][:3])
-                        if len(swarm_results) > 3:
-                            leader_name += f" 외 {len(swarm_results)-3}명"
-                        leader_specialty = ", ".join([r["specialty"] for r in swarm_results][:3])
-                        swarm_mode = len(successful) > 1
-
-                        if len(successful) == 1:
-                            final_text = successful[0]["analysis"]
-                            yield _sse("chunk", {"text": final_text})
-                        else:
-                            yield _sse("status", {"step": "synthesizing"})
-
-                            synthesis_orchestrator = _RUNTIME.get("swarm_orchestrator")
-                            accumulated = ""
-                            async for text_chunk in synthesis_orchestrator.synthesize_swarm_results_stream(
-                                query, swarm_results, model_name
-                            ):
-                                accumulated += text_chunk
-                                yield _sse("chunk", {"text": text_chunk})
-
-                            final_text = accumulated
-
-                        # C-Level swarm 보강
-                        if clevel and clevel_decision and clevel_decision.get("mode") == "swarm":
-                            exec_id = clevel_decision.get("executive_id", "CSO")
-                            exec_name = clevel.executives.get(exec_id, {}).get("name", exec_id)
-                            try:
-                                clevel_instruction = clevel.get_clevel_system_instruction(exec_id, _build_system_instruction(stream_mode))
-                                _gc = _ensure_genai_client_fn(_RUNTIME)
-                                clevel_chat = _gc.chats.create(
-                                    model=model_name,
-                                    config=genai_types.GenerateContentConfig(
-                                        system_instruction=clevel_instruction,
-                                    ),
-                                )
-                                clevel_resp = clevel_chat.send_message(
-                                    f"다음은 법률 리더들의 분석 결과입니다:\n\n{final_text}\n\n"
-                                    f"위 분석에 대해 {exec_name}({exec_id}) 관점에서 전략적 보강 의견을 2~3문장으로 추가하세요.\n"
-                                    f"사용자 원래 질문: {query}"
-                                )
-                                clevel_opinion = _safe_extract_gemini_text(clevel_resp)
-                                if clevel_opinion:
-                                    extra = f"\n\n---\n**[{exec_name} ({exec_id}) 전략 보강]**\n{clevel_opinion}"
-                                    final_text += extra
-                                    yield _sse("chunk", {"text": extra})
-                                    leader_name += f", {exec_name}"
-                            except Exception as ce:
-                                logger.warning(f"⚠️ C-Level swarm 보강 실패 (무시): {ce}")
-
-                else:
-                    # Fallback 단일 리더
-                    leader = select_swarm_leader(query, _LEADER_REGISTRY)
-                    leader_name = leader['name']
-                    leader_specialty = leader.get('specialty', '콘텐츠 설계')
-                    swarm_mode = False
-                    _is_cco_fallback = leader.get("_clevel") == "CCO"
-                    _fb_max_tokens = 800 if _is_cco_fallback else 3000
-
-                    # ─── Fallback 비법률 즉시 응답 ───
-                    if _is_cco_fallback:
-                        if lang == "en":
-                            msg = (
-                                "[Yuna (CCO) Content Design]\n\n"
-                                "## 💡 Key Answer\n"
-                                "Your question appears to be a general inquiry rather than a legal matter. "
-                                "As a legal analysis system, I may not be able to provide a specialized answer, "
-                                "but let me briefly guide you.\n\n"
-                                "## 📌 Key Points\n"
-                                "• Lawmadi OS is a **Korean legal analysis system**\n"
-                                "• 60 expert leaders provide detailed analysis by legal field\n"
-                                "• We cover lease, divorce, inheritance, criminal, labor law, and more\n\n"
-                                "## 🔍 Learn More\n"
-                                "If you have a legal concern, please ask a specific question! "
-                                "For example, \"I can't get my lease deposit back\" — "
-                                "an expert leader will begin analysis immediately."
-                            )
-                        else:
-                            msg = (
-                                "[유나 (CCO) 콘텐츠 설계]\n\n"
-                                "## 💡 핵심 답변\n"
-                                "말씀하신 내용은 법률 분야가 아닌 일반 질문으로 판단됩니다. "
-                                "저는 법률 분석 시스템이라 전문적인 답변이 어려울 수 있지만, "
-                                "간단히 안내드릴게요.\n\n"
-                                "## 📌 주요 포인트\n"
-                                "• Lawmadi OS는 **대한민국 법률 분석 전문 시스템**입니다\n"
-                                "• 60명의 전문 리더가 법률 분야별로 정밀 분석해 드려요\n"
-                                "• 임대차, 이혼, 상속, 형사, 노동법 등 다양한 분야를 다룹니다\n\n"
-                                "## 🔍 더 알아보기\n"
-                                "법률과 관련된 고민이 있으시다면 구체적으로 질문해 주세요! "
-                                "예를 들어 \"전세 보증금을 못 돌려받고 있어요\" 같은 질문이면 "
-                                "전문 리더가 즉시 분석을 시작합니다."
-                            )
-                        yield _sse("chunk", {"text": msg})
-                        final_text = msg
+                # FAIL_CLOSED 조기 차단: 30% 이상 미검증 시
+                if drf_verification.total_refs > 0:
+                    unverified_ratio = len(drf_verification.unverified_refs) / max(drf_verification.total_refs, 1)
+                    if unverified_ratio > 0.3:
+                        logger.warning(f"[Stream FAIL_CLOSED] 미검증 {unverified_ratio*100:.0f}% > 30%")
+                        yield _sse("chunk", {"text": FAIL_CLOSED_RESPONSE})
+                        final_text = FAIL_CLOSED_RESPONSE
                         latency_ms = int((time.time() - start_time) * 1000)
                         _METRICS["requests"] += 1
                         yield _sse("done", {
-                            "leader": "유나", "leader_specialty": "콘텐츠 설계",
+                            "leader": leader_name, "leader_specialty": leader_specialty,
                             "latency_ms": latency_ms, "trace_id": trace,
-                            "swarm_mode": False, "response": msg, "status": "SUCCESS",
+                            "swarm_mode": False, "response": FAIL_CLOSED_RESPONSE, "status": "FAIL_CLOSED",
                         })
-                        _audit_fn("ask_stream", {"query": query, "leader": "유나", "status": "SUCCESS_INSTANT", "latency_ms": latency_ms, "swarm_mode": False})
                         return
 
-                    yield _sse("status", {"step": "analyzing", "leader": leader_name})
+                # Stage 4: Gemini 검증 + 보강 (스트리밍)
+                yield _sse("status", {"step": "composing", "leader": leader_name})
 
-                    fallback_instruction = (
-                        f"{_build_system_instruction(stream_mode)}\n"
-                        f"현재 당신은 '{leader['name']}({leader['role']})' 노드입니다.\n"
-                        f"🎯 전문 분야: {leader.get('specialty', '통합')}\n"
-                        f"🎯 관점: {leader.get('specialty', '통합')} 전문가 관점에서 이 사안을 분석하세요.\n"
+                sys_instr = build_stage4_system_instruction(
+                    analysis=analysis,
+                    lawmadilm_answer=lawmadilm_answer or "(LawmadiLM 답변 없음 - 직접 작성하세요)",
+                    drf_verification=drf_verification,
+                    rag_context=rag_context,
+                    lang=lang,
+                    mode=stream_mode,
+                )
+
+                max_tokens = 4000 if stream_mode == "expert" else 3000
+                chat = gc.chats.create(
+                    model=model_name,
+                    config=genai_types.GenerateContentConfig(
+                        tools=tools,
+                        system_instruction=sys_instr,
+                        max_output_tokens=max_tokens,
+                        automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
+                    ),
+                    history=gemini_history,
+                )
+
+                accumulated = ""
+                async for text_part in _async_stream_chunks(
+                    chat.send_message_stream(
+                        f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
                     )
-                    if _is_cco_fallback:
-                        fallback_instruction += (
-                            f"📏 **비법률 질문은 반드시 500자 이내로 간결하게 답변하세요.**\n"
-                            f"**비법률 목차**: ## 💡 핵심 답변 → ## 📌 주요 포인트 → ## 🔍 더 알아보기\n"
-                        )
-                    fallback_instruction += f"반드시 [{leader['name']} ({leader.get('specialty', '통합')}) 답변]으로 시작하세요."
-                    if lang == "en":
-                        fallback_instruction += "\n\nIMPORTANT: Respond entirely in English. Translate Korean legal terms with the original Korean in parentheses."
-                    chat = gc.chats.create(
-                        model=model_name,
-                        config=genai_types.GenerateContentConfig(
-                            tools=tools,
-                            system_instruction=fallback_instruction,
-                            max_output_tokens=_fb_max_tokens,
-                            automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
-                        ),
-                        history=gemini_history,
+                ):
+                    accumulated += text_part
+                    yield _sse("chunk", {"text": text_part})
+
+                # AFC로 인해 스트림 텍스트가 비었으면 non-stream fallback
+                if len(accumulated.strip()) < 10:
+                    logger.warning(f"⚠️ [Stream] 스트림 텍스트 비어있음 → non-stream fallback")
+                    fallback_resp = chat.send_message(
+                        f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
                     )
+                    accumulated = _safe_extract_gemini_text(fallback_resp)
+                    if accumulated:
+                        yield _sse("chunk", {"text": accumulated})
 
-                    accumulated = ""
-                    async for text_part in _async_stream_chunks(
-                        chat.send_message_stream(
-                            f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
-                        )
-                    ):
-                        accumulated += text_part
-                        yield _sse("chunk", {"text": text_part})
+                final_text = accumulated
 
-                    final_text = accumulated
+                # Stage 4 결과에 대해 DRF 재검증 후 미검증 조문 태깅
+                if final_text and drf_verification.total_refs > 0:
+                    final_text = _apply_fail_closed(final_text, drf_verification)
+
+                swarm_mode = False
 
             # Governance 검증
             if not validate_constitutional_compliance(final_text):
@@ -1161,7 +1072,7 @@ async def ask_stream(request: Request):
 
 @router.post("/ask-expert")
 async def ask_expert(request: Request):
-    """전문가용 답변: 5-Stage Legal Pipeline 통합 사용."""
+    """전문가용 답변: 4-Stage Legal Pipeline 통합 사용."""
     trace = str(uuid.uuid4())[:8]
     start = time.time()
 
@@ -1185,7 +1096,7 @@ async def ask_expert(request: Request):
 
         now_kst = _now_iso()
 
-        # 5-Stage Pipeline 실행 (전문가 모드)
+        # 4-Stage Pipeline 실행 (전문가 모드)
         final_text = await _run_legal_pipeline(
             query, analysis, tools, [], now_kst, ssot_available, lang=lang, mode="expert"
         )

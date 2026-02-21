@@ -128,7 +128,6 @@ from core.classifier import (
 from core.pipeline import (
     set_runtime as _set_pipeline_runtime,
     set_law_cache as _set_pipeline_law_cache,
-    _step5_gemini_verify,
     _run_legal_pipeline,
 )
 from prompts.system_instructions import build_system_instruction as _build_system_instruction
@@ -1219,9 +1218,15 @@ async def startup():
     # 9️⃣ RUNTIME SSOT 등록
     # --------------------------------------------------
     # --------------------------------------------------
-    # 9.5️⃣ Tier Router/검증은 Gemini로 통합 (Claude 제거)
+    # 9.5️⃣ Tier Router/검증은 Gemini로 통합, 4-Stage Hybrid Pipeline
     # --------------------------------------------------
     logger.info("✅ Tier Router/검증 엔진: Gemini 통합 사용")
+    _rag_url = os.getenv("LAWMADILM_RAG_URL", "")
+    if _rag_url:
+        logger.info(f"✅ LawmadiLM RAG 서비스: {_rag_url}")
+    else:
+        logger.info("ℹ️ LawmadiLM RAG 미설정 (law_cache 폴백 사용)")
+    logger.info("✅ 4-Stage Hybrid Pipeline: RAG → LawmadiLM(3000) → DRF전수검증 → Gemini검증보강")
 
     RUNTIME.update({
         "config": config,
@@ -1241,7 +1246,7 @@ async def startup():
     _set_classifier_runtime(RUNTIME)
     _set_classifier_leader_registry(LEADER_REGISTRY)
     _set_pipeline_runtime(RUNTIME)
-    _set_pipeline_law_cache(LAW_CACHE, build_cache_context)
+    _set_pipeline_law_cache(LAW_CACHE, build_cache_context, match_ssot_sources, build_ssot_context)
 
     # Wire route module dependencies
     _set_health_deps(RUNTIME, METRICS, LAW_CACHE, _KEYWORD_INDEX, optional_import("connectors.db_client_v2"))
