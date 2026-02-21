@@ -4063,10 +4063,13 @@
 
         /* 2. 섹션 래퍼 */
         .ai-section {
-            margin: 0;
-            border-radius: 12px;
+            margin: 16px 0;
+            border-radius: 16px;
             overflow: hidden;
             animation: sectionFadeIn 0.5s ease both;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(226, 232, 240, 0.7);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
         }
         .ai-section:nth-child(2) { animation-delay: 80ms; }
         .ai-section:nth-child(3) { animation-delay: 160ms; }
@@ -4083,6 +4086,11 @@
         @media (prefers-reduced-motion: reduce) {
             .ai-section { animation: none !important; }
         }
+        body.dark-mode .ai-section {
+            background: rgba(30, 41, 59, 0.5);
+            border-color: rgba(51, 65, 85, 0.6);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+        }
 
         .ai-section-header {
             display: flex;
@@ -4091,6 +4099,14 @@
             cursor: pointer;
             user-select: none;
             padding: 0;
+        }
+        .ai-section-header p {
+            margin: 0;
+            flex: 1;
+        }
+        .ai-section .ai-section-header .section-title {
+            margin: 0;
+            border-radius: 16px 16px 0 0;
         }
         .ai-section-header h2 {
             margin-bottom: 0;
@@ -4111,6 +4127,10 @@
             opacity: 1;
             overflow: hidden;
             transition: max-height 0.4s ease, opacity 0.3s ease;
+            padding: 4px 24px 16px;
+        }
+        .ai-section-body hr:last-child {
+            display: none;
         }
         .ai-section.collapsed .ai-section-body {
             max-height: 0;
@@ -4543,6 +4563,15 @@
                 font-size: 1.02rem;
                 padding: 12px 16px;
                 margin: 20px -16px 12px;
+            }
+            .ai-section .ai-section-header .section-title {
+                margin: 0;
+                border-radius: 16px 16px 0 0;
+                font-size: 0.98rem;
+                padding: 12px 16px;
+            }
+            .ai-section .ai-section-body {
+                padding: 4px 16px 12px;
             }
             .ai-msg .subsection-title {
                 font-size: 0.95rem;

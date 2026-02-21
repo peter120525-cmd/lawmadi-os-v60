@@ -2200,7 +2200,7 @@ def _postprocess_lawmadilm(draft: str, query: str) -> Optional[str]:
 async def _step3_gemini_compose(query: str, analysis: Dict, draft: str,
                                  tools: list, gemini_history: list,
                                  now_kst: str, ssot_available: bool,
-                                 lang: str = "") -> str:
+                                 lang: str = "", mode: str = "general") -> str:
     """Stage 3: Gemini Flash 콘텐츠 작성 (메인 응답, max_output_tokens=800)"""
     gc = _ensure_genai_client(RUNTIME)
     model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
@@ -2237,7 +2237,7 @@ async def _step3_gemini_compose(query: str, analysis: Dict, draft: str,
         lang_instruction = "\n\nIMPORTANT: Respond entirely in English. Translate Korean legal terms with the original Korean in parentheses."
 
     instruction = (
-        f"{SYSTEM_INSTRUCTION_BASE}\n"
+        f"{_build_system_instruction(mode)}\n"
         f"현재 당신은 '{leader_name}' 리더입니다.\n"
         f"전문 분야: {leader_specialty}\n"
         f"질문 요약: {analysis.get('summary', '')}"
@@ -2281,32 +2281,24 @@ GENERAL_MODE_PROMPT = """당신은 법률 문제로 불안해하는 일반인에
 
 [답변 구조 - 반드시 이 순서와 목차 제목을 사용]
 
-목차는 아래 자연어 제목을 그대로 사용하세요. 번호(1. 2.)나 로마자(Ⅰ. Ⅱ.)는 사용하지 마세요.
+반드시 아래 목차 제목을 ## 마크다운 헤더로 사용하세요.
 
 ---
 
 {{사용자 상황에 맞는 한 줄 공감}}
 예: "보증금을 못 돌려받고 계신 상황이시군요."
 
-
-결론부터 말씀드리면
+## 결론부터 말씀드리면
 
 법적으로 어떤 상황인지 핵심 결론을 1~2문장으로.
 근거 법률명을 자연스럽게 포함.
-예: "결론부터 말씀드리면, 법적으로 반드시 돌려받을 수 있습니다.
-주택임대차보호법이 임차인을 강하게 보호하고 있기 때문입니다."
 
-
-왜 그런가요?
+## 왜 그런가요?
 
 근거 법률을 일반인이 이해할 수 있게 풀어서 설명.
 법률 용어는 괄호 안에 쉬운 말 병기.
-예: "주택임대차보호법 제3조의3에 따르면, 임차인은
-임차권등기명령(이사를 가도 보증금 받을 권리를 지켜주는 제도)을
-신청할 수 있습니다."
 
-
-지금 바로 하실 수 있는 일
+## 지금 바로 하실 수 있는 일
 
 첫째, (가장 쉬운 행동)
   무엇을, 어디서, 비용 얼마, 시간 얼마나 걸리는지.
@@ -2317,24 +2309,19 @@ GENERAL_MODE_PROMPT = """당신은 법률 문제로 불안해하는 일반인에
 셋째, (그래도 해결 안 될 때)
   다음 단계와 예상 소요기간.
 
-
-그래도 해결이 안 되면
+## 그래도 해결이 안 되면
 
 최종 수단(소송 등)을 간략히 안내.
 예상 비용과 기간을 포함.
 "여기까지 가는 경우는 많지 않습니다" 등 안심 표현.
 
-
-혼자 하기 어려우시면
+## 혼자 하기 어려우시면
 
 무료 법률 지원 기관을 구체적으로 안내.
 기관명, 전화번호, 이용 조건을 포함.
-예: "대한법률구조공단(전화 132)에 무료로 도움받으실 수 있습니다.
-소득 기준 없이 누구나 이용 가능합니다."
 가능하면 2곳 이상 안내.
 
-
-법률 근거
+## 법률 근거
 
 인용된 법률명 + 조문번호를 1~2줄로 정리.
 "최신 조문은 법령정보센터(law.go.kr)에서 확인하실 수 있습니다."
@@ -2367,58 +2354,46 @@ EXPERT_MODE_PROMPT = """당신은 법률 전문가에게 분석 보고서를 작
 4. 반대 견해나 예외 사항도 검토하세요.
 5. 실무 절차는 단계별로 구비서류, 비용, 관할, 소요기간까지 포함하세요.
 
-[답변 구조 - 반드시 이 형식으로]
+[답변 구조 - 반드시 ## 마크다운 헤더를 사용하세요]
 
-제목: {{법률 주제}}에 관한 법률 검토
+## 사안의 쟁점
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+본 사안의 핵심 쟁점을 3~5개로 정리.
+각 쟁점을 번호와 함께 한 줄로 명시.
 
-Ⅰ. 사안의 쟁점
-  본 사안의 핵심 쟁점을 3~5개로 정리.
-  각 쟁점을 번호와 함께 한 줄로 명시.
+## 관련 법령
 
-Ⅱ. 관련 법령
-  관련 법률+조문을 중요도 순으로 나열.
-  각 조문의 핵심 내용을 인용 또는 요약.
-  조문번호 + 조문 제목 + 내용 형식.
-  예:
-    1. 주택임대차보호법 제3조의3 (임차권등기명령)
-       임대차가 종료된 후 보증금이 반환되지 아니한 경우,
-       임차인은 임차주택의 소재지를 관할하는 지방법원에
-       임차권등기명령을 신청할 수 있다.
+관련 법률+조문을 중요도 순으로 나열.
+각 조문의 핵심 내용을 인용 또는 요약.
+조문번호 + 조문 제목 + 내용 형식.
 
-Ⅲ. 판례 검토
-  관련 판례를 중요도 순으로 나열.
-  형식:
-    1. 대법원 20XX다XXXXX (20XX.XX.XX.)
-       "판결 요지 인용"
-       → 본 사안에의 적용: 한 줄 설명
-  판례가 SSOT에 없으면 "(※ 법령정보센터에서 확인 필요)" 표기.
+## 판례 검토
 
-Ⅳ. 실무 대응 절차
-  단계별로 구체적 절차 안내.
-  각 단계마다:
-    · 관할 (어디에 신청하는지)
-    · 구비서류 (무엇이 필요한지)
-    · 비용 (인지대, 송달료, 변호사 비용 등)
-    · 소요기간 (얼마나 걸리는지)
-    · 효과 (이걸 하면 어떤 법적 효과가 있는지)
+관련 판례를 중요도 순으로 나열.
+형식: 법원명 + 날짜 + 사건번호 + "판결 요지"
+→ 본 사안에의 적용 설명
+판례가 SSOT에 없으면 "(※ 법령정보센터에서 확인 필요)" 표기.
 
-Ⅴ. 쟁점별 검토 의견
-  각 쟁점에 대한 법률적 분석.
-  찬반 논거가 있으면 양쪽 모두 검토.
-  "다만", "한편" 등으로 예외/반대 견해 포함.
+## 실무 대응 절차
 
-Ⅵ. 결론 및 권고
-  최종 의견을 2~3문장으로 요약.
-  권고하는 실무 대응 순서를 명시.
-  비용·시간 효율 관점의 우선순위 제시.
+단계별로 구체적 절차 안내.
+각 단계마다: 관할, 구비서류, 비용, 소요기간, 효과
 
-※ 본 분석에 인용된 조문은 법령정보센터(law.go.kr)에서
-   최신 개정 여부를 반드시 확인하시기 바랍니다.
+## 쟁점별 검토 의견
 
-법률 근거: (인용된 모든 법률+조문 목록)
-참조 판례: (인용된 모든 판례번호 목록)
+각 쟁점에 대한 법률적 분석.
+찬반 논거가 있으면 양쪽 모두 검토.
+
+## 결론 및 권고
+
+최종 의견을 2~3문장으로 요약.
+권고하는 실무 대응 순서를 명시.
+비용·시간 효율 관점의 우선순위 제시.
+
+## 법률 근거
+
+인용된 모든 법률+조문 목록
+참조 판례 목록
 담당: {leader_name} 리더 ({leader_specialty} 전문)
 
 [절대 하지 말 것]
@@ -2435,6 +2410,106 @@ EXPERT_MODE_PROMPT = """당신은 법률 전문가에게 분석 보고서를 작
 객관적, 분석적, 정확한. "~이다", "~한다" 또는 "~입니다" 혼용 가능.
 법률 의견서/검토서 스타일.
 """
+
+
+# =============================================================
+# 📋 모드별 응답 형식 (Gemini 시스템 지시에 추가)
+# =============================================================
+
+GENERAL_RESPONSE_FORMAT = """
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ 아래 응답 형식이 위의 "응답 프레임워크 Premium Format v2"보다 우선합니다.
+반드시 아래 형식을 따르세요.
+
+## 📋 응답 형식 (일반인 모드)
+
+[답변 원칙]
+1. 결론을 먼저 말하세요. 불안한 사람은 "괜찮은지 아닌지"를 가장 먼저 알고 싶어합니다.
+2. 법률 용어를 쓸 때는 반드시 바로 옆에 쉬운 설명을 붙이세요.
+3. 사용자가 오늘 당장 할 수 있는 구체적 행동을 알려주세요.
+4. 감정에 공감하되 과장하지 마세요. 차분하고 따뜻한 톤.
+5. "변호사에게 상담받으세요"로 끝내지 마세요. 무료 지원 기관을 구체적으로 안내하세요.
+
+[답변 구조 - 반드시 이 순서와 제목을 ## 마크다운 헤더로 사용]
+
+{{사용자 상황에 맞는 한 줄 공감}}
+
+## 결론부터 말씀드리면
+핵심 결론 1~2문장 + 근거 법률명
+
+## 왜 그런가요?
+법률 근거를 쉽게 풀어서 설명
+
+## 지금 바로 하실 수 있는 일
+첫째/둘째/셋째 — 구체적 행동 + 비용 + 시간
+
+## 그래도 해결이 안 되면
+최종 수단 + 예상 비용/기간
+
+## 혼자 하기 어려우시면
+무료 법률 지원 기관 2곳 이상 (기관명, 전화번호, 이용 조건)
+
+## 법률 근거
+인용된 법률명 + 조문번호 정리
+
+[절대 하지 말 것]
+- 번호 매기기(1. 2. 3.)보다 "첫째, 둘째, 셋째" 사용
+- "AI", "상담" 표현 사용 금지
+
+[글자수] 2,000~3,000자
+[톤] 친구에게 설명하듯 편안하지만, 법률 근거는 정확하게
+"""
+
+EXPERT_RESPONSE_FORMAT = """
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ 아래 응답 형식이 위의 "응답 프레임워크 Premium Format v2"보다 우선합니다.
+반드시 아래 형식을 따르세요.
+
+## 📋 응답 형식 (전문가 모드)
+
+[답변 원칙]
+1. 법률 용어를 정확하게 사용. 쉬운 설명 불필요.
+2. 모든 주장에 법률 근거(법률명+조문번호) 명시.
+3. 관련 판례 반드시 포함 (판례번호+선고일+요지).
+4. 반대 견해나 예외 사항도 검토.
+
+[답변 구조 - 반드시 ## 마크다운 헤더를 사용]
+
+## 사안의 쟁점
+핵심 쟁점 3~5개 정리
+
+## 관련 법령
+법률+조문을 중요도 순으로 나열
+
+## 판례 검토
+관련 판례 (법원명+날짜+사건번호+요지)
+
+## 실무 대응 절차
+단계별 절차 (관할, 구비서류, 비용, 소요기간, 효과)
+
+## 쟁점별 검토 의견
+각 쟁점에 대한 법률적 분석 + 찬반 논거
+
+## 결론 및 권고
+최종 의견 요약 + 실무 대응 순서
+
+## 법률 근거
+인용된 모든 법률+조문+판례 목록
+
+[글자수] 4,000~5,000자
+[톤] 객관적, 분석적, 법률 검토서 스타일
+"""
+
+
+def _build_system_instruction(mode: str = "general") -> str:
+    """모드별 시스템 지시 생성: SYSTEM_INSTRUCTION_BASE + 모드별 응답 형식"""
+    if mode == "expert":
+        return SYSTEM_INSTRUCTION_BASE + EXPERT_RESPONSE_FORMAT
+    return SYSTEM_INSTRUCTION_BASE + GENERAL_RESPONSE_FORMAT
 
 
 async def _step4_claude_enhance(query: str, analysis: Dict,
@@ -2599,14 +2674,14 @@ async def _run_legal_pipeline(query: str, analysis: Dict, tools: list,
     # ── Stage 3: Gemini Flash 콘텐츠 작성 ──
     logger.info(f"⚡ [Stage 3/5] Gemini Flash 콘텐츠 작성 (draft={'있음' if draft else '없음'})")
     gemini_text = await _step3_gemini_compose(
-        query, analysis, draft, tools, gemini_history, now_kst, ssot_available, lang=lang
+        query, analysis, draft, tools, gemini_history, now_kst, ssot_available, lang=lang, mode=mode
     )
 
     # 응답이 너무 짧으면 draft 없이 재시도
     if len(gemini_text.strip()) < 50 and draft:
         logger.warning(f"⚠️ [Stage 3] 응답 너무 짧음 ({len(gemini_text)}자), draft 없이 재시도")
         gemini_text = await _step3_gemini_compose(
-            query, analysis, "", tools, gemini_history, now_kst, ssot_available, lang=lang
+            query, analysis, "", tools, gemini_history, now_kst, ssot_available, lang=lang, mode=mode
         )
 
     # ── Stage 4: Claude 모드별 답변 생성 ──
@@ -3469,7 +3544,7 @@ async def ask(request: Request):
         if clevel_decision and clevel_decision.get("mode") == "direct":
             exec_id = clevel_decision.get("executive_id")
             logger.info(f"🎯 C-Level 직접 모드: {exec_id}")
-            clevel_instruction = clevel.get_clevel_system_instruction(exec_id, SYSTEM_INSTRUCTION_BASE)
+            clevel_instruction = clevel.get_clevel_system_instruction(exec_id, _build_system_instruction("general"))
             gc = _ensure_genai_client(RUNTIME)
             model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
             chat = gc.chats.create(
@@ -3665,6 +3740,7 @@ async def ask_stream(request: Request):
         query = (data.get("query", "") or "").strip()
         raw_history = data.get("history", [])
         lang = (data.get("lang", "") or "").strip().lower()
+        stream_mode = (data.get("mode", "") or "").strip().lower() or "general"
 
         # 입력 길이 제한 (DoS 방지)
         MAX_QUERY_LEN = 2000
@@ -3696,7 +3772,7 @@ async def ask_stream(request: Request):
 
     # --- SSE generator ---
     async def _sse_generator():
-        nonlocal query, raw_history, gemini_history, visitor_id, config, trace, start_time, lang
+        nonlocal query, raw_history, gemini_history, visitor_id, config, trace, start_time, lang, stream_mode
 
         final_text = ""
         leader_name = "유나"
@@ -3817,7 +3893,7 @@ async def ask_stream(request: Request):
             # ─── 경로 A: C-Level 직접 호출 (스트리밍) ───
             if clevel_decision and clevel_decision.get("mode") == "direct":
                 exec_id = clevel_decision.get("executive_id")
-                clevel_instruction = clevel.get_clevel_system_instruction(exec_id, SYSTEM_INSTRUCTION_BASE)
+                clevel_instruction = clevel.get_clevel_system_instruction(exec_id, _build_system_instruction(stream_mode))
                 if lang == "en":
                     clevel_instruction += "\n\nIMPORTANT: Respond entirely in English. Translate Korean legal terms with the original Korean in parentheses."
                 leader_name = clevel.executives.get(exec_id, {}).get("name", exec_id)
@@ -3924,11 +4000,11 @@ async def ask_stream(request: Request):
 
                         _lang_suffix = "\n\nIMPORTANT: Respond entirely in English. Translate Korean legal terms with the original Korean in parentheses." if lang == "en" else ""
                         if clevel_id:
-                            sys_instr = orchestrator._build_clevel_instruction(leader, SYSTEM_INSTRUCTION_BASE) if hasattr(orchestrator, '_build_clevel_instruction') else SYSTEM_INSTRUCTION_BASE
+                            sys_instr = orchestrator._build_clevel_instruction(leader, _build_system_instruction(stream_mode)) if hasattr(orchestrator, '_build_clevel_instruction') else _build_system_instruction(stream_mode)
                             sys_instr += _lang_suffix
                         else:
                             sys_instr = (
-                                f"{SYSTEM_INSTRUCTION_BASE}\n\n"
+                                f"{_build_system_instruction(stream_mode)}\n\n"
                                 f"🎯 당신의 역할: {leader.get('name', '')} ({leader.get('role', '')})\n"
                                 f"🎯 전문 분야: {leader_specialty}\n"
                                 f"🎯 관점: {leader_specialty} 전문가 관점에서 이 사안을 분석하세요.\n\n"
@@ -3977,7 +4053,7 @@ async def ask_stream(request: Request):
                             None,
                             lambda: orchestrator.parallel_swarm_analysis(
                                 query, selected_leaders, tools,
-                                SYSTEM_INSTRUCTION_BASE, model_name
+                                _build_system_instruction(stream_mode), model_name
                             )
                         )
 
@@ -4010,7 +4086,7 @@ async def ask_stream(request: Request):
                             exec_id = clevel_decision.get("executive_id", "CSO")
                             exec_name = clevel.executives.get(exec_id, {}).get("name", exec_id)
                             try:
-                                clevel_instruction = clevel.get_clevel_system_instruction(exec_id, SYSTEM_INSTRUCTION_BASE)
+                                clevel_instruction = clevel.get_clevel_system_instruction(exec_id, _build_system_instruction(stream_mode))
                                 _gc = _ensure_genai_client(RUNTIME)
                                 clevel_chat = _gc.chats.create(
                                     model=model_name,
@@ -4090,7 +4166,7 @@ async def ask_stream(request: Request):
                     yield _sse("status", {"step": "analyzing", "leader": leader_name})
 
                     fallback_instruction = (
-                        f"{SYSTEM_INSTRUCTION_BASE}\n"
+                        f"{_build_system_instruction(stream_mode)}\n"
                         f"현재 당신은 '{leader['name']}({leader['role']})' 노드입니다.\n"
                         f"🎯 전문 분야: {leader.get('specialty', '통합')}\n"
                         f"🎯 관점: {leader.get('specialty', '통합')} 전문가 관점에서 이 사안을 분석하세요.\n"
