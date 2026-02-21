@@ -44,6 +44,26 @@
         "destination": "/index-en.html"
       },
       {
+        "source": "/about",
+        "destination": "/about.html"
+      },
+      {
+        "source": "/about-en",
+        "destination": "/about-en.html"
+      },
+      {
+        "source": "/leaders",
+        "destination": "/leaders.html"
+      },
+      {
+        "source": "/leaders-en",
+        "destination": "/leaders-en.html"
+      },
+      {
+        "source": "/clevel-en",
+        "destination": "/clevel-en.html"
+      },
+      {
         "source": "/api/**",
         "function": "api"
       }
