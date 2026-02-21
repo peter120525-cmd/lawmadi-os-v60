@@ -263,14 +263,14 @@
             flex-direction: column;
         }
 
-        /* 랜딩페이지: 스크롤 없이 뷰포트에 맞춤 */
+        /* 랜딩페이지: 뷰포트 맞춤 (넘칠 시 스크롤) */
         #landing-content {
-            overflow: hidden;
+            overflow-y: auto;
             padding: 4px 12px;
         }
         #landing-content .example-questions {
             max-height: 100%;
-            overflow: hidden;
+            overflow-y: auto;
         }
         /* 데스크탑: 3열 x 4행 = 뷰포트 안에 맞춤 */
         #landing-content .example-card-grid {
@@ -309,8 +309,8 @@
                 width: 100%;
             }
             .examples-section h3 { font-size: 1.5rem; margin-bottom: 16px; }
-            .example-card-grid { gap: 16px; }
-            .example-card { padding: 18px 22px; border-radius: 16px; gap: 12px; }
+            .example-card-grid { gap: 12px; }
+            .example-card { padding: 14px 18px; border-radius: 16px; gap: 10px; }
             .example-card-icon { font-size: 1.85rem; }
             .example-card-title { font-size: 1.32rem; }
             .example-card-desc { font-size: 1.18rem; }
