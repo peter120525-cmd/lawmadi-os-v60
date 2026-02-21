@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>About Lawmadi OS - Legal Operating System That Turns Anxiety into Action</title>
     <meta name="description" content="60 expert leaders analyze your legal issues together. Lawmadi OS provides real-time statute verification and 5-stage analysis.">
     <link rel="canonical" href="https://lawmadi-db.web.app/about-en.html" />
@@ -11,6 +11,7 @@
     <meta property="og:description" content="Legal operating system that turns anxiety into action. 60 expert leaders analyze together." />
     <meta property="og:url" content="https://lawmadi-db.web.app/about-en.html" />
     <meta property="og:locale" content="en_US" />
+    <meta name="theme-color" content="#0f172a">
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
     <style>
@@ -110,6 +111,7 @@
             gap: 8px;
             padding: 12px 24px;
             background: rgba(255, 255, 255, 0.1);
+            -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 12px;
@@ -197,6 +199,7 @@
 
         .keyword-card {
             background: rgba(30, 41, 59, 0.8);
+            -webkit-backdrop-filter: blur(20px);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 20px;
@@ -244,6 +247,7 @@
             align-items: center;
             gap: 20px;
             background: rgba(30, 41, 59, 0.6);
+            -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
@@ -338,6 +342,7 @@
 
         .clevel-mini {
             background: rgba(30, 41, 59, 0.8);
+            -webkit-backdrop-filter: blur(20px);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 16px;
@@ -427,6 +432,7 @@
 
         .trust-card {
             background: rgba(30, 41, 59, 0.6);
+            -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
@@ -528,9 +534,17 @@
         .section:nth-child(5) { animation-delay: 0.25s; }
         .section:nth-child(6) { animation-delay: 0.3s; }
 
+        @media (max-width: 1024px) {
+            .keyword-grid,
+            .trust-grid,
+            .clevel-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
         @media (max-width: 768px) {
             .container { padding: 20px 16px 60px; }
-            .back-button { top: 12px; left: 12px; padding: 8px 14px; font-size: 0.85rem; }
+            .back-button { top: 12px; left: 12px; padding: 8px 14px; font-size: 0.85rem; min-height: 44px; }
             .header { margin-top: 40px; margin-bottom: 40px; }
             .header h1 { font-size: 2rem; }
             .header p { font-size: 1rem; }
@@ -545,6 +559,7 @@
             .stat-number { font-size: 1.8rem; }
             .section-title { font-size: 1.3rem; }
             .view-links { flex-direction: column; gap: 10px; }
+            .view-link { min-height: 44px; padding: 10px 0; }
             .cta-button { padding: 16px 36px; font-size: 1rem; }
         }
     </style>
