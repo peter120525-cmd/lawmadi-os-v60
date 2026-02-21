@@ -2015,7 +2015,7 @@ async def _step3_gemini_compose(query: str, analysis: Dict, draft: str,
                                  tools: list, gemini_history: list,
                                  now_kst: str, ssot_available: bool,
                                  lang: str = "", mode: str = "general") -> str:
-    """Stage 3: Gemini Flash 콘텐츠 작성 (일반: 800, 전문가: 1500 토큰)"""
+    """Stage 3: Gemini Flash 메인 콘텐츠 작성 (일반: 3000, 전문가: 4000 토큰)"""
     gc = _ensure_genai_client(RUNTIME)
     model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
     leader_name = analysis.get("leader_name", "마디")
@@ -2063,7 +2063,7 @@ async def _step3_gemini_compose(query: str, analysis: Dict, draft: str,
     gen_config = genai_types.GenerateContentConfig(
         tools=tools,
         system_instruction=instruction,
-        max_output_tokens=1500 if mode == "expert" else 800,
+        max_output_tokens=4000 if mode == "expert" else 3000,
         automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
     )
 
@@ -2341,9 +2341,13 @@ def _build_system_instruction(mode: str = "general") -> str:
 
 async def _step4_claude_enhance(query: str, analysis: Dict,
                                  gemini_text: str, mode: str = "general") -> str:
-    """Stage 4: Claude Sonnet 4 모드별 답변 생성 (general: 2500 토큰, expert: 5000 토큰)"""
+    """Stage 4: Claude 보강 — Gemini 메인 응답의 구조·가독성·법률 정확성을 보강 (원본 유지 기반)"""
     claude_client = RUNTIME.get("claude_client")
     if not claude_client:
+        return ""
+
+    # Gemini 응답이 너무 짧으면 보강 불필요
+    if len(gemini_text.strip()) < 100:
         return ""
 
     leader_name = analysis.get("leader_name", "마디")
@@ -2351,41 +2355,47 @@ async def _step4_claude_enhance(query: str, analysis: Dict,
 
     try:
         if mode == "expert":
-            system_prompt = EXPERT_MODE_PROMPT.format(
-                leader_name=leader_name, leader_specialty=leader_specialty
-            )
             max_tokens = 5000
-            user_message = (
-                f"사용자 질문: {query}\n\n"
-                f"[이전 단계 분석 초안]\n{gemini_text}\n\n"
-                f"위 초안의 법률 근거를 유지하면서 답변 원칙과 구조에 맞게 법률 검토서를 작성하세요. 반드시 4,000~5,000자 분량으로 모든 섹션을 빠짐없이 작성하세요."
+            enhance_instruction = (
+                f"당신은 Lawmadi OS의 법률 품질 보강 엔진입니다.\n"
+                f"아래 Gemini 메인 응답을 **원본 구조와 내용을 유지하면서** 보강하세요.\n\n"
+                f"[보강 규칙]\n"
+                f"1. 원본의 법률 근거(조문, 판례)를 그대로 유지하세요.\n"
+                f"2. 빠진 섹션이 있으면 추가하세요: 사안의 쟁점, 관련 법령, 판례 검토, 실무 대응 절차, 쟁점별 검토 의견, 결론 및 권고, 법률 근거\n"
+                f"3. 법률 용어의 정확성을 검증하고 보완하세요.\n"
+                f"4. 4,000~5,000자 분량으로 보강하세요.\n"
+                f"5. 담당: {leader_name} 리더 ({leader_specialty} 전문)\n"
             )
         else:
-            system_prompt = GENERAL_MODE_PROMPT.format(
-                leader_name=leader_name, leader_specialty=leader_specialty
-            )
-            max_tokens = 2500
-            user_message = (
-                f"사용자 질문: {query}\n\n"
-                f"[이전 단계 분석 초안]\n{gemini_text}\n\n"
-                f"위 초안의 법률 근거를 유지하면서 답변 원칙과 구조에 맞게 최종 답변을 작성하세요."
+            max_tokens = 3000
+            enhance_instruction = (
+                f"당신은 Lawmadi OS의 법률 품질 보강 엔진입니다.\n"
+                f"아래 Gemini 메인 응답을 **원본 구조와 내용을 유지하면서** 보강하세요.\n\n"
+                f"[보강 규칙]\n"
+                f"1. 원본의 법률 근거(조문, 판례)를 그대로 유지하세요.\n"
+                f"2. 빠진 섹션이 있으면 추가하세요: 결론부터 말씀드리면, 왜 그런가요?, 지금 바로 하실 수 있는 일, 그래도 해결이 안 되면, 혼자 하기 어려우시면, 지금 해야 할 행동 3가지, 법률 근거\n"
+                f"3. 한 문장은 20~25자 이내, 문단은 3줄 이내로 정리하세요.\n"
+                f"4. 법률 용어는 괄호 안에 쉬운 설명을 붙이세요.\n"
+                f"5. 2,000~3,000자 분량으로 보강하세요.\n"
+                f"6. 담당: {leader_name} 리더 ({leader_specialty} 전문)\n"
             )
 
         enhance_resp = claude_client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=max_tokens,
-            system=system_prompt,
+            system=enhance_instruction,
             messages=[{
                 "role": "user",
-                "content": user_message
+                "content": f"사용자 질문: {query}\n\n[Gemini 메인 응답]\n{gemini_text}\n\n위 응답을 보강하세요."
             }],
         )
         enhanced = enhance_resp.content[0].text.strip()
-        if not enhanced:
+        if not enhanced or len(enhanced) < len(gemini_text) * 0.5:
+            # 보강 결과가 원본보다 크게 짧으면 원본 유지
             return ""
         return enhanced
     except Exception as e:
-        logger.warning(f"⚠️ [Stage 4] Claude 보강 실패 (무시): {e}")
+        logger.warning(f"⚠️ [Stage 4] Claude 보강 실패 (Gemini 원본 유지): {e}")
         return ""
 
 
