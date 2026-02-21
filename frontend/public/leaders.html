@@ -845,7 +845,7 @@
                     ? `<div class="leader-banner"><img src="${img.banner}" alt="${leader.name}" loading="lazy"></div>`
                     : '';
                 return `
-                <div class="leader-card" data-name="${leader.name}" style="animation-delay: ${index * 0.02}s">
+                <div class="leader-card" data-name="${leader.name}" data-code="${leader.code}" style="animation-delay: ${index * 0.02}s">
                     <div class="leader-header">
                         <div class="leader-avatar">${avatarContent}</div>
                         <div class="leader-name-group">
@@ -879,18 +879,23 @@
         // Load leaders on page load
         loadLeaders();
 
-        // C-Level 카드 클릭 → 채팅 이동
+        // C-Level 카드 클릭 → 소개 페이지 이동
+        const clevelCodeMap = { '서연': 'CSO', '지유': 'CTO', '유나': 'CCO' };
         document.querySelectorAll('.clevel-card').forEach(card => {
             card.addEventListener('click', () => {
-                window.location.href = `index.html?leader=${encodeURIComponent(card.dataset.name)}`;
+                const code = clevelCodeMap[card.dataset.name] || card.dataset.name;
+                window.location.href = `leader-profile.html?id=${code}`;
             });
         });
 
-        // 리더 카드 클릭 → 채팅 이동 (이벤트 위임)
+        // 리더 카드 클릭 → 소개 페이지 이동 (이벤트 위임)
         document.getElementById('leadersGrid').addEventListener('click', (e) => {
             const card = e.target.closest('.leader-card');
-            if (card && card.dataset.name) {
-                window.location.href = `index.html?leader=${encodeURIComponent(card.dataset.name)}`;
+            if (card) {
+                const code = card.dataset.code;
+                if (code) {
+                    window.location.href = `leader-profile.html?id=${code}`;
+                }
             }
         });
 
