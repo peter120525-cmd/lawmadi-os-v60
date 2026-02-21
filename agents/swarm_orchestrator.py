@@ -23,6 +23,142 @@ logger = logging.getLogger("LawmadiOS.SwarmOrchestrator")
 # Gemini 모델 상수 — main.py의 DEFAULT_GEMINI_MODEL과 동기화
 _DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
 
+# =============================================================
+# 📦 법률명 → 리더 매핑 (law_cache.json 기반)
+# =============================================================
+LAW_TO_LEADER = {
+    # L01 휘율 (민사법)
+    "민법": "L01", "민사소송법": "L01",
+    # L02 보늬 (부동산법)
+    "부동산등기법": "L02", "부동산실명법": "L02", "공인중개사법": "L02",
+    # L03 담슬 (건설법)
+    "건설산업기본법": "L03", "건축법": "L03", "하도급법": "L03",
+    # L04 아키 (재개발·재건축)
+    "도시정비법": "L04", "도시개발법": "L04",
+    # L05 연우 (의료법)
+    "의료법": "L05", "약사법": "L05",
+    # L06 벼리 (손해배상)
+    "국가배상법": "L06",
+    # L07 하늬 (교통사고)
+    "교통사고처리특례법": "L07", "도로교통법": "L07", "자동차손해배상보장법": "L07",
+    # L08 온유 (임대차)
+    "주택임대차보호법": "L08", "상가건물임대차보호법": "L08",
+    # L09 한울 (국가계약)
+    "국가계약법": "L09", "지방계약법": "L09",
+    # L10 결휘 (민사집행)
+    "민사집행법": "L10",
+    # L11 오름 (채권추심)
+    "채권추심법": "L11", "신용정보법": "L11",
+    # L13 누리 (상사법)
+    "상법": "L13", "자본시장법": "L13",
+    # L14 다솜 (회사법·M&A)
+    "법인세법": "L14",
+    # L15 별하 (스타트업)
+    "중소기업기본법": "L15", "외국인투자촉진법": "L15",
+    # L16 슬아 (보험)
+    "보험업법": "L16",
+    # L17 미르 (국제거래)
+    "국제사법": "L17", "대외무역법": "L17",
+    # L18 다온 (에너지·자원)
+    "에너지법": "L18", "전기사업법": "L18",
+    # L19 슬옹 (해상·항공)
+    "항공사업법": "L19",
+    # L20 찬솔 (조세·금융)
+    "소득세법": "L20", "부가가치세법": "L20", "국세기본법": "L20", "지방세법": "L20",
+    # L21 휘윤 (IT·보안)
+    "정보통신망법": "L21", "전자서명법": "L21", "데이터산업법": "L21",
+    # L22 무결 (형사법)
+    "형법": "L22", "형사소송법": "L22",
+    # L23 가비 (엔터테인먼트)
+    "대중문화예술산업발전법": "L23", "공연법": "L23",
+    # L24 도울 (조세불복)
+    "조세범처벌법": "L24",
+    # L25 강무 (군형법)
+    "군형법": "L25", "군사법원법": "L25",
+    # L26 루다 (지식재산권)
+    "특허법": "L26", "디자인보호법": "L26", "상표법": "L26",
+    # L27 수림 (환경법)
+    "환경정책기본법": "L27", "환경영향평가법": "L27", "대기환경보전법": "L27",
+    # L28 해슬 (무역·관세)
+    "관세법": "L28",
+    # L29 라온 (게임·콘텐츠)
+    "게임산업진흥법": "L29",
+    # L30 담우 (노동법)
+    "근로기준법": "L30", "노동조합법": "L30", "산업안전보건법": "L30",
+    # L31 로운 (행정법)
+    "행정소송법": "L31", "행정심판법": "L31", "행정절차법": "L31",
+    "국가공무원법": "L31", "지방공무원법": "L31",
+    # L32 바름 (공정거래)
+    "공정거래법": "L32",
+    # L34 지누 (개인정보)
+    "개인정보보호법": "L34",
+    # L35 마루 (헌법)
+    "헌법": "L35", "헌법재판소법": "L35",
+    # L36 단아 (문화·종교)
+    "문화재보호법": "L36",
+    # L37 예솔 (소년법)
+    "소년법": "L37", "청소년보호법": "L37", "아동학대처벌법": "L37", "아동복지법": "L37",
+    # L38 슬비 (소비자)
+    "소비자기본법": "L38", "전자상거래법": "L38",
+    # L39 가온 (정보통신)
+    "전기통신사업법": "L39",
+    # L40 한결 (인권)
+    "국가인권위원회법": "L40",
+    # L41 산들 (이혼·가족)
+    "가사소송법": "L41",
+    # L42 하람 (저작권)
+    "저작권법": "L42",
+    # L43 해나 (산업재해)
+    "산업재해보상보험법": "L43",
+    # L44 보람 (사회복지)
+    "사회보장기본법": "L44", "국민기초생활보장법": "L44",
+    # L45 이룸 (교육·청소년)
+    "교육기본법": "L45",
+    # L46 다올 (보험·연금)
+    "국민연금법": "L46", "국민건강보험법": "L46", "국민건강증진법": "L46",
+    # L48 나래 (문화예술)
+    "문화예술진흥법": "L48",
+    # L49 가람 (식품·보건)
+    "식품위생법": "L49",
+    # L50 빛나 (다문화·이주)
+    "다문화가족지원법": "L50", "출입국관리법": "L50", "국적법": "L50",
+    # L51 소울 (종교·전통)
+    "전통사찰보존법": "L51",
+    # L52 미소 (광고·언론)
+    "언론중재법": "L52",
+    # L53 늘솔 (농림·축산)
+    "농지법": "L53", "농업협동조합법": "L53", "축산법": "L53",
+    # L54 이서 (해양·수산)
+    "수산업법": "L54", "해양환경관리법": "L54",
+    # L55 윤빛 (과학기술)
+    "과학기술기본법": "L55",
+    # L56 다인 (장애인·복지)
+    "장애인복지법": "L56",
+    # L57 세움 (상속·신탁)
+    "상속세및증여세법": "L57", "신탁법": "L57",
+    # L58 예온 (스포츠·레저)
+    "국민체육진흥법": "L58",
+}
+
+
+def resolve_leaders_from_ssot(ssot_sources: list) -> Dict[str, int]:
+    """
+    SSOT 매칭 결과에서 리더별 점수를 산출.
+    Returns: {leader_id: boost_score}
+    """
+    leader_boost = {}
+    if not ssot_sources:
+        return leader_boost
+    for src in ssot_sources:
+        law_name = src.get("law", "")
+        ssot_score = src.get("score", 0)
+        leader_id = LAW_TO_LEADER.get(law_name)
+        if leader_id:
+            # SSOT 점수가 높은 법률일수록 더 큰 부스트
+            boost = 30 if ssot_score >= 50 else 20
+            leader_boost[leader_id] = leader_boost.get(leader_id, 0) + boost
+    return leader_boost
+
 
 class GeminiCircuitBreaker:
     """Gemini API Circuit Breaker — CLOSED/OPEN/HALF_OPEN 3-state"""
@@ -60,8 +196,8 @@ class GeminiCircuitBreaker:
                 logger.warning(f"🔴 [CircuitBreaker] OPEN — {self._failure_count}회 연속 실패, {self._recovery_timeout}초 후 재시도")
 
 
-# 전역 Circuit Breaker 인스턴스
-_gemini_cb = GeminiCircuitBreaker(failure_threshold=5, recovery_timeout=60)
+# 전역 Circuit Breaker 인스턴스 (config.json 값으로 초기화됨 — SwarmOrchestrator.__init__에서 갱신)
+_gemini_cb = GeminiCircuitBreaker(failure_threshold=3, recovery_timeout=30)
 
 
 class SwarmOrchestrator:
@@ -76,9 +212,20 @@ class SwarmOrchestrator:
     """
 
     def __init__(self, leaders_registry: Dict, config: Dict = None, genai_client=None):
+        global _gemini_cb
         self.leaders = leaders_registry
         self.config = config or {}
         self.genai_client = genai_client
+
+        # config.json의 circuit_breaker 설정 읽기
+        cb_config = (self.config
+                     .get("network_security", {})
+                     .get("circuit_breaker", {})
+                     .get("per_provider", {})
+                     .get("LAW_GO_KR_DRF", {}))
+        cb_threshold = cb_config.get("failure_threshold", 3)
+        cb_timeout_s = cb_config.get("reset_timeout_ms", 30000) // 1000
+        _gemini_cb = GeminiCircuitBreaker(failure_threshold=cb_threshold, recovery_timeout=cb_timeout_s)
 
         # Leader별 도메인 키워드 매핑
         self._build_domain_index()
@@ -91,67 +238,71 @@ class SwarmOrchestrator:
         logger.info(f"✅ SwarmOrchestrator initialized: {len(self.leaders)} leaders, swarm={self.swarm_enabled}")
 
     def _build_domain_index(self):
-        """각 Leader의 specialty를 기반으로 도메인 키워드 인덱스 구축"""
+        """각 Leader의 specialty를 기반으로 3계층 가중 키워드 인덱스 구축
+        primary(+20): 해당 리더의 핵심 독점 키워드
+        secondary(+10): 관련 일반 키워드
+        contextual(+5): 문맥 보조 키워드
+        """
         self.domain_keywords = {
-            "L01": ["민사", "계약", "손해배상", "부당이득", "민법", "채무", "불법행위"],  # 민사법
-            "L02": ["부동산", "등기", "소유권", "지분", "매매", "토지", "건물"],  # 부동산법
-            "L03": ["건설", "공사", "하자", "설계", "시공"],  # 건설법
-            "L04": ["재개발", "재건축", "조합", "분양", "정비사업"],  # 재개발·재건축
-            "L05": ["의료", "진료", "수술", "병원", "의사", "환자", "의료과실"],  # 의료법
-            "L06": ["손해배상", "과실", "배상", "보상", "위자료"],  # 손해배상
-            "L07": ["교통사고", "사고", "과실", "보험", "자동차"],  # 교통사고
-            "L08": ["임대차", "전세", "월세", "보증금", "임차", "임대", "집주인"],  # 임대차
-            "L09": ["국가계약", "입찰", "계약", "공공계약"],  # 국가계약
-            "L10": ["민사집행", "경매", "압류", "배당", "강제집행", "집행"],  # 민사집행
-            "L11": ["채권", "추심", "변제", "채무", "빚"],  # 채권추심
-            "L12": ["등기", "경매", "낙찰", "배당", "부동산등기"],  # 등기·경매
-            "L13": ["상사", "회사", "주주", "이사", "상법", "상행위"],  # 상사법
-            "L14": ["회사법", "M&A", "인수합병", "주식", "법인"],  # 회사법·M&A
-            "L15": ["스타트업", "투자", "벤처", "스톡옵션", "창업"],  # 스타트업
-            "L16": ["보험", "보험금", "피보험자", "약관", "보험사"],  # 보험
-            "L17": ["국제거래", "무역", "중재", "외국", "국제"],  # 국제거래
-            "L18": ["에너지", "자원", "전력", "광업", "전기"],  # 에너지·자원
-            "L19": ["해상", "항공", "선박", "운송", "물류"],  # 해상·항공
-            "L20": ["조세", "금융", "세금", "과세", "은행", "국세", "지방세"],  # 조세·금융
-            "L21": ["it", "보안", "해킹", "데이터", "정보보호", "개인정보", "사이버"],  # IT·보안
-            "L22": ["형사", "고소", "처벌", "범죄", "기소", "형법", "사기", "횡령", "폭행", "절도", "구속", "수사", "검찰", "갚을 생각", "빌려줬", "차용증", "공증", "떼먹", "먹튀", "배임", "명예훼손", "허위사실", "모욕", "비방", "악플", "게시글", "sns"],  # 형사법
-            "L23": ["엔터테인먼트", "연예", "계약", "방송", "영화"],  # 엔터테인먼트
-            "L24": ["조세불복", "심판", "이의신청", "과세전적부심사"],  # 조세불복
-            "L25": ["군형법", "군대", "군사", "군인"],  # 군형법
-            "L26": ["지식재산권", "특허", "상표", "저작권", "ip", "디자인권", "상표권", "특허권", "발명"],  # 지식재산권
-            "L27": ["환경", "오염", "배출", "환경법", "폐기물"],  # 환경법
-            "L28": ["무역", "관세", "수입", "수출", "fta"],  # 무역·관세
-            "L29": ["게임", "콘텐츠", "아이템", "게임물"],  # 게임·콘텐츠
-            "L30": ["노동", "해고", "임금", "근로", "퇴직", "근로기준법", "부당해고", "노동조합"],  # 노동법
-            "L31": ["행정", "행정처분", "취소", "허가", "행정소송", "행정청"],  # 행정법
-            "L32": ["공정거래", "독점", "담합", "불공정", "경쟁제한"],  # 공정거래
-            "L33": ["우주항공", "위성", "발사체", "항공우주"],  # 우주항공
-            "L34": ["개인정보", "gdpr", "정보주체", "개인정보보호"],  # 개인정보
-            "L35": ["헌법", "위헌", "기본권", "헌재", "헌법재판소", "위헌법률"],  # 헌법
-            "L36": ["문화", "종교", "문화재", "문화유산"],  # 문화·종교
-            "L37": ["소년법", "청소년", "미성년", "소년범"],  # 소년법
-            "L38": ["소비자", "피해", "환불", "약관", "소비자보호"],  # 소비자
-            "L39": ["정보통신", "통신", "망", "전기통신"],  # 정보통신
-            "L40": ["인권", "차별", "평등", "인권침해"],  # 인권
-            "L41": ["이혼", "가족", "양육", "위자료", "혼인", "친권", "상속"],  # 이혼·가족
-            "L42": ["저작권", "표절", "침해", "저작물", "사진", "무단", "허락 없이", "워터마크", "도용", "복제", "블로그", "카피"],  # 저작권
-            "L43": ["산업재해", "산재", "업무상", "산업안전"],  # 산업재해
-            "L44": ["사회복지", "복지", "사회보장"],  # 사회복지
-            "L45": ["교육", "학교", "청소년", "학생"],  # 교육·청소년
-            "L46": ["보험", "연금", "국민연금", "4대보험"],  # 보험·연금
-            "L47": ["벤처", "신산업", "규제샌드박스", "혁신"],  # 벤처·신산업
-            "L48": ["문화예술", "예술", "미술", "문화"],  # 문화예술
-            "L49": ["식품", "보건", "위생", "식품안전"],  # 식품·보건
-            "L50": ["다문화", "이주", "외국인", "이민"],  # 다문화·이주
-            "L51": ["종교", "전통", "종교법인", "사찰"],  # 종교·전통
-            "L52": ["광고", "언론", "언론중재", "명예", "출판", "언론사", "기사", "보도"],  # 광고·언론
-            "L53": ["농림", "축산", "농지", "농업", "축산업"],  # 농림·축산
-            "L54": ["해양", "수산", "어업", "어선", "수산물"],  # 해양·수산
-            "L55": ["과학기술", "R&D", "연구", "기술개발"],  # 과학기술
-            "L56": ["장애인", "복지", "편의시설", "장애", "장애인차별금지"],  # 장애인·복지
-            "L57": ["상속", "신탁", "유언", "유산", "명의신탁", "상속세", "증여"],  # 상속·신탁
-            "L58": ["스포츠", "레저", "체육", "운동"],  # 스포츠·레저
-            "L59": ["데이터", "ai윤리", "알고리즘", "인공지능", "ai"],  # 데이터·AI윤리
+            "L01": {"primary": ["민사", "민법", "불법행위", "부당이득"], "secondary": ["계약", "채무불이행", "채권", "물권"], "contextual": ["이행", "해제", "해지", "위약금", "약정"]},
+            "L02": {"primary": ["부동산", "토지", "건물매매", "소유권이전"], "secondary": ["등기", "소유권", "지분", "매매", "건물", "아파트", "주택"], "contextual": ["명의", "이중매매", "중개", "감정평가"]},
+            "L03": {"primary": ["건설", "시공", "건설산업"], "secondary": ["공사", "하자", "설계", "건축"], "contextual": ["도급", "하도급", "공사대금", "준공", "시공사"]},
+            "L04": {"primary": ["재개발", "재건축", "정비사업"], "secondary": ["조합", "분양", "도시정비"], "contextual": ["관리처분", "조합원", "이주비"]},
+            "L05": {"primary": ["의료사고", "의료과실", "오진", "수술사고"], "secondary": ["의료", "진료", "수술", "병원", "의사", "환자"], "contextual": ["합병증", "후유증", "진료기록", "의료분쟁"]},
+            "L06": {"primary": ["영업손실", "국가배상"], "secondary": ["손해배상", "배상", "보상", "위자료", "과실상계"], "contextual": ["일실수익", "재산피해", "정신적 고통"]},
+            "L07": {"primary": ["교통사고", "자동차사고", "차량사고"], "secondary": ["과실비율", "합의금", "자동차", "보험사", "교통"], "contextual": ["신호위반", "음주운전", "뺑소니", "후유장해", "자배법"]},
+            "L08": {"primary": ["임대차", "전세", "월세", "보증금반환"], "secondary": ["보증금", "임차", "임대", "집주인", "세입자"], "contextual": ["전입신고", "확정일자", "갱신", "묵시적", "계약갱신", "나가달라", "퇴거"]},
+            "L09": {"primary": ["국가계약", "조달", "관급공사"], "secondary": ["입찰", "공공계약", "부정당업자"], "contextual": ["낙찰", "제재", "정부조달"]},
+            "L10": {"primary": ["민사집행", "강제집행", "재산조회"], "secondary": ["압류", "배당", "집행", "가압류"], "contextual": ["채권압류", "급여압류", "재산명시"]},
+            "L11": {"primary": ["채권추심", "추심", "빚독촉"], "secondary": ["채권", "변제", "빚", "상환"], "contextual": ["채무자", "채권자", "독촉", "변제기"]},
+            "L12": {"primary": ["부동산경매", "낙찰", "경매법원"], "secondary": ["경매", "등기", "배당", "부동산등기"], "contextual": ["최저매각가", "매각허가", "인도명령", "명도"]},
+            "L13": {"primary": ["상사", "상법", "상행위", "주주대표소송"], "secondary": ["회사", "주주", "이사", "이사회"], "contextual": ["대표이사", "감사", "총회", "결의"]},
+            "L14": {"primary": ["m&a", "인수합병", "기업인수"], "secondary": ["회사법", "주식", "법인", "합병"], "contextual": ["실사", "주식양도", "경영권", "우선주"]},
+            "L15": {"primary": ["스타트업", "스톡옵션", "공동창업"], "secondary": ["투자", "벤처", "창업", "투자유치"], "contextual": ["지분", "엔젤투자", "시드", "시리즈", "주주간계약"]},
+            "L16": {"primary": ["보험금청구", "보험사기", "면책사유"], "secondary": ["보험", "보험금", "피보험자", "보험사", "보험약관"], "contextual": ["보장", "해약환급금", "보험료"]},
+            "L17": {"primary": ["국제거래", "국제중재", "icc"], "secondary": ["무역분쟁", "중재", "외국", "국제"], "contextual": ["해외바이어", "외국기업", "통상"]},
+            "L18": {"primary": ["에너지", "전력", "발전소"], "secondary": ["자원", "광업", "전기", "태양광"], "contextual": ["신재생", "인허가", "전기사업"]},
+            "L19": {"primary": ["해상운송", "항공운송", "선박"], "secondary": ["해상", "항공", "운송", "물류"], "contextual": ["화물", "선하증권", "항공화물"]},
+            "L20": {"primary": ["세무조사", "세금", "과세"], "secondary": ["조세", "금융", "은행", "국세", "지방세"], "contextual": ["소득세", "부가세", "종합소득", "탈세"]},
+            "L21": {"primary": ["해킹", "정보유출", "사이버범죄"], "secondary": ["it", "보안", "정보보호", "사이버"], "contextual": ["서버", "취약점", "디도스"]},
+            "L22": {"primary": ["형사", "고소", "기소", "구속", "수사"], "secondary": ["처벌", "범죄", "형법", "사기", "횡령", "폭행", "절도", "검찰"], "contextual": ["갚을 생각", "빌려줬", "차용증", "공증", "떼먹", "먹튀", "배임", "허위사실", "모욕", "비방", "악플", "sns"]},
+            "L23": {"primary": ["엔터테인먼트", "연예", "전속계약"], "secondary": ["방송", "영화", "기획사"], "contextual": ["매니지먼트", "출연료", "연예인"]},
+            "L24": {"primary": ["조세불복", "과세전적부심사"], "secondary": ["심판", "이의신청", "조세심판"], "contextual": ["경정청구", "부과처분", "국세청"]},
+            "L25": {"primary": ["군형법", "군사법원", "군대폭력"], "secondary": ["군대", "군사", "군인"], "contextual": ["상관", "가혹행위", "군복무", "병역"]},
+            "L26": {"primary": ["특허", "상표", "디자인권", "특허침해"], "secondary": ["지식재산권", "ip", "상표권", "특허권", "발명", "변리사"], "contextual": ["출원", "등록", "심사", "무효심판"]},
+            "L27": {"primary": ["환경오염", "폐기물", "환경법"], "secondary": ["환경", "오염", "배출"], "contextual": ["소음", "악취", "수질", "대기오염"]},
+            "L28": {"primary": ["관세", "수입통관", "fta"], "secondary": ["무역", "수입", "수출"], "contextual": ["관세분류", "반덤핑", "원산지"]},
+            "L29": {"primary": ["게임", "게임아이템", "게임물"], "secondary": ["콘텐츠", "아이템"], "contextual": ["인게임", "현금거래", "게임사"]},
+            "L30": {"primary": ["부당해고", "임금체불", "근로기준법", "노동조합"], "secondary": ["노동", "해고", "임금", "근로", "퇴직"], "contextual": ["급여", "연장근로", "야근", "통상임금", "퇴직금"]},
+            "L31": {"primary": ["행정소송", "행정심판", "행정처분취소"], "secondary": ["행정", "행정처분", "취소", "허가", "행정청"], "contextual": ["인허가", "과징금", "영업정지"]},
+            "L32": {"primary": ["공정거래", "담합", "독점"], "secondary": ["불공정", "경쟁제한", "시장지배"], "contextual": ["과징금", "공정위", "끼워팔기"]},
+            "L33": {"primary": ["우주항공", "위성", "발사체"], "secondary": ["항공우주", "드론"], "contextual": ["우주산업", "항공규제"]},
+            "L34": {"primary": ["개인정보", "개인정보보호", "gdpr"], "secondary": ["정보주체", "개인정보유출"], "contextual": ["동의", "수집", "제3자 제공"]},
+            "L35": {"primary": ["헌법", "위헌", "헌법소원"], "secondary": ["기본권", "헌재", "헌법재판소", "위헌법률"], "contextual": ["기본권 침해", "법률심판"]},
+            "L36": {"primary": ["문화재", "문화유산"], "secondary": ["문화", "종교", "문화재보호"], "contextual": ["지정구역", "보존"]},
+            "L37": {"primary": ["소년법", "소년범", "미성년범죄"], "secondary": ["청소년", "미성년"], "contextual": ["학교폭력", "보호처분", "소년심판"]},
+            "L38": {"primary": ["소비자보호", "환불거부", "소비자피해"], "secondary": ["소비자", "환불", "소비자기본법"], "contextual": ["하자", "불량", "제품결함", "청약철회"]},
+            "L39": {"primary": ["정보통신", "전기통신", "통신사"], "secondary": ["통신", "망", "위약금"], "contextual": ["약정", "회선", "전파"]},
+            "L40": {"primary": ["인권침해", "차별금지", "평등권"], "secondary": ["인권", "차별", "평등"], "contextual": ["성차별", "장애차별", "혐오"]},
+            "L41": {"primary": ["이혼", "양육권", "재산분할"], "secondary": ["가족", "양육", "위자료", "혼인", "친권"], "contextual": ["면접교섭", "협의이혼", "소송이혼", "아이"]},
+            "L42": {"primary": ["저작권침해", "저작물도용", "표절"], "secondary": ["저작권", "표절", "침해", "저작물", "사진도용"], "contextual": ["무단", "허락 없이", "워터마크", "도용", "복제", "블로그", "카피"]},
+            "L43": {"primary": ["산업재해", "산재", "업무상재해"], "secondary": ["산업안전", "업무상"], "contextual": ["공장", "작업장", "산재보험"]},
+            "L44": {"primary": ["사회복지", "사회보장", "기초생활수급"], "secondary": ["복지", "수급자"], "contextual": ["생계급여", "의료급여"]},
+            "L45": {"primary": ["교육법", "학교폭력대책"], "secondary": ["교육", "학교", "학생"], "contextual": ["교사", "징계", "자퇴", "휴대폰압수"]},
+            "L46": {"primary": ["국민연금", "4대보험", "건강보험"], "secondary": ["연금", "보험료"], "contextual": ["수급나이", "납입", "건강보험료"]},
+            "L47": {"primary": ["규제샌드박스", "신산업특례"], "secondary": ["벤처", "신산업", "혁신"], "contextual": ["규제특례", "실증특례"]},
+            "L48": {"primary": ["문화예술", "예술인권리"], "secondary": ["예술", "미술"], "contextual": ["예술인복지", "갤러리"]},
+            "L49": {"primary": ["식중독", "식품안전", "식품위생"], "secondary": ["식품", "보건", "위생"], "contextual": ["음식점", "위해식품"]},
+            "L50": {"primary": ["다문화", "체류자격", "영주권"], "secondary": ["이주", "외국인", "이민"], "contextual": ["비자", "귀화", "결혼이민"]},
+            "L51": {"primary": ["종교법인", "사찰", "전통사찰"], "secondary": ["종교", "전통"], "contextual": ["종교단체", "교회재산"]},
+            "L52": {"primary": ["언론중재", "정정보도", "보도피해"], "secondary": ["광고", "언론", "출판", "언론사", "기사", "보도"], "contextual": ["오보", "반론보도", "명예"]},
+            "L53": {"primary": ["농지", "농업법", "축산업법"], "secondary": ["농림", "축산", "농업", "축산업"], "contextual": ["농지매매", "축사"]},
+            "L54": {"primary": ["해양", "수산업", "어업면허"], "secondary": ["수산", "어업", "어선", "수산물"], "contextual": ["양식", "불법조업"]},
+            "L55": {"primary": ["과학기술", "r&d", "연구비"], "secondary": ["연구", "기술개발"], "contextual": ["국가과제", "연구부정"]},
+            "L56": {"primary": ["장애인차별", "편의시설미비"], "secondary": ["장애인", "편의시설", "장애", "장애인차별금지"], "contextual": ["접근성", "이동권"]},
+            "L57": {"primary": ["상속분쟁", "유언장", "유언무효", "신탁"], "secondary": ["상속", "유언", "유산", "상속세", "증여"], "contextual": ["유류분", "특별수익", "기여분", "상속포기"]},
+            "L58": {"primary": ["스포츠사고", "체육진흥"], "secondary": ["스포츠", "레저", "체육", "운동"], "contextual": ["경기중부상", "도핑"]},
+            "L59": {"primary": ["ai윤리", "알고리즘편향", "ai저작권"], "secondary": ["데이터", "알고리즘", "인공지능", "ai"], "contextual": ["생성ai", "딥페이크", "ai규제"]},
             # L60(마디)은 도메인 매칭에서 제외 — 기본 응답은 유나(CCO)가 담당
         }
 
@@ -198,9 +349,9 @@ class SwarmOrchestrator:
 
         return None
 
-    def detect_domains(self, query: str) -> List[Tuple[str, int]]:
+    def detect_domains(self, query: str, ssot_sources: list = None) -> List[Tuple[str, int]]:
         """
-        Query에서 관련 법률 도메인 탐지
+        Query에서 관련 법률 도메인 탐지 (3계층 가중 키워드 + SSOT 부스트)
 
         Returns:
             List[Tuple[leader_id, score]] - 점수 순으로 정렬
@@ -209,7 +360,7 @@ class SwarmOrchestrator:
 
         query_lower = query.lower()
 
-        for leader_id, keywords in self.domain_keywords.items():
+        for leader_id, kw_data in self.domain_keywords.items():
             # 해당 leader_id가 실제 registry에 있는지 확인
             if leader_id not in self.leaders:
                 continue
@@ -217,15 +368,32 @@ class SwarmOrchestrator:
             score = 0
             matched_keywords = []
 
-            for keyword in keywords:
+            # 3계층 가중치 키워드 매칭
+            for keyword in kw_data.get("primary", []):
+                if keyword in query_lower:
+                    score += 20
+                    matched_keywords.append(f"{keyword}(P)")
+            for keyword in kw_data.get("secondary", []):
                 if keyword in query_lower:
                     score += 10
-                    matched_keywords.append(keyword)
+                    matched_keywords.append(f"{keyword}(S)")
+            for keyword in kw_data.get("contextual", []):
+                if keyword in query_lower:
+                    score += 5
+                    matched_keywords.append(f"{keyword}(C)")
 
             if score > 0:
                 domain_scores[leader_id] = score
                 leader_name = self.leaders[leader_id].get('name', '?')
                 logger.debug(f"🎯 {leader_id} ({leader_name}): score={score}, matched={matched_keywords}")
+
+        # SSOT 법률 매칭 부스트 (law_cache 기반)
+        if ssot_sources:
+            ssot_boost = resolve_leaders_from_ssot(ssot_sources)
+            for leader_id, boost in ssot_boost.items():
+                if leader_id in self.leaders:
+                    domain_scores[leader_id] = domain_scores.get(leader_id, 0) + boost
+                    logger.info(f"📦 SSOT 부스트: {leader_id} +{boost}")
 
         # 점수순 정렬
         sorted_domains = sorted(domain_scores.items(), key=lambda x: x[1], reverse=True)
@@ -287,9 +455,14 @@ class SwarmOrchestrator:
             logger.warning(f"⚠️ Gemini 도메인 분류 실패 (무시): {e}")
             return None
 
-    def select_leaders(self, query: str, detected_domains: List[Tuple[str, int]] = None) -> List[Dict]:
+    def select_leaders(self, query: str, detected_domains: List[Tuple[str, int]] = None, ssot_sources: list = None) -> List[Dict]:
         """
         Query에 적합한 Leader 선택
+
+        Args:
+            query: 사용자 질문
+            detected_domains: 사전 탐지된 도메인 (None이면 자동 탐지)
+            ssot_sources: SSOT 매칭 결과 (law_cache 기반 부스트용)
 
         Returns:
             List[Dict] - 선택된 Leader 정보 리스트
@@ -312,7 +485,7 @@ class SwarmOrchestrator:
             return [leader_info]
 
         if detected_domains is None:
-            detected_domains = self.detect_domains(query)
+            detected_domains = self.detect_domains(query, ssot_sources=ssot_sources)
 
         if not detected_domains:
             # 도메인 미탐지 → Gemini 1차 분류 시도
@@ -912,7 +1085,8 @@ class SwarmOrchestrator:
         tools: List = None,
         system_instruction_base: str = "",
         model_name: str = _DEFAULT_MODEL,
-        force_single: bool = False
+        force_single: bool = False,
+        ssot_sources: list = None
     ) -> Dict:
         """
         Swarm 전체 오케스트레이션
@@ -923,6 +1097,7 @@ class SwarmOrchestrator:
             system_instruction_base: 기본 시스템 지시
             model_name: Gemini 모델명
             force_single: True면 단일 리더만 사용 (테스트용)
+            ssot_sources: SSOT 매칭 결과 (law_cache 기반 부스트용)
 
         Returns:
             Dict: {
@@ -932,11 +1107,11 @@ class SwarmOrchestrator:
                 "swarm_mode": bool
             }
         """
-        # 1. 도메인 탐지
-        detected_domains = self.detect_domains(query)
+        # 1. 도메인 탐지 (SSOT 부스트 포함)
+        detected_domains = self.detect_domains(query, ssot_sources=ssot_sources)
 
-        # 2. Leader 선택
-        selected_leaders = self.select_leaders(query, detected_domains)
+        # 2. Leader 선택 (SSOT 부스트 포함)
+        selected_leaders = self.select_leaders(query, detected_domains, ssot_sources=ssot_sources)
 
         # 3. 단일 vs 다중 모드 결정
         use_swarm = (

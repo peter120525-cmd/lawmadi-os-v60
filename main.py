@@ -75,14 +75,44 @@ def optional_import(module_path: str, attr: Optional[str] = None) -> Optional[An
 
 # 원본 hard import → fail-soft로 교체
 timeline_analyze = optional_import("engines.temporal_v2", "timeline_analyze")
-SwarmManager = optional_import("agents.swarm_manager", "SwarmManager")
 SwarmOrchestrator = optional_import("agents.swarm_orchestrator", "SwarmOrchestrator")
+resolve_leaders_from_ssot = optional_import("agents.swarm_orchestrator", "resolve_leaders_from_ssot")
 CLevelHandler = optional_import("agents.clevel_handler", "CLevelHandler")
 SearchService = optional_import("services.search_service", "SearchService")
 SafetyGuard = optional_import("core.security", "SafetyGuard")
 DRFConnector = optional_import("connectors.drf_client", "DRFConnector")
 LawSelector = optional_import("core.law_selector", "LawSelector")
 db_client = optional_import("connectors.db_client")
+
+# =============================================================
+# [Item 7] 분리된 모듈에서 import (하위 호환 유지)
+# =============================================================
+from utils.helpers import (
+    _now_iso as _now_iso,
+    _trace_id as _trace_id,
+    _is_low_signal as _is_low_signal,
+    _safe_extract_json as _safe_extract_json,
+    _extract_best_dict_list as _extract_best_dict_list,
+    _collect_texts_by_keys as _collect_texts_by_keys,
+    _dedup_keep_order as _dedup_keep_order,
+    _safe_extract_gemini_text as _safe_extract_gemini_text,
+    _remove_think_blocks as _remove_think_blocks,
+    _remove_markdown_headers as _remove_markdown_headers,
+    _remove_markdown_tables as _remove_markdown_tables,
+)
+from core.constitutional import validate_constitutional_compliance as validate_constitutional_compliance
+from tools.drf_tools import (
+    set_runtime as _set_drf_tools_runtime,
+    search_law_drf as search_law_drf,
+    search_precedents_drf as search_precedents_drf,
+    search_admrul_drf as search_admrul_drf,
+    search_expc_drf as search_expc_drf,
+    search_constitutional_drf as search_constitutional_drf,
+    search_ordinance_drf as search_ordinance_drf,
+    search_legal_term_drf as search_legal_term_drf,
+    search_admin_appeals_drf as search_admin_appeals_drf,
+    search_treaty_drf as search_treaty_drf,
+)
 
 # =============================================================
 # BOOTSTRAP
@@ -277,6 +307,34 @@ def _build_keyword_index():
 
 if LAW_CACHE:
     _build_keyword_index()
+
+# =============================================================
+# 📦 [RESPONSE_CACHE] 대표 질문 응답 캐시 (리더 매칭 보정용)
+# =============================================================
+RESPONSE_CACHE: Dict[str, Any] = {}
+try:
+    _rcache_path = os.path.join(os.path.dirname(__file__), "response_cache.json")
+    if os.path.exists(_rcache_path):
+        with open(_rcache_path, "r", encoding="utf-8") as f:
+            RESPONSE_CACHE = json.load(f)
+        logger.info(f"✅ RESPONSE_CACHE loaded: {len(RESPONSE_CACHE)} entries")
+    else:
+        logger.info("ℹ️ response_cache.json 미존재: 캐시 없이 동작")
+except Exception as _e:
+    logger.warning(f"⚠️ response_cache.json 로드 실패: {_e}")
+
+
+def _check_response_cache(query: str) -> Optional[Dict]:
+    """
+    정확 일치 캐시 확인.
+    Returns cached response dict or None.
+    """
+    if not RESPONSE_CACHE:
+        return None
+    for leader_id, entry in RESPONSE_CACHE.items():
+        if entry.get("query", "").strip() == query.strip():
+            return entry
+    return None
 
 
 def match_ssot_sources(query: str, top_k: int = 8) -> list:
@@ -559,6 +617,54 @@ def _audit(event_type: str, payload: dict) -> None:
 # 🛠️ [ROBUST HELPERS] 데이터 정밀 추출 및 정규화 계층
 # =============================================================
 
+def _safe_extract_json(text: str) -> Optional[Dict[str, Any]]:
+    """중첩 JSON을 안전하게 추출하는 brace-counting 파서.
+
+    기존 ``re.search(r'\\{[^{}]+\\}', ...)`` 는 중첩 중괄호가 있으면 실패한다.
+    여기서는 첫 번째 ``{`` 를 찾은 뒤 depth 카운팅으로 매칭되는 ``}`` 를 찾아
+    올바른 JSON 조각을 추출한다.
+    """
+    # 코드블록 안에 JSON이 감싸져 있을 수 있으므로 먼저 벗긴다
+    stripped = text.strip()
+    if "```" in stripped:
+        # ```json ... ``` 또는 ``` ... ``` 패턴
+        m = re.search(r'```(?:json)?\s*\n?([\s\S]*?)```', stripped)
+        if m:
+            stripped = m.group(1).strip()
+
+    start = stripped.find("{")
+    if start == -1:
+        return None
+
+    depth = 0
+    in_string = False
+    escape = False
+    for i in range(start, len(stripped)):
+        ch = stripped[i]
+        if escape:
+            escape = False
+            continue
+        if ch == "\\":
+            escape = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                candidate = stripped[start:i + 1]
+                try:
+                    return json.loads(candidate)
+                except json.JSONDecodeError:
+                    return None
+    return None
+
+
 def _is_low_signal(query: str) -> bool:
     q = (query or "").strip()
     if len(q) < 3:
@@ -775,9 +881,9 @@ def validate_constitutional_compliance(response_text: str) -> bool:
 
     # 2) placeholder 날짜/타임라인 금지
     banned_patterns = [
-        r"\b2024-MM-DD\b",
-        r"\bYYYY-MM-DD\b",
-        r"\bHH:MM:SS\b",
+        r"2024-MM-DD",
+        r"YYYY-MM-DD",
+        r"HH:MM:SS",
         r"ASCII_TIMELINE_V2\(SYSTEM_CORE_CHECK\)",
     ]
     for p in banned_patterns:
@@ -792,6 +898,50 @@ def validate_constitutional_compliance(response_text: str) -> bool:
         "즉각적인 접근이 가능",
     ]
     if any(x in t for x in banned_phrases):
+        return False
+
+    # 4) 법조문 참조 없는 단정적 법률 주장 차단
+    #    "~해야 합니다", "~됩니다" 등 법적 단정이 있는데
+    #    "제N조", "법 제", "판례" 등 근거가 전혀 없으면 차단
+    legal_assertion_patterns = [
+        r"(?:위법|불법|합법|적법)(?:입니다|합니다|이다)",
+        r"(?:의무|권리)가\s*(?:있습니다|없습니다|발생합니다)",
+        r"(?:처벌|처분|제재)(?:을\s*)?(?:받습니다|됩니다|받게\s*됩니다)",
+    ]
+    has_legal_assertion = any(re.search(p, t) for p in legal_assertion_patterns)
+    has_legal_source = bool(re.search(r'제\s?\d+\s?조|판례|대법원|헌법재판소|법령|법률\s+제\d+호', t))
+    if has_legal_assertion and not has_legal_source:
+        return False
+
+    # 5) 불법 행위 조장 차단
+    illegal_incitement = [
+        "증거를 인멸",
+        "증거를 없애",
+        "증거 인멸",
+        "증거를 숨기",
+        "뇌물을 제공",
+        "뇌물을 주",
+        "허위 진술",
+        "위증을 하",
+        "위조하",
+        "문서를 조작",
+        "탈세 방법",
+        "세금을 탈루",
+    ]
+    if any(phrase in t for phrase in illegal_incitement):
+        return False
+
+    # 6) 결과 보장 차단
+    guarantee_patterns = [
+        r"반드시\s*승소",
+        r"100\s*%\s*(?:이길|승소|성공|확실)",
+        r"무조건\s*(?:이길|승소|성공)",
+        r"확실히\s*(?:이길|승소|이깁니다)",
+        r"틀림없이\s*(?:이길|승소|이깁니다)",
+        r"보장합니다",
+        r"장담합니다",
+    ]
+    if any(re.search(p, t) for p in guarantee_patterns):
         return False
 
     return True
@@ -1892,10 +2042,9 @@ async def _claude_analyze_query(query: str) -> Dict[str, Any]:
             system=TIER_ANALYSIS_PROMPT.format(leader_summary=leader_summary),
         )
         text = resp.content[0].text.strip()
-        # JSON 추출 (코드블록 안에 있을 수 있음)
-        json_match = re.search(r'\{[^{}]+\}', text, re.DOTALL)
-        if json_match:
-            result = json.loads(json_match.group())
+        # JSON 추출 (중첩 JSON 및 코드블록 지원)
+        result = _safe_extract_json(text)
+        if result:
             logger.info(f"🎯 [Tier Router] Claude 분석: tier={result.get('tier')}, "
                        f"leader={result.get('leader_name')}({result.get('leader_id')}), "
                        f"complexity={result.get('complexity')}, is_document={result.get('is_document')}")
@@ -1944,6 +2093,33 @@ def _fallback_tier_classification(query: str) -> Dict[str, Any]:
         "leader_specialty": leader_specialty,
         "summary": query[:50],
         "is_legal": is_legal,
+    }
+
+
+def _resolve_leader_from_ssot(matched_sources: list) -> Optional[Dict[str, str]]:
+    """
+    SSOT 매칭 결과로부터 최적 리더를 결정.
+    resolve_leaders_from_ssot() 가 반환하는 leader_id→score 맵에서
+    최고 점수 리더를 찾아 LEADER_REGISTRY에서 이름/전문분야를 조회.
+    Returns: {"id": "L08", "name": "온유", "specialty": "임대차"} or None
+    """
+    if not matched_sources or not resolve_leaders_from_ssot:
+        return None
+    leader_boost = resolve_leaders_from_ssot(matched_sources)
+    if not leader_boost:
+        return None
+    # 최고 부스트 리더 선택 (최소 30점 이상일 때만 override)
+    best_id = max(leader_boost, key=leader_boost.get)
+    best_score = leader_boost[best_id]
+    if best_score < 30:
+        return None
+    leader_info = LEADER_REGISTRY.get(best_id, {})
+    if not leader_info:
+        return None
+    return {
+        "id": best_id,
+        "name": leader_info.get("name", "마디"),
+        "specialty": leader_info.get("specialty", "통합"),
     }
 
 
@@ -2430,7 +2606,7 @@ async def _step5_claude_verify(query: str, response_text: str, drf_results: list
     """Stage 5: 헌법 검증 + 법률 품질 검증 + 교정 (max_tokens=300)"""
     claude_client = RUNTIME.get("claude_client")
     if not claude_client:
-        return {"passed": True, "warning": None, "corrected_text": None}
+        return {"passed": False, "warning": "Claude 검증 엔진 미초기화 (Fail-Closed)", "corrected_text": None}
 
     if drf_results is None:
         drf_results = []
@@ -2457,14 +2633,14 @@ async def _step5_claude_verify(query: str, response_text: str, drf_results: list
             }],
         )
         text = resp.content[0].text.strip()
-        json_match = re.search(r'\{[^{}]+\}', text, re.DOTALL)
-        result = {"passed": True, "warning": None, "corrected_text": None}
-        if json_match:
-            result = json.loads(json_match.group())
+        parsed = _safe_extract_json(text)
+        result = {"passed": False, "warning": "Claude 검증 JSON 파싱 실패 (Fail-Closed)", "corrected_text": None}
+        if parsed:
+            result = parsed
             result.setdefault("corrected_text", None)
 
         # FAIL 시 교정 (차단 아님)
-        if not result.get("passed", True):
+        if not result.get("passed", False):
             try:
                 corrected = claude_client.messages.create(
                     model="claude-sonnet-4-20250514",
@@ -2482,9 +2658,9 @@ async def _step5_claude_verify(query: str, response_text: str, drf_results: list
 
         return result
     except Exception as e:
-        logger.warning(f"⚠️ [Stage 5] 헌법 검증 실패 (무시): {e}")
+        logger.warning(f"⚠️ [Stage 5] 헌법 검증 실패 (Fail-Closed): {e}")
 
-    return {"passed": True, "warning": None, "corrected_text": None}
+    return {"passed": False, "warning": "Claude 검증 예외 발생 (Fail-Closed)", "corrected_text": None}
 
 
 async def _run_legal_pipeline(query: str, analysis: Dict, tools: list,
@@ -2535,7 +2711,7 @@ async def _run_legal_pipeline(query: str, analysis: Dict, tools: list,
     drf_results = _drf_verify_law_refs(final_text)
     verification = await _step5_claude_verify(query, final_text, drf_results)
 
-    if not verification.get("passed", True):
+    if not verification.get("passed", False):
         logger.warning(f"🚨 [Stage 5] 헌법 검증 경고: {verification}")
         if verification.get("corrected_text"):
             final_text = verification["corrected_text"]
@@ -2574,7 +2750,6 @@ def _diagnostic_snapshot() -> Dict[str, Any]:
             "selector": bool(RUNTIME.get("selector")),
             "guard": bool(RUNTIME.get("guard")),
             "search_service": bool(RUNTIME.get("search_service")),
-            "swarm": bool(RUNTIME.get("swarm")),
             "swarm_orchestrator": bool(RUNTIME.get("swarm_orchestrator")),
             "clevel_handler": bool(RUNTIME.get("clevel_handler")),
             "claude_client": bool(RUNTIME.get("claude_client")),
@@ -2663,18 +2838,7 @@ async def startup():
         config = {}
 
     # --------------------------------------------------
-    # 3️⃣ SwarmManager (Fail-Soft)
-    # --------------------------------------------------
-    swarm = None
-    if SwarmManager:
-        try:
-            swarm = SwarmManager(config)
-            logger.info("✅ SwarmManager initialized")
-        except Exception as e:
-            logger.warning(f"🟡 SwarmManager degraded: {e}")
-
-    # --------------------------------------------------
-    # 3.5️⃣ SwarmOrchestrator (60 Leader 진정한 협업)
+    # 3️⃣ SwarmOrchestrator (60 Leader 도메인 라우팅)
     # --------------------------------------------------
     swarm_orchestrator = None
     if SwarmOrchestrator:
@@ -2824,12 +2988,14 @@ async def startup():
         "selector": selector,
         "guard": guard,
         "search_service": search_service,
-        "swarm": swarm,
         "swarm_orchestrator": swarm_orchestrator,
         "clevel_handler": clevel_handler,
         "genai_client": genai_client,
         "claude_client": claude_client,
     })
+
+    # [Item 7] 분리된 DRF 도구 모듈에 RUNTIME 주입
+    _set_drf_tools_runtime(RUNTIME)
 
     METRICS["boot_time"] = _now_iso()
     logger.info(f"✅ Lawmadi OS {OS_VERSION} Online")
@@ -3230,6 +3396,28 @@ async def ask(request: Request):
             return {"trace_id": trace, "response": msg, "leader": "유나", "leader_specialty": "콘텐츠 설계", "status": "SUCCESS"}
 
         # -------------------------------------------------
+        # 0.3) 응답 캐시 확인 (정확 일치 → 즉시 반환)
+        # -------------------------------------------------
+        cached = _check_response_cache(query)
+        if cached:
+            latency = int((time.time() - start_time) * 1000)
+            logger.info(f"⚡ [Cache HIT] leader={cached.get('leader', '?')} latency={latency}ms")
+            _audit("ask_cache_hit", {"query": query, "leader": cached.get("leader", "?"), "status": "CACHE_HIT", "latency_ms": latency})
+            return {
+                "trace_id": trace,
+                "response": cached.get("response", ""),
+                "leader": cached.get("leader", "마디"),
+                "leader_specialty": cached.get("leader_specialty", "통합"),
+                "tier": cached.get("tier", 1),
+                "status": "SUCCESS",
+                "latency_ms": latency,
+                "swarm_mode": False,
+                "constitutional_check": "PASS",
+                "ssot_sources": cached.get("ssot_sources", []),
+                "meta": cached.get("meta", {}),
+            }
+
+        # -------------------------------------------------
         # 0.5) Gemini 키 점검
         # -------------------------------------------------
         if not os.getenv("GEMINI_KEY"):
@@ -3303,8 +3491,14 @@ async def ask(request: Request):
         now_kst = _now_iso()
 
         # -------------------------------------------------
-        # 4) 🎯 Claude 분석 → 티어/리더 배정
+        # 4) 📦 SSOT 캐시 매칭 → Claude 분석 → 리더 배정
         # -------------------------------------------------
+        # SSOT 매칭을 먼저 실행하여 리더 선택에 활용
+        matched_sources = match_ssot_sources(query, top_k=5)
+        if matched_sources:
+            _src_strs = [s["type"] + ":" + s["law"] for s in matched_sources[:3]]
+            logger.info(f"📦 [Cache] 매칭: {', '.join(_src_strs)}")
+
         analysis = await _claude_analyze_query(query)
         if not analysis:
             analysis = _fallback_tier_classification(query)
@@ -3317,11 +3511,15 @@ async def ask(request: Request):
         is_document = analysis.get("is_document", False)
         swarm_mode = False
 
-        # 📦 SSOT 10종 캐시 매칭
-        matched_sources = match_ssot_sources(query, top_k=5)
-        if matched_sources:
-            _src_strs = [s["type"] + ":" + s["law"] for s in matched_sources[:3]]
-            logger.info(f"📦 [Cache] 매칭: {', '.join(_src_strs)}")
+        # SSOT 기반 리더 검증/보정: SSOT가 강하게 특정 리더를 지목하면 override
+        if matched_sources and is_legal:
+            ssot_leader = _resolve_leader_from_ssot(matched_sources)
+            if ssot_leader and ssot_leader["name"] != leader_name:
+                logger.info(f"🔄 [SSOT Override] {leader_name}→{ssot_leader['name']}({ssot_leader['specialty']})")
+                leader_name = ssot_leader["name"]
+                leader_specialty = ssot_leader["specialty"]
+                analysis["leader_name"] = leader_name
+                analysis["leader_specialty"] = leader_specialty
 
         logger.info(f"🎯 [Tier {tier}] leader={leader_name}({leader_specialty}), "
                     f"legal={is_legal}, document={is_document}")
@@ -3677,6 +3875,23 @@ async def ask_stream(request: Request):
                 yield _sse("done", {"leader": "유나", "leader_specialty": "콘텐츠 설계", "latency_ms": 0, "trace_id": trace})
                 return
 
+            # 0.3) 응답 캐시 확인 (정확 일치 → SSE로 즉시 반환)
+            cached = _check_response_cache(query)
+            if cached:
+                latency_ms = int((time.time() - start_time) * 1000)
+                logger.info(f"⚡ [Stream Cache HIT] leader={cached.get('leader', '?')} latency={latency_ms}ms")
+                yield _sse("status", {"step": "analyzing", "leader": cached.get("leader", "마디")})
+                yield _sse("chunk", {"text": cached.get("response", "")})
+                yield _sse("done", {
+                    "leader": cached.get("leader", "마디"),
+                    "leader_specialty": cached.get("leader_specialty", "통합"),
+                    "latency_ms": latency_ms, "trace_id": trace,
+                    "swarm_mode": False, "response": cached.get("response", ""),
+                    "status": "SUCCESS",
+                })
+                _audit("ask_stream_cache_hit", {"query": query, "leader": cached.get("leader", "?"), "status": "CACHE_HIT", "latency_ms": latency_ms})
+                return
+
             # 0.5) Gemini 키
             if not os.getenv("GEMINI_KEY"):
                 yield _sse("error", {"message": "⚠️ GEMINI_KEY 미설정으로 추론이 비활성화되었습니다."})
@@ -3769,8 +3984,10 @@ async def ask_stream(request: Request):
                 if orchestrator and os.getenv("USE_SWARM", "true").lower() == "true":
                     yield _sse("status", {"step": "detecting_domain"})
 
-                    detected_domains = orchestrator.detect_domains(query)
-                    selected_leaders = orchestrator.select_leaders(query, detected_domains)
+                    # SSOT 캐시 매칭 → 도메인 탐지 + 리더 선택에 반영
+                    _stream_matched = match_ssot_sources(query, top_k=5)
+                    detected_domains = orchestrator.detect_domains(query, ssot_sources=_stream_matched)
+                    selected_leaders = orchestrator.select_leaders(query, detected_domains, ssot_sources=_stream_matched)
 
                     use_swarm = (
                         orchestrator.swarm_enabled

@@ -4,6 +4,7 @@ import hashlib
 import enum
 import logging
 import threading
+import unicodedata
 from typing import List, Dict, Any, Optional, Union
 
 logger = logging.getLogger("LawmadiOS.Security")
@@ -133,7 +134,7 @@ class SafetyGuard:
             re.IGNORECASE
         )
 
-        # LLM 프롬프트 인젝션 방어 패턴
+        # LLM 프롬프트 인젝션 방어 패턴 (한국어/영어 확장)
         self.prompt_injection_patterns = re.compile(
             r"("
             r"ignore\s+(all\s+)?previous\s+instructions?"
@@ -153,6 +154,68 @@ class SafetyGuard:
             r"|역할을?\s*바꿔|역할\s*변경"
             r"|너는?\s*이제\s*(부터)?\s*(나의|내)"
             r"|DAN\s*모드|jailbreak"
+            r"|do\s+anything\s+now"
+            r"|developer\s+mode"
+            r"|내부\s*구조(를)?\s*(알려|출력|보여)"
+            r"|프롬프트(를)?\s*(공개|노출|출력)"
+            r"|지시문(을)?\s*(무시|출력|보여)"
+            r"|모든\s*제한(을)?\s*(해제|풀어|무시)"
+            r")",
+            re.IGNORECASE
+        )
+
+        # SQL Injection 확장 패턴 (20+ patterns)
+        self.sql_injection_patterns = re.compile(
+            r"("
+            r"DROP\s+TABLE"
+            r"|UNION\s+(ALL\s+)?SELECT"
+            r"|';\s*--"
+            r"|1\s*=\s*1"
+            r"|OR\s+1\s*=\s*1"
+            r"|AND\s+1\s*=\s*1"
+            r"|INSERT\s+INTO"
+            r"|DELETE\s+FROM"
+            r"|UPDATE\s+\w+\s+SET"
+            r"|ALTER\s+TABLE"
+            r"|CREATE\s+TABLE"
+            r"|EXEC(\s+|\s*\()"
+            r"|EXECUTE(\s+|\s*\()"
+            r"|xp_cmdshell"
+            r"|LOAD_FILE\s*\("
+            r"|INTO\s+OUTFILE"
+            r"|INTO\s+DUMPFILE"
+            r"|BENCHMARK\s*\("
+            r"|SLEEP\s*\("
+            r"|WAITFOR\s+DELAY"
+            r"|CONCAT\s*\("
+            r"|CHAR\s*\("
+            r"|information_schema"
+            r"|sys\.tables"
+            r"|pg_catalog"
+            r")",
+            re.IGNORECASE
+        )
+
+        # XSS 패턴
+        self.xss_patterns = re.compile(
+            r"("
+            r"<script[^>]*>"
+            r"|</script>"
+            r"|javascript\s*:"
+            r"|on(error|load|click|mouseover|focus|blur)\s*="
+            r"|<iframe[^>]*>"
+            r"|<object[^>]*>"
+            r"|<embed[^>]*>"
+            r"|<svg[^>]*\s+on\w+\s*="
+            r"|<img[^>]*\s+on\w+\s*="
+            r"|document\.(cookie|write|location)"
+            r"|window\.(location|open)"
+            r"|eval\s*\("
+            r"|alert\s*\("
+            r"|prompt\s*\("
+            r"|confirm\s*\("
+            r"|String\.fromCharCode"
+            r"|atob\s*\("
             r")",
             re.IGNORECASE
         )
@@ -171,30 +234,38 @@ class SafetyGuard:
         if not user_input or not isinstance(user_input, str):
             return False
 
+        # 0. Unicode NFKC 정규화 (동형문자 우회 방지)
+        #    예: 'ＤＲＯＰＴＡＢＬＥʼ → 'DROPTABLE' (전각/반각/동형 통일)
+        normalized_input = unicodedata.normalize("NFKC", user_input)
+
         # 1. Anti-Leak: 시스템 내부 기밀 정보 유출 시도 차단
-        if self.malicious_pattern.search(user_input):
+        if self.malicious_pattern.search(normalized_input):
             logger.warning("[LMD-SECURITY-001] 보안 프로토콜에 따라 시스템 핵심 인증 자산 접근이 차단되었습니다.")
             return False
 
         # 2. 금지 키워드 필터링 (Blacklist)
-        lower_input = user_input.lower()
+        lower_input = normalized_input.lower()
         for word in self.restricted_keywords:
             if word in lower_input:
                 logger.warning(f"[Security] 금지 키워드 감지: '{word}'")
                 return False
 
         # 3. LLM 프롬프트 인젝션 방어 (Prompt Injection / Jailbreak)
-        if self.prompt_injection_patterns.search(user_input):
+        if self.prompt_injection_patterns.search(normalized_input):
             logger.warning("[LMD-SECURITY-002] 프롬프트 인젝션 시도가 차단되었습니다.")
             return False
 
-        # 4. SQL/Command 인젝션 방어
-        injection_patterns = ["DROP TABLE", "UNION SELECT", "'; --", "1=1", "<script"]
-        if any(p.lower() in user_input.lower() for p in injection_patterns):
-            logger.warning("[Security] 주입 공격 패턴이 감지되었습니다.")
+        # 4. SQL Injection 방어 (확장 패턴)
+        if self.sql_injection_patterns.search(normalized_input):
+            logger.warning("[LMD-SECURITY-003] SQL 인젝션 패턴이 감지되어 차단되었습니다.")
             return False
 
-        # 5. 위급 상황(Crisis) 트리거 감지
+        # 5. XSS 방어
+        if self.xss_patterns.search(normalized_input):
+            logger.warning("[LMD-SECURITY-004] XSS 패턴이 감지되어 차단되었습니다.")
+            return False
+
+        # 6. 위급 상황(Crisis) 트리거 감지
         if any(kw in lower_input for kw in self.crisis_trigger_keywords):
             return "CRISIS"
 
