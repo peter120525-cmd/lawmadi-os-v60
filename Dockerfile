@@ -25,6 +25,9 @@ COPY --from=builder /install /usr/local
 # 소스 코드 및 설정 파일 복사
 COPY core/ ./core/
 COPY connectors/ ./connectors/
+COPY utils/ ./utils/
+COPY routes/ ./routes/
+COPY tools/ ./tools/
 COPY main.py .
 COPY config.json .
 COPY leaders.json .
