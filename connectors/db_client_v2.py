@@ -689,7 +689,7 @@ def init_verification_table():
                 verification_result VARCHAR(20),
                 ssot_compliance_score INTEGER,
                 issues_found JSONB,
-                claude_feedback TEXT,
+                verification_feedback TEXT,
                 created_at TIMESTAMPTZ DEFAULT NOW(),
                 env_version VARCHAR(50)
             )
@@ -707,6 +707,19 @@ def init_verification_table():
         cur.execute("""
             CREATE INDEX IF NOT EXISTS idx_verification_created
             ON response_verification(created_at DESC)
+        """)
+
+        # 기존 claude_feedback 컬럼 → verification_feedback 마이그레이션
+        cur.execute("""
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = 'response_verification' AND column_name = 'claude_feedback'
+                ) THEN
+                    ALTER TABLE response_verification RENAME COLUMN claude_feedback TO verification_feedback;
+                END IF;
+            END $$;
         """)
 
         conn.commit()
@@ -727,7 +740,7 @@ def save_verification_result(
     verification_result: str,
     ssot_compliance_score: int,
     issues_found: List[str],
-    claude_feedback: str
+    verification_feedback: str
 ) -> Dict[str, Any]:
     """
     검증 결과 저장
@@ -741,7 +754,7 @@ def save_verification_result(
         verification_result: PASS/WARNING/FAIL/ERROR
         ssot_compliance_score: SSOT 준수 점수 (0-100)
         issues_found: 발견된 문제점 목록
-        claude_feedback: Claude의 피드백
+        verification_feedback: Claude의 피드백
     """
     if not _db_enabled():
         return {"ok": False, "error": "DB_DISABLED"}
@@ -756,7 +769,7 @@ def save_verification_result(
                 session_id, user_query, gemini_response,
                 tools_used, tool_results,
                 verification_result, ssot_compliance_score,
-                issues_found, claude_feedback,
+                issues_found, verification_feedback,
                 env_version
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -770,7 +783,7 @@ def save_verification_result(
             verification_result,
             ssot_compliance_score,
             json.dumps(issues_found, ensure_ascii=False),
-            claude_feedback[:2000],
+            verification_feedback[:2000],
             _ENV_VERSION
         ))
 
@@ -836,7 +849,7 @@ def get_verification_statistics(days: int = 7) -> Dict[str, Any]:
                 verification_result,
                 ssot_compliance_score,
                 issues_found,
-                claude_feedback
+                verification_feedback
             FROM response_verification
             WHERE verification_result IN ('FAIL', 'WARNING')
                 AND created_at >= NOW() - INTERVAL %s
@@ -1124,7 +1137,7 @@ def get_feedback_summary(days: int = 30) -> dict:
 
 
 def get_cost_estimate(days: int = 7) -> dict:
-    """Gemini/Claude API 호출 수, 추정 비용"""
+    """Gemini API 호출 수, 추정 비용"""
     try:
         result = execute(
             """SELECT COUNT(*) as total_calls
@@ -1136,23 +1149,17 @@ def get_cost_estimate(days: int = 7) -> dict:
         total_calls = result.get("data", [0])[0] if result.get("ok") else 0
         total_calls = total_calls or 0
 
-        # Rough cost estimates (per call averages)
+        # Gemini Flash 기준 호출당 평균 비용
         gemini_cost_per_call = 0.002  # ~$0.002 per Gemini Flash call
-        claude_cost_per_call = 0.01   # ~$0.01 per Claude Sonnet call (tier analysis + verify)
-
-        gemini_calls = total_calls  # Every query uses Gemini
-        claude_calls = int(total_calls * 0.3)  # ~30% use Claude (tier 2+3)
 
         return {
             "ok": True,
             "period_days": days,
             "total_api_calls": total_calls,
-            "gemini_calls": gemini_calls,
-            "claude_calls": claude_calls,
-            "estimated_cost_usd": round(gemini_calls * gemini_cost_per_call + claude_calls * claude_cost_per_call, 2),
+            "gemini_calls": total_calls,
+            "estimated_cost_usd": round(total_calls * gemini_cost_per_call, 2),
             "cost_breakdown": {
-                "gemini": round(gemini_calls * gemini_cost_per_call, 2),
-                "claude": round(claude_calls * claude_cost_per_call, 2),
+                "gemini": round(total_calls * gemini_cost_per_call, 2),
             },
             "note": "Estimated based on average token usage. Actual costs may vary.",
         }

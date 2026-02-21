@@ -502,7 +502,7 @@ async def ask(request: Request):
                                 session_id=trace, user_query=query, gemini_response=final_text,
                                 tools_used=[], tool_results=[],
                                 verification_result=v_result, ssot_compliance_score=v_score,
-                                issues_found=v_issues, claude_feedback=verification_result.get("feedback", "")
+                                issues_found=v_issues, verification_feedback=verification_result.get("feedback", "")
                             )
                         )
             except Exception as verify_error:

@@ -26,7 +26,7 @@ def _init_cache():
             _cache_set = lambda k, v, t: None
 
 _DEFAULT_DRF_URL = "https://www.law.go.kr/DRF/lawSearch.do"
-_LAW_SERVICE_URL = "http://www.law.go.kr/DRF/lawService.do"
+_LAW_SERVICE_URL = "https://www.law.go.kr/DRF/lawService.do"
 
 
 class DRFConnector:
