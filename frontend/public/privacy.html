@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>개인정보처리방침 - Lawmadi OS</title>
+    <meta name="description" content="Lawmadi OS 개인정보처리방침. 개인정보보호법에 근거한 개인정보 처리 및 보호에 관한 사항을 안내합니다.">
+    <link rel="canonical" href="https://lawmadi-db.web.app/privacy.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="개인정보처리방침 - Lawmadi OS" />
+    <meta property="og:description" content="Lawmadi OS 개인정보처리방침. 개인정보보호법에 근거한 개인정보 처리 및 보호에 관한 사항을 안내합니다." />
+    <meta property="og:url" content="https://lawmadi-db.web.app/privacy.html" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta name="theme-color" content="#0f172a">
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --gold: #f59e0b;
+            --purple: #8b5cf6;
+            --green: #10b981;
+            --red: #ef4444;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* Animated Background */
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .grid-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .floating-shape {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.04;
+            animation: float 25s infinite ease-in-out;
+        }
+
+        .shape1 { width: 400px; height: 400px; background: #3b82f6; top: 5%; left: 5%; animation-delay: 0s; }
+        .shape2 { width: 300px; height: 300px; background: #f59e0b; top: 50%; right: 5%; animation-delay: 8s; }
+        .shape3 { width: 350px; height: 350px; background: #8b5cf6; bottom: 5%; left: 40%; animation-delay: 16s; }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(40px, -40px) rotate(90deg); }
+            50% { transform: translate(-30px, 30px) rotate(180deg); }
+            75% { transform: translate(30px, 40px) rotate(270deg); }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px 80px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 40px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(-5px);
+        }
+
+        .header-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .header .law-ref {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 6px 16px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Article Card */
+        .article-card {
+            background: rgba(30, 41, 59, 0.7);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 36px 32px;
+            margin-bottom: 24px;
+            transition: all 0.3s;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .article-card:hover {
+            border-color: rgba(16, 185, 129, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .article-number {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .article-number .icon-wrap {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--green) 0%, #06b6d4 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .article-number .icon-wrap .material-symbols-outlined {
+            font-size: 1.2rem;
+            color: white;
+        }
+
+        .article-number h2 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: white;
+        }
+
+        .article-number .law-tag {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--green);
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 2px 10px;
+            border-radius: 6px;
+            margin-left: 4px;
+        }
+
+        .article-card p {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        .article-card p:last-child {
+            margin-bottom: 0;
+        }
+
+        .article-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 12px 0;
+        }
+
+        .article-card ul li {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .article-card ul li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 11px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--green);
+        }
+
+        /* Data Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .data-table thead th {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--green);
+            font-weight: 700;
+            font-size: 0.85rem;
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .data-table tbody td {
+            padding: 12px 16px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .data-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .data-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Third-party card */
+        .third-party-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .third-party-item {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .third-party-item:hover {
+            border-color: rgba(16, 185, 129, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .third-party-item .service-name {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 6px;
+        }
+
+        .third-party-item .service-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        /* Rights Grid */
+        .rights-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .right-item {
+            background: rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: all 0.3s;
+        }
+
+        .right-item:hover {
+            border-color: rgba(139, 92, 246, 0.3);
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        .right-item .material-symbols-outlined {
+            font-size: 1.6rem;
+            color: var(--purple);
+            flex-shrink: 0;
+        }
+
+        .right-item .right-text h4 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 2px;
+        }
+
+        .right-item .right-text p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+        }
+
+        /* Security Grid */
+        .security-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .security-item {
+            background: rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .security-item:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .security-item .material-symbols-outlined {
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .security-item h4 {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 4px;
+        }
+
+        .security-item p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+        }
+
+        /* Contact Box */
+        .contact-box {
+            background: rgba(37, 99, 235, 0.1);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .contact-box .material-symbols-outlined {
+            font-size: 2rem;
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .contact-box .contact-info h4 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 4px;
+        }
+
+        .contact-box .contact-info p {
+            margin-bottom: 0;
+        }
+
+        .contact-box .contact-info a {
+            color: #93c5fd;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .contact-box .contact-info a:hover {
+            color: #60a5fa;
+        }
+
+        /* Effective Date */
+        .effective-date {
+            text-align: center;
+            padding: 40px 20px;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .effective-date p {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .effective-date .date {
+            font-size: 1.4rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-top: 8px;
+        }
+
+        /* Footer Nav */
+        .footer-nav {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            padding: 40px 20px 0;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .footer-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            background: rgba(255, 255, 255, 0.08);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 14px;
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+
+        .footer-link:hover {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: var(--green);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .article-card:nth-child(2) { animation-delay: 0.05s; }
+        .article-card:nth-child(3) { animation-delay: 0.1s; }
+        .article-card:nth-child(4) { animation-delay: 0.15s; }
+        .article-card:nth-child(5) { animation-delay: 0.2s; }
+        .article-card:nth-child(6) { animation-delay: 0.25s; }
+        .article-card:nth-child(7) { animation-delay: 0.3s; }
+        .article-card:nth-child(8) { animation-delay: 0.35s; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 16px 60px;
+            }
+
+            .back-button {
+                top: 12px;
+                left: 12px;
+                padding: 8px 14px;
+                font-size: 0.85rem;
+                min-height: 44px;
+            }
+
+            .header {
+                margin-top: 40px;
+                margin-bottom: 40px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .header p {
+                font-size: 1rem;
+            }
+
+            .article-card {
+                padding: 24px 20px;
+            }
+
+            .article-number h2 {
+                font-size: 1.1rem;
+            }
+
+            .third-party-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .rights-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .security-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .data-table {
+                font-size: 0.85rem;
+            }
+
+            .data-table thead th,
+            .data-table tbody td {
+                padding: 10px 12px;
+            }
+
+            .contact-box {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .footer-nav {
+                flex-direction: column;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .footer-link {
+                width: 100%;
+                max-width: 300px;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="animated-bg">
+        <div class="grid-pattern"></div>
+        <div class="floating-shape shape1"></div>
+        <div class="floating-shape shape2"></div>
+        <div class="floating-shape shape3"></div>
+    </div>
+
+    <a href="index.html" class="back-button">
+        <span class="material-symbols-outlined">arrow_back</span>
+        메인으로
+    </a>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-badge">PRIVACY POLICY</div>
+            <h1>개인정보처리방침</h1>
+            <p>Lawmadi OS의 개인정보 처리 및 보호에 관한 사항</p>
+            <div class="law-ref">「개인정보보호법」 준거</div>
+        </header>
+
+        <!-- 제1조 처리 목적 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="icon-wrap">
+                    <span class="material-symbols-outlined">target</span>
+                </div>
+                <h2>처리 목적</h2>
+                <span class="law-tag">제15조</span>
+            </div>
+            <p>Lawmadi OS(이하 "서비스")는 다음의 목적을 위해 개인정보를 처리합니다. 처리하는 개인정보는 다음의 목적 이외의 용도로는 사용되지 않으며, 처리 목적이 변경될 경우 사전 동의를 구합니다.</p>
+            <ul>
+                <li><strong>법률 분석 서비스 제공</strong> — 이용자의 질문을 분석하고, AI 기반 법률 정보를 제공하기 위한 목적</li>
+                <li><strong>서비스 보안 및 안정성 확보</strong> — 비정상적인 접근 탐지, 서비스 악용 방지, 시스템 안정성 유지</li>
+                <li><strong>서비스 개선 및 통계 분석</strong> — 이용 패턴 분석을 통한 서비스 품질 향상 및 기능 개선</li>
+            </ul>
+        </div>
+
+        <!-- 제2조 수집 항목 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="icon-wrap">
+                    <span class="material-symbols-outlined">database</span>
+                </div>
+                <h2>수집 항목</h2>
+            </div>
+            <p>서비스는 다음과 같은 개인정보를 수집합니다.</p>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>구분</th>
+                        <th>수집 항목</th>
+                        <th>수집 방법</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>필수 수집</td>
+                        <td>질문 텍스트, IP 주소, 방문 시간</td>
+                        <td>서비스 이용 시 자동 수집</td>
+                    </tr>
+                    <tr>
+                        <td>서비스 이용</td>
+                        <td>대화 이력, 업로드 문서</td>
+                        <td>서비스 이용 시 자동 수집</td>
+                    </tr>
+                    <tr>
+                        <td>변호사 문의</td>
+                        <td>이름, 전화번호</td>
+                        <td>이용자 직접 입력</td>
+                    </tr>
+                    <tr>
+                        <td>자동 수집</td>
+                        <td>브라우저 정보, 접속 로그</td>
+                        <td>시스템 자동 생성</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 제3조 보유 기간 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="icon-wrap">
+                    <span class="material-symbols-outlined">schedule</span>
+                </div>
+                <h2>보유 기간</h2>
+                <span class="law-tag">제21조</span>
+            </div>
+            <p>서비스는 개인정보 수집 및 이용 목적이 달성된 후에는 해당 정보를 지체 없이 파기합니다. 각 항목별 보유 기간은 다음과 같습니다.</p>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>항목</th>
+                        <th>보유 기간</th>
+                        <th>근거</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>대화 이력</td>
+                        <td>1년</td>
+                        <td>서비스 품질 개선</td>
+                    </tr>
+                    <tr>
+                        <td>업로드 문서</td>
+                        <td>7일</td>
+                        <td>분석 완료 후 자동 삭제</td>
+                    </tr>
+                    <tr>
+                        <td>방문 통계</td>
+                        <td>1년</td>
+                        <td>서비스 운영 및 통계</td>
+                    </tr>
+                    <tr>
+                        <td>변호사 문의 정보</td>
+                        <td>연결 완료 후 즉시 삭제</td>
+                        <td>목적 달성 시 삭제</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 제4조 제3자 제공 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="icon-wrap">
+                    <span class="material-symbols-outlined">share</span>
+                </div>
+                <h2>제3자 제공</h2>
+            </div>
+            <p>서비스는 법률 정보 분석을 위해 다음의 외부 서비스와 데이터를 연동합니다. 개인정보는 서비스 제공에 필요한 최소한의 범위 내에서만 처리됩니다.</p>
+            <div class="third-party-grid">
+                <div class="third-party-item">
+                    <div class="service-name">Google Gemini API</div>
+                    <div class="service-desc">AI 기반 법률 질의 분석 및 응답 생성</div>
+                </div>
+                <div class="third-party-item">
+                    <div class="service-name">Anthropic Claude API</div>
+                    <div class="service-desc">고급 법률 추론 및 문서 분석</div>
+                </div>
+                <div class="third-party-item">
+                    <div class="service-name">법제처 DRF API</div>
+                    <div class="service-desc">국가법령정보 실시간 검색 및 검증</div>
+                </div>
+            </div>
+            <p>각 외부 서비스 제공자는 자체 개인정보처리방침에 따라 데이터를 처리하며, 전송되는 데이터는 질문 텍스트에 한정됩니다.</p>
+        </div>
+
+        <!-- 제5조 정보주체 권리 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="icon-wrap">
+                    <span class="material-symbols-outlined">verified_user</span>
+                </div>
+                <h2>정보주체의 권리</h2>
+                <span class="law-tag">제35-37조</span>
+            </div>
+            <p>이용자(정보주체)는 개인정보보호법에 따라 다음과 같은 권리를 행사할 수 있습니다.</p>
+            <div class="rights-grid">
+                <div class="right-item">
+                    <span class="material-symbols-outlined">visibility</span>
+                    <div class="right-text">
+                        <h4>열람권</h4>
+                        <p>개인정보 처리 현황 열람 요구</p>
+                    </div>
+                </div>
+                <div class="right-item">
+                    <span class="material-symbols-outlined">edit</span>
+                    <div class="right-text">
+                        <h4>정정권</h4>
+                        <p>부정확한 개인정보 정정 요구</p>
+                    </div>
+                </div>
+                <div class="right-item">
+                    <span class="material-symbols-outlined">delete</span>
+                    <div class="right-text">
+                        <h4>삭제권</h4>
+                        <p>개인정보 삭제 요구</p>
+                    </div>
+                </div>
+                <div class="right-item">
+                    <span class="material-symbols-outlined">pause_circle</span>
+                    <div class="right-text">
+                        <h4>처리정지권</h4>
+                        <p>개인정보 처리정지 요구</p>
+                    </div>
+                </div>
+            </div>
+            <p>위 권리 행사는 개인정보 보호책임자에게 이메일로 요청하실 수 있으며, 요청 접수 후 10일 이내에 처리 결과를 통지합니다.</p>
+        </div>
+
+        <!-- 제6조 안전성 조치 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="icon-wrap">
+                    <span class="material-symbols-outlined">security</span>
+                </div>
+                <h2>안전성 확보 조치</h2>
+            </div>
+            <p>서비스는 개인정보의 안전성 확보를 위해 다음과 같은 기술적, 관리적 조치를 시행하고 있습니다.</p>
+            <div class="security-grid">
+                <div class="security-item">
+                    <span class="material-symbols-outlined">language</span>
+                    <h4>CORS 제한</h4>
+                    <p>허용된 도메인만 API 접근 가능</p>
+                </div>
+                <div class="security-item">
+                    <span class="material-symbols-outlined">key</span>
+                    <h4>API 키 인증</h4>
+                    <p>모든 외부 API 요청 인증 처리</p>
+                </div>
+                <div class="security-item">
+                    <span class="material-symbols-outlined">shield</span>
+                    <h4>보안 헤더</h4>
+                    <p>XSS, CSRF 등 공격 방어 헤더 적용</p>
+                </div>
+            </div>
+            <ul>
+                <li>HTTPS를 통한 암호화 통신</li>
+                <li>서버 접근 로그 기록 및 모니터링</li>
+                <li>정기적인 보안 취약점 점검</li>
+            </ul>
+        </div>
+
+        <!-- 제7조 보호책임자 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="icon-wrap">
+                    <span class="material-symbols-outlined">person</span>
+                </div>
+                <h2>개인정보 보호책임자</h2>
+            </div>
+            <p>서비스의 개인정보 처리에 관한 업무를 총괄하고, 정보주체의 불만 처리 및 피해 구제를 위해 아래와 같이 개인정보 보호책임자를 지정하고 있습니다.</p>
+            <div class="contact-box">
+                <span class="material-symbols-outlined">mail</span>
+                <div class="contact-info">
+                    <h4>개인정보 보호책임자</h4>
+                    <p>개인정보 관련 문의, 열람/정정/삭제 요청, 불만 처리</p>
+                    <p>연락처: <a href="mailto:privacy@lawmadi.com">privacy@lawmadi.com</a></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Effective Date -->
+        <div class="effective-date">
+            <p>시행일</p>
+            <div class="date">2026년 2월 21일</div>
+        </div>
+
+        <!-- Footer Navigation -->
+        <div class="footer-nav">
+            <a href="index.html" class="footer-link">
+                <span class="material-symbols-outlined">home</span>
+                메인으로
+            </a>
+            <a href="terms.html" class="footer-link">
+                <span class="material-symbols-outlined">description</span>
+                이용약관
+            </a>
+            <a href="about.html" class="footer-link">
+                <span class="material-symbols-outlined">info</span>
+                서비스 소개
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Page load animation
+        window.addEventListener('load', () => {
+            document.body.style.opacity = '0';
+            setTimeout(() => {
+                document.body.style.transition = 'opacity 0.5s';
+                document.body.style.opacity = '1';
+            }, 100);
+        });
+    </script>
+    <script>
+    document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    </script>
+</body>
+</html>

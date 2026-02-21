@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>이용약관 - Lawmadi OS</title>
+    <meta name="description" content="Lawmadi OS 이용약관. AI 기반 법률 정보 서비스의 이용 조건을 안내합니다.">
+    <link rel="canonical" href="https://lawmadi-db.web.app/terms.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="이용약관 - Lawmadi OS" />
+    <meta property="og:description" content="Lawmadi OS 이용약관. AI 기반 법률 정보 서비스의 이용 조건을 안내합니다." />
+    <meta property="og:url" content="https://lawmadi-db.web.app/terms.html" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta name="theme-color" content="#0f172a">
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --gold: #f59e0b;
+            --purple: #8b5cf6;
+            --green: #10b981;
+            --red: #ef4444;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* Animated Background */
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .grid-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .floating-shape {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.04;
+            animation: float 25s infinite ease-in-out;
+        }
+
+        .shape1 { width: 400px; height: 400px; background: #3b82f6; top: 5%; left: 5%; animation-delay: 0s; }
+        .shape2 { width: 300px; height: 300px; background: #f59e0b; top: 50%; right: 5%; animation-delay: 8s; }
+        .shape3 { width: 350px; height: 350px; background: #8b5cf6; bottom: 5%; left: 40%; animation-delay: 16s; }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(40px, -40px) rotate(90deg); }
+            50% { transform: translate(-30px, 30px) rotate(180deg); }
+            75% { transform: translate(30px, 40px) rotate(270deg); }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px 80px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 40px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(-5px);
+        }
+
+        .header-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* Article Card */
+        .article-card {
+            background: rgba(30, 41, 59, 0.7);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 36px 32px;
+            margin-bottom: 24px;
+            transition: all 0.3s;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .article-card:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .article-number {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .article-number .num {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: 900;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .article-number h2 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: white;
+        }
+
+        .article-card p {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        .article-card p:last-child {
+            margin-bottom: 0;
+        }
+
+        .article-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 12px 0;
+        }
+
+        .article-card ul li {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .article-card ul li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 11px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--primary);
+        }
+
+        .highlight-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-top: 12px;
+        }
+
+        .highlight-box p {
+            color: #fca5a5;
+            font-weight: 600;
+            margin-bottom: 0;
+        }
+
+        .highlight-box .material-symbols-outlined {
+            font-size: 1.1rem;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        .info-box {
+            background: rgba(37, 99, 235, 0.1);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-top: 12px;
+        }
+
+        .info-box p {
+            color: #93c5fd;
+            font-weight: 600;
+            margin-bottom: 0;
+        }
+
+        .info-box .material-symbols-outlined {
+            font-size: 1.1rem;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        /* Effective Date */
+        .effective-date {
+            text-align: center;
+            padding: 40px 20px;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .effective-date p {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .effective-date .date {
+            font-size: 1.4rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-top: 8px;
+        }
+
+        /* Footer Nav */
+        .footer-nav {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            padding: 40px 20px 0;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .footer-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            background: rgba(255, 255, 255, 0.08);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 14px;
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+
+        .footer-link:hover {
+            background: rgba(37, 99, 235, 0.2);
+            border-color: var(--primary);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .article-card:nth-child(2) { animation-delay: 0.05s; }
+        .article-card:nth-child(3) { animation-delay: 0.1s; }
+        .article-card:nth-child(4) { animation-delay: 0.15s; }
+        .article-card:nth-child(5) { animation-delay: 0.2s; }
+        .article-card:nth-child(6) { animation-delay: 0.25s; }
+        .article-card:nth-child(7) { animation-delay: 0.3s; }
+        .article-card:nth-child(8) { animation-delay: 0.35s; }
+        .article-card:nth-child(9) { animation-delay: 0.4s; }
+        .article-card:nth-child(10) { animation-delay: 0.45s; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 16px 60px;
+            }
+
+            .back-button {
+                top: 12px;
+                left: 12px;
+                padding: 8px 14px;
+                font-size: 0.85rem;
+                min-height: 44px;
+            }
+
+            .header {
+                margin-top: 40px;
+                margin-bottom: 40px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .header p {
+                font-size: 1rem;
+            }
+
+            .article-card {
+                padding: 24px 20px;
+            }
+
+            .article-number h2 {
+                font-size: 1.1rem;
+            }
+
+            .footer-nav {
+                flex-direction: column;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .footer-link {
+                width: 100%;
+                max-width: 300px;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="animated-bg">
+        <div class="grid-pattern"></div>
+        <div class="floating-shape shape1"></div>
+        <div class="floating-shape shape2"></div>
+        <div class="floating-shape shape3"></div>
+    </div>
+
+    <a href="index.html" class="back-button">
+        <span class="material-symbols-outlined">arrow_back</span>
+        메인으로
+    </a>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-badge">TERMS OF SERVICE</div>
+            <h1>이용약관</h1>
+            <p>Lawmadi OS 서비스 이용에 관한 약관</p>
+        </header>
+
+        <!-- 제1조 목적 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">1</div>
+                <h2>목적</h2>
+            </div>
+            <p>본 약관은 Lawmadi OS(이하 "서비스")가 제공하는 AI 기반 법률 정보 서비스의 이용에 관한 기본적인 사항을 규정함을 목적으로 합니다.</p>
+            <p>Lawmadi OS는 인공지능 기술을 활용하여 법률 정보를 검색, 분석, 정리하여 제공하는 법률 정보 서비스입니다. 본 서비스는 국가법령정보센터(법제처)의 공식 데이터를 기반으로 운영됩니다.</p>
+        </div>
+
+        <!-- 제2조 용어의 정의 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">2</div>
+                <h2>용어의 정의</h2>
+            </div>
+            <p>본 약관에서 사용하는 용어의 정의는 다음과 같습니다.</p>
+            <ul>
+                <li><strong>"서비스"</strong>란 Lawmadi OS가 제공하는 AI 기반 법률 정보 검색, 분석, 문서 작성 지원 등 일체의 기능을 의미합니다.</li>
+                <li><strong>"이용자"</strong>란 본 약관에 따라 서비스를 이용하는 모든 사람을 의미합니다.</li>
+                <li><strong>"법률정보"</strong>란 서비스를 통해 제공되는 법령, 판례, 법률 해석, 분석 결과 등 법률 관련 정보를 의미합니다. 이는 법률 자문(legal advice)과 구별됩니다.</li>
+            </ul>
+        </div>
+
+        <!-- 제3조 서비스의 내용 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">3</div>
+                <h2>서비스의 내용</h2>
+            </div>
+            <p>Lawmadi OS는 다음과 같은 서비스를 제공합니다.</p>
+            <ul>
+                <li>AI 기반 법률 질의응답 및 법률 정보 분석</li>
+                <li>국가법령정보센터 실시간 연동을 통한 법령 검색 및 검증</li>
+                <li>60명의 전문 AI 리더를 통한 분야별 법률 분석</li>
+                <li>5단계 검증 프로세스를 통한 분석 결과 제공</li>
+                <li>법률 문서 초안 작성 지원</li>
+            </ul>
+            <div class="highlight-box">
+                <p><span class="material-symbols-outlined">warning</span>본 서비스는 법률 정보를 제공하는 것이며, 변호사에 의한 법률 자문이 아닙니다. 서비스에서 제공하는 정보는 참고 목적으로만 활용하시기 바랍니다.</p>
+            </div>
+        </div>
+
+        <!-- 제4조 변호사법 면책 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">4</div>
+                <h2>변호사법 면책</h2>
+            </div>
+            <p>본 서비스는 「변호사법」에 의한 법률사무가 아니며, 법적 효력을 보장하지 않습니다.</p>
+            <ul>
+                <li>Lawmadi OS는 변호사 또는 법률사무소가 아니며, 변호사-의뢰인 관계를 형성하지 않습니다.</li>
+                <li>서비스에서 제공하는 모든 응답은 AI가 생성한 법률 정보이며, 전문 법률 자문을 대체할 수 없습니다.</li>
+                <li>법적 분쟁, 소송, 계약 등 중요한 법률 사안에 대해서는 반드시 자격을 갖춘 변호사의 자문을 받으시기 바랍니다.</li>
+            </ul>
+            <div class="highlight-box">
+                <p><span class="material-symbols-outlined">gavel</span>본 서비스는 변호사법에 의한 법률사무가 아니며, 법적 효력을 보장하지 않습니다.</p>
+            </div>
+        </div>
+
+        <!-- 제5조 이용자의 의무 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">5</div>
+                <h2>이용자의 의무</h2>
+            </div>
+            <p>이용자는 서비스를 이용함에 있어 다음 사항을 준수하여야 합니다.</p>
+            <ul>
+                <li>서비스 이용 시 정확한 정보를 제공하여야 합니다.</li>
+                <li>서비스를 불법적인 목적이나 타인의 권리를 침해하는 용도로 사용해서는 안 됩니다.</li>
+                <li>서비스를 악용하여 허위 법률 문서를 작성하거나 사기, 협박 등에 활용해서는 안 됩니다.</li>
+                <li>서비스의 정상적인 운영을 방해하는 행위를 해서는 안 됩니다.</li>
+                <li>다른 이용자의 개인정보를 수집하거나 무단으로 이용해서는 안 됩니다.</li>
+            </ul>
+        </div>
+
+        <!-- 제6조 지적재산권 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">6</div>
+                <h2>지적재산권</h2>
+            </div>
+            <p>Lawmadi OS의 모든 콘텐츠에 대한 지적재산권은 보호됩니다.</p>
+            <ul>
+                <li>서비스의 디자인, 로고, 텍스트, 소프트웨어, AI 모델 구성 등 일체의 콘텐츠에 대한 저작권 및 지적재산권은 Lawmadi OS에 귀속됩니다.</li>
+                <li>이용자는 서비스를 통해 얻은 정보를 개인적, 비상업적 용도로만 사용할 수 있습니다.</li>
+                <li>서비스의 콘텐츠를 사전 동의 없이 복제, 배포, 전송, 수정하는 행위는 금지됩니다.</li>
+            </ul>
+        </div>
+
+        <!-- 제7조 면책조항 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">7</div>
+                <h2>면책조항</h2>
+            </div>
+            <p>Lawmadi OS는 다음 사항에 대하여 책임을 지지 않습니다.</p>
+            <ul>
+                <li>AI가 생성한 응답의 정확성, 완전성, 적시성에 대한 보장</li>
+                <li>서비스에서 제공한 정보를 기반으로 이용자가 내린 결정 및 그에 따른 결과</li>
+                <li>천재지변, 시스템 장애 등 불가항력으로 인한 서비스 중단</li>
+                <li>이용자의 귀책사유로 인한 서비스 이용 장애</li>
+            </ul>
+            <div class="info-box">
+                <p><span class="material-symbols-outlined">info</span>AI 응답은 참고 목적의 정보이며, 최종 판단은 반드시 자격을 갖춘 법률 전문가에게 자문을 구하시기 바랍니다.</p>
+            </div>
+        </div>
+
+        <!-- 제8조 서비스 변경/중단 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">8</div>
+                <h2>서비스 변경 및 중단</h2>
+            </div>
+            <p>Lawmadi OS는 서비스의 안정성과 품질 향상을 위해 서비스의 전부 또는 일부를 변경하거나 중단할 수 있습니다.</p>
+            <ul>
+                <li>서비스 변경 또는 중단 시 사전에 서비스 내 공지를 통해 이용자에게 통지합니다.</li>
+                <li>긴급한 시스템 점검, 보안 이슈 등 불가피한 경우에는 사후에 통지할 수 있습니다.</li>
+                <li>무료로 제공되는 서비스의 변경 또는 중단에 대해서는 별도의 보상을 하지 않습니다.</li>
+            </ul>
+        </div>
+
+        <!-- 제9조 준거법 및 관할 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">9</div>
+                <h2>준거법 및 관할</h2>
+            </div>
+            <p>본 약관의 해석 및 적용에 관한 사항은 다음과 같습니다.</p>
+            <ul>
+                <li>본 약관은 대한민국 법률에 따라 해석되고 적용됩니다.</li>
+                <li>서비스 이용과 관련하여 분쟁이 발생한 경우, 서울중앙지방법원을 제1심 관할법원으로 합니다.</li>
+                <li>본 약관에서 정하지 아니한 사항에 대해서는 관계 법령 및 상관례에 따릅니다.</li>
+            </ul>
+        </div>
+
+        <!-- 제10조 시행일 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">10</div>
+                <h2>시행일</h2>
+            </div>
+            <p>본 약관은 아래 시행일부터 효력이 발생합니다.</p>
+        </div>
+
+        <!-- Effective Date -->
+        <div class="effective-date">
+            <p>시행일</p>
+            <div class="date">2026년 2월 21일</div>
+        </div>
+
+        <!-- Footer Navigation -->
+        <div class="footer-nav">
+            <a href="index.html" class="footer-link">
+                <span class="material-symbols-outlined">home</span>
+                메인으로
+            </a>
+            <a href="privacy.html" class="footer-link">
+                <span class="material-symbols-outlined">shield</span>
+                개인정보처리방침
+            </a>
+            <a href="about.html" class="footer-link">
+                <span class="material-symbols-outlined">info</span>
+                서비스 소개
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Page load animation
+        window.addEventListener('load', () => {
+            document.body.style.opacity = '0';
+            setTimeout(() => {
+                document.body.style.transition = 'opacity 0.5s';
+                document.body.style.opacity = '1';
+            }, 100);
+        });
+    </script>
+    <script>
+    document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    </script>
+</body>
+</html>
