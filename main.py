@@ -114,23 +114,23 @@ def _classify_gemini_error(e: Exception, ref: str = "") -> str:
 
     # 1) genai_client가 None (AttributeError: 'NoneType' ...)
     if isinstance(e, AttributeError) and "'nonetype'" in err_msg:
-        return f"⚠️ AI 엔진이 초기화되지 않았습니다. 서버를 재시작해 주세요. (Ref: {ref})"
+        return f"⚠️ 엔진이 초기화되지 않았습니다. 서버를 재시작해 주세요. (Ref: {ref})"
 
     # 2) Gemini API 에러 (google.genai 예외)
     if "quota" in err_msg or "resource_exhausted" in err_msg or "resourceexhausted" in err_msg:
-        return f"⚠️ AI 사용량 한도에 도달했습니다. 잠시 후 다시 시도해 주세요. (Ref: {ref})"
+        return f"⚠️ 사용량 한도에 도달했습니다. 잠시 후 다시 시도해 주세요. (Ref: {ref})"
     if "429" in err_msg or "rate" in err_msg:
         return f"⚠️ 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요. (Ref: {ref})"
     if "404" in err_msg or "not_found" in err_msg or "model" in err_msg and "not found" in err_msg:
-        return f"⚠️ AI 모델을 찾을 수 없습니다. 관리자에게 문의해 주세요. (Ref: {ref})"
+        return f"⚠️ 모델을 찾을 수 없습니다. 관리자에게 문의해 주세요. (Ref: {ref})"
     if "401" in err_msg or "403" in err_msg or "permission" in err_msg or "unauthenticated" in err_msg:
-        return f"⚠️ AI 인증에 실패했습니다. API 키를 확인해 주세요. (Ref: {ref})"
+        return f"⚠️ 인증에 실패했습니다. API 키를 확인해 주세요. (Ref: {ref})"
     if "500" in err_msg or "internal" in err_msg or "unavailable" in err_msg:
-        return f"⚠️ AI 서버가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해 주세요. (Ref: {ref})"
+        return f"⚠️ 서버가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해 주세요. (Ref: {ref})"
 
     # 3) 타임아웃
     if isinstance(e, (TimeoutError, asyncio.TimeoutError)) or "timeout" in err_msg or "timed out" in err_msg:
-        return f"⚠️ AI 응답 시간이 초과되었습니다. 질문을 간결하게 수정 후 다시 시도해 주세요. (Ref: {ref})"
+        return f"⚠️ 응답 시간이 초과되었습니다. 질문을 간결하게 수정 후 다시 시도해 주세요. (Ref: {ref})"
 
     # 4) 네트워크 오류
     if isinstance(e, (ConnectionError, OSError)) or "connection" in err_msg or "network" in err_msg:
@@ -222,7 +222,7 @@ async def security_headers_middleware(request: Request, call_next):
         "object-src 'none'; "
         "base-uri 'self'"
     )
-    # API 응답 캐시 방지 — 법률 상담 내용이 프록시/브라우저에 캐시되지 않도록
+    # API 응답 캐시 방지 — 법률 분석 내용이 프록시/브라우저에 캐시되지 않도록
     req_path = request.url.path
     if req_path.startswith("/ask") or req_path.startswith("/api/") or req_path.startswith("/upload") or req_path.startswith("/export"):
         response.headers["Cache-Control"] = "no-store, no-cache, private, max-age=0"
@@ -279,12 +279,13 @@ if LAW_CACHE:
     _build_keyword_index()
 
 
-def match_ssot_sources(query: str, top_k: int = 5) -> list:
+def match_ssot_sources(query: str, top_k: int = 8) -> list:
     """
     질문 → 10종 캐시에서 관련 소스 매칭.
     Returns: [{"type": "law", "law": "근로기준법", "label": "현행법령",
                "target": "law", "endpoint": "lawSearch.do",
-               "key_articles": [...top5...], "score": 150}, ...]
+               "key_articles": [...top5...], "key_article_texts": [...],
+               "key_precedents": [...], "key_qa": [...], "score": 150}, ...]
     """
     import re as _re
     tokens = _re.findall(r'[가-힣]{2,8}', query)
@@ -314,7 +315,10 @@ def match_ssot_sources(query: str, top_k: int = 5) -> list:
             "label": type_data.get("label", ""),
             "target": type_data.get("target", ""),
             "endpoint": type_data.get("endpoint", ""),
-            "key_articles": law_info.get("key_articles", [])[:5],  # 상위 5조문만 전달
+            "key_articles": law_info.get("key_articles", [])[:5],
+            "key_article_texts": law_info.get("key_article_texts", [])[:3],
+            "key_precedents": law_info.get("key_precedents", [])[:5],
+            "key_qa": law_info.get("key_qa", [])[:3],
             "keywords": law_info.get("keywords", [])[:5],
             "score": score,
         })
@@ -326,7 +330,7 @@ def build_cache_context(query: str) -> str:
     질문 → 관련 SSOT 소스 요약 텍스트 (Gemini/Claude에 주입).
     토큰 절약: 핵심 조문만 포함 (전체 법령 대신 관련 3~5개 조문).
     """
-    sources = match_ssot_sources(query, top_k=5)
+    sources = match_ssot_sources(query, top_k=8)
     if not sources:
         return ""
 
@@ -340,6 +344,29 @@ def build_cache_context(query: str) -> str:
             f"(DRF target={s['target']}, endpoint={s['endpoint']})"
         )
     lines.append("[위 캐시를 참고하되, 정확한 조문은 반드시 DRF 도구로 실시간 검증하세요]")
+    return "\n".join(lines)
+
+
+def build_ssot_context(query: str) -> str:
+    """관련 SSOT: 법률명+조문원문+판례요지+대표Q&A → Gemini/Claude 전달"""
+    sources = match_ssot_sources(query, top_k=8)
+    if not sources:
+        return ""
+
+    lines = ["[SSOT 매칭 결과]"]
+    for s in sources:
+        lines.append(f"\n■ {s['law']} ({s['label']})")
+        # 핵심조문 원문
+        for art in s.get("key_article_texts", [])[:3]:
+            lines.append(f"  조문: {art}")
+        # 판례요지
+        for prec in s.get("key_precedents", [])[:2]:
+            lines.append(f"  판례: {prec}")
+        # 대표 Q&A
+        for qa in s.get("key_qa", [])[:1]:
+            lines.append(f"  참고Q: {qa.get('q', '')}")
+            lines.append(f"  참고A: {qa.get('a', '')[:100]}...")
+
     return "\n".join(lines)
 
 # =============================================================
@@ -688,6 +715,25 @@ def _remove_separator_lines(text: str) -> str:
     return '\n'.join(result)
 
 
+def _compute_quality_meta(text: str, matched_sources: list) -> dict:
+    """응답 품질 메타데이터 계산"""
+    has_law_name = bool(re.search(r'[가-힣]+법', text))
+    has_article = bool(re.search(r'제\d+조', text))
+    has_action_guide = any(kw in text for kw in ["즉시", "1단계", "▶", "□", "체크리스트", "준비물"])
+    has_precedent = bool(re.search(r'(대법원|헌법재판소|판결|선고)\s*\d', text))
+    ssot_verified = len(matched_sources) > 0
+
+    score = sum([has_law_name, has_article, has_action_guide, has_precedent, ssot_verified])
+    return {
+        "has_law_name": has_law_name,
+        "has_article": has_article,
+        "has_action_guide": has_action_guide,
+        "has_precedent": has_precedent,
+        "ssot_verified": ssot_verified,
+        "quality_score": score,
+    }
+
+
 def _remove_think_blocks(text: str) -> str:
     """Gemini <think>...</think> 내부 추론 블록 제거"""
     import re
@@ -1021,7 +1067,7 @@ SYSTEM_INSTRUCTION_BASE = f"""
 ## 🎯 시스템 정체성
 
 당신은 **Lawmadi OS**입니다.
-대한민국 법률 AI 의사결정 지원 시스템으로, 법적 문제로 불안에 빠진 사용자를 **논리적 행동 경로**로 안내합니다.
+대한민국 법률 의사결정 지원 시스템으로, 법적 문제로 불안에 빠진 사용자를 **논리적 행동 경로**로 안내합니다.
 
 > 💡 **핵심 철학**
 > 불안을 행동 가능한 논리로 전환한다.
@@ -1359,7 +1405,7 @@ SYSTEM_INSTRUCTION_BASE = f"""
 - 확인되지 않은 사실(이름·날짜·금액·주소 등)은 반드시 `[   ]` 빈칸으로 남긴다.
 - SSOT 검색으로 관련 법조문(형법·민법·민사소송법 등)을 자동 인용한다.
 - 모든 문서 끝에 면책 고지를 포함한다:
-  > ⚠️ 본 문서는 AI가 생성한 참고용 초안이며, 법적 효력을 보장하지 않습니다. 반드시 변호사 등 법률 전문가의 검토를 받으시기 바랍니다.
+  > ⚠️ 본 문서는 Lawmadi OS가 생성한 참고용 초안이며, 법적 효력을 보장하지 않습니다. 반드시 변호사 등 법률 전문가의 검토를 받으시기 바랍니다.
 - **PDF 다운로드 안내:** 법률문서 초안 작성이 완료되면 반드시 아래 안내를 포함한다:
   > 📥 이 문서를 PDF로 다운로드하시려면 화면 하단의 **"PDF 다운로드"** 버튼을 눌러주세요.
 
@@ -2095,7 +2141,7 @@ async def _call_lawmadilm(query: str, analysis: Dict) -> str:
     payload = {
         "messages": [{"role": "user", "content": query}],
         "system_prompt": (
-            f"당신은 대한민국 법률 전문 AI 'LawmadiLM'입니다. "
+            f"당신은 대한민국 법률 전문 'LawmadiLM'입니다. "
             f"현재 당신은 '{leader_name}' 리더입니다. 전문 분야: {leader_specialty}. "
             f"아래 질문에 대해 핵심 법률 내용을 간결하게 정리하세요: "
             f"적용 법률, 관련 조문, 핵심 판례, 실무 결론을 빠짐없이 포함하되 최대한 간결하게. "
@@ -2115,6 +2161,40 @@ async def _call_lawmadilm(query: str, analysis: Dict) -> str:
     tokens = data.get("usage", {}).get("completion_tokens", 0)
     logger.info(f"🤖 [Stage 2] LawmadiLM 초안 완료 ({elapsed}s, {tokens} tokens)")
     return content
+
+
+def _postprocess_lawmadilm(draft: str, query: str) -> Optional[str]:
+    """LawmadiLM 초안 후처리: 품질 미달 시 None → Gemini 전담"""
+    if not draft or len(draft.strip()) < 20:
+        return None
+
+    # <think> 태그 제거
+    draft = _remove_think_blocks(draft)
+
+    # 반복 50% 이상 감지
+    sentences = [s.strip() for s in re.split(r'[.。\n]', draft) if s.strip()]
+    if sentences:
+        unique = set(sentences)
+        if len(unique) / len(sentences) < 0.5:
+            logger.warning(f"⚠️ [Stage 2 PP] 반복 감지 ({len(unique)}/{len(sentences)}) → None")
+            return None
+
+    # SSOT에 없는 "OO법 제X조" → "(※확인 필요)" 태그
+    law_refs = re.findall(r'([가-힣]+법)\s+제(\d+)조', draft)
+    for law_name, article_num in law_refs:
+        # LAW_CACHE에서 확인
+        found = False
+        for stype, type_data in LAW_CACHE.items():
+            if law_name in type_data.get("entries", {}):
+                found = True
+                break
+        if not found:
+            draft = draft.replace(
+                f"{law_name} 제{article_num}조",
+                f"{law_name} 제{article_num}조(※확인 필요)"
+            )
+
+    return draft.strip()
 
 
 async def _step3_gemini_compose(query: str, analysis: Dict, draft: str,
@@ -2141,12 +2221,16 @@ async def _step3_gemini_compose(query: str, analysis: Dict, draft: str,
             f"위 초안을 바탕으로 사용자에게 전달할 완성된 법률 답변을 작성하세요.\n"
             f"- 초안의 법률 근거(조문, 판례)를 검증하고 보완하세요\n"
             f"- DRF API 도구로 법령/판례를 실시간 확인하세요\n"
+            f"- SSOT 조문만 인용하세요. 없는 조문 절대 금지.\n"
+            f"- 구조: 상황정리→법률근거→실무가이드→주의사항\n"
             f"- [{leader_name} ({leader_specialty}) 분석]으로 시작하세요"
         )
     else:
         draft_section = (
             f"\n사용자에게 전달할 완성된 법률 답변을 직접 작성하세요.\n"
             f"- DRF API 도구로 법령/판례를 실시간 확인하세요\n"
+            f"- SSOT 조문만 인용하세요. 없는 조문 절대 금지.\n"
+            f"- 구조: 상황정리→법률근거→실무가이드→주의사항\n"
             f"- [{leader_name} ({leader_specialty}) 분석]으로 시작하세요"
         )
 
@@ -2208,15 +2292,17 @@ async def _step4_claude_enhance(query: str, analysis: Dict,
             system=(
                 f"당신은 Lawmadi OS의 법률 품질 보강 엔진입니다.\n"
                 f"담당 리더: {leader_name} ({leader_specialty})\n"
-                f"아래 AI 응답을 검토하여 부족한 부분만 보완하세요:\n"
-                f"- 누락된 중요 조문이나 판례가 있으면 추가\n"
-                f"- 법적 오류가 있으면 수정\n"
-                f"- 추가할 내용이 없으면 '보완 없음'만 출력\n"
-                f"보완 내용만 간결하게 출력하세요."
+                f"아래 응답을 검토하여 부족한 부분만 보완하세요:\n"
+                f"1. 조문 정확성 교정 (잘못된 조·항·호 수정)\n"
+                f"2. 누락된 중요 조항 추가\n"
+                f"3. 'law.go.kr에서 확인' 안내 포함\n"
+                f"4. 다음 단계 행동 1~2개 구체적 제시\n"
+                f"5. SSOT 미확인 법률은 '(확인 필요)' 표시\n"
+                f"보완 내용만 간결하게 출력하세요. 추가할 내용이 없으면 '보완 없음'만 출력."
             ),
             messages=[{
                 "role": "user",
-                "content": f"사용자 질문: {query}\n\nAI 응답:\n{gemini_text}"
+                "content": f"사용자 질문: {query}\n\n응답:\n{gemini_text}"
             }],
         )
         enhanced = enhance_resp.content[0].text.strip()
@@ -2228,24 +2314,57 @@ async def _step4_claude_enhance(query: str, analysis: Dict,
         return ""
 
 
-async def _step5_claude_verify(query: str, response_text: str) -> Dict[str, Any]:
-    """Stage 5: 헌법 검증 + 교정 (max_tokens=300)"""
+def _drf_verify_law_refs(text: str) -> list:
+    """응답에서 'OO법 제X조' 최대 5개 추출 → DRF API 존재 확인"""
+    refs = re.findall(r'([가-힣]+법)\s+제(\d+)조', text)
+    if not refs:
+        return []
+
+    results = []
+    svc = RUNTIME.get("search_service")
+    if not svc:
+        return []
+
+    seen = set()
+    for law_name, article in refs[:5]:
+        key = f"{law_name} 제{article}조"
+        if key in seen:
+            continue
+        seen.add(key)
+        try:
+            raw = svc.search_law(law_name)
+            found = bool(raw)
+            results.append({"ref": key, "verified": found})
+        except Exception:
+            results.append({"ref": key, "verified": False})
+
+    return results
+
+
+async def _step5_claude_verify(query: str, response_text: str, drf_results: list = None) -> Dict[str, Any]:
+    """Stage 5: 헌법 검증 + 법률 품질 검증 + 교정 (max_tokens=300)"""
     claude_client = RUNTIME.get("claude_client")
     if not claude_client:
         return {"passed": True, "warning": None, "corrected_text": None}
+
+    if drf_results is None:
+        drf_results = []
 
     try:
         resp = claude_client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=300,
             system=(
-                "당신은 헌법 준수 검증 엔진입니다. 아래 법률 AI 응답이 헌법을 위배하는지 검증하세요.\n"
+                "당신은 헌법 준수 및 법률 품질 검증 엔진입니다. 아래 법률 응답을 검증하세요.\n"
                 "검증 항목:\n"
-                "1. 기본권(자유권, 평등권, 사회권) 침해 가능성\n"
-                "2. 위헌 판례가 있는 조항 인용 여부\n"
-                "3. 법률 조언이 헌법 가치에 반하는지 여부\n\n"
+                "1. 헌법 준수: 기본권 침해, 위헌 판례 인용 여부\n"
+                "2. 법률 정확성: 조문번호 오류, 폐지/개정 법률 인용 여부\n"
+                "3. 실무 유용성: 구체적 행동 가이드 포함 여부\n\n"
+                f"[DRF 검증 결과]\n{json.dumps(drf_results, ensure_ascii=False)}\n\n"
                 "JSON으로만 응답:\n"
-                '{{"passed": true/false, "warning": "경고 메시지 또는 null", "unconstitutional_refs": []}}'
+                '{"passed": true/false, "constitutional": "PASS/FAIL", '
+                '"accuracy": "PASS/FAIL", "usefulness": "PASS/FAIL", '
+                '"warning": "경고 메시지 또는 null"}'
             ),
             messages=[{
                 "role": "user",
@@ -2295,8 +2414,9 @@ async def _run_legal_pipeline(query: str, analysis: Dict, tools: list,
     try:
         logger.info(f"🤖 [Stage 2/5] LawmadiLM 법률 초안 생성")
         draft = await _call_lawmadilm(query, analysis)
-        if not draft or len(draft.strip()) < 10:
-            logger.warning(f"⚠️ [Stage 2] LawmadiLM 초안 너무 짧음 → Stage 3에서 Gemini 단독 처리")
+        draft = _postprocess_lawmadilm(draft, query)  # 후처리
+        if not draft:
+            logger.warning(f"⚠️ [Stage 2] 후처리 → None → Gemini 전담")
             draft = ""
     except Exception as e:
         logger.warning(f"⚠️ [Stage 2] LawmadiLM 실패 ({e}) → Stage 3에서 Gemini 단독 처리")
@@ -2323,17 +2443,18 @@ async def _run_legal_pipeline(query: str, analysis: Dict, tools: list,
     if enhancement:
         final_text += f"\n\n---\n**[보강]**\n{enhancement}"
 
-    # ── Stage 5: 헌법 검증 + 교정 ──
-    logger.info(f"⚖️ [Stage 5/5] 헌법 검증 + 교정")
-    verification = await _step5_claude_verify(query, final_text)
+    # ── Stage 5: DRF 검증 + 헌법 검증 + 교정 ──
+    logger.info(f"⚖️ [Stage 5/5] DRF 검증 + 헌법 검증 + 교정")
+    drf_results = _drf_verify_law_refs(final_text)
+    verification = await _step5_claude_verify(query, final_text, drf_results)
 
     if not verification.get("passed", True):
         logger.warning(f"🚨 [Stage 5] 헌법 검증 경고: {verification}")
         if verification.get("corrected_text"):
             final_text = verification["corrected_text"]
-            final_text += "\n\n> ⚠️ 이 답변은 헌법 검증 후 교정되었습니다. 전문가 상담을 권장합니다."
+            final_text += "\n\n> ⚠️ 이 답변은 헌법 검증 후 교정되었습니다. 전문가 확인을 권장합니다."
         else:
-            final_text += "\n\n> ⚠️ 이 답변에는 헌법적 검토가 필요한 사항이 포함되어 있습니다. 전문가 상담을 권장합니다."
+            final_text += "\n\n> ⚠️ 이 답변에는 헌법적 검토가 필요한 사항이 포함되어 있습니다. 전문가 확인을 권장합니다."
     elif verification.get("warning"):
         final_text += f"\n\n---\n⚖️ **헌법 검증 참고사항:** {verification['warning']}"
 
@@ -3101,10 +3222,10 @@ async def ask(request: Request):
                 f"[유나 (CCO) 콘텐츠 설계]\n\n"
                 "## 💡 핵심 답변\n"
                 "말씀하신 내용은 법률 분야가 아닌 일반 질문으로 판단됩니다. "
-                "저는 법률 AI 시스템이라 전문적인 답변이 어려울 수 있지만, "
+                "저는 법률 분석 시스템이라 전문적인 답변이 어려울 수 있지만, "
                 "간단히 안내드릴게요.\n\n"
                 "## 📌 주요 포인트\n"
-                "• Lawmadi OS는 **대한민국 법률 상담 전문 AI**입니다\n"
+                "• Lawmadi OS는 **대한민국 법률 분석 전문 시스템**입니다\n"
                 "• 60명의 전문 리더가 법률 분야별로 정밀 분석해 드려요\n"
                 "• 임대차, 이혼, 상속, 형사, 노동법 등 다양한 분야를 다룹니다\n\n"
                 "## 🔍 더 알아보기\n"
@@ -3278,6 +3399,7 @@ async def ask(request: Request):
             "swarm_mode": False,
             "constitutional_check": "PASS" if const_check.get("passed", True) else "WARNING",
             "ssot_sources": [f"{s['type']}:{s['law']}" for s in matched_sources[:3]] if matched_sources else [],
+            "meta": _compute_quality_meta(final_text_clean, matched_sources),
         }
 
     except Exception as e:
@@ -3512,10 +3634,10 @@ async def ask_stream(request: Request):
                                 f"[유나 (CCO) 콘텐츠 설계]\n\n"
                                 f"## 💡 핵심 답변\n"
                                 f"말씀하신 내용은 법률 분야가 아닌 일반 질문으로 판단됩니다. "
-                                f"저는 법률 AI 시스템이라 전문적인 답변이 어려울 수 있지만, "
+                                f"저는 법률 분석 시스템이라 전문적인 답변이 어려울 수 있지만, "
                                 f"간단히 안내드릴게요.\n\n"
                                 f"## 📌 주요 포인트\n"
-                                f"• Lawmadi OS는 **대한민국 법률 상담 전문 AI**입니다\n"
+                                f"• Lawmadi OS는 **대한민국 법률 분석 전문 시스템**입니다\n"
                                 f"• 60명의 전문 리더가 법률 분야별로 정밀 분석해 드려요\n"
                                 f"• 임대차, 이혼, 상속, 형사, 노동법 등 다양한 분야를 다룹니다\n\n"
                                 f"## 🔍 더 알아보기\n"
@@ -3657,10 +3779,10 @@ async def ask_stream(request: Request):
                             "[유나 (CCO) 콘텐츠 설계]\n\n"
                             "## 💡 핵심 답변\n"
                             "말씀하신 내용은 법률 분야가 아닌 일반 질문으로 판단됩니다. "
-                            "저는 법률 AI 시스템이라 전문적인 답변이 어려울 수 있지만, "
+                            "저는 법률 분석 시스템이라 전문적인 답변이 어려울 수 있지만, "
                             "간단히 안내드릴게요.\n\n"
                             "## 📌 주요 포인트\n"
-                            "• Lawmadi OS는 **대한민국 법률 상담 전문 AI**입니다\n"
+                            "• Lawmadi OS는 **대한민국 법률 분석 전문 시스템**입니다\n"
                             "• 60명의 전문 리더가 법률 분야별로 정밀 분석해 드려요\n"
                             "• 임대차, 이혼, 상속, 형사, 노동법 등 다양한 분야를 다룹니다\n\n"
                             "## 🔍 더 알아보기\n"
@@ -4247,7 +4369,7 @@ async def _analyze_image_document(file_path: Path, analysis_type: str) -> Dict[s
             "summary": result_text[:500],
             "legal_issues": ["분석 결과를 구조화하지 못했습니다."],
             "risk_level": "medium",
-            "recommendations": ["전문가와 상담하시기 바랍니다."],
+            "recommendations": ["전문가 확인이 필요합니다."],
             "legal_category": "일반",
             "raw_response": result_text
         }
@@ -4318,7 +4440,7 @@ async def _analyze_pdf_document(file_path: Path, analysis_type: str) -> Dict[str
                 "summary": result_text[:500],
                 "legal_issues": ["분석 결과를 구조화하지 못했습니다."],
                 "risk_level": "medium",
-                "recommendations": ["전문가와 상담하시기 바랍니다."],
+                "recommendations": ["전문가 확인이 필요합니다."],
                 "legal_category": "일반"
             }
 
@@ -4395,7 +4517,7 @@ async def export_pdf(request: Request):
         pdf.ln(10)
         pdf.set_font("NotoSansKR", "", 9)
         disclaimer = (
-            "※ 본 문서는 AI가 생성한 참고용 초안이며, 법적 효력을 보장하지 않습니다. "
+            "※ 본 문서는 Lawmadi OS가 생성한 참고용 초안이며, 법적 효력을 보장하지 않습니다. "
             "반드시 변호사 등 법률 전문가의 검토를 받으시기 바랍니다."
         )
         pdf.multi_cell(0, 6, disclaimer)
@@ -4646,7 +4768,7 @@ def _verify_mcp_auth(authorization: str = Header(default="")) -> None:
 mcp = FastApiMCP(
     app,
     name="Lawmadi OS",
-    description="한국 법률 AI 상담 시스템. 60명의 전문 리더와 3명의 C-Level 임원이 법률 질문에 답변합니다.",
+    description="한국 법률 분석 시스템. 60명의 전문 리더와 3명의 C-Level 임원이 법률 질문에 답변합니다.",
     describe_all_responses=True,
     describe_full_response_schema=True,
     auth_config=AuthConfig(
