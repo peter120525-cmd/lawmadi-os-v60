@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lawmadi OS 소개 - 불안을 행동으로 바꾸는 법률 운영체제</title>
+    <meta name="description" content="법률 문제, 60명의 전문 리더가 함께 분석합니다. Lawmadi OS는 국가법령정보센터 실시간 연동, 5단계 검증 분석을 제공하는 법률 운영체제입니다.">
+    <link rel="canonical" href="https://lawmadi-db.web.app/about.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Lawmadi OS 소개" />
+    <meta property="og:description" content="불안을 행동으로 바꾸는 법률 운영체제. 60명의 전문 리더가 함께 분석합니다." />
+    <meta property="og:url" content="https://lawmadi-db.web.app/about.html" />
+    <meta property="og:locale" content="ko_KR" />
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --gold: #f59e0b;
+            --purple: #8b5cf6;
+            --green: #10b981;
+            --red: #ef4444;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* Animated Background */
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .grid-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .floating-shape {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.04;
+            animation: float 25s infinite ease-in-out;
+        }
+
+        .shape1 { width: 400px; height: 400px; background: #3b82f6; top: 5%; left: 5%; animation-delay: 0s; }
+        .shape2 { width: 300px; height: 300px; background: #f59e0b; top: 50%; right: 5%; animation-delay: 8s; }
+        .shape3 { width: 350px; height: 350px; background: #8b5cf6; bottom: 5%; left: 40%; animation-delay: 16s; }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(40px, -40px) rotate(90deg); }
+            50% { transform: translate(-30px, 30px) rotate(180deg); }
+            75% { transform: translate(30px, 40px) rotate(270deg); }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px 80px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 40px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(-5px);
+        }
+
+        .header-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* Section Title */
+        .section-title {
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: white;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 6px;
+            height: 32px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        /* Section spacing */
+        .section {
+            margin-bottom: 60px;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        /* ===== Section 2: Keyword Cards ===== */
+        .hero-text {
+            text-align: center;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 32px;
+            line-height: 1.6;
+        }
+
+        .keyword-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .keyword-card {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 32px 24px;
+            text-align: center;
+            transition: all 0.4s;
+        }
+
+        .keyword-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border-color: var(--primary);
+        }
+
+        .keyword-card .icon {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 16px;
+        }
+
+        .keyword-card:nth-child(2) .icon { color: var(--gold); }
+        .keyword-card:nth-child(3) .icon { color: var(--purple); }
+
+        .keyword-card h3 {
+            font-size: 1.15rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: white;
+        }
+
+        .keyword-card p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* ===== Section 3: 5-Step Process ===== */
+        .steps-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .step-card {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 24px;
+            transition: all 0.3s;
+        }
+
+        .step-card:hover {
+            background: rgba(30, 41, 59, 0.9);
+            border-color: var(--primary);
+            transform: translateX(8px);
+        }
+
+        .step-number {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .step-card:nth-child(2) .step-number { background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%); }
+        .step-card:nth-child(3) .step-number { background: linear-gradient(135deg, var(--gold) 0%, #f97316 100%); }
+        .step-card:nth-child(4) .step-number { background: linear-gradient(135deg, var(--green) 0%, #06b6d4 100%); }
+        .step-card:nth-child(5) .step-number { background: linear-gradient(135deg, var(--purple) 0%, #ec4899 100%); }
+
+        .step-icon {
+            font-size: 1.8rem;
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .step-card:nth-child(2) .step-icon { color: #06b6d4; }
+        .step-card:nth-child(3) .step-icon { color: var(--gold); }
+        .step-card:nth-child(4) .step-icon { color: var(--green); }
+        .step-card:nth-child(5) .step-icon { color: var(--purple); }
+
+        .step-content h3 {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 4px;
+        }
+
+        .step-content p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* ===== Section 4: Leaders + C-Level Highlight ===== */
+        .badge-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 28px;
+        }
+
+        .category-badge {
+            padding: 10px 18px;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            transition: all 0.3s;
+        }
+
+        .category-badge:hover {
+            border-color: var(--primary);
+            background: rgba(37, 99, 235, 0.15);
+        }
+
+        .category-badge .name {
+            color: var(--text-secondary);
+            font-weight: 400;
+            margin-left: 6px;
+            font-size: 0.8rem;
+        }
+
+        .clevel-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .clevel-mini {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: all 0.3s;
+        }
+
+        .clevel-mini:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+            border-color: var(--clevel-color);
+        }
+
+        .clevel-mini.cso { --clevel-color: #3b82f6; }
+        .clevel-mini.cto { --clevel-color: #f59e0b; }
+        .clevel-mini.cco { --clevel-color: #8b5cf6; }
+
+        .clevel-mini::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--clevel-color);
+            border-radius: 16px 16px 0 0;
+        }
+
+        .clevel-mini {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .clevel-mini-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--clevel-color) 0%, rgba(255, 255, 255, 0.1) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .clevel-mini-info h4 {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 2px;
+        }
+
+        .clevel-mini-info span {
+            font-size: 0.8rem;
+            color: var(--clevel-color);
+            font-weight: 600;
+        }
+
+        .view-links {
+            display: flex;
+            gap: 16px;
+        }
+
+        .view-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .view-link:hover {
+            color: #60a5fa;
+            transform: translateX(4px);
+        }
+
+        /* ===== Section 5: Trust Principles ===== */
+        .trust-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .trust-card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .trust-card:hover {
+            background: rgba(30, 41, 59, 0.9);
+            border-color: var(--green);
+            transform: translateY(-4px);
+        }
+
+        .trust-card .icon {
+            font-size: 2rem;
+            color: var(--green);
+            margin-bottom: 12px;
+        }
+
+        .trust-card h4 {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: white;
+            line-height: 1.4;
+        }
+
+        /* ===== Section 6: Stats Bar ===== */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-box {
+            text-align: center;
+            padding: 16px;
+        }
+
+        .stat-number {
+            font-size: 2.2rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 6px;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        /* ===== Section 7: CTA ===== */
+        .cta-section {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .cta-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 18px 48px;
+            background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 100%);
+            border: none;
+            border-radius: 16px;
+            color: white;
+            font-size: 1.15rem;
+            font-weight: 800;
+            text-decoration: none;
+            transition: all 0.4s;
+            box-shadow: 0 8px 32px rgba(37, 99, 235, 0.4);
+            cursor: pointer;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 48px rgba(37, 99, 235, 0.5);
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section:nth-child(2) { animation-delay: 0.1s; }
+        .section:nth-child(3) { animation-delay: 0.15s; }
+        .section:nth-child(4) { animation-delay: 0.2s; }
+        .section:nth-child(5) { animation-delay: 0.25s; }
+        .section:nth-child(6) { animation-delay: 0.3s; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 16px 60px;
+            }
+
+            .back-button {
+                top: 12px;
+                left: 12px;
+                padding: 8px 14px;
+                font-size: 0.85rem;
+            }
+
+            .header {
+                margin-top: 40px;
+                margin-bottom: 40px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .header p {
+                font-size: 1rem;
+            }
+
+            .hero-text {
+                font-size: 1.15rem;
+            }
+
+            .keyword-grid {
+                grid-template-columns: 1fr;
+                gap: 14px;
+            }
+
+            .keyword-card {
+                padding: 24px 20px;
+            }
+
+            .step-card {
+                padding: 18px;
+                gap: 14px;
+            }
+
+            .step-number {
+                width: 40px;
+                height: 40px;
+                font-size: 1rem;
+            }
+
+            .clevel-row {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .trust-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+                padding: 24px;
+                gap: 12px;
+            }
+
+            .stat-number {
+                font-size: 1.8rem;
+            }
+
+            .section-title {
+                font-size: 1.3rem;
+            }
+
+            .view-links {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .cta-button {
+                padding: 16px 36px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="animated-bg">
+        <div class="grid-pattern"></div>
+        <div class="floating-shape shape1"></div>
+        <div class="floating-shape shape2"></div>
+        <div class="floating-shape shape3"></div>
+    </div>
+
+    <a href="index.html" class="back-button">
+        <span class="material-symbols-outlined">arrow_back</span>
+        메인으로
+    </a>
+
+    <div class="container">
+        <!-- Section 1: Header -->
+        <header class="header">
+            <div class="header-badge">v60.0.0</div>
+            <h1>Lawmadi OS</h1>
+            <p>불안을 행동으로 바꾸는 법률 운영체제</p>
+        </header>
+
+        <!-- Section 2: Keywords -->
+        <div class="section">
+            <div class="hero-text">법률 문제, 60명의 전문 리더가 함께 분석합니다</div>
+            <div class="keyword-grid">
+                <div class="keyword-card">
+                    <div class="icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">verified</span></div>
+                    <h3>실시간 법령 검증</h3>
+                    <p>국가법령정보센터 실시간 연동</p>
+                </div>
+                <div class="keyword-card">
+                    <div class="icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">groups</span></div>
+                    <h3>60명 전문 리더</h3>
+                    <p>분야별 법률 전문가가 자동 배정</p>
+                </div>
+                <div class="keyword-card">
+                    <div class="icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">fact_check</span></div>
+                    <h3>5단계 검증 분석</h3>
+                    <p>초안부터 헌법 검증까지 자동</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: 5-Step Process -->
+        <div class="section">
+            <h2 class="section-title">이렇게 분석합니다</h2>
+            <div class="steps-container">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <span class="material-symbols-outlined step-icon">psychology</span>
+                    <div class="step-content">
+                        <h3>질문 파악</h3>
+                        <p>어떤 법률 문제인지 분석</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <span class="material-symbols-outlined step-icon">search</span>
+                    <div class="step-content">
+                        <h3>법률 탐색</h3>
+                        <p>관련 법률·판례 검색</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <span class="material-symbols-outlined step-icon">gavel</span>
+                    <div class="step-content">
+                        <h3>실시간 검증</h3>
+                        <p>법제처 공식 데이터로 확인</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">4</div>
+                    <span class="material-symbols-outlined step-icon">edit_note</span>
+                    <div class="step-content">
+                        <h3>답변 정리</h3>
+                        <p>이해하기 쉽게 구성</p>
+                    </div>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">5</div>
+                    <span class="material-symbols-outlined step-icon">shield</span>
+                    <div class="step-content">
+                        <h3>최종 검증</h3>
+                        <p>헌법 준수 여부 확인</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 4: Leaders + C-Level Highlight -->
+        <div class="section">
+            <h2 class="section-title">60명 리더 &amp; C-Level 임원</h2>
+            <div class="badge-grid">
+                <span class="category-badge">민사<span class="name">민준 외</span></span>
+                <span class="category-badge">형사<span class="name">서준 외</span></span>
+                <span class="category-badge">부동산<span class="name">도윤 외</span></span>
+                <span class="category-badge">노동<span class="name">하준 외</span></span>
+                <span class="category-badge">가족<span class="name">시우 외</span></span>
+                <span class="category-badge">행정<span class="name">지호 외</span></span>
+                <span class="category-badge">IT·개인정보<span class="name">예준 외</span></span>
+                <span class="category-badge">국제<span class="name">수아 외</span></span>
+                <span class="category-badge">헌법<span class="name">하은 외</span></span>
+                <span class="category-badge">의료<span class="name">지아 외</span></span>
+                <span class="category-badge">환경<span class="name">윤서 외</span></span>
+                <span class="category-badge">금융<span class="name">지윤 외</span></span>
+            </div>
+
+            <div class="clevel-row">
+                <div class="clevel-mini cso">
+                    <div class="clevel-mini-avatar">서</div>
+                    <div class="clevel-mini-info">
+                        <h4>서연</h4>
+                        <span>CSO · 전략 총괄</span>
+                    </div>
+                </div>
+                <div class="clevel-mini cto">
+                    <div class="clevel-mini-avatar">지</div>
+                    <div class="clevel-mini-info">
+                        <h4>지유</h4>
+                        <span>CTO · 기술 총괄</span>
+                    </div>
+                </div>
+                <div class="clevel-mini cco">
+                    <div class="clevel-mini-avatar">유</div>
+                    <div class="clevel-mini-info">
+                        <h4>유나</h4>
+                        <span>CCO · 콘텐츠 총괄</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="view-links">
+                <a href="leaders.html" class="view-link">
+                    60명 리더 전체 보기
+                    <span class="material-symbols-outlined" style="font-size:1.1rem">arrow_forward</span>
+                </a>
+                <a href="clevel.html" class="view-link">
+                    C-Level 자세히 보기
+                    <span class="material-symbols-outlined" style="font-size:1.1rem">arrow_forward</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Section 5: Trust Principles -->
+        <div class="section">
+            <h2 class="section-title">신뢰 원칙</h2>
+            <div class="trust-grid">
+                <div class="trust-card">
+                    <div class="icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">menu_book</span></div>
+                    <h4>공식 법령만 사용</h4>
+                </div>
+                <div class="trust-card">
+                    <div class="icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">block</span></div>
+                    <h4>추측하지 않음</h4>
+                </div>
+                <div class="trust-card">
+                    <div class="icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">front_hand</span></div>
+                    <h4>모르면 멈춤</h4>
+                </div>
+                <div class="trust-card">
+                    <div class="icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">person_off</span></div>
+                    <h4>변호사 사칭 금지</h4>
+                </div>
+                <div class="trust-card">
+                    <div class="icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">calendar_today</span></div>
+                    <h4>정확한 날짜만</h4>
+                </div>
+                <div class="trust-card">
+                    <div class="icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">link</span></div>
+                    <h4>출처 투명 공개</h4>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 6: Stats Bar -->
+        <div class="section">
+            <div class="stats-bar">
+                <div class="stat-box">
+                    <div class="stat-number">60명</div>
+                    <div class="stat-label">전문 리더</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">10종</div>
+                    <div class="stat-label">데이터 소스</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">548개</div>
+                    <div class="stat-label">법률 분야</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">85,909건</div>
+                    <div class="stat-label">학습 데이터</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 7: CTA -->
+        <div class="cta-section">
+            <a href="index.html" class="cta-button">
+                <span class="material-symbols-outlined">rocket_launch</span>
+                지금 무료로 시작하기
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Page load animation
+        window.addEventListener('load', () => {
+            document.body.style.opacity = '0';
+            setTimeout(() => {
+                document.body.style.transition = 'opacity 0.5s';
+                document.body.style.opacity = '1';
+            }, 100);
+        });
+    </script>
+    <script>
+    document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    </script>
+</body>
+</html>

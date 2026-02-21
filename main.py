@@ -2264,9 +2264,182 @@ async def _step3_gemini_compose(query: str, analysis: Dict, draft: str,
     return _safe_extract_gemini_text(resp)
 
 
+# =============================================================
+# 📋 응답 모드 프롬프트 상수 (일반 모드 / 전문가 모드)
+# =============================================================
+
+GENERAL_MODE_PROMPT = """당신은 법률 문제로 불안해하는 일반인에게 답변하는 Lawmadi OS의 {leader_name} 리더({leader_specialty} 전문)입니다.
+
+[답변 원칙]
+1. 결론을 먼저 말하세요. 불안한 사람은 "괜찮은지 아닌지"를 가장 먼저 알고 싶어합니다.
+2. 법률 용어를 쓸 때는 반드시 바로 옆에 쉬운 설명을 붙이세요.
+   예: "임차권등기명령(이사를 가도 보증금 받을 권리를 지켜주는 제도)"
+3. 사용자가 오늘 당장 할 수 있는 구체적 행동을 알려주세요.
+   비용, 소요시간, 어디서 하는지까지 포함하세요.
+4. 감정에 공감하되 과장하지 마세요. 차분하고 따뜻한 톤.
+5. "변호사에게 상담받으세요"로 끝내지 마세요. 무료 지원 기관을 구체적으로 안내하세요.
+
+[답변 구조 - 반드시 이 순서와 목차 제목을 사용]
+
+목차는 아래 자연어 제목을 그대로 사용하세요. 번호(1. 2.)나 로마자(Ⅰ. Ⅱ.)는 사용하지 마세요.
+
+---
+
+{{사용자 상황에 맞는 한 줄 공감}}
+예: "보증금을 못 돌려받고 계신 상황이시군요."
+
+
+결론부터 말씀드리면
+
+법적으로 어떤 상황인지 핵심 결론을 1~2문장으로.
+근거 법률명을 자연스럽게 포함.
+예: "결론부터 말씀드리면, 법적으로 반드시 돌려받을 수 있습니다.
+주택임대차보호법이 임차인을 강하게 보호하고 있기 때문입니다."
+
+
+왜 그런가요?
+
+근거 법률을 일반인이 이해할 수 있게 풀어서 설명.
+법률 용어는 괄호 안에 쉬운 말 병기.
+예: "주택임대차보호법 제3조의3에 따르면, 임차인은
+임차권등기명령(이사를 가도 보증금 받을 권리를 지켜주는 제도)을
+신청할 수 있습니다."
+
+
+지금 바로 하실 수 있는 일
+
+첫째, (가장 쉬운 행동)
+  무엇을, 어디서, 비용 얼마, 시간 얼마나 걸리는지.
+
+둘째, (핵심 법적 조치)
+  무엇을, 어디서, 비용 얼마, 어떤 효과가 있는지 쉽게 설명.
+
+셋째, (그래도 해결 안 될 때)
+  다음 단계와 예상 소요기간.
+
+
+그래도 해결이 안 되면
+
+최종 수단(소송 등)을 간략히 안내.
+예상 비용과 기간을 포함.
+"여기까지 가는 경우는 많지 않습니다" 등 안심 표현.
+
+
+혼자 하기 어려우시면
+
+무료 법률 지원 기관을 구체적으로 안내.
+기관명, 전화번호, 이용 조건을 포함.
+예: "대한법률구조공단(전화 132)에 무료로 도움받으실 수 있습니다.
+소득 기준 없이 누구나 이용 가능합니다."
+가능하면 2곳 이상 안내.
+
+
+법률 근거
+
+인용된 법률명 + 조문번호를 1~2줄로 정리.
+"최신 조문은 법령정보센터(law.go.kr)에서 확인하실 수 있습니다."
+
+담당: {leader_name} 리더 ({leader_specialty} 전문)
+
+---
+
+[절대 하지 말 것]
+- 법률 용어만 나열하고 설명 없이 넘어가기
+- "~할 수 있습니다" 반복. 구체적 방법을 말하세요
+- 번호 매기기(1. 2. 3.)보다 "첫째, 둘째, 셋째" 사용
+- 글머리 기호(•, -, *) 사용 금지. 문장형으로 서술
+- "AI", "상담" 표현 사용 금지
+
+[글자수]
+2,000~3,000자. 읽는 데 3분 이내.
+
+[톤]
+친구에게 설명하듯 편안하지만, 법률 근거는 정확하게.
+"~하세요", "~입니다" 존댓말 사용.
+"""
+
+EXPERT_MODE_PROMPT = """당신은 법률 전문가에게 분석 보고서를 작성하는 Lawmadi OS의 {leader_name} 리더({leader_specialty} 전문)입니다.
+
+[답변 원칙]
+1. 법률 용어를 정확하게 사용하세요. 쉬운 설명은 붙이지 마세요.
+2. 모든 주장에 법률 근거(법률명+조문번호)를 명시하세요.
+3. 관련 판례가 있으면 반드시 포함하세요 (판례번호+선고일+요지).
+4. 반대 견해나 예외 사항도 검토하세요.
+5. 실무 절차는 단계별로 구비서류, 비용, 관할, 소요기간까지 포함하세요.
+
+[답변 구조 - 반드시 이 형식으로]
+
+제목: {{법률 주제}}에 관한 법률 검토
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Ⅰ. 사안의 쟁점
+  본 사안의 핵심 쟁점을 3~5개로 정리.
+  각 쟁점을 번호와 함께 한 줄로 명시.
+
+Ⅱ. 관련 법령
+  관련 법률+조문을 중요도 순으로 나열.
+  각 조문의 핵심 내용을 인용 또는 요약.
+  조문번호 + 조문 제목 + 내용 형식.
+  예:
+    1. 주택임대차보호법 제3조의3 (임차권등기명령)
+       임대차가 종료된 후 보증금이 반환되지 아니한 경우,
+       임차인은 임차주택의 소재지를 관할하는 지방법원에
+       임차권등기명령을 신청할 수 있다.
+
+Ⅲ. 판례 검토
+  관련 판례를 중요도 순으로 나열.
+  형식:
+    1. 대법원 20XX다XXXXX (20XX.XX.XX.)
+       "판결 요지 인용"
+       → 본 사안에의 적용: 한 줄 설명
+  판례가 SSOT에 없으면 "(※ 법령정보센터에서 확인 필요)" 표기.
+
+Ⅳ. 실무 대응 절차
+  단계별로 구체적 절차 안내.
+  각 단계마다:
+    · 관할 (어디에 신청하는지)
+    · 구비서류 (무엇이 필요한지)
+    · 비용 (인지대, 송달료, 변호사 비용 등)
+    · 소요기간 (얼마나 걸리는지)
+    · 효과 (이걸 하면 어떤 법적 효과가 있는지)
+
+Ⅴ. 쟁점별 검토 의견
+  각 쟁점에 대한 법률적 분석.
+  찬반 논거가 있으면 양쪽 모두 검토.
+  "다만", "한편" 등으로 예외/반대 견해 포함.
+
+Ⅵ. 결론 및 권고
+  최종 의견을 2~3문장으로 요약.
+  권고하는 실무 대응 순서를 명시.
+  비용·시간 효율 관점의 우선순위 제시.
+
+※ 본 분석에 인용된 조문은 법령정보센터(law.go.kr)에서
+   최신 개정 여부를 반드시 확인하시기 바랍니다.
+
+법률 근거: (인용된 모든 법률+조문 목록)
+참조 판례: (인용된 모든 판례번호 목록)
+담당: {leader_name} 리더 ({leader_specialty} 전문)
+
+[절대 하지 말 것]
+- 쉬운 말 풀이 (전문가는 알고 있음)
+- 감정적 공감 표현 ("걱정되시겠지만" 등)
+- 근거 없는 주장
+- 존재하지 않는 판례번호나 조문 생성
+- "AI", "상담" 표현 사용 금지
+
+[글자수]
+4,000~5,000자. 법률 검토서 수준.
+
+[톤]
+객관적, 분석적, 정확한. "~이다", "~한다" 또는 "~입니다" 혼용 가능.
+법률 의견서/검토서 스타일.
+"""
+
+
 async def _step4_claude_enhance(query: str, analysis: Dict,
-                                 gemini_text: str) -> str:
-    """Stage 4: Claude Sonnet 4 보강/보완 (max_tokens=200)"""
+                                 gemini_text: str, mode: str = "general") -> str:
+    """Stage 4: Claude Sonnet 4 모드별 답변 생성 (general: 2500 토큰, expert: 4000 토큰)"""
     claude_client = RUNTIME.get("claude_client")
     if not claude_client:
         return ""
@@ -2275,27 +2448,38 @@ async def _step4_claude_enhance(query: str, analysis: Dict,
     leader_specialty = analysis.get("leader_specialty", "통합")
 
     try:
+        if mode == "expert":
+            system_prompt = EXPERT_MODE_PROMPT.format(
+                leader_name=leader_name, leader_specialty=leader_specialty
+            )
+            max_tokens = 4000
+            user_message = (
+                f"사용자 질문: {query}\n\n"
+                f"[이전 단계 분석 초안]\n{gemini_text}\n\n"
+                f"위 초안의 법률 근거를 유지하면서 답변 원칙과 구조에 맞게 법률 검토서를 작성하세요."
+            )
+        else:
+            system_prompt = GENERAL_MODE_PROMPT.format(
+                leader_name=leader_name, leader_specialty=leader_specialty
+            )
+            max_tokens = 2500
+            user_message = (
+                f"사용자 질문: {query}\n\n"
+                f"[이전 단계 분석 초안]\n{gemini_text}\n\n"
+                f"위 초안의 법률 근거를 유지하면서 답변 원칙과 구조에 맞게 최종 답변을 작성하세요."
+            )
+
         enhance_resp = claude_client.messages.create(
             model="claude-sonnet-4-20250514",
-            max_tokens=200,
-            system=(
-                f"당신은 Lawmadi OS의 법률 품질 보강 엔진입니다.\n"
-                f"담당 리더: {leader_name} ({leader_specialty})\n"
-                f"아래 응답을 검토하여 부족한 부분만 보완하세요:\n"
-                f"1. 조문 정확성 교정 (잘못된 조·항·호 수정)\n"
-                f"2. 누락된 중요 조항 추가\n"
-                f"3. 'law.go.kr에서 확인' 안내 포함\n"
-                f"4. 다음 단계 행동 1~2개 구체적 제시\n"
-                f"5. SSOT 미확인 법률은 '(확인 필요)' 표시\n"
-                f"보완 내용만 간결하게 출력하세요. 추가할 내용이 없으면 '보완 없음'만 출력."
-            ),
+            max_tokens=max_tokens,
+            system=system_prompt,
             messages=[{
                 "role": "user",
-                "content": f"사용자 질문: {query}\n\n응답:\n{gemini_text}"
+                "content": user_message
             }],
         )
         enhanced = enhance_resp.content[0].text.strip()
-        if "보완 없음" in enhanced:
+        if not enhanced:
             return ""
         return enhanced
     except Exception as e:
@@ -2393,7 +2577,8 @@ async def _step5_claude_verify(query: str, response_text: str, drf_results: list
 
 async def _run_legal_pipeline(query: str, analysis: Dict, tools: list,
                                gemini_history: list, now_kst: str,
-                               ssot_available: bool, lang: str = "") -> str:
+                               ssot_available: bool, lang: str = "",
+                               mode: str = "general") -> str:
     """5-Stage Legal Pipeline: LawmadiLM 초안 → Gemini 작성 → Claude 보강 → Claude 검증"""
     leader_name = analysis.get("leader_name", "마디")
     leader_specialty = analysis.get("leader_specialty", "통합")
@@ -2424,13 +2609,14 @@ async def _run_legal_pipeline(query: str, analysis: Dict, tools: list,
             query, analysis, "", tools, gemini_history, now_kst, ssot_available, lang=lang
         )
 
-    # ── Stage 4: Claude 보강/보완 ──
-    logger.info(f"🔍 [Stage 4/5] Claude 보강/보완")
-    enhancement = await _step4_claude_enhance(query, analysis, gemini_text)
+    # ── Stage 4: Claude 모드별 답변 생성 ──
+    logger.info(f"🔍 [Stage 4/5] Claude 모드별 답변 생성 (mode={mode})")
+    enhanced_text = await _step4_claude_enhance(query, analysis, gemini_text, mode=mode)
 
-    final_text = gemini_text
-    if enhancement:
-        final_text += f"\n\n---\n**[보강]**\n{enhancement}"
+    if enhanced_text:
+        final_text = enhanced_text  # 대체 (append 아님)
+    else:
+        final_text = gemini_text    # 실패 시 원본 유지
 
     # ── Stage 5: DRF 검증 + 헌법 검증 + 교정 ──
     logger.info(f"⚖️ [Stage 5/5] DRF 검증 + 헌법 검증 + 교정")
@@ -2798,6 +2984,38 @@ async def serve_leaders():
     if os.path.exists(leaders_path):
         return FileResponse(leaders_path)
     return {"message": "Leaders page not found", "version": OS_VERSION}
+
+@app.get("/about")
+async def serve_about():
+    """About page"""
+    frontend_path = os.path.join(os.path.dirname(__file__), "frontend", "public", "about.html")
+    if os.path.exists(frontend_path):
+        return FileResponse(frontend_path)
+    return {"message": "Lawmadi OS About", "version": OS_VERSION}
+
+@app.get("/about-en")
+async def serve_about_en():
+    """About page (English)"""
+    frontend_path = os.path.join(os.path.dirname(__file__), "frontend", "public", "about-en.html")
+    if os.path.exists(frontend_path):
+        return FileResponse(frontend_path)
+    return {"message": "Lawmadi OS About", "version": OS_VERSION}
+
+@app.get("/leaders-en")
+async def serve_leaders_en():
+    """60 Leaders page (English)"""
+    frontend_path = os.path.join(os.path.dirname(__file__), "frontend", "public", "leaders-en.html")
+    if os.path.exists(frontend_path):
+        return FileResponse(frontend_path)
+    return {"message": "Leaders page not found", "version": OS_VERSION}
+
+@app.get("/clevel-en")
+async def serve_clevel_en():
+    """C-Level page (English)"""
+    frontend_path = os.path.join(os.path.dirname(__file__), "frontend", "public", "clevel-en.html")
+    if os.path.exists(frontend_path):
+        return FileResponse(frontend_path)
+    return {"message": "C-Level page not found", "version": OS_VERSION}
 
 # =============================================================
 # ✅ health
@@ -3274,7 +3492,7 @@ async def ask(request: Request):
         # -------------------------------------------------
         else:
             final_text = await _run_legal_pipeline(
-                query, analysis, tools, gemini_history, now_kst, ssot_available, lang=lang
+                query, analysis, tools, gemini_history, now_kst, ssot_available, lang=lang, mode="general"
             )
 
         # -------------------------------------------------
@@ -4023,6 +4241,7 @@ async def ask_expert(request: Request):
         body = await request.json()
         query = str(body.get("query", "")).strip()
         original_response = str(body.get("original_response", "")).strip()
+        lang = str(body.get("lang", "")).strip().lower()
 
         if not query:
             return {"trace_id": trace, "status": "ERROR", "response": "query가 필요합니다."}
@@ -4050,10 +4269,14 @@ async def ask_expert(request: Request):
 
         now_kst = _now_iso()
 
-        # 5-Stage Pipeline 실행
+        # 5-Stage Pipeline 실행 (전문가 모드)
         final_text = await _run_legal_pipeline(
-            query, analysis, tools, [], now_kst, ssot_available
+            query, analysis, tools, [], now_kst, ssot_available, lang=lang, mode="expert"
         )
+
+        # 후처리: think 블록 + 표 제거 (구분선은 유지 — 법률 검토서 형식에 필요)
+        final_text = _remove_think_blocks(final_text)
+        final_text = _remove_markdown_tables(final_text)
 
         latency_ms = int((time.time() - start) * 1000)
         return {

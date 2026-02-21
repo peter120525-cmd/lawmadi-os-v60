@@ -4803,13 +4803,17 @@
                 <span class="material-symbols-outlined" aria-hidden="true">chat_bubble</span>
                 <span>Legal Analysis</span>
             </div>
-            <a class="menu-item" href="leaders.html" role="menuitem" aria-label="View 60 Expert Leaders">
+            <a class="menu-item" href="leaders-en.html" role="menuitem" aria-label="View 60 Expert Leaders">
                 <span class="material-symbols-outlined" aria-hidden="true">account_tree</span>
                 <span>60 Leaders</span>
             </a>
-            <a class="menu-item" href="clevel.html" role="menuitem" aria-label="C-Level Executives">
+            <a class="menu-item" href="clevel-en.html" role="menuitem" aria-label="C-Level Executives">
                 <span class="material-symbols-outlined" aria-hidden="true">groups</span>
                 <span>C-Level Executives</span>
+            </a>
+            <a class="menu-item" href="about-en.html" role="menuitem" aria-label="About Lawmadi OS">
+                <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                <span>About</span>
             </a>
         </nav>
 
@@ -6836,11 +6840,11 @@
                 updateTabAria(tab);
 
                 if (action === 'chat') {
-                    window.location.href = '/';
+                    window.location.href = '/en';
                 } else if (action === 'leaders') {
-                    window.location.href = 'leaders.html';
+                    window.location.href = 'leaders-en.html';
                 } else if (action === 'clevel') {
-                    window.location.href = 'clevel.html';
+                    window.location.href = 'clevel-en.html';
                 } else if (action === 'favorites') {
                     UI.toggleFavorites();
                     // 저장 탭은 토글이므로 chat 활성 유지
@@ -7032,5 +7036,8 @@
 })();
 </script>
 
+<script>
+document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+</script>
 </body>
 </html>

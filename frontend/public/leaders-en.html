@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>60인 전문 리더 소개 - Lawmadi OS</title>
-    <meta name="description" content="Lawmadi OS의 핵심, 60명의 전문 리더를 만나보세요. 각 분야 최고 전문가들이 여러분의 법률 문제를 해결합니다.">
+    <title>60 Expert Leaders - Lawmadi OS</title>
+    <meta name="description" content="Meet the 60 expert leaders of Lawmadi OS. Top specialists in every legal domain are here to resolve your legal issues.">
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
     <style>
@@ -34,7 +34,6 @@
             overflow-x: hidden;
         }
 
-        /* Animated Background */
         .animated-bg {
             position: fixed;
             top: 0;
@@ -90,7 +89,6 @@
             padding: 40px 20px;
         }
 
-        /* Header */
         .header {
             position: sticky;
             top: 0;
@@ -183,9 +181,7 @@
             box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
         }
 
-        .search-box::placeholder {
-            color: var(--text-secondary);
-        }
+        .search-box::placeholder { color: var(--text-secondary); }
 
         .filter-tabs {
             display: flex;
@@ -217,10 +213,7 @@
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
 
-        /* C-Level Section */
-        .clevel-section {
-            margin-bottom: 60px;
-        }
+        .clevel-section { margin-bottom: 60px; }
 
         .section-title {
             font-size: 1.8rem;
@@ -281,7 +274,6 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
-
         .clevel-card.cso { --clevel-color: #3b82f6; }
         .clevel-card.cto { --clevel-color: #f59e0b; }
         .clevel-card.cco { --clevel-color: #8b5cf6; }
@@ -315,26 +307,10 @@
             object-position: center 20%;
         }
 
-        .clevel-info h3 {
-            font-size: 1.6rem;
-            font-weight: 900;
-            color: white;
-            margin-bottom: 4px;
-        }
+        .clevel-info h3 { font-size: 1.6rem; font-weight: 900; color: white; margin-bottom: 4px; }
+        .clevel-role { font-size: 0.9rem; color: var(--clevel-color); font-weight: 700; }
+        .clevel-profile { font-size: 0.95rem; color: var(--text-secondary); line-height: 1.6; }
 
-        .clevel-role {
-            font-size: 0.9rem;
-            color: var(--clevel-color);
-            font-weight: 700;
-        }
-
-        .clevel-profile {
-            font-size: 0.95rem;
-            color: var(--text-secondary);
-            line-height: 1.6;
-        }
-
-        /* Leaders Grid */
         .leaders-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -359,12 +335,7 @@
             box-shadow: 0 12px 32px rgba(0,0,0,0.2), 0 0 0 1px rgba(59,130,246,0.2);
         }
 
-        .leader-header {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            margin-bottom: 16px;
-        }
+        .leader-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
 
         .leader-avatar {
             width: 60px;
@@ -381,44 +352,14 @@
             overflow: hidden;
         }
 
-        .leader-avatar img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: center top;
-        }
+        .leader-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
 
-        .leader-banner {
-            margin-top: 16px;
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
+        .leader-banner { margin-top: 16px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.08); }
+        .leader-banner img { width: 100%; height: auto; display: block; border-radius: 12px; }
 
-        .leader-banner img {
-            width: 100%;
-            height: auto;
-            display: block;
-            border-radius: 12px;
-        }
-
-        .leader-name-group {
-            flex: 1;
-        }
-
-        .leader-name {
-            font-size: 1.3rem;
-            font-weight: 900;
-            color: white;
-            margin-bottom: 4px;
-        }
-
-        .leader-code {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 600;
-        }
+        .leader-name-group { flex: 1; }
+        .leader-name { font-size: 1.3rem; font-weight: 900; color: white; margin-bottom: 4px; }
+        .leader-code { font-size: 0.8rem; color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; font-weight: 600; }
 
         .leader-specialty {
             display: inline-block;
@@ -432,20 +373,9 @@
             margin-bottom: 12px;
         }
 
-        .leader-role {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
+        .leader-role { font-size: 0.9rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 8px; }
+        .leader-profile { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; }
 
-        .leader-profile {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            line-height: 1.5;
-        }
-
-        /* Stats Section */
         .stats-section {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -457,10 +387,7 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .stat-box {
-            text-align: center;
-            padding: 20px;
-        }
+        .stat-box { text-align: center; padding: 20px; }
 
         .stat-number {
             font-size: 2.5rem;
@@ -472,115 +399,37 @@
             margin-bottom: 8px;
         }
 
-        .stat-label {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            font-weight: 600;
-        }
+        .stat-label { font-size: 0.9rem; color: var(--text-secondary); font-weight: 600; }
 
-        /* No Results */
-        .no-results {
-            text-align: center;
-            padding: 80px 20px;
-            color: var(--text-secondary);
-        }
+        .no-results { text-align: center; padding: 80px 20px; color: var(--text-secondary); }
+        .no-results-icon { font-size: 4rem; margin-bottom: 20px; opacity: 0.3; }
+        .no-results h3 { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
 
-        .no-results-icon {
-            font-size: 4rem;
-            margin-bottom: 20px;
-            opacity: 0.3;
-        }
-
-        .no-results h3 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        /* Loading Animation */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .leader-card {
-            animation: fadeIn 0.5s ease;
-        }
+        .leader-card { animation: fadeIn 0.5s ease; }
 
-        /* Responsive */
         @media (max-width: 1200px) {
-            .leaders-grid,
-            .clevel-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
+            .leaders-grid, .clevel-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
         @media (max-width: 768px) {
-            .container {
-                padding: 20px 12px;
-            }
-
-            /* ── 헤더 모바일: 세로 배치 ── */
-            .header {
-                padding: 12px 0;
-                margin-bottom: 20px;
-            }
-
-            .header-content {
-                flex-direction: column;
-                gap: 10px;
-                padding: 0 12px;
-            }
-
-            .back-button {
-                align-self: flex-start;
-                padding: 8px 16px;
-                font-size: 0.85rem;
-            }
-
-            .header-title {
-                text-align: center;
-            }
-
-            .header-badge {
-                font-size: 0.75rem;
-                padding: 6px 14px;
-                margin-bottom: 8px;
-            }
-
-            .header h1 {
-                font-size: 1.5rem;
-                letter-spacing: -0.5px;
-            }
-
-            /* spacer 숨기기 */
-            .header-content > div:last-child {
-                display: none;
-            }
-
-            .leaders-grid,
-            .clevel-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .stats-section {
-                grid-template-columns: repeat(2, 1fr);
-                padding: 20px;
-            }
-
-            .filter-tabs {
-                overflow-x: auto;
-                flex-wrap: nowrap;
-                padding-bottom: 10px;
-            }
-
-            .filter-tab {
-                white-space: nowrap;
-            }
-
-            .section-title {
-                font-size: 1.4rem;
-            }
+            .container { padding: 20px 12px; }
+            .header { padding: 12px 0; margin-bottom: 20px; }
+            .header-content { flex-direction: column; gap: 10px; padding: 0 12px; }
+            .back-button { align-self: flex-start; padding: 8px 16px; font-size: 0.85rem; }
+            .header-title { text-align: center; }
+            .header-badge { font-size: 0.75rem; padding: 6px 14px; margin-bottom: 8px; }
+            .header h1 { font-size: 1.5rem; letter-spacing: -0.5px; }
+            .header-content > div:last-child { display: none; }
+            .leaders-grid, .clevel-grid { grid-template-columns: 1fr; }
+            .stats-section { grid-template-columns: repeat(2, 1fr); padding: 20px; }
+            .filter-tabs { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 10px; }
+            .filter-tab { white-space: nowrap; }
+            .section-title { font-size: 1.4rem; }
         }
     </style>
 </head>
@@ -594,105 +443,100 @@
 
     <div class="header">
         <div class="header-content">
-            <a href="index.html" class="back-button">
+            <a href="index-en.html" class="back-button">
                 <span class="material-symbols-outlined">arrow_back</span>
-                메인으로
+                Home
             </a>
             <div class="header-title">
                 <div class="header-badge">60 LEGAL LEADERS</div>
-                <h1>전문 리더 소개</h1>
+                <h1>Expert Leaders</h1>
             </div>
-            <div style="width: 140px;"></div> <!-- Spacer for centering -->
+            <div style="width: 140px;"></div>
         </div>
     </div>
 
     <div class="container">
-        <!-- Search Controls -->
         <div class="search-controls">
             <input type="text"
                    class="search-box"
                    id="searchBox"
-                   placeholder="🔍 리더 이름, 전문 분야, 역할로 검색하세요...">
+                   placeholder="Search by leader name, specialty, or role...">
 
             <div class="filter-tabs">
-                <button class="filter-tab active" data-filter="all">전체</button>
-                <button class="filter-tab" data-filter="민사법">민사법</button>
-                <button class="filter-tab" data-filter="형사법">형사법</button>
-                <button class="filter-tab" data-filter="상사법">상사법</button>
-                <button class="filter-tab" data-filter="노동법">노동법</button>
-                <button class="filter-tab" data-filter="행정법">행정법</button>
-                <button class="filter-tab" data-filter="지식재산권">지식재산권</button>
+                <button class="filter-tab active" data-filter="all">All</button>
+                <button class="filter-tab" data-filter="민사법">Civil</button>
+                <button class="filter-tab" data-filter="형사법">Criminal</button>
+                <button class="filter-tab" data-filter="상사법">Commercial</button>
+                <button class="filter-tab" data-filter="노동법">Labor</button>
+                <button class="filter-tab" data-filter="행정법">Administrative</button>
+                <button class="filter-tab" data-filter="지식재산권">IP</button>
             </div>
         </div>
 
-        <!-- C-Level Section -->
         <div class="clevel-section">
-            <h2 class="section-title">C-Level 임원진</h2>
+            <h2 class="section-title">C-Level Executives</h2>
             <div class="clevel-grid" id="clevelGrid">
                 <div class="clevel-card cso" data-name="서연">
                     <div class="clevel-header">
-                        <div class="clevel-avatar"><img src="images/clevel/cso-seoyeon.jpg" alt="서연 CSO"></div>
+                        <div class="clevel-avatar"><img src="images/clevel/cso-seoyeon.jpg" alt="Seoyeon CSO"></div>
                         <div class="clevel-info">
-                            <h3>서연 (CSO)</h3>
+                            <h3>Seoyeon (CSO)</h3>
                             <div class="clevel-role">Chief Strategy Officer</div>
                         </div>
                     </div>
-                    <p class="clevel-profile">미국 연방대법원 로클럭 출신급 / 글로벌 Top3 전략 컨설팅 파트너급</p>
+                    <p class="clevel-profile">U.S. Supreme Court law clerk-level / Global Top 3 strategy consulting partner-level</p>
                 </div>
 
                 <div class="clevel-card cto" data-name="지유">
                     <div class="clevel-header">
-                        <div class="clevel-avatar"><img src="images/clevel/cto-jiyu.jpg" alt="지유 CTO"></div>
+                        <div class="clevel-avatar"><img src="images/clevel/cto-jiyu.jpg" alt="Jiyu CTO"></div>
                         <div class="clevel-info">
-                            <h3>지유 (CTO)</h3>
+                            <h3>Jiyu (CTO)</h3>
                             <div class="clevel-role">Chief Technology Officer</div>
                         </div>
                     </div>
-                    <p class="clevel-profile">실리콘밸리 유니콘 창업 멤버급 / AI 무결성 검증 분야 세계적 석학급</p>
+                    <p class="clevel-profile">Silicon Valley unicorn founding member-level / World-class integrity verification expert</p>
                 </div>
 
                 <div class="clevel-card cco" data-name="유나">
                     <div class="clevel-header">
-                        <div class="clevel-avatar"><img src="images/clevel/cco-yuna.jpg" alt="유나 CCO"></div>
+                        <div class="clevel-avatar"><img src="images/clevel/cco-yuna.jpg" alt="Yuna CCO"></div>
                         <div class="clevel-info">
-                            <h3>유나 (CCO)</h3>
+                            <h3>Yuna (CCO)</h3>
                             <div class="clevel-role">Chief Content Officer</div>
                         </div>
                     </div>
-                    <p class="clevel-profile">애플 휴먼 인터페이스 그룹 리드급 / 칸 라이언즈 그랑프리 수상자급</p>
+                    <p class="clevel-profile">Apple Human Interface Group lead-level / Cannes Lions Grand Prix winner-level</p>
                 </div>
             </div>
         </div>
 
-        <!-- Leaders Section -->
-        <h2 class="section-title">60인 전문 리더</h2>
+        <h2 class="section-title">60 Expert Leaders</h2>
         <div class="leaders-grid" id="leadersGrid">
-            <!-- Leaders will be loaded here by JavaScript -->
         </div>
 
         <div class="no-results" id="noResults" style="display: none;">
             <div class="no-results-icon">🔍</div>
-            <h3>검색 결과가 없습니다</h3>
-            <p>다른 키워드로 검색해보세요.</p>
+            <h3>No results found</h3>
+            <p>Try searching with different keywords.</p>
         </div>
 
-        <!-- Stats Section -->
         <div class="stats-section">
             <div class="stat-box">
                 <div class="stat-number">60</div>
-                <div class="stat-label">전문 리더</div>
+                <div class="stat-label">Expert Leaders</div>
             </div>
             <div class="stat-box">
                 <div class="stat-number">3</div>
-                <div class="stat-label">C-Level 임원</div>
+                <div class="stat-label">C-Level Executives</div>
             </div>
             <div class="stat-box">
                 <div class="stat-number">100%</div>
-                <div class="stat-label">법률 검증률</div>
+                <div class="stat-label">Legal Verification Rate</div>
             </div>
             <div class="stat-box">
                 <div class="stat-number">24/7</div>
-                <div class="stat-label">시스템 가동</div>
+                <div class="stat-label">System Uptime</div>
             </div>
         </div>
     </div>
@@ -701,7 +545,6 @@
         let allLeaders = [];
         let currentFilter = 'all';
 
-        // 리더 프로필 이미지 매핑
         const leaderImages = {
             'L01': { profile: 'images/leaders/L01-hwiyul.jpg', banner: 'images/leaders/L01-hwiyul-banner.jpg' },
             'L02': { profile: 'images/leaders/L02-bonui.jpg', banner: 'images/leaders/L02-bonui-banner.jpg' },
@@ -765,7 +608,6 @@
             'L60': { profile: 'images/leaders/L60-madi.jpg', banner: 'images/leaders/L60-madi-banner.jpg' },
         };
 
-        // Load leaders data
         async function loadLeaders() {
             try {
                 const response = await fetch('leaders.json');
@@ -773,46 +615,39 @@
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const data = await response.json();
-
-                // Extract leaders from leader_registry
                 const leaderRegistry = data.swarm_engine_config?.leader_registry || {};
-
-                // Convert object to array with code as property
                 allLeaders = Object.entries(leaderRegistry).map(([code, leader]) => ({
                     code,
                     ...leader
                 }));
 
                 if (allLeaders.length === 0) {
-                    throw new Error('리더 데이터가 비어있습니다.');
+                    throw new Error('Leader data is empty.');
                 }
 
                 renderLeaders();
             } catch (error) {
-                console.error('리더 데이터 로드 실패:', error);
+                console.error('Failed to load leader data:', error);
                 document.getElementById('leadersGrid').innerHTML =
                     `<p style="text-align: center; color: var(--text-secondary); padding: 40px;">
-                        데이터를 불러오는 중 오류가 발생했습니다.<br>
+                        An error occurred while loading data.<br>
                         <small>${error.message}</small>
                     </p>`;
             }
         }
 
-        // Render leaders
         function renderLeaders(searchTerm = '') {
             const grid = document.getElementById('leadersGrid');
             const noResults = document.getElementById('noResults');
 
             let filteredLeaders = allLeaders;
 
-            // Apply specialty filter
             if (currentFilter !== 'all') {
                 filteredLeaders = filteredLeaders.filter(leader =>
                     leader.specialty.includes(currentFilter)
                 );
             }
 
-            // Apply search filter
             if (searchTerm) {
                 filteredLeaders = filteredLeaders.filter(leader =>
                     leader.name.includes(searchTerm) ||
@@ -856,12 +691,10 @@
             }).join('');
         }
 
-        // Search functionality
         document.getElementById('searchBox').addEventListener('input', (e) => {
             renderLeaders(e.target.value);
         });
 
-        // Filter functionality
         document.querySelectorAll('.filter-tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
@@ -871,25 +704,21 @@
             });
         });
 
-        // Load leaders on page load
         loadLeaders();
 
-        // C-Level 카드 클릭 → 채팅 이동
         document.querySelectorAll('.clevel-card').forEach(card => {
             card.addEventListener('click', () => {
-                window.location.href = `index.html?leader=${encodeURIComponent(card.dataset.name)}`;
+                window.location.href = `index-en.html?leader=${encodeURIComponent(card.dataset.name)}`;
             });
         });
 
-        // 리더 카드 클릭 → 채팅 이동 (이벤트 위임)
         document.getElementById('leadersGrid').addEventListener('click', (e) => {
             const card = e.target.closest('.leader-card');
             if (card && card.dataset.name) {
-                window.location.href = `index.html?leader=${encodeURIComponent(card.dataset.name)}`;
+                window.location.href = `index-en.html?leader=${encodeURIComponent(card.dataset.name)}`;
             }
         });
 
-        // Page load animation
         window.addEventListener('load', () => {
             document.body.style.opacity = '0';
             setTimeout(() => {
