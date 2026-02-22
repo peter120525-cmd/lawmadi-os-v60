@@ -36,7 +36,6 @@ from core.pipeline import (
     run_pipeline_stage1,
     run_pipeline_stage2,
     run_pipeline_stage3,
-    build_stage4_system_instruction,
     _apply_fail_closed,
     _drf_verify_law_refs,
     VerificationResult,
@@ -408,14 +407,19 @@ async def ask(request: Request):
         now_kst = _now_iso()
 
         # -------------------------------------------------
-        # 4) 📦 SSOT 캐시 매칭 → Gemini 분석 → 리더 배정
+        # 4) 📦 SSOT 캐시 매칭 → S0(분류) + S1(RAG) 병렬 실행 → 리더 배정
         # -------------------------------------------------
         matched_sources = _match_ssot_sources_fn(query, top_k=5)
         if matched_sources:
             _src_strs = [s["type"] + ":" + s["law"] for s in matched_sources[:3]]
             logger.info(f"📦 [Cache] 매칭: {', '.join(_src_strs)}")
 
-        analysis = await _gemini_analyze_query(query)
+        # S0(Gemini 분류) + S1(RAG 검색) 병렬 실행
+        analysis_result, rag_context = await asyncio.gather(
+            _gemini_analyze_query(query),
+            run_pipeline_stage1(query),
+        )
+        analysis = analysis_result
         if not analysis:
             analysis = _fallback_tier_classification(query)
             logger.info(f"🔄 키워드 기반 fallback 분류: tier={analysis['tier']}")
@@ -484,11 +488,12 @@ async def ask(request: Request):
             leader_specialty = clevel.executives.get(exec_id, {}).get("role", exec_id)
 
         # -------------------------------------------------
-        # 5) 🎯 4-Stage Legal Pipeline
+        # 5) 🎯 3-Stage Legal Pipeline (S0+S1 병렬화 적용)
         # -------------------------------------------------
         else:
             final_text = await _run_legal_pipeline(
-                query, analysis, tools, gemini_history, now_kst, ssot_available, lang=lang, mode="general"
+                query, analysis, tools, gemini_history, now_kst, ssot_available,
+                lang=lang, mode="general", rag_context=rag_context,
             )
 
         # -------------------------------------------------
@@ -509,7 +514,7 @@ async def ask(request: Request):
             _audit_fn("ask_fail_closed", {"query": query, "status": "GOVERNANCE", "leader": leader_name})
             return {"trace_id": trace, "response": gov_msg, "status": "FAIL_CLOSED"}
 
-        const_check = {"passed": True}  # Stage 3+4에서 이미 처리됨
+        const_check = {"passed": True}  # Stage 3 DRF 검증에서 이미 처리됨
 
         latency_ms = int((time.time() - start_time) * 1000)
 
@@ -820,9 +825,13 @@ async def ask_stream(request: Request):
             model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
             gc = _ensure_genai_client_fn(_RUNTIME)
 
-            # 4) 질문 분류 (법률/비법률/정상/비정상)
+            # 4) S0(분류) + S1(RAG) 병렬 실행
             from core.classifier import _gemini_analyze_query, _fallback_tier_classification
-            analysis = await _gemini_analyze_query(query)
+            analysis_result, rag_context_pre = await asyncio.gather(
+                _gemini_analyze_query(query),
+                run_pipeline_stage1(query),
+            )
+            analysis = analysis_result
             if not analysis:
                 analysis = _fallback_tier_classification(query)
             is_legal = analysis.get("is_legal", True)
@@ -878,18 +887,20 @@ async def ask_stream(request: Request):
                 final_text = accumulated
                 swarm_mode = False
 
-            # ─── 경로 B: 4-Stage Hybrid Pipeline (스트리밍) ───
+            # ─── 경로 B: 3-Stage Pipeline (스트리밍, Stage 4 제거) ───
             else:
                 leader_name = analysis.get("leader_name", "마디")
                 leader_specialty = analysis.get("leader_specialty", "통합")
 
-                # Stage 1: RAG 조문 검색
+                # Stage 1: 이미 S0+S1 병렬 완료 (rag_context_pre 사용)
                 yield _sse("status", {"step": "searching_laws", "leader": leader_name})
-                rag_context = await run_pipeline_stage1(query)
 
-                # Stage 2: LawmadiLM 주력 답변
+                # Stage 2: LawmadiLM 강화 답변 (5단계 프레임워크)
                 yield _sse("status", {"step": "analyzing", "leader": leader_name})
-                lawmadilm_answer = await run_pipeline_stage2(query, analysis, rag_context)
+                lawmadilm_answer = await run_pipeline_stage2(
+                    query, analysis, rag_context_pre,
+                    lang=lang, mode=stream_mode,
+                )
 
                 # Stage 3: DRF 전수 검증
                 drf_verification = VerificationResult()
@@ -916,54 +927,18 @@ async def ask_stream(request: Request):
                         })
                         return
 
-                # Stage 4: Gemini 검증 + 보강 (스트리밍)
+                # Fail-Closed 통과: LawmadiLM 답변을 직접 스트리밍
                 yield _sse("status", {"step": "composing", "leader": leader_name})
 
-                sys_instr = build_stage4_system_instruction(
-                    analysis=analysis,
-                    lawmadilm_answer=lawmadilm_answer or "(LawmadiLM 답변 없음 - 직접 작성하세요)",
-                    drf_verification=drf_verification,
-                    rag_context=rag_context,
-                    lang=lang,
-                    mode=stream_mode,
-                )
+                # 미검증 조문 태깅 적용
+                final_text = _apply_fail_closed(lawmadilm_answer, drf_verification) if lawmadilm_answer else ""
 
-                max_tokens = 6000 if stream_mode == "expert" else 3000
-                chat = gc.chats.create(
-                    model=model_name,
-                    config=genai_types.GenerateContentConfig(
-                        tools=tools,
-                        system_instruction=sys_instr,
-                        max_output_tokens=max_tokens,
-                        automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
-                    ),
-                    history=gemini_history,
-                )
-
-                accumulated = ""
-                async for text_part in _async_stream_chunks(
-                    chat.send_message_stream(
-                        f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
-                    )
-                ):
-                    accumulated += text_part
-                    yield _sse("chunk", {"text": text_part})
-
-                # AFC로 인해 스트림 텍스트가 비었으면 non-stream fallback
-                if len(accumulated.strip()) < 10:
-                    logger.warning(f"⚠️ [Stream] 스트림 텍스트 비어있음 → non-stream fallback")
-                    fallback_resp = chat.send_message(
-                        f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
-                    )
-                    accumulated = _safe_extract_gemini_text(fallback_resp)
-                    if accumulated:
-                        yield _sse("chunk", {"text": accumulated})
-
-                final_text = accumulated
-
-                # Stage 4 결과에 대해 DRF 재검증 후 미검증 조문 태깅
-                if final_text and drf_verification.total_refs > 0:
-                    final_text = _apply_fail_closed(final_text, drf_verification)
+                # 청크 단위로 스트리밍 (문단 기준 분할)
+                if final_text:
+                    chunks = final_text.split("\n\n")
+                    for i, chunk in enumerate(chunks):
+                        text_part = chunk if i == len(chunks) - 1 else chunk + "\n\n"
+                        yield _sse("chunk", {"text": text_part})
 
                 swarm_mode = False
 

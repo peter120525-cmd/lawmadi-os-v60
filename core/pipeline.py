@@ -1,37 +1,33 @@
 """
-Lawmadi OS v60 -- 4-Stage Hybrid Legal Pipeline.
-LawmadiLM(3000토큰) + RAG + DRF 이중 검증, Claude 완전 제거.
+Lawmadi OS v60 -- 3-Stage Hybrid Legal Pipeline.
+LawmadiLM(강화 프롬프트, 3000토큰) + RAG + DRF 전수 검증, Stage 4 제거.
 
 Pipeline:
-  Stage 1: RAG 조문 검색 (ChromaDB + law_cache)
-  Stage 2: LawmadiLM 주력 답변 (3000토큰, RAG 컨텍스트 기반)
+  Stage 0: Gemini 질문 분류 (병렬 실행)
+  Stage 1: RAG 조문 검색 (ChromaDB + law_cache, Stage 0과 병렬)
+  Stage 2: LawmadiLM 강화 답변 (5단계 프레임워크, RAG 컨텍스트 기반)
   Stage 3: DRF 실시간 전수 검증 (조문번호까지 검증)
-  Stage 4: Gemini 검증 + 보강 (DRF 검증 결과 기반 팩트 앵커링)
+  → Fail-Closed → 응답
 
 사용법:
     from core.pipeline import set_runtime, set_law_cache, run_legal_pipeline
     set_runtime(RUNTIME)
     set_law_cache(LAW_CACHE, build_cache_context, match_ssot_sources, build_ssot_context)
 """
-import os
 import re
-import json
 import logging
 import asyncio
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 import httpx
-from google.genai import types as genai_types
-
 from core.constants import (
-    DEFAULT_GEMINI_MODEL,
     LAWMADILM_API_URL,
     LAWMADILM_RAG_URL,
     FAIL_CLOSED_RESPONSE,
 )
-from utils.helpers import _safe_extract_gemini_text, _remove_think_blocks, _safe_extract_json
-from prompts.system_instructions import build_system_instruction
+from utils.helpers import _remove_think_blocks
+from prompts.system_instructions import build_lawmadilm_prompt
 
 logger = logging.getLogger("LawmadiOS.Pipeline")
 
@@ -73,14 +69,6 @@ def set_law_cache(
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def _ensure_genai_client(runtime: dict) -> object:
-    """Gemini 클라이언트가 초기화되어 있는지 확인 후 반환."""
-    gc = runtime.get("genai_client")
-    if gc is None:
-        raise RuntimeError("Gemini 클라이언트가 초기화되지 않았습니다 (GEMINI_KEY 확인 필요)")
-    return gc
-
-
 # =============================================================
 # 데이터 구조체
 # =============================================================
@@ -102,10 +90,6 @@ class VerificationResult:
     all_passed: bool = True
     total_refs: int = 0
 
-
-
-# NOTE: 응답 모드 프롬프트와 형식은 prompts/system_instructions.py에서 관리.
-# build_system_instruction(mode) 함수를 통해 사용.
 
 
 # =============================================================
@@ -184,33 +168,41 @@ async def _stage1_rag_search(query: str, top_k: int = 10) -> RAGContext:
 # Stage 2: LawmadiLM 주력 답변 생성
 # =============================================================
 
-async def _call_lawmadilm(query: str, analysis: Dict, rag_context: RAGContext) -> str:
-    """Stage 2: LawmadiLM 주력 답변 생성 (3000토큰, RAG 컨텍스트 기반)"""
+async def _call_lawmadilm(
+    query: str,
+    analysis: Dict,
+    rag_context: RAGContext,
+    drf_verification: Optional[VerificationResult] = None,
+    lang: str = "",
+    mode: str = "general",
+) -> str:
+    """Stage 2: LawmadiLM 강화 답변 생성 (5단계 프레임워크, 3000토큰)"""
     leader_name = analysis.get("leader_name", "마디")
     leader_specialty = analysis.get("leader_specialty", "통합")
 
-    # RAG 컨텍스트를 시스템 프롬프트에 주입
-    rag_section = ""
+    # RAG 컨텍스트 텍스트 준비
+    rag_text = ""
     if rag_context.context_text:
-        rag_section = f"\n\n[참고 법령 조문]\n{rag_context.context_text[:3000]}\n"
+        rag_text = rag_context.context_text[:4000]
     elif rag_context.cache_context:
-        rag_section = f"\n\n[참고 법령 정보]\n{rag_context.cache_context[:2000]}\n"
+        rag_text = rag_context.cache_context[:2000]
 
-    system_prompt = (
-        f"당신은 대한민국 법률 전문 'LawmadiLM'입니다. "
-        f"현재 당신은 '{leader_name}' 리더입니다. 전문 분야: {leader_specialty}. "
-        f"{rag_section}"
-        f"\n위 [참고 법령 조문]만을 근거로 완성된 법률 답변을 작성하세요. "
-        f"조문에 없는 내용은 절대 작성하지 마세요. "
-        f"반드시 법령명 + 조문번호를 인용하세요. "
-        f"적용 법률, 관련 조문, 핵심 판례, 실무 결론을 빠짐없이 포함하세요. "
-        f"/no_think"
+    # 5단계 프레임워크 강화 프롬프트 생성
+    system_prompt = build_lawmadilm_prompt(
+        leader_name=leader_name,
+        leader_specialty=leader_specialty,
+        rag_context=rag_text,
+        drf_verification=drf_verification,
+        lang=lang,
+        mode=mode,
     )
+
+    max_tokens = 6000 if mode == "expert" else 3000
 
     payload = {
         "messages": [{"role": "user", "content": query}],
         "system_prompt": system_prompt,
-        "max_tokens": 3000,
+        "max_tokens": max_tokens,
         "temperature": 0.3,
     }
 
@@ -222,7 +214,7 @@ async def _call_lawmadilm(query: str, analysis: Dict, rag_context: RAGContext) -
     content = data.get("answer", "")
     elapsed = data.get("usage", {}).get("elapsed_seconds", 0)
     tokens = data.get("usage", {}).get("completion_tokens", 0)
-    logger.info(f"[Stage 2] LawmadiLM 주력 답변 완료 ({elapsed}s, {tokens} tokens, {len(content)}자)")
+    logger.info(f"[Stage 2] LawmadiLM 강화 답변 완료 ({elapsed}s, {tokens} tokens, {len(content)}자)")
     return content
 
 
@@ -431,94 +423,6 @@ def _match_article_num(article_dict: Dict, target_num: int) -> bool:
 
 
 # =============================================================
-# Stage 4: Gemini 검증 + 보강
-# =============================================================
-
-async def _stage4_gemini_verify_enhance(
-    query: str,
-    lawmadilm_answer: str,
-    drf_verification: VerificationResult,
-    rag_context: RAGContext,
-    tools: list,
-    analysis: Dict,
-    now_kst: str,
-    gemini_history: list,
-    ssot_available: bool,
-    lang: str = "",
-    mode: str = "general",
-) -> str:
-    """Stage 4: Gemini가 DRF 검증 결과를 바탕으로 LawmadiLM 답변을 검증하고 보강"""
-    gc = _ensure_genai_client(_RUNTIME)
-    model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
-    leader_name = analysis.get("leader_name", "마디")
-    leader_specialty = analysis.get("leader_specialty", "통합")
-
-    # 검증된 조문만 컨텍스트에 포함
-    verified_lines = []
-    for r in drf_verification.verified_refs:
-        if r.get("article_text"):
-            verified_lines.append(f"[V] {r['ref']}\n{r['article_text']}")
-        else:
-            verified_lines.append(f"[V] {r['ref']} (검증 통과, 조문 텍스트 미제공)")
-    verified_context = "\n\n".join(verified_lines) if verified_lines else "(검증된 조문 없음)"
-
-    # 미검증 조문 경고
-    unverified_lines = []
-    for r in drf_verification.unverified_refs:
-        unverified_lines.append(f"[X] {r['ref']} - {r.get('reason', '미확인')}")
-    unverified_warning = "\n".join(unverified_lines) if unverified_lines else "(없음)"
-
-    # SSOT 캐시 컨텍스트
-    cache_ctx = rag_context.cache_context or ""
-
-    # English instruction
-    lang_instruction = ""
-    if lang == "en":
-        lang_instruction = "\n\nIMPORTANT: Respond entirely in English. Translate Korean legal terms with the original Korean in parentheses."
-
-    system_instruction = (
-        f"{build_system_instruction(mode)}\n"
-        f"현재 당신은 '{leader_name}' 리더입니다.\n"
-        f"전문 분야: {leader_specialty}\n"
-        f"질문 요약: {analysis.get('summary', '')}\n\n"
-        f"[역할: 법률 답변 검증 및 보강]\n\n"
-        f"[DRF 검증 완료된 법률 근거]\n{verified_context}\n\n"
-        f"[DRF 미검증 조문 - 사용 금지]\n{unverified_warning}\n\n"
-        f"[LawmadiLM 원본 답변]\n{lawmadilm_answer[:4000]}\n\n"
-        f"위 원본 답변을 아래 기준으로 검증하고 보강하세요:\n"
-        f"1. 검증된 조문과 답변 내용의 일치 여부 확인\n"
-        f"2. 불일치 발견 시 검증된 조문 기준으로 교정\n"
-        f"3. DRF 도구로 추가 판례/해석례를 검색하여 보강\n"
-        f"4. 미검증 조문([X] 표시)은 절대 사용하지 마세요\n"
-        f"5. 응답 형식을 사용자 친화적으로 완성\n"
-        f"6. [{leader_name} ({leader_specialty}) 분석]으로 시작하세요"
-        f"{lang_instruction}"
-    )
-
-    if cache_ctx:
-        system_instruction += f"\n\n{cache_ctx}"
-
-    max_tokens = 6000 if mode == "expert" else 3000
-
-    gen_config = genai_types.GenerateContentConfig(
-        tools=tools,
-        system_instruction=system_instruction,
-        max_output_tokens=max_tokens,
-        automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
-    )
-
-    chat = gc.chats.create(
-        model=model_name,
-        config=gen_config,
-        history=gemini_history,
-    )
-    resp = chat.send_message(
-        f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
-    )
-    return _safe_extract_gemini_text(resp)
-
-
-# =============================================================
 # FAIL_CLOSED 및 미검증 조문 제거
 # =============================================================
 
@@ -556,7 +460,7 @@ def _apply_fail_closed(final_text: str, drf_verification: VerificationResult) ->
 
 
 # =============================================================
-# Main Pipeline Orchestrator (4-Stage)
+# Main Pipeline Orchestrator (3-Stage, LawmadiLM 프롬프트 강화)
 # =============================================================
 
 async def _run_legal_pipeline(
@@ -568,104 +472,72 @@ async def _run_legal_pipeline(
     ssot_available: bool,
     lang: str = "",
     mode: str = "general",
+    rag_context: Optional[RAGContext] = None,
 ) -> str:
-    """4-Stage Hybrid Legal Pipeline:
+    """3-Stage Hybrid Legal Pipeline (Stage 4 제거, LawmadiLM 프롬프트 강화):
     Stage 1: RAG 조문 검색
-    Stage 2: LawmadiLM 주력 답변 (3000토큰)
+    Stage 2: LawmadiLM 강화 답변 (5단계 프레임워크, 3000토큰)
     Stage 3: DRF 실시간 전수 검증
-    Stage 4: Gemini 검증 + 보강
+    → Fail-Closed → 응답
 
-    SSOT 위반 시 Stage 2부터 최대 2회 재시도.
+    SSOT 위반 시 Stage 2부터 최대 2회 재시도 (DRF 검증 결과 피드백 포함).
+    rag_context가 전달되면 Stage 1을 건너뛰어 S0+S1 병렬화를 지원.
     """
-    leader_name = analysis.get("leader_name", "마디")
-    leader_specialty = analysis.get("leader_specialty", "통합")
-
     MAX_RETRIES = 2
     final_text = ""
     drf_verification = VerificationResult()
 
-    # -- Stage 1: RAG 조문 검색 (1회만 수행) --
-    logger.info("[Stage 1/4] RAG 조문 검색 시작")
-    try:
-        rag_context = await _stage1_rag_search(query)
-    except Exception as e:
-        logger.warning(f"[Stage 1] RAG 검색 실패 (빈 컨텍스트 진행): {e}")
-        rag_context = RAGContext()
+    # -- Stage 1: RAG 조문 검색 (1회만 수행, 외부 전달 시 스킵) --
+    if rag_context is None:
+        logger.info("[Stage 1/3] RAG 조문 검색 시작")
+        try:
+            rag_context = await _stage1_rag_search(query)
+        except Exception as e:
+            logger.warning(f"[Stage 1] RAG 검색 실패 (빈 컨텍스트 진행): {e}")
+            rag_context = RAGContext()
+    else:
+        logger.info("[Stage 1/3] RAG 컨텍스트 외부 전달 (S0+S1 병렬화)")
 
     for attempt in range(1, MAX_RETRIES + 1):
         if attempt > 1:
-            logger.warning(f"[SSOT 재시도 {attempt}/{MAX_RETRIES}] Stage 2부터 재시작")
+            logger.warning(f"[SSOT 재시도 {attempt}/{MAX_RETRIES}] Stage 2부터 재시작 (DRF 검증 피드백 포함)")
 
-        # -- Stage 2: LawmadiLM 주력 답변 --
+        # -- Stage 2: LawmadiLM 강화 답변 --
         lawmadilm_answer = ""
         try:
-            logger.info(f"[Stage 2/4] LawmadiLM 주력 답변 생성 (시도 {attempt}/{MAX_RETRIES})")
-            raw_answer = await _call_lawmadilm(query, analysis, rag_context)
-            lawmadilm_answer = _postprocess_lawmadilm(raw_answer, query)
-            if not lawmadilm_answer:
-                logger.warning("[Stage 2] 후처리 -> None -> Gemini 전담")
-                lawmadilm_answer = ""
-        except Exception as e:
-            logger.warning(f"[Stage 2] LawmadiLM 실패 ({e}) -> Gemini 전담")
-            lawmadilm_answer = ""
-
-        # -- Stage 3: DRF 실시간 전수 검증 --
-        if lawmadilm_answer:
-            logger.info(f"[Stage 3/4] DRF 전수 검증 (시도 {attempt}/{MAX_RETRIES})")
-            try:
-                drf_verification = _drf_verify_law_refs(lawmadilm_answer)
-            except Exception as e:
-                logger.warning(f"[Stage 3] DRF 검증 실패: {e}")
-                drf_verification = VerificationResult()
-        else:
-            drf_verification = VerificationResult()
-
-        # -- Stage 4: Gemini 검증 + 보강 --
-        logger.info(f"[Stage 4/4] Gemini 검증 + 보강 (mode={mode}, 시도 {attempt}/{MAX_RETRIES})")
-        try:
-            final_text = await _stage4_gemini_verify_enhance(
-                query=query,
-                lawmadilm_answer=lawmadilm_answer or "(LawmadiLM 답변 없음 - 직접 작성하세요)",
-                drf_verification=drf_verification,
-                rag_context=rag_context,
-                tools=tools,
-                analysis=analysis,
-                now_kst=now_kst,
-                gemini_history=gemini_history,
-                ssot_available=ssot_available,
+            logger.info(f"[Stage 2/3] LawmadiLM 강화 답변 생성 (시도 {attempt}/{MAX_RETRIES})")
+            # 재시도 시 이전 DRF 검증 결과를 피드백으로 전달
+            drf_feedback = drf_verification if attempt > 1 else None
+            raw_answer = await _call_lawmadilm(
+                query, analysis, rag_context,
+                drf_verification=drf_feedback,
                 lang=lang,
                 mode=mode,
             )
+            lawmadilm_answer = _postprocess_lawmadilm(raw_answer, query)
+            if not lawmadilm_answer:
+                logger.warning("[Stage 2] 후처리 -> None (품질 미달)")
+                lawmadilm_answer = ""
         except Exception as e:
-            logger.error(f"[Stage 4] Gemini 실패: {e}")
-            # Gemini 실패 시 LawmadiLM 답변을 직접 사용
-            if lawmadilm_answer:
-                final_text = lawmadilm_answer
-            else:
-                raise  # LawmadiLM도 없으면 상위로 전파
+            logger.warning(f"[Stage 2] LawmadiLM 실패: {e}")
+            lawmadilm_answer = ""
 
-        # 최종 텍스트에 대해서도 DRF 검증 수행 (Gemini가 새 조문 추가했을 수 있음)
-        if final_text:
-            logger.info("[Stage 3+] Gemini 최종 응답 DRF 재검증")
-            try:
-                final_drf = _drf_verify_law_refs(final_text)
-                # 원래 검증과 합산
-                all_verified = {r["ref"] for r in drf_verification.verified_refs}
-                for r in final_drf.verified_refs:
-                    if r["ref"] not in all_verified:
-                        drf_verification.verified_refs.append(r)
-                        all_verified.add(r["ref"])
-                all_unverified = {r["ref"] for r in drf_verification.unverified_refs}
-                for r in final_drf.unverified_refs:
-                    if r["ref"] not in all_unverified and r["ref"] not in all_verified:
-                        drf_verification.unverified_refs.append(r)
-                        all_unverified.add(r["ref"])
-                drf_verification.total_refs = len(drf_verification.verified_refs) + len(drf_verification.unverified_refs)
-                drf_verification.all_passed = len(drf_verification.unverified_refs) == 0
-            except Exception:
-                pass
+        # LawmadiLM 답변이 없으면 재시도 불가, 에러 전파
+        if not lawmadilm_answer:
+            if attempt < MAX_RETRIES:
+                logger.warning(f"[Stage 2] 답변 없음 -> 재시도 ({attempt}/{MAX_RETRIES})")
+                continue
+            raise RuntimeError("LawmadiLM 답변 생성 실패 (재시도 소진)")
 
-        # FAIL_CLOSED 검사
+        # -- Stage 3: DRF 실시간 전수 검증 --
+        logger.info(f"[Stage 3/3] DRF 전수 검증 (시도 {attempt}/{MAX_RETRIES})")
+        try:
+            drf_verification = _drf_verify_law_refs(lawmadilm_answer)
+        except Exception as e:
+            logger.warning(f"[Stage 3] DRF 검증 실패: {e}")
+            drf_verification = VerificationResult()
+
+        # FAIL_CLOSED 검사: 30% 초과 미검증 시 재시도
         if drf_verification.total_refs > 0:
             unverified_ratio = len(drf_verification.unverified_refs) / max(drf_verification.total_refs, 1)
             if unverified_ratio > 0.3 and attempt < MAX_RETRIES:
@@ -674,9 +546,10 @@ async def _run_legal_pipeline(
                 )
                 continue
 
+        final_text = lawmadilm_answer
         break
 
-    # FAIL_CLOSED 적용
+    # FAIL_CLOSED 적용 (미검증 조문 태깅 또는 응답 차단)
     final_text = _apply_fail_closed(final_text, drf_verification)
 
     return final_text
@@ -695,10 +568,22 @@ async def run_pipeline_stage1(query: str) -> RAGContext:
         return RAGContext()
 
 
-async def run_pipeline_stage2(query: str, analysis: Dict, rag_context: RAGContext) -> str:
-    """스트리밍용: Stage 2만 실행"""
+async def run_pipeline_stage2(
+    query: str,
+    analysis: Dict,
+    rag_context: RAGContext,
+    drf_verification: Optional[VerificationResult] = None,
+    lang: str = "",
+    mode: str = "general",
+) -> str:
+    """스트리밍용: Stage 2만 실행 (강화 프롬프트)"""
     try:
-        raw = await _call_lawmadilm(query, analysis, rag_context)
+        raw = await _call_lawmadilm(
+            query, analysis, rag_context,
+            drf_verification=drf_verification,
+            lang=lang,
+            mode=mode,
+        )
         return _postprocess_lawmadilm(raw, query) or ""
     except Exception as e:
         logger.warning(f"[Stream Stage 2] LawmadiLM 실패: {e}")
@@ -714,62 +599,6 @@ def run_pipeline_stage3(text: str) -> VerificationResult:
     except Exception as e:
         logger.warning(f"[Stream Stage 3] DRF 검증 실패: {e}")
         return VerificationResult()
-
-
-def build_stage4_system_instruction(
-    analysis: Dict,
-    lawmadilm_answer: str,
-    drf_verification: VerificationResult,
-    rag_context: RAGContext,
-    lang: str = "",
-    mode: str = "general",
-) -> str:
-    """스트리밍용: Stage 4 Gemini 시스템 지시 생성"""
-    leader_name = analysis.get("leader_name", "마디")
-    leader_specialty = analysis.get("leader_specialty", "통합")
-
-    verified_lines = []
-    for r in drf_verification.verified_refs:
-        if r.get("article_text"):
-            verified_lines.append(f"[V] {r['ref']}\n{r['article_text']}")
-        else:
-            verified_lines.append(f"[V] {r['ref']} (검증 통과)")
-    verified_context = "\n\n".join(verified_lines) if verified_lines else "(검증된 조문 없음)"
-
-    unverified_lines = []
-    for r in drf_verification.unverified_refs:
-        unverified_lines.append(f"[X] {r['ref']} - {r.get('reason', '미확인')}")
-    unverified_warning = "\n".join(unverified_lines) if unverified_lines else "(없음)"
-
-    cache_ctx = rag_context.cache_context or ""
-
-    lang_instruction = ""
-    if lang == "en":
-        lang_instruction = "\n\nIMPORTANT: Respond entirely in English. Translate Korean legal terms with the original Korean in parentheses."
-
-    instruction = (
-        f"{build_system_instruction(mode)}\n"
-        f"현재 당신은 '{leader_name}' 리더입니다.\n"
-        f"전문 분야: {leader_specialty}\n"
-        f"질문 요약: {analysis.get('summary', '')}\n\n"
-        f"[역할: 법률 답변 검증 및 보강]\n\n"
-        f"[DRF 검증 완료된 법률 근거]\n{verified_context}\n\n"
-        f"[DRF 미검증 조문 - 사용 금지]\n{unverified_warning}\n\n"
-        f"[LawmadiLM 원본 답변]\n{lawmadilm_answer[:4000]}\n\n"
-        f"위 원본 답변을 아래 기준으로 검증하고 보강하세요:\n"
-        f"1. 검증된 조문과 답변 내용의 일치 여부 확인\n"
-        f"2. 불일치 발견 시 검증된 조문 기준으로 교정\n"
-        f"3. DRF 도구로 추가 판례/해석례를 검색하여 보강\n"
-        f"4. 미검증 조문([X] 표시)은 절대 사용하지 마세요\n"
-        f"5. 응답 형식을 사용자 친화적으로 완성\n"
-        f"6. [{leader_name} ({leader_specialty}) 분석]으로 시작하세요"
-        f"{lang_instruction}"
-    )
-
-    if cache_ctx:
-        instruction += f"\n\n{cache_ctx}"
-
-    return instruction
 
 
 # Public alias for external use
