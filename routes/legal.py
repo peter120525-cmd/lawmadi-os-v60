@@ -484,6 +484,7 @@ async def ask(request: Request):
             )
             resp = chat.send_message(f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}")
             final_text = _safe_extract_gemini_text(resp)
+            drf_result = VerificationResult()
             leader_name = clevel.executives.get(exec_id, {}).get("name", exec_id)
             leader_specialty = clevel.executives.get(exec_id, {}).get("role", exec_id)
 
@@ -491,7 +492,7 @@ async def ask(request: Request):
         # 5) 🎯 3-Stage Legal Pipeline (S0+S1 병렬화 적용)
         # -------------------------------------------------
         else:
-            final_text = await _run_legal_pipeline(
+            final_text, drf_result = await _run_legal_pipeline(
                 query, analysis, tools, gemini_history, now_kst, ssot_available,
                 lang=lang, mode="general", rag_context=rag_context,
             )
@@ -552,6 +553,16 @@ async def ask(request: Request):
         async def _background_verify_and_save():
             """백그라운드에서 SSOT 검증 + DB 저장 수행"""
             try:
+                # DRF Stage 4 결과를 tool_results 형식으로 변환
+                _tools_used = []
+                _tool_results = []
+                if drf_result and drf_result.total_refs > 0:
+                    _tools_used = [{"name": "DRF_Stage4_전수검증", "args": {"total": drf_result.total_refs}}]
+                    for ref in drf_result.verified_refs:
+                        _tool_results.append({"result": "FOUND", "source": "DRF", "ref": ref.get("ref", ""), "verified": True})
+                    for ref in drf_result.unverified_refs:
+                        _tool_results.append({"result": "NO_DATA", "source": "DRF", "ref": ref.get("ref", ""), "verified": False, "reason": ref.get("reason", "")})
+
                 verifier_module = _optional_import_fn("engines.response_verifier")
                 if verifier_module:
                     verifier = verifier_module.get_verifier()
@@ -561,8 +572,8 @@ async def ask(request: Request):
                         lambda: verifier.verify_response(
                             user_query=query,
                             gemini_response=final_text,
-                            tools_used=[],
-                            tool_results=[]
+                            tools_used=_tools_used,
+                            tool_results=_tool_results
                         )
                     )
                     v_result = verification_result.get("result", "SKIP")
@@ -579,7 +590,7 @@ async def ask(request: Request):
                             None,
                             lambda: db_client_v2.save_verification_result(
                                 session_id=trace, user_query=query, gemini_response=final_text,
-                                tools_used=[], tool_results=[],
+                                tools_used=_tools_used, tool_results=_tool_results,
                                 verification_result=v_result, ssot_compliance_score=v_score,
                                 issues_found=v_issues, verification_feedback=verification_result.get("feedback", "")
                             )
@@ -985,6 +996,16 @@ async def ask_stream(request: Request):
             # 백그라운드 검증/저장
             async def _bg_verify():
                 try:
+                    # DRF 검증 결과를 tool_results 형식으로 변환
+                    _bg_tools_used = []
+                    _bg_tool_results = []
+                    if drf_verification and drf_verification.total_refs > 0:
+                        _bg_tools_used = [{"name": "DRF_Stage4_전수검증", "args": {"total": drf_verification.total_refs}}]
+                        for ref in drf_verification.verified_refs:
+                            _bg_tool_results.append({"result": "FOUND", "source": "DRF", "ref": ref.get("ref", ""), "verified": True})
+                        for ref in drf_verification.unverified_refs:
+                            _bg_tool_results.append({"result": "NO_DATA", "source": "DRF", "ref": ref.get("ref", ""), "verified": False, "reason": ref.get("reason", "")})
+
                     verifier_module = _optional_import_fn("engines.response_verifier")
                     if verifier_module:
                         verifier = verifier_module.get_verifier()
@@ -994,8 +1015,8 @@ async def ask_stream(request: Request):
                             lambda: verifier.verify_response(
                                 user_query=query,
                                 gemini_response=final_text_clean,
-                                tools_used=[],
-                                tool_results=[]
+                                tools_used=_bg_tools_used,
+                                tool_results=_bg_tool_results
                             )
                         )
                 except Exception as e:
@@ -1072,7 +1093,7 @@ async def ask_expert(request: Request):
         now_kst = _now_iso()
 
         # 4-Stage Pipeline 실행 (전문가 모드)
-        final_text = await _run_legal_pipeline(
+        final_text, drf_result = await _run_legal_pipeline(
             query, analysis, tools, [], now_kst, ssot_available, lang=lang, mode="expert"
         )
 
