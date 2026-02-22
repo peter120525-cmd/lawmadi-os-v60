@@ -161,37 +161,37 @@ async def _generate_yuna_response(query: str, lang: str = "") -> str:
 
 
 def _build_yuna_fallback(lang: str = "") -> str:
-    """Gemini 실패 시 유나 기본 응답"""
+    """비법률 질문 시 유나 로컬 응답 (시스템 안내)"""
     if lang == "en":
         return (
-            "[Yuna (CCO) Content Design]\n\n"
-            "## 💡 Key Answer\n"
-            "Your question appears to be a general inquiry rather than a legal matter. "
-            "As a legal analysis system, I may not be able to provide a specialized answer, "
-            "but let me briefly guide you.\n\n"
-            "## 📌 Key Points\n"
-            "- Lawmadi OS is a **Korean legal analysis system**\n"
-            "- 60 expert leaders provide detailed analysis by legal field\n"
-            "- We cover lease, divorce, inheritance, criminal, labor law, and more\n\n"
-            "## 🔍 Learn More\n"
-            "If you have a legal concern, please ask a specific question! "
-            "For example, \"I can't get my lease deposit back\" — "
-            "an expert leader will begin analysis immediately."
+            "**Lawmadi OS — Korea's Legal Analysis System**\n\n"
+            "Your question appears to be a general inquiry rather than a legal matter.\n\n"
+            "Lawmadi OS specializes in **Korean legal analysis** with 60 expert leaders "
+            "and real-time verification through the National Law Information Center.\n\n"
+            "**We can help with:**\n"
+            "- Lease disputes & deposit recovery\n"
+            "- Divorce, custody & property division\n"
+            "- Unfair dismissal & wage issues\n"
+            "- Traffic accidents & insurance claims\n"
+            "- Fraud, defamation & criminal matters\n"
+            "- Inheritance, bankruptcy & corporate law\n\n"
+            "If you have a legal concern, describe your situation in detail!\n"
+            "For example: \"My landlord won't return my deposit\""
         )
     return (
-        "[유나 (CCO) 콘텐츠 설계]\n\n"
-        "## 💡 핵심 답변\n"
-        "말씀하신 내용은 법률 분야가 아닌 일반 질문으로 판단됩니다. "
-        "저는 법률 분석 시스템이라 전문적인 답변이 어려울 수 있지만, "
-        "간단히 안내드릴게요.\n\n"
-        "## 📌 주요 포인트\n"
-        "- Lawmadi OS는 **대한민국 법률 분석 전문 시스템**입니다\n"
-        "- 60명의 전문 리더가 법률 분야별로 정밀 분석해 드려요\n"
-        "- 임대차, 이혼, 상속, 형사, 노동법 등 다양한 분야를 다룹니다\n\n"
-        "## 🔍 더 알아보기\n"
-        "법률과 관련된 고민이 있으시다면 구체적으로 질문해 주세요! "
-        "예를 들어 \"전세 보증금을 못 돌려받고 있어요\" 같은 질문이면 "
-        "전문 리더가 즉시 분석을 시작합니다."
+        "**Lawmadi OS — 대한민국 법률 분석 시스템**\n\n"
+        "말씀하신 내용은 법률 분야가 아닌 일반 질문으로 판단됩니다.\n\n"
+        "Lawmadi OS는 **60명의 전문 리더**가 국가법령정보센터(SSOT) 실시간 검증을 통해 "
+        "정확한 법률 분석을 제공하는 시스템입니다.\n\n"
+        "**도움받을 수 있는 분야:**\n"
+        "- 전세·임대차 분쟁, 보증금 반환\n"
+        "- 이혼, 양육권, 재산분할\n"
+        "- 부당해고, 임금체불, 퇴직금\n"
+        "- 교통사고, 보험금 분쟁\n"
+        "- 사기, 명예훼손, 형사 사건\n"
+        "- 상속, 개인회생, 창업·법인\n\n"
+        "법률 관련 고민이 있으시다면 구체적으로 질문해 주세요!\n"
+        "예: \"전세 보증금을 돌려받지 못하고 있어요\""
     )
 
 
@@ -253,29 +253,39 @@ async def ask(request: Request):
         if _is_low_signal(query):
             if lang == "en":
                 msg = (
-                    "[Yuna (CCO) Notice]\n\n"
-                    "Hi! I'm Yuna. 😊\n\n"
-                    "A test input has been detected. The server is running normally.\n\n"
-                    "To provide a more accurate answer, please share:\n"
-                    "- Case overview (what happened)\n"
-                    "- Dates / parties involved / supporting documents\n"
-                    "- Desired outcome\n\n"
-                    "If you have a legal concern, please ask a specific question.\n"
-                    "60 expert leaders are here to help!\n"
+                    "**Lawmadi OS — Korea's Legal Analysis System**\n\n"
+                    "Welcome! Lawmadi OS provides **real-time legal analysis** powered by 60 specialized leaders "
+                    "and verified through the National Law Information Center (SSOT).\n\n"
+                    "**What we can help with:**\n"
+                    "- Lease disputes & deposit recovery\n"
+                    "- Divorce, custody & property division\n"
+                    "- Unfair dismissal & wage issues\n"
+                    "- Traffic accidents & insurance claims\n"
+                    "- Fraud, defamation & criminal matters\n"
+                    "- Inheritance, bankruptcy & corporate law\n\n"
+                    "**How to get started:**\n"
+                    "Simply describe your situation in detail. For example:\n"
+                    "\"My landlord won't return my deposit\" or \"I was unfairly fired from my job\"\n\n"
+                    "The more details you provide, the more precise our analysis will be."
                 )
             else:
                 msg = (
-                    "[유나 (CCO) 안내]\n\n"
-                    "안녕하세요! 유나입니다. 😊\n\n"
-                    "테스트 입력이 감지되었습니다. 서버는 정상 동작 중이에요.\n\n"
-                    "더 정확한 답변을 드리기 위해 다음 정보를 알려주시면 좋겠어요:\n"
-                    "- 사건 개요 (어떤 상황인지)\n"
-                    "- 날짜/당사자/증빙 자료\n"
-                    "- 원하시는 결과\n\n"
-                    "법률 문제로 걱정이 있으시다면, 구체적으로 질문해 주세요.\n"
-                    "60명의 전문 리더가 함께 도와드릴게요!\n"
+                    "**Lawmadi OS — 대한민국 법률 분석 시스템**\n\n"
+                    "반갑습니다! Lawmadi OS는 **60명의 전문 리더**가 국가법령정보센터(SSOT) 실시간 검증을 통해 "
+                    "정확한 법률 분석을 제공하는 시스템입니다.\n\n"
+                    "**도움받을 수 있는 분야:**\n"
+                    "- 전세·임대차 분쟁, 보증금 반환\n"
+                    "- 이혼, 양육권, 재산분할\n"
+                    "- 부당해고, 임금체불, 퇴직금\n"
+                    "- 교통사고, 보험금 분쟁\n"
+                    "- 사기, 명예훼손, 형사 사건\n"
+                    "- 상속, 개인회생, 창업·법인\n\n"
+                    "**이용 방법:**\n"
+                    "겪고 계신 상황을 구체적으로 말씀해 주세요. 예를 들어:\n"
+                    "\"전세 보증금을 돌려받지 못하고 있어요\" 또는 \"직장에서 부당해고를 당했습니다\"\n\n"
+                    "상황을 자세히 알려주실수록 더 정확한 분석이 가능합니다."
                 )
-            _audit_fn("ask_low_signal", {"query": query, "status": "SKIPPED", "latency_ms": 0})
+            _audit_fn("ask_greeting", {"query": query, "status": "SYSTEM_INTRO", "latency_ms": 0})
             return {"trace_id": trace, "response": msg, "leader": "유나", "leader_specialty": "콘텐츠 설계", "status": "SUCCESS"}
 
         # -------------------------------------------------
@@ -696,31 +706,41 @@ async def ask_stream(request: Request):
                 yield item
 
         try:
-            # 0) Low Signal
+            # 0) Low Signal → 시스템 소개
             if _is_low_signal(query):
                 if lang == "en":
                     msg = (
-                        "[Yuna (CCO) Notice]\n\n"
-                        "Hi! I'm Yuna. 😊\n\n"
-                        "A test input has been detected. The server is running normally.\n\n"
-                        "To provide a more accurate answer, please share:\n"
-                        "- Case overview (what happened)\n"
-                        "- Dates / parties involved / supporting documents\n"
-                        "- Desired outcome\n\n"
-                        "If you have a legal concern, please ask a specific question.\n"
-                        "60 expert leaders are here to help!\n"
+                        "**Lawmadi OS — Korea's Legal Analysis System**\n\n"
+                        "Welcome! Lawmadi OS provides **real-time legal analysis** powered by 60 specialized leaders "
+                        "and verified through the National Law Information Center (SSOT).\n\n"
+                        "**What we can help with:**\n"
+                        "- Lease disputes & deposit recovery\n"
+                        "- Divorce, custody & property division\n"
+                        "- Unfair dismissal & wage issues\n"
+                        "- Traffic accidents & insurance claims\n"
+                        "- Fraud, defamation & criminal matters\n"
+                        "- Inheritance, bankruptcy & corporate law\n\n"
+                        "**How to get started:**\n"
+                        "Simply describe your situation in detail. For example:\n"
+                        "\"My landlord won't return my deposit\" or \"I was unfairly fired from my job\"\n\n"
+                        "The more details you provide, the more precise our analysis will be."
                     )
                 else:
                     msg = (
-                        "[유나 (CCO) 안내]\n\n"
-                        "안녕하세요! 유나입니다. 😊\n\n"
-                        "테스트 입력이 감지되었습니다. 서버는 정상 동작 중이에요.\n\n"
-                        "더 정확한 답변을 드리기 위해 다음 정보를 알려주시면 좋겠어요:\n"
-                        "- 사건 개요 (어떤 상황인지)\n"
-                        "- 날짜/당사자/증빙 자료\n"
-                        "- 원하시는 결과\n\n"
-                        "법률 문제로 걱정이 있으시다면, 구체적으로 질문해 주세요.\n"
-                        "60명의 전문 리더가 함께 도와드릴게요!\n"
+                        "**Lawmadi OS — 대한민국 법률 분석 시스템**\n\n"
+                        "반갑습니다! Lawmadi OS는 **60명의 전문 리더**가 국가법령정보센터(SSOT) 실시간 검증을 통해 "
+                        "정확한 법률 분석을 제공하는 시스템입니다.\n\n"
+                        "**도움받을 수 있는 분야:**\n"
+                        "- 전세·임대차 분쟁, 보증금 반환\n"
+                        "- 이혼, 양육권, 재산분할\n"
+                        "- 부당해고, 임금체불, 퇴직금\n"
+                        "- 교통사고, 보험금 분쟁\n"
+                        "- 사기, 명예훼손, 형사 사건\n"
+                        "- 상속, 개인회생, 창업·법인\n\n"
+                        "**이용 방법:**\n"
+                        "겪고 계신 상황을 구체적으로 말씀해 주세요. 예를 들어:\n"
+                        "\"전세 보증금을 돌려받지 못하고 있어요\" 또는 \"직장에서 부당해고를 당했습니다\"\n\n"
+                        "상황을 자세히 알려주실수록 더 정확한 분석이 가능합니다."
                     )
                 yield _sse("chunk", {"text": msg})
                 yield _sse("done", {"leader": "유나", "leader_specialty": "콘텐츠 설계", "latency_ms": 0, "trace_id": trace})
