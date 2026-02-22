@@ -928,7 +928,7 @@ async def ask_stream(request: Request):
                     mode=stream_mode,
                 )
 
-                max_tokens = 4000 if stream_mode == "expert" else 3000
+                max_tokens = 6000 if stream_mode == "expert" else 3000
                 chat = gc.chats.create(
                     model=model_name,
                     config=genai_types.GenerateContentConfig(
