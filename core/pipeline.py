@@ -14,6 +14,7 @@ Pipeline:
     set_runtime(RUNTIME)
     set_law_cache(LAW_CACHE, build_cache_context, match_ssot_sources, build_ssot_context)
 """
+import os
 import re
 import logging
 import asyncio
@@ -21,13 +22,15 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 import httpx
+from google.genai import types as genai_types
 from core.constants import (
+    DEFAULT_GEMINI_MODEL,
     LAWMADILM_API_URL,
     LAWMADILM_RAG_URL,
     FAIL_CLOSED_RESPONSE,
 )
-from utils.helpers import _remove_think_blocks
-from prompts.system_instructions import build_lawmadilm_prompt
+from utils.helpers import _remove_think_blocks, _safe_extract_gemini_text
+from prompts.system_instructions import build_lawmadilm_prompt, build_system_instruction
 
 logger = logging.getLogger("LawmadiOS.Pipeline")
 
@@ -460,7 +463,86 @@ def _apply_fail_closed(final_text: str, drf_verification: VerificationResult) ->
 
 
 # =============================================================
-# Main Pipeline Orchestrator (3-Stage, LawmadiLM 프롬프트 강화)
+# Gemini Fallback: LawmadiLM 실패 시 Gemini Flash로 답변 생성
+# =============================================================
+
+async def _gemini_fallback_compose(
+    query: str,
+    analysis: Dict,
+    rag_context: RAGContext,
+    tools: list,
+    gemini_history: list,
+    now_kst: str,
+    ssot_available: bool,
+    lang: str = "",
+    mode: str = "general",
+) -> str:
+    """LawmadiLM 실패 시 Gemini Flash로 직접 법률 답변 생성 (캐시 컨텍스트 최대 활용)"""
+    gc = _RUNTIME.get("genai_client")
+    if not gc:
+        raise RuntimeError("Gemini 클라이언트 미초기화")
+
+    model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+    leader_name = analysis.get("leader_name", "마디")
+    leader_specialty = analysis.get("leader_specialty", "통합")
+
+    # RAG/캐시 컨텍스트 주입
+    ctx_section = ""
+    if rag_context.context_text:
+        ctx_section = f"\n\n[참고 법령 조문]\n{rag_context.context_text[:4000]}"
+    elif rag_context.cache_context:
+        ctx_section = f"\n\n[참고 법령 조문]\n{rag_context.cache_context[:2000]}"
+
+    # 모드별 보강 지시
+    if mode == "expert":
+        enhance = (
+            "\n\n[구조 지시] 사안의 쟁점 → 관련 법령 → 판례 검토 → 실무 대응 절차 → 쟁점별 검토 의견 → 결론 및 권고 → 법률 근거"
+            "\n핵심 쟁점, 법률명, 판례번호는 **굵은 글씨**로 표시. 4,000~5,000자."
+        )
+        max_tokens = 5000
+    else:
+        enhance = (
+            "\n\n[구조 지시] 결론부터 말씀드리면 → 왜 그런가요? → 지금 바로 하실 수 있는 일 → 그래도 해결이 안 되면 → 혼자 하기 어려우시면 → 지금 해야 할 행동 3가지 → 법률 근거"
+            "\n한 문장은 50~60자 이내. 2,000~3,000자."
+        )
+        max_tokens = 3500
+
+    lang_instruction = ""
+    if lang == "en":
+        lang_instruction = "\n\nIMPORTANT: Respond entirely in English. Translate Korean legal terms with the original Korean in parentheses."
+
+    instruction = (
+        f"{build_system_instruction(mode)}\n"
+        f"현재 당신은 '{leader_name}' 리더입니다.\n"
+        f"전문 분야: {leader_specialty}\n"
+        f"질문 요약: {analysis.get('summary', '')}"
+        f"{ctx_section}"
+        f"{enhance}"
+        f"{lang_instruction}"
+    )
+
+    gen_config = genai_types.GenerateContentConfig(
+        tools=tools,
+        system_instruction=instruction,
+        max_output_tokens=max_tokens,
+        automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
+    )
+
+    chat = gc.chats.create(
+        model=model_name,
+        config=gen_config,
+        history=gemini_history,
+    )
+    resp = chat.send_message(
+        f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
+    )
+    text = _safe_extract_gemini_text(resp)
+    logger.info(f"[Gemini Fallback] 답변 생성 완료 ({len(text)}자, mode={mode})")
+    return text
+
+
+# =============================================================
+# Main Pipeline Orchestrator (3-Stage, LawmadiLM + Gemini Fallback)
 # =============================================================
 
 async def _run_legal_pipeline(
@@ -474,13 +556,14 @@ async def _run_legal_pipeline(
     mode: str = "general",
     rag_context: Optional[RAGContext] = None,
 ) -> str:
-    """3-Stage Hybrid Legal Pipeline (Stage 4 제거, LawmadiLM 프롬프트 강화):
+    """3-Stage Hybrid Legal Pipeline (LawmadiLM + Gemini Fallback):
     Stage 1: RAG 조문 검색
-    Stage 2: LawmadiLM 강화 답변 (5단계 프레임워크, 3000토큰)
+    Stage 2: LawmadiLM 강화 답변 (실패 시 Gemini Flash fallback)
     Stage 3: DRF 실시간 전수 검증
     → Fail-Closed → 응답
 
     SSOT 위반 시 Stage 2부터 최대 2회 재시도 (DRF 검증 결과 피드백 포함).
+    LawmadiLM 재시도 소진 시 Gemini Flash로 자동 전환.
     rag_context가 전달되면 Stage 1을 건너뛰어 S0+S1 병렬화를 지원.
     """
     MAX_RETRIES = 2
@@ -522,12 +605,24 @@ async def _run_legal_pipeline(
             logger.warning(f"[Stage 2] LawmadiLM 실패: {e}")
             lawmadilm_answer = ""
 
-        # LawmadiLM 답변이 없으면 재시도 불가, 에러 전파
+        # LawmadiLM 답변이 없으면 재시도, 소진 시 Gemini fallback
         if not lawmadilm_answer:
             if attempt < MAX_RETRIES:
                 logger.warning(f"[Stage 2] 답변 없음 -> 재시도 ({attempt}/{MAX_RETRIES})")
                 continue
-            raise RuntimeError("LawmadiLM 답변 생성 실패 (재시도 소진)")
+            # Gemini Flash fallback
+            logger.warning("[Stage 2] LawmadiLM 재시도 소진 -> Gemini Flash fallback")
+            try:
+                gemini_text = await _gemini_fallback_compose(
+                    query, analysis, rag_context, tools, gemini_history,
+                    now_kst, ssot_available, lang=lang, mode=mode,
+                )
+                if gemini_text and len(gemini_text.strip()) >= 50:
+                    final_text = gemini_text
+                    break
+            except Exception as ge:
+                logger.error(f"[Gemini Fallback] 실패: {ge}")
+            raise RuntimeError("LawmadiLM + Gemini 모두 답변 생성 실패")
 
         # -- Stage 3: DRF 실시간 전수 검증 --
         logger.info(f"[Stage 3/3] DRF 전수 검증 (시도 {attempt}/{MAX_RETRIES})")
