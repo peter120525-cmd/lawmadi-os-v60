@@ -1,5 +1,5 @@
 # Lawmadi OS — LLM System Specification
-> Version: v60.0.0 | Last Updated: 2026-02-21 | Format: llms.txt/1.0
+> Version: v60.0.0 | Last Updated: 2026-02-22 | Format: llms.txt/1.0
 
 ---
 
@@ -7,7 +7,7 @@
 
 - **Name**: Lawmadi OS (로마디 OS)
 - **Version**: v60.0.0
-- **Type**: Korean Legal AI Decision Operating System
+- **Type**: Korean Legal Decision Operating System
 - **Description**: 대한민국 법령·판례·행정규칙 기반 법률 자문 멀티에이전트 AI 운영체제.
   60개 도메인 특화 라우팅(키워드 + Gemini 분류)으로 사용자 질의에 대한 법적 분석 및 경로를 제공한다.
 - **Copyright**: Copyright (c) 2026 Jainam Choe (최재남). All Rights Reserved.
@@ -61,12 +61,12 @@ L7 RENDERER    → Legal vs Reference Output Segregation (Section Divider, Discl
 | Backend Framework | FastAPI 0.128.0 + Uvicorn 0.40.0 |
 | Runtime | Python 3.10+ |
 | Primary LLM | Google Gemini 3 Flash (gemini-3-flash-preview) |
-| Constitutional Verifier | Anthropic Claude (claude-sonnet series) |
+| Constitutional Verifier | Gemini Flash (DRF cross-verification) |
 | Legal Draft LLM | LawmadiLM v4.0 (Qwen3-1.7B QLoRA, GGUF Q4_K_M ~1.19GB) |
 | LLM Serving | llama.cpp (OpenAI-compatible /v1/chat/completions) |
 | RAG Engine | ChromaDB + intfloat/multilingual-e5-large |
 | Cloud Platform | GCP Cloud Run (asia-northeast3) |
-| Cloud Resources | 2 vCPU / 2 GiB RAM / max 10 instances / concurrency 80 / timeout 300s |
+| Cloud Resources | 4 vCPU / 8 GiB RAM / max 3 instances / concurrency 80 / timeout 300s |
 | Frontend | Firebase Hosting (Static HTML/CSS/JS — Korean + English) |
 | Splash Screen | Premium: Aurora gradient + 20 particles + glow icon + letter animation + progress bar |
 | PWA Icons | Custom PNG icons: 192x192 + 512x512 (resized from 1024x1024 source) |
@@ -216,39 +216,40 @@ Max Tokens:       150 (draft), Context: 4096
 
 ---
 
-## 5-STAGE LEGAL PIPELINE
+## 4-STAGE LEGAL PIPELINE
 
 Every `/ask` and `/ask-stream` request flows through this pipeline:
 
 ```
 Stage 1: SECURITY & PRE-PROCESSING
-  ├─ Rate limiting (Free: 50/4h, Premium: 200/4h)
-  ├─ Low Signal filter (test/greeting queries → CCO Yuna response)
+  ├─ Rate limiting (Free: 10/4h, Premium: 200/4h)
+  ├─ Low Signal → 3-tier routing:
+  │     greeting → system intro
+  │     non-legal → local response
+  │     legal → pipeline continues
   ├─ SafetyGuard.check() → CRISIS / BLOCKED / PASS
-  ├─ Claude Sonnet analysis → tier (1-3), leader (L01-L60), specialty
+  ├─ Gemini Flash analysis → tier (1-3), leader (L01-L60), specialty
   └─ SSOT availability check (Gemini key, DRF connectivity)
 
 Stage 2: LAWMADILM DRAFT
   ├─ Async call to LawmadiLM API (max 150 tokens, timeout 15s)
   ├─ Draft: law name, key articles, precedent references, conclusion
-  └─ Fallback: skip if unavailable (pipeline continues without draft)
+  ├─ Fallback: skip if unavailable (pipeline continues without draft)
+  └─ Fallback: Gemini Flash compose if LawmadiLM unavailable
 
-Stage 3: GEMINI FLASH COMPOSITION (Primary)
+Stage 3: GEMINI FLASH COMPOSITION + ENHANCEMENT
   ├─ System instruction = SYSTEM_INSTRUCTION_BASE + leader persona + law_cache context
   ├─ 9 DRF tools with automatic_function_calling enabled
   ├─ LawmadiLM draft injected as reference (if available)
-  ├─ Max output: 800 tokens
+  ├─ Max output: 3,500 tokens (standard) / 5,000 tokens (expert)
+  ├─ SSOT cache 99% priority
   └─ Retry without draft if response < 50 chars
 
-Stage 4: CLAUDE ENHANCEMENT
-  ├─ Claude Sonnet 4 review (accuracy, missing articles, practical advice)
-  ├─ Max 200 tokens supplementary content
-  └─ Appended only if meaningful enhancement exists
-
-Stage 5: DRF VERIFICATION + CONSTITUTIONAL CHECK
-  ├─ Extract law references from response
+Stage 4: DRF FULL VERIFICATION + CONSTITUTIONAL CHECK
+  ├─ Extract law references + precedent numbers + constitutional court decision numbers
   ├─ DRF real-time cross-verification
   ├─ Constitutional compliance validation (6 principles)
+  ├─ 30%+ unverified → Fail-Closed (block response)
   ├─ Warning/correction injection if violation detected
   └─ Audit logging to Cloud SQL
 ```
@@ -303,7 +304,7 @@ Zero-cost keyword matching cache loaded into server memory at startup.
 ```
 Total SSOT Types:  10
 Total Entries:     548
-Total Keywords:    18,961
+Total Keywords:    14,088
 Total Articles:    20,798
 File Size:         4.12 MB
 ```
@@ -358,7 +359,7 @@ Usage: Query keywords matched against reverse index → top matching articles se
 | GET | `/diagnostics` | 시스템 진단 정보 |
 | POST | `/ask` | 법률 질의 처리 (메인 AI 엔드포인트). `lang: "en"` 파라미터로 영어 응답 |
 | POST | `/ask-stream` | SSE 스트리밍 법률 답변. `lang: "en"` 파라미터로 영어 응답 |
-| POST | `/ask-expert` | 전문가용 답변 (Gemini 재생성 + Claude SSOT 검증) |
+| POST | `/ask-expert` | 전문가용 답변 (Gemini 재생성 + DRF SSOT 검증) |
 | POST | `/upload` | 법률 문서 파일 업로드 |
 | GET | `/analyze-document/{file_id}` | 업로드된 문서 분석 |
 | POST | `/api/visit` | 방문자 카운터 업데이트 |
@@ -492,17 +493,17 @@ ANTHROPIC_API_KEY   (Claude API key)
 ### GCP Cloud Run Configuration
 ```
 Region: asia-northeast3 (Seoul)
-CPU: 2 vCPU
-Memory: 2 GiB
-Max Instances: 10
-Min Instances: 1 (cold start 방지)
+CPU: 4 vCPU
+Memory: 8 GiB
+Max Instances: 3
+Min Instances: 0
 Concurrency: 80
 Request Timeout: 300s
 ```
 
 ### Cloud Run Services (4 Total)
 ```
-lawmadi-os-v60    — Main API (FastAPI)          | 2 vCPU, 2 GiB  | 1–10 instances
+lawmadi-os-v60    — Main API (FastAPI)          | 4 vCPU, 8 GiB  | 0–3 instances
 lawmadilm-llm     — LLM inference (llama.cpp)   | 4 vCPU, 16 GiB | 1–2 instances
 lawmadilm-rag     — RAG search (ChromaDB)        | 2 vCPU, 8 GiB  | 0–3 instances
 lawmadilm-api     — Legacy API gateway           | 1 vCPU, 512 MiB | 0–1 instances
@@ -531,7 +532,7 @@ core.security              → SafetyGuard
 connectors.drf_client      → DRFConnector
 core.law_selector          → LawSelector
 connectors.db_client       → db_client
-engines.response_verifier  → ResponseVerifier (Claude SSOT 검증)
+engines.response_verifier  → ResponseVerifier (Gemini SSOT 검증)
 ```
 
 ---
@@ -565,4 +566,4 @@ engines.response_verifier  → ResponseVerifier (Claude SSOT 검증)
 ---
 
 *This llms.txt file conforms to the llms.txt/1.0 specification for machine-readable AI system documentation.*
-*Generated: 2026-02-21 | Lawmadi OS v60.0.0*
+*Generated: 2026-02-22 | Lawmadi OS v60.0.0*
