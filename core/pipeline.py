@@ -634,7 +634,7 @@ async def _run_legal_pipeline(
     # FAIL_CLOSED 적용 (미검증 조문 태깅 또는 응답 차단)
     final_text = _apply_fail_closed(final_text, drf_verification)
 
-    return final_text
+    return final_text, drf_verification
 
 
 # =============================================================
