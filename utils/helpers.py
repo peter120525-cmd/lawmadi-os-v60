@@ -37,8 +37,14 @@ def _is_low_signal(query: str) -> bool:
     q = (query or "").strip()
     if len(q) < 3:
         return True
+    # 정확 일치
     low = {"테스트", "test", "안녕", "hello", "hi", "ㅎ", "ㅋㅋ", "ㅇㅇ"}
-    return q.lower() in low
+    if q.lower() in low:
+        return True
+    # 인사 패턴 (시작어 매칭)
+    greetings = ["안녕하세요", "반갑습니다", "반가워요", "하이요", "헬로",
+                 "처음 뵙겠습니다", "좋은 아침", "좋은 저녁", "수고하세요"]
+    return any(q.startswith(g) for g in greetings)
 
 
 # ---------------------------------------------------------------------------
