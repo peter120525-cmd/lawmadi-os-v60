@@ -397,12 +397,71 @@ def _drf_verify_law_refs(text: str) -> VerificationResult:
                 "reason": f"검증 오류: {type(e).__name__}",
             })
 
+    # ── 판례 검증: "대법원 YYYY다NNNNN" 등 판례번호 추출 + DRF 검증 ──
+    prec_refs = re.findall(
+        r'((?:대법원|대법|헌법재판소|헌재|서울고등법원|서울고법|서울중앙지방법원)\s*'
+        r'(\d{4})\s*[.]\s*(\d{1,2})\s*[.]\s*\d{1,2}\s*[.]?\s*선고\s*'
+        r'(\d{2,4}[가-힣]+\d+)\s*(?:판결|결정))',
+        text
+    )
+    # 더 간단한 패턴: "대법원 2020다12345 판결" 또는 "2020다12345"
+    if not prec_refs:
+        prec_refs_simple = re.findall(
+            r'(\d{2,4}(?:다|나|가|마|카|타|파|라|바|사|아|자|차|하|두|누|구|무|부|수|우|주|추|후|그|드|스|으)'
+            r'(?:합)?\d{2,6})',
+            text
+        )
+    else:
+        prec_refs_simple = [p[3] for p in prec_refs]  # 사건번호만 추출
+
+    if prec_refs_simple:
+        drf_inst = _RUNTIME.get("drf")
+        prec_seen = set()
+        for case_no in prec_refs_simple:
+            case_no = case_no.strip()
+            if case_no in prec_seen or len(case_no) < 5:
+                continue
+            prec_seen.add(case_no)
+            try:
+                if drf_inst and hasattr(drf_inst, "search_precedents"):
+                    raw_prec = drf_inst.search_precedents(case_no)
+                    prec_exists = bool(raw_prec)
+                else:
+                    prec_exists = False
+                    logger.debug(f"[Stage 4] 판례 DRF 미사용 (drf 인스턴스 없음)")
+
+                ref_entry = {
+                    "ref": f"판례 {case_no}",
+                    "type": "precedent",
+                    "case_no": case_no,
+                    "verified": prec_exists,
+                }
+                if prec_exists:
+                    result.verified_refs.append(ref_entry)
+                else:
+                    ref_entry["reason"] = "판례 미존재"
+                    result.unverified_refs.append(ref_entry)
+            except Exception as e:
+                logger.warning(f"[Stage 4] 판례 {case_no} 검증 실패: {e}")
+                result.unverified_refs.append({
+                    "ref": f"판례 {case_no}",
+                    "type": "precedent",
+                    "case_no": case_no,
+                    "verified": False,
+                    "reason": f"검증 오류: {type(e).__name__}",
+                })
+
     result.total_refs = len(result.verified_refs) + len(result.unverified_refs)
     result.all_passed = len(result.unverified_refs) == 0
 
+    law_count = sum(1 for r in result.verified_refs if r.get("type") != "precedent")
+    prec_count = sum(1 for r in result.verified_refs if r.get("type") == "precedent")
+    law_fail = sum(1 for r in result.unverified_refs if r.get("type") != "precedent")
+    prec_fail = sum(1 for r in result.unverified_refs if r.get("type") == "precedent")
+
     logger.info(
-        f"[Stage 3] DRF 전수 검증 완료: "
-        f"총 {result.total_refs}건 중 "
+        f"[Stage 4] DRF 전수 검증 완료: "
+        f"총 {result.total_refs}건 (법률 {law_count+law_fail}건, 판례 {prec_count+prec_fail}건) | "
         f"통과 {len(result.verified_refs)}건, "
         f"실패 {len(result.unverified_refs)}건"
     )
