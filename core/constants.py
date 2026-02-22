@@ -14,7 +14,7 @@ OS_VERSION = "v60.0.0"
 DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview"
 
 # LawmadiLM API 설정 (주력 답변 생성기)
-LAWMADILM_API_URL = os.getenv("LAWMADILM_API_URL", "https://lawmadilm-api-938146962157.asia-northeast3.run.app")
+LAWMADILM_API_URL = os.getenv("LAWMADILM_API_URL", "https://lawmadilm-api-938146962157.asia-southeast1.run.app")
 
 # LawmadiLM RAG 서비스 URL (ChromaDB + multilingual-e5-large 임베딩 검색)
 LAWMADILM_RAG_URL = os.getenv("LAWMADILM_RAG_URL", "")
