@@ -483,6 +483,19 @@ TIER_ANALYSIS_PROMPT = """당신은 Lawmadi OS의 질문 분류 엔진입니다.
 질문: "오늘 날씨 어때요?"
 → {{"tier":0,"complexity":"simple","is_document":false,"leader_id":"L60","summary":"비법률 질문","is_legal":false}}
 
+질문: "점심 뭐 먹을까요?"
+→ {{"tier":0,"complexity":"simple","is_document":false,"leader_id":"L60","summary":"비법률 질문","is_legal":false}}
+
+질문: "영화 추천해줘"
+→ {{"tier":0,"complexity":"simple","is_document":false,"leader_id":"L60","summary":"비법률 질문","is_legal":false}}
+
+질문: "코딩 배우고 싶어요"
+→ {{"tier":0,"complexity":"simple","is_document":false,"leader_id":"L60","summary":"비법률 질문","is_legal":false}}
+
+## 비법률 판단 기준
+- 법률, 법적 분쟁, 권리침해, 계약, 피해, 사건과 무관한 일상 질문은 is_legal=false
+- 날씨, 음식, 여행, 영화, 게임, 취미, 인사, IT, 학업 등은 모두 비법률
+
 반드시 위 목록에서 leader_id, leader_name을 선택하고 아래 JSON 형식만 출력하세요:
 {{"tier": 1, "complexity": "simple", "is_document": false, "leader_id": "L08", "leader_name": "리더이름", "leader_specialty": "전문분야", "summary": "요약", "is_legal": true}}"""
 
@@ -552,9 +565,29 @@ def _fallback_tier_classification(query: str) -> Dict[str, Any]:
         is_legal = True
     else:
         non_legal_keywords = [
-            "날씨", "요리", "레시피", "맛집", "스포츠 경기", "영화 추천",
-            "음악 추천", "노래", "여행지", "안녕하세요", "반갑습니다",
-            "자기소개", "취미", "운동 방법", "다이어트",
+            # 일상생활
+            "날씨", "기온", "비 올", "눈 올", "미세먼지",
+            "요리", "레시피", "맛집", "점심", "저녁", "아침", "뭐 먹", "메뉴",
+            "카페", "커피", "음식",
+            # 엔터테인먼트
+            "영화 추천", "영화", "드라마", "넷플릭스", "유튜브",
+            "음악 추천", "노래", "가수", "아이돌", "콘서트",
+            "게임", "스포츠", "축구", "야구", "농구",
+            # 여행/취미
+            "여행지", "여행", "관광", "호텔", "항공", "비행기",
+            "취미", "운동 방법", "다이어트", "헬스", "요가", "등산",
+            # 인사/잡담
+            "안녕하세요", "반갑습니다", "안녕", "하이", "헬로",
+            "자기소개", "너 누구", "넌 뭐", "이름이 뭐",
+            "고마워", "감사합니다", "수고",
+            # IT/기술
+            "코딩", "프로그래밍", "파이썬", "자바", "엑셀",
+            "컴퓨터", "스마트폰", "아이폰", "갤럭시",
+            # 교육/학업
+            "수학", "영어", "시험", "공부", "대학",
+            # 쇼핑/생활
+            "쇼핑", "할인", "세일", "배송",
+            "택배", "반품", "교환",
         ]
         is_legal = not any(kw in query for kw in non_legal_keywords)
 

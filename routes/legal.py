@@ -153,71 +153,10 @@ def _get_drf_tools() -> list:
 
 
 # ---------------------------------------------------------------------------
-# 비법률 질문용 Gemini 응답 생성 (유나 CCO)
+# 비법률 질문용 로컬 응답 (유나 CCO) — Gemini 미사용, 즉시 응답
 # ---------------------------------------------------------------------------
 async def _generate_yuna_response(query: str, lang: str = "") -> str:
-    """비법률 질문에 대해 Gemini를 사용하여 유나(CCO)가 간결하게 응답"""
-    gc = _RUNTIME.get("genai_client")
-    if not gc:
-        return _build_yuna_fallback(lang)
-
-    model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
-
-    if lang == "en":
-        sys_instr = (
-            "You are Yuna (유나), the Chief Content Officer of Lawmadi OS, a Korean legal analysis system.\n\n"
-            "The user asked a NON-LEGAL question. Your job:\n"
-            "1. Briefly and helpfully answer their question (2-3 sentences max)\n"
-            "2. Then gently mention that Lawmadi OS specializes in Korean law\n"
-            "3. Give 1-2 example legal questions they could ask\n\n"
-            "Format:\n"
-            "[Yuna (CCO) Content Design]\n\n"
-            "## 💡 Answer\n(brief answer)\n\n"
-            "## 📌 By the way...\n(Lawmadi OS intro + example questions)\n\n"
-            "Keep total response under 500 characters. Be warm and friendly."
-        )
-    else:
-        sys_instr = (
-            "당신은 Lawmadi OS의 최고콘텐츠책임자 유나(CCO)입니다.\n"
-            "Lawmadi OS는 대한민국 법률 분석 전문 시스템입니다.\n\n"
-            "사용자가 비법률 질문을 했습니다. 당신의 역할:\n"
-            "1. 사용자의 질문에 간결하고 친절하게 답변하세요 (2~3문장)\n"
-            "2. Lawmadi OS는 법률 전문 시스템임을 부드럽게 안내하세요\n"
-            "3. 법률 질문 예시를 1~2개 제시하세요\n\n"
-            "응답 형식:\n"
-            "[유나 (CCO) 콘텐츠 설계]\n\n"
-            "## 💡 답변\n(간단한 답변)\n\n"
-            "## 📌 참고로...\nLawmadi OS 소개 + 법률 질문 예시\n\n"
-            "총 500자 이내로 작성하세요. 따뜻하고 친근한 톤으로."
-        )
-
-    try:
-        resp = gc.models.generate_content(
-            model=model_name,
-            contents=f"사용자 질문: {query}",
-            config=genai_types.GenerateContentConfig(
-                system_instruction=sys_instr,
-                max_output_tokens=800,
-                temperature=0.7,
-            ),
-        )
-        text = ""
-        if hasattr(resp, 'text') and resp.text:
-            text = resp.text.strip()
-        if not text:
-            # candidates에서 직접 추출 시도
-            try:
-                if resp.candidates and resp.candidates[0].content.parts:
-                    text = resp.candidates[0].content.parts[0].text.strip()
-            except (AttributeError, IndexError):
-                pass
-        # 헤더만 있고 실제 내용이 없는 경우 fallback
-        if text and len(text) > 50 and "답변" in text:
-            return text
-        logger.warning(f"⚠️ [Yuna] 응답이 너무 짧음 ({len(text)}자): {text[:100]}")
-    except Exception as e:
-        logger.warning(f"⚠️ [Yuna] Gemini 응답 생성 실패: {e}")
-
+    """비법률 질문에 대해 유나(CCO)가 로컬에서 즉시 응답 (API 호출 없음)"""
     return _build_yuna_fallback(lang)
 
 
