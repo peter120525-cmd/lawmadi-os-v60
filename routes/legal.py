@@ -38,6 +38,7 @@ from core.pipeline import (
     run_pipeline_stage3,
     _apply_fail_closed,
     _drf_verify_law_refs,
+    _gemini_fallback_compose,
     VerificationResult,
     RAGContext,
 )
@@ -938,8 +939,28 @@ async def ask_stream(request: Request):
                         })
                         return
 
-                # Fail-Closed 통과: LawmadiLM 답변을 직접 스트리밍
+                # Fail-Closed 통과 → Gemini 완성 또는 LM 답변 스트리밍
                 yield _sse("status", {"step": "composing", "leader": leader_name})
+
+                # LM 실패 시 Gemini Fallback (비스트리밍 파이프라인과 동일)
+                if not lawmadilm_answer:
+                    try:
+                        now_kst = _now_iso()
+                        ssot_available = _RUNTIME.get("drf_healthy", False)
+                        gemini_text = await _gemini_fallback_compose(
+                            query, analysis, rag_context_pre, tools, gemini_history,
+                            now_kst, ssot_available, lang=lang, mode=stream_mode,
+                            lm_draft="",
+                        )
+                        lawmadilm_answer = gemini_text
+                        # Gemini 답변에도 DRF 검증 실행
+                        if lawmadilm_answer:
+                            loop = asyncio.get_event_loop()
+                            drf_verification = await loop.run_in_executor(
+                                None, lambda: run_pipeline_stage3(lawmadilm_answer)
+                            )
+                    except Exception as gemini_err:
+                        logger.error(f"[Stream] Gemini Fallback 실패: {gemini_err}")
 
                 # 미검증 조문 태깅 적용
                 final_text = _apply_fail_closed(lawmadilm_answer, drf_verification) if lawmadilm_answer else ""
