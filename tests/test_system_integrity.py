@@ -214,29 +214,44 @@ class TestCacheSystem:
 # ─── 8. main.py 라우트 검증 ──────────────────────────────────────────────────
 
 class TestMainRoutes:
+    """Phase 6: 라우트가 routes/ 모듈로 분리됨. main.py는 커널+라우터 등록만 담당."""
+
     def test_fastapi_app(self, main_content):
         assert "app = FastAPI(" in main_content
 
-    def test_ask_endpoint(self, main_content):
-        assert '@app.post("/ask")' in main_content
+    def test_route_modules_registered(self, main_content):
+        """main.py에 라우터 include 확인"""
+        assert "app.include_router(legal_router)" in main_content
+        assert "app.include_router(health_router)" in main_content
+        assert "app.include_router(files_router)" in main_content
 
-    def test_upload_endpoint(self, main_content):
-        assert '@app.post("/upload")' in main_content
+    def test_ask_endpoint(self):
+        from routes.legal import router
+        paths = [r.path for r in router.routes if hasattr(r, "path")]
+        assert "/ask" in paths
 
-    def test_analyze_document_endpoint(self, main_content):
-        assert '@app.post("/analyze-document' in main_content
+    def test_upload_endpoint(self):
+        from routes.files import router
+        paths = [r.path for r in router.routes if hasattr(r, "path")]
+        assert "/upload" in paths
 
-    def test_health_endpoint(self, main_content):
-        assert '@app.get("/health")' in main_content
+    def test_analyze_document_endpoint(self):
+        from routes.files import router
+        paths = [r.path for r in router.routes if hasattr(r, "path")]
+        assert any("/analyze-document" in p for p in paths)
 
-    def test_search_law_drf_tool(self, main_content):
-        assert "def search_law_drf(" in main_content
+    def test_health_endpoint(self):
+        from routes.health import router
+        paths = [r.path for r in router.routes if hasattr(r, "path")]
+        assert "/health" in paths
 
-    def test_search_precedents_drf_tool(self, main_content):
-        assert "def search_precedents_drf(" in main_content
+    def test_search_law_drf_tool(self):
+        from tools.drf_tools import search_law_drf
+        assert callable(search_law_drf)
 
-    def test_gemini_tools_list(self, main_content):
-        assert "tools = [" in main_content
+    def test_search_precedents_drf_tool(self):
+        from tools.drf_tools import search_precedents_drf
+        assert callable(search_precedents_drf)
 
 
 # ─── 9. SSOT 데이터 무결성 검증 ──────────────────────────────────────────────
