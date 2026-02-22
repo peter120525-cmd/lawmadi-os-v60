@@ -502,7 +502,7 @@ async def _gemini_analyze_query(query: str) -> Optional[Dict[str, Any]]:
             contents=f"질문: {query}",
             config={
                 "system_instruction": TIER_ANALYSIS_PROMPT.format(leader_summary=leader_summary),
-                "max_output_tokens": 500,
+                "max_output_tokens": 800,
                 "temperature": 0.1,
             },
         )
