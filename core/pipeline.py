@@ -209,7 +209,7 @@ async def _call_lawmadilm(
         "temperature": 0.3,
     }
 
-    async with httpx.AsyncClient(timeout=10.0) as client:
+    async with httpx.AsyncClient(timeout=60.0) as client:
         resp = await client.post(f"{LAWMADILM_API_URL}/chat", json=payload)
         resp.raise_for_status()
         data = resp.json()
@@ -566,7 +566,7 @@ async def _run_legal_pipeline(
     LawmadiLM 재시도 소진 시 Gemini Flash로 자동 전환.
     rag_context가 전달되면 Stage 1을 건너뛰어 S0+S1 병렬화를 지원.
     """
-    MAX_RETRIES = 1
+    MAX_RETRIES = 2
     final_text = ""
     drf_verification = VerificationResult()
 
