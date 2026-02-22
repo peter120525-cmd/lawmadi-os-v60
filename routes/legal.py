@@ -195,15 +195,26 @@ async def _generate_yuna_response(query: str, lang: str = "") -> str:
         resp = gc.models.generate_content(
             model=model_name,
             contents=f"사용자 질문: {query}",
-            config={
-                "system_instruction": sys_instr,
-                "max_output_tokens": 400,
-                "temperature": 0.7,
-            },
+            config=genai_types.GenerateContentConfig(
+                system_instruction=sys_instr,
+                max_output_tokens=800,
+                temperature=0.7,
+            ),
         )
-        text = resp.text.strip() if resp.text else ""
-        if text and len(text) > 20:
+        text = ""
+        if hasattr(resp, 'text') and resp.text:
+            text = resp.text.strip()
+        if not text:
+            # candidates에서 직접 추출 시도
+            try:
+                if resp.candidates and resp.candidates[0].content.parts:
+                    text = resp.candidates[0].content.parts[0].text.strip()
+            except (AttributeError, IndexError):
+                pass
+        # 헤더만 있고 실제 내용이 없는 경우 fallback
+        if text and len(text) > 50 and "답변" in text:
             return text
+        logger.warning(f"⚠️ [Yuna] 응답이 너무 짧음 ({len(text)}자): {text[:100]}")
     except Exception as e:
         logger.warning(f"⚠️ [Yuna] Gemini 응답 생성 실패: {e}")
 
