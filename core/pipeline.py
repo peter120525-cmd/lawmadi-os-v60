@@ -179,7 +179,7 @@ async def _call_lawmadilm(
     lang: str = "",
     mode: str = "general",
 ) -> str:
-    """Stage 2: LawmadiLM 강화 답변 생성 (5단계 프레임워크, 3000토큰)"""
+    """Stage 2: LawmadiLM 핵심 법률 초안 (5-6초 내 완료, 150토큰)"""
     leader_name = analysis.get("leader_name", "마디")
     leader_specialty = analysis.get("leader_specialty", "통합")
 
@@ -200,7 +200,7 @@ async def _call_lawmadilm(
         mode=mode,
     )
 
-    max_tokens = 6000 if mode == "expert" else 3000
+    max_tokens = 200 if mode == "expert" else 150
 
     payload = {
         "messages": [{"role": "user", "content": query}],
@@ -209,7 +209,7 @@ async def _call_lawmadilm(
         "temperature": 0.3,
     }
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.post(f"{LAWMADILM_API_URL}/chat", json=payload)
         resp.raise_for_status()
         data = resp.json()
@@ -476,8 +476,9 @@ async def _gemini_fallback_compose(
     ssot_available: bool,
     lang: str = "",
     mode: str = "general",
+    lm_draft: str = "",
 ) -> str:
-    """LawmadiLM 실패 시 Gemini Flash로 직접 법률 답변 생성 (캐시 컨텍스트 최대 활용)"""
+    """Gemini Flash 완성 답변 생성 (LM 초안 기반 또는 단독, 캐시 컨텍스트 최대 활용)"""
     gc = _RUNTIME.get("genai_client")
     if not gc:
         raise RuntimeError("Gemini 클라이언트 미초기화")
@@ -485,6 +486,15 @@ async def _gemini_fallback_compose(
     model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
     leader_name = analysis.get("leader_name", "마디")
     leader_specialty = analysis.get("leader_specialty", "통합")
+
+    # LM 초안 주입
+    draft_section = ""
+    if lm_draft:
+        draft_section = (
+            f"\n\n[LawmadiLM 법률 초안]\n{lm_draft}\n\n"
+            f"위 초안의 법률 근거(조문, 판례)를 바탕으로 완성된 답변을 작성하세요.\n"
+            f"초안의 법령명+조문번호를 반드시 포함하세요."
+        )
 
     # RAG/캐시 컨텍스트 주입
     ctx_section = ""
@@ -516,6 +526,7 @@ async def _gemini_fallback_compose(
         f"현재 당신은 '{leader_name}' 리더입니다.\n"
         f"전문 분야: {leader_specialty}\n"
         f"질문 요약: {analysis.get('summary', '')}"
+        f"{draft_section}"
         f"{ctx_section}"
         f"{enhance}"
         f"{lang_instruction}"
@@ -556,93 +567,69 @@ async def _run_legal_pipeline(
     mode: str = "general",
     rag_context: Optional[RAGContext] = None,
 ) -> str:
-    """3-Stage Hybrid Legal Pipeline (LawmadiLM + Gemini Fallback):
+    """4-Stage Hybrid Legal Pipeline (LM 초안 → Gemini 완성):
     Stage 1: RAG 조문 검색
-    Stage 2: LawmadiLM 강화 답변 (실패 시 Gemini Flash fallback)
-    Stage 3: DRF 실시간 전수 검증
+    Stage 2: LawmadiLM 핵심 초안 (~5-6초, 150토큰)
+    Stage 3: Gemini Flash 완성 답변 (LM 초안 기반)
+    Stage 4: DRF 실시간 전수 검증
     → Fail-Closed → 응답
 
-    SSOT 위반 시 Stage 2부터 최대 2회 재시도 (DRF 검증 결과 피드백 포함).
-    LawmadiLM 재시도 소진 시 Gemini Flash로 자동 전환.
+    LawmadiLM 실패 시 Gemini가 단독 작성 (fallback).
     rag_context가 전달되면 Stage 1을 건너뛰어 S0+S1 병렬화를 지원.
     """
-    MAX_RETRIES = 2
     final_text = ""
     drf_verification = VerificationResult()
 
     # -- Stage 1: RAG 조문 검색 (1회만 수행, 외부 전달 시 스킵) --
     if rag_context is None:
-        logger.info("[Stage 1/3] RAG 조문 검색 시작")
+        logger.info("[Stage 1/4] RAG 조문 검색 시작")
         try:
             rag_context = await _stage1_rag_search(query)
         except Exception as e:
             logger.warning(f"[Stage 1] RAG 검색 실패 (빈 컨텍스트 진행): {e}")
             rag_context = RAGContext()
     else:
-        logger.info("[Stage 1/3] RAG 컨텍스트 외부 전달 (S0+S1 병렬화)")
+        logger.info("[Stage 1/4] RAG 컨텍스트 외부 전달 (S0+S1 병렬화)")
 
-    for attempt in range(1, MAX_RETRIES + 1):
-        if attempt > 1:
-            logger.warning(f"[SSOT 재시도 {attempt}/{MAX_RETRIES}] Stage 2부터 재시작 (DRF 검증 피드백 포함)")
+    # -- Stage 2: LawmadiLM 핵심 초안 (~5-6초) --
+    lm_draft = ""
+    try:
+        logger.info("[Stage 2/4] LawmadiLM 핵심 초안 생성")
+        raw_answer = await _call_lawmadilm(
+            query, analysis, rag_context, lang=lang, mode=mode,
+        )
+        lm_draft = _postprocess_lawmadilm(raw_answer, query)
+        if lm_draft:
+            logger.info(f"[Stage 2] LM 초안 완료 ({len(lm_draft)}자)")
+        else:
+            logger.warning("[Stage 2] 후처리 -> None (품질 미달)")
+            lm_draft = ""
+    except Exception as e:
+        logger.warning(f"[Stage 2] LawmadiLM 실패: {e} -> Gemini 단독 작성")
+        lm_draft = ""
 
-        # -- Stage 2: LawmadiLM 강화 답변 --
-        lawmadilm_answer = ""
-        try:
-            logger.info(f"[Stage 2/3] LawmadiLM 강화 답변 생성 (시도 {attempt}/{MAX_RETRIES})")
-            # 재시도 시 이전 DRF 검증 결과를 피드백으로 전달
-            drf_feedback = drf_verification if attempt > 1 else None
-            raw_answer = await _call_lawmadilm(
-                query, analysis, rag_context,
-                drf_verification=drf_feedback,
-                lang=lang,
-                mode=mode,
-            )
-            lawmadilm_answer = _postprocess_lawmadilm(raw_answer, query)
-            if not lawmadilm_answer:
-                logger.warning("[Stage 2] 후처리 -> None (품질 미달)")
-                lawmadilm_answer = ""
-        except Exception as e:
-            logger.warning(f"[Stage 2] LawmadiLM 실패: {e}")
-            lawmadilm_answer = ""
-
-        # LawmadiLM 답변이 없으면 재시도, 소진 시 Gemini fallback
-        if not lawmadilm_answer:
-            if attempt < MAX_RETRIES:
-                logger.warning(f"[Stage 2] 답변 없음 -> 재시도 ({attempt}/{MAX_RETRIES})")
-                continue
-            # Gemini Flash fallback
-            logger.warning("[Stage 2] LawmadiLM 재시도 소진 -> Gemini Flash fallback")
-            try:
-                gemini_text = await _gemini_fallback_compose(
-                    query, analysis, rag_context, tools, gemini_history,
-                    now_kst, ssot_available, lang=lang, mode=mode,
-                )
-                if gemini_text and len(gemini_text.strip()) >= 50:
-                    final_text = gemini_text
-                    break
-            except Exception as ge:
-                logger.error(f"[Gemini Fallback] 실패: {ge}")
+    # -- Stage 3: Gemini Flash 완성 답변 (LM 초안 기반 또는 단독) --
+    logger.info(f"[Stage 3/4] Gemini Flash 완성 답변 (LM초안={'있음' if lm_draft else '없음'})")
+    try:
+        final_text = await _gemini_fallback_compose(
+            query, analysis, rag_context, tools, gemini_history,
+            now_kst, ssot_available, lang=lang, mode=mode,
+            lm_draft=lm_draft,
+        )
+    except Exception as e:
+        logger.error(f"[Stage 3] Gemini 완성 실패: {e}")
+        if lm_draft:
+            final_text = lm_draft
+        else:
             raise RuntimeError("LawmadiLM + Gemini 모두 답변 생성 실패")
 
-        # -- Stage 3: DRF 실시간 전수 검증 --
-        logger.info(f"[Stage 3/3] DRF 전수 검증 (시도 {attempt}/{MAX_RETRIES})")
-        try:
-            drf_verification = _drf_verify_law_refs(lawmadilm_answer)
-        except Exception as e:
-            logger.warning(f"[Stage 3] DRF 검증 실패: {e}")
-            drf_verification = VerificationResult()
-
-        # FAIL_CLOSED 검사: 30% 초과 미검증 시 재시도
-        if drf_verification.total_refs > 0:
-            unverified_ratio = len(drf_verification.unverified_refs) / max(drf_verification.total_refs, 1)
-            if unverified_ratio > 0.3 and attempt < MAX_RETRIES:
-                logger.warning(
-                    f"[FAIL_CLOSED] 미검증 비율 {unverified_ratio*100:.0f}% > 30% -> 재시도 ({attempt}/{MAX_RETRIES})"
-                )
-                continue
-
-        final_text = lawmadilm_answer
-        break
+    # -- Stage 4: DRF 실시간 전수 검증 --
+    logger.info("[Stage 4/4] DRF 전수 검증")
+    try:
+        drf_verification = _drf_verify_law_refs(final_text)
+    except Exception as e:
+        logger.warning(f"[Stage 4] DRF 검증 실패: {e}")
+        drf_verification = VerificationResult()
 
     # FAIL_CLOSED 적용 (미검증 조문 태깅 또는 응답 차단)
     final_text = _apply_fail_closed(final_text, drf_verification)
