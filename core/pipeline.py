@@ -404,10 +404,13 @@ def _drf_verify_law_refs(text: str) -> VerificationResult:
         r'(\d{2,4}[가-힣]+\d+)\s*(?:판결|결정))',
         text
     )
-    # 더 간단한 패턴: "대법원 2020다12345 판결" 또는 "2020다12345"
+    # 더 간단한 패턴: "2020다12345", "2012헌바55", "2019헌마439" 등
     if not prec_refs:
         prec_refs_simple = re.findall(
-            r'(\d{2,4}(?:다|나|가|마|카|타|파|라|바|사|아|자|차|하|두|누|구|무|부|수|우|주|추|후|그|드|스|으)'
+            r'(\d{2,4}'
+            r'(?:헌바|헌마|헌가|헌나|헌라|헌사|헌아|헌자|'  # 헌재결정례
+            r'다|나|가|마|카|타|파|라|바|사|아|자|차|하|'    # 대법원 판례
+            r'두|누|구|무|부|수|우|주|추|후|그|드|스|으)'
             r'(?:합)?\d{2,6})',
             text
         )
@@ -555,12 +558,22 @@ async def _gemini_fallback_compose(
             f"초안의 법령명+조문번호를 반드시 포함하세요."
         )
 
-    # RAG/캐시 컨텍스트 주입
+    # RAG/캐시 컨텍스트 주입 (SSOT 캐시 최우선 참조)
     ctx_section = ""
     if rag_context.context_text:
-        ctx_section = f"\n\n[참고 법령 조문]\n{rag_context.context_text[:4000]}"
+        ctx_section = (
+            "\n\n[SSOT 캐시 — 반드시 최우선 참조]\n"
+            "아래 SSOT 캐시 데이터는 DRF API에서 사전 검증된 법률 정보입니다.\n"
+            "답변 시 반드시 이 캐시의 법령명·조문번호·판례번호를 그대로 인용하세요.\n"
+            "캐시에 없는 법령이나 판례를 임의 생성하지 마세요.\n"
+            f"{rag_context.context_text[:4000]}"
+        )
     elif rag_context.cache_context:
-        ctx_section = f"\n\n[참고 법령 조문]\n{rag_context.cache_context[:2000]}"
+        ctx_section = (
+            "\n\n[SSOT 캐시 — 반드시 최우선 참조]\n"
+            "아래 캐시 데이터의 법령명·조문번호·판례번호를 그대로 인용하세요.\n"
+            f"{rag_context.cache_context[:2000]}"
+        )
 
     # 모드별 보강 지시
     if mode == "expert":
