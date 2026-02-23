@@ -251,10 +251,34 @@ METRICS: Dict[str, Any] = {
 
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
-    """보안 헤더 주입 + MCP 모니터링"""
+    """보안 헤더 주입 + MCP 모니터링 + body size limit + bot 차단"""
     if request.url.path.startswith("/mcp"):
         METRICS["mcp_requests"] += 1
         logger.info(f"[MCP] {request.method} {request.url.path}")
+
+    req_path = request.url.path
+
+    # ── Request Body Size Limit (1MB) ──
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            if int(content_length) > 1_048_576:  # 1MB
+                return JSONResponse(
+                    status_code=413,
+                    content={"error": "요청 크기가 너무 큽니다. 최대 1MB까지 허용됩니다."}
+                )
+        except (ValueError, TypeError):
+            pass
+
+    # ── Bot/Crawler 방어 (API 엔드포인트만) ──
+    if req_path.startswith("/ask") or req_path.startswith("/api/"):
+        ua = (request.headers.get("user-agent") or "").lower()
+        if not ua or any(sig in ua for sig in ("sqlmap", "nikto", "nmap", "masscan", "dirbuster", "gobuster", "nuclei")):
+            return JSONResponse(
+                status_code=403,
+                content={"error": "접근이 차단되었습니다."}
+            )
+
     response = await call_next(request)
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -271,10 +295,17 @@ async def security_headers_middleware(request: Request, call_next):
         f"connect-src 'self' {LAWMADI_OS_API_URL} https://www.google-analytics.com https://region1.google-analytics.com; "
         "frame-ancestors 'none'; "
         "object-src 'none'; "
-        "base-uri 'self'"
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "upgrade-insecure-requests"
     )
+    # 추가 보안 헤더
+    response.headers["X-DNS-Prefetch-Control"] = "off"
+    response.headers["X-Download-Options"] = "noopen"
+    response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
+    response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
     # API 응답 캐시 방지 — 법률 분석 내용이 프록시/브라우저에 캐시되지 않도록
-    req_path = request.url.path
     if req_path.startswith("/ask") or req_path.startswith("/api/") or req_path.startswith("/upload") or req_path.startswith("/export"):
         response.headers["Cache-Control"] = "no-store, no-cache, private, max-age=0"
         response.headers["Pragma"] = "no-cache"
