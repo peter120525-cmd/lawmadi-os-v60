@@ -31,10 +31,14 @@ COPY tools/ ./tools/
 COPY main.py .
 COPY config.json .
 COPY leaders.json .
-# law_cache 다중 파일 (398K QA, 10 SSOT types)
-COPY law_cache_law_1.json .
-COPY law_cache_law_2.json .
-COPY law_cache_other.json .
+# law_cache 다중 파일 (952K QA, 10 SSOT types, 7 files)
+COPY law_cache_1.json .
+COPY law_cache_2.json .
+COPY law_cache_3.json .
+COPY law_cache_4.json .
+COPY law_cache_5.json .
+COPY law_cache_6.json .
+COPY law_cache_7.json .
 COPY agents/ ./agents/
 COPY engines/ ./engines/
 COPY services/ ./services/
