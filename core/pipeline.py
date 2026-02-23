@@ -24,7 +24,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 from google.genai import types as genai_types
 from core.constants import (
-    DEFAULT_GEMINI_MODEL,
+    GEMINI_MODEL,
     LAWMADILM_API_URL,
     LAWMADILM_RAG_URL,
     FAIL_CLOSED_RESPONSE,
@@ -545,7 +545,7 @@ async def _gemini_fallback_compose(
     if not gc:
         raise RuntimeError("Gemini 클라이언트 미초기화")
 
-    model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+    model_name = GEMINI_MODEL
     leader_name = analysis.get("leader_name", "마디")
     leader_specialty = analysis.get("leader_specialty", "통합")
 
@@ -771,4 +771,4 @@ def run_pipeline_stage3(text: str) -> VerificationResult:
 
 # Public alias for external use
 run_legal_pipeline = _run_legal_pipeline
-# Option B: gemini-3-flash-preview + law_cache direct injection (no CachedContent)
+# Option B: gemini-2.5-flash + law_cache direct injection (no CachedContent)

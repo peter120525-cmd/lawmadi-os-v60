@@ -4,7 +4,7 @@ import sys
 import logging
 from typing import Any, Dict
 from fastapi import APIRouter, Header, HTTPException
-from core.constants import OS_VERSION, DEFAULT_GEMINI_MODEL, LAWMADILM_API_URL
+from core.constants import OS_VERSION, GEMINI_MODEL, LAWMADILM_API_URL
 from utils.helpers import _now_iso
 
 router = APIRouter()
@@ -45,7 +45,7 @@ def _diagnostic_snapshot() -> Dict[str, Any]:
         "python": sys.version,
         "pid": os.getpid(),
         "os_version": OS_VERSION,
-        "gemini_model": os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
+        "gemini_model": GEMINI_MODEL,
         "modules": {
             "drf": bool(_RUNTIME.get("drf")),
             "selector": bool(_RUNTIME.get("selector")),

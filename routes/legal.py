@@ -18,7 +18,7 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from google.genai import types as genai_types
 
-from core.constants import OS_VERSION, DEFAULT_GEMINI_MODEL
+from core.constants import OS_VERSION, GEMINI_MODEL
 from utils.helpers import (
     _safe_extract_gemini_text,
     _remove_think_blocks,
@@ -432,7 +432,7 @@ async def ask(request: Request):
             logger.info(f"🎯 C-Level 직접 모드: {exec_id}")
             clevel_instruction = clevel.get_clevel_system_instruction(exec_id, _build_system_instruction("general"))
             gc = _ensure_genai_client_fn(_RUNTIME)
-            model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+            model_name = GEMINI_MODEL
             chat = gc.chats.create(
                 model=model_name,
                 config=genai_types.GenerateContentConfig(
@@ -804,7 +804,7 @@ async def ask_stream(request: Request):
             tools = _get_drf_tools()
 
             now_kst = _now_iso()
-            model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+            model_name = GEMINI_MODEL
             gc = _ensure_genai_client_fn(_RUNTIME)
 
             # 4) S0(분류) + S1(RAG) 병렬 실행

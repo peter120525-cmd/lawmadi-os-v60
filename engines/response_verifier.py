@@ -9,7 +9,7 @@ from google import genai
 from google.genai import types as genai_types
 from typing import Dict, Any, List, Optional
 import json
-from core.constants import DEFAULT_GEMINI_MODEL
+from core.constants import GEMINI_MODEL
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class ResponseVerifier:
     def __init__(self):
         self.api_key = os.getenv("GEMINI_KEY", "")
         self.enabled = bool(self.api_key)
-        self.model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+        self.model_name = GEMINI_MODEL
 
         if self.enabled:
             self.client = genai.Client(api_key=self.api_key)

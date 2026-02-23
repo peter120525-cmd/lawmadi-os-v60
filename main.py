@@ -117,7 +117,7 @@ from tools.drf_tools import (
 # =============================================================
 # [Phase 6] Import extracted modules
 # =============================================================
-from core.constants import OS_VERSION, DEFAULT_GEMINI_MODEL, LAWMADILM_API_URL, LAWMADI_OS_API_URL
+from core.constants import OS_VERSION, GEMINI_MODEL, LAWMADILM_API_URL, LAWMADI_OS_API_URL
 from core.classifier import (
     set_runtime as _set_classifier_runtime,
     set_leader_registry as _set_classifier_leader_registry,
@@ -154,7 +154,7 @@ for directory in ["temp", "logs", "uploads"]:
     Path(directory).mkdir(exist_ok=True)
 logger.info("✅ 필수 디렉토리 확인 완료: temp/, logs/, uploads/")
 
-# [Phase 6] OS_VERSION, DEFAULT_GEMINI_MODEL, LAWMADILM_API_URL
+# [Phase 6] OS_VERSION, GEMINI_MODEL, LAWMADILM_API_URL
 # are now imported from core.constants (see imports above)
 
 # ─── Gemini 에러 분류 헬퍼 ───

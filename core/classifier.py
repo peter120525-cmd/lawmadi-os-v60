@@ -13,7 +13,7 @@ import re
 import logging
 from typing import Any, Dict, List, Optional
 
-from core.constants import DEFAULT_GEMINI_MODEL
+from core.constants import GEMINI_MODEL
 from utils.helpers import _safe_extract_json
 
 logger = logging.getLogger("LawmadiOS.Classifier")
@@ -508,7 +508,7 @@ async def _gemini_analyze_query(query: str) -> Optional[Dict[str, Any]]:
         return None
 
     leader_summary = _build_leader_summary_for_gemini()
-    model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
+    model_name = GEMINI_MODEL
     try:
         resp = genai_client.models.generate_content(
             model=model_name,
