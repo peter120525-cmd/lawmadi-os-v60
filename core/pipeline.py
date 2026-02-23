@@ -708,6 +708,8 @@ async def _run_legal_pipeline(
             _cached_ok = True
         except Exception as e:
             logger.warning(f"[Stage 2] CachedContent 실패 → Legacy 폴백: {e}")
+            # 캐시 비활성화하여 Legacy Gemini 호출 시 재실패 방지
+            _RUNTIME["gemini_cache_name"] = None
 
     if not _cached_ok:
         # ─── Legacy: LawmadiLM 초안 → Gemini 완성 ───
