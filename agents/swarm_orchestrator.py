@@ -141,10 +141,84 @@ LAW_TO_LEADER = {
     "국민체육진흥법": "L58",
 }
 
+# 키워드 기반 리더 매핑 패턴 (exact match 실패 시 fallback)
+# (substring_keyword, leader_id) — 우선순위 순서
+_LEADER_KEYWORD_PATTERNS = [
+    ("민법", "L01"), ("민사", "L01"),
+    ("부동산등기", "L02"), ("부동산실명", "L02"), ("공인중개사", "L02"),
+    ("부동산", "L02"), ("토지", "L02"),
+    ("건설산업", "L03"), ("건축법", "L03"), ("하도급", "L03"),
+    ("건설", "L03"), ("건축", "L03"),
+    ("도시정비", "L04"), ("도시개발", "L04"), ("재개발", "L04"), ("재건축", "L04"),
+    ("의료법", "L05"), ("약사법", "L05"), ("의료", "L05"), ("약사", "L05"),
+    ("국가배상", "L06"), ("손해배상", "L06"),
+    ("교통사고처리", "L07"), ("도로교통", "L07"), ("자동차손해", "L07"), ("교통", "L07"),
+    ("주택임대차", "L08"), ("상가건물임대차", "L08"), ("임대차", "L08"), ("임대", "L08"),
+    ("국가계약", "L09"), ("지방계약", "L09"), ("조달", "L09"),
+    ("민사집행", "L10"), ("강제집행", "L10"),
+    ("채권추심", "L11"), ("신용정보", "L11"),
+    ("경매", "L12"),
+    ("상법", "L13"), ("자본시장", "L13"), ("상사", "L13"),
+    ("법인세", "L14"), ("법인", "L14"), ("합병", "L14"),
+    ("중소기업", "L15"), ("외국인투자", "L15"), ("스타트업", "L15"), ("벤처", "L15"),
+    ("보험업", "L16"), ("보험", "L16"),
+    ("국제사법", "L17"), ("대외무역", "L17"), ("국제", "L17"),
+    ("에너지법", "L18"), ("전기사업", "L18"), ("에너지", "L18"), ("원자력", "L18"),
+    ("항공사업", "L19"), ("항공", "L19"), ("해운", "L19"),
+    ("소득세", "L20"), ("부가가치세", "L20"), ("국세기본", "L20"),
+    ("지방세", "L20"), ("조세", "L20"), ("세금", "L20"),
+    ("정보통신망", "L21"), ("전자서명", "L21"), ("데이터산업", "L21"),
+    ("정보보호", "L21"), ("사이버", "L21"),
+    ("형법", "L22"), ("형사소송", "L22"), ("형사", "L22"),
+    ("대중문화예술", "L23"), ("공연법", "L23"), ("연예", "L23"), ("엔터테인먼트", "L23"),
+    ("조세범처벌", "L24"), ("조세불복", "L24"),
+    ("군형법", "L25"), ("군사법원", "L25"), ("군사", "L25"),
+    ("특허법", "L26"), ("디자인보호", "L26"), ("상표법", "L26"),
+    ("특허", "L26"), ("상표", "L26"),
+    ("환경정책", "L27"), ("환경영향", "L27"), ("대기환경", "L27"),
+    ("수질환경", "L27"), ("폐기물", "L27"), ("환경", "L27"),
+    ("관세법", "L28"), ("관세", "L28"), ("무역", "L28"), ("수출입", "L28"),
+    ("게임산업", "L29"), ("게임", "L29"), ("콘텐츠", "L29"),
+    ("근로기준", "L30"), ("노동조합", "L30"), ("산업안전보건", "L30"),
+    ("근로", "L30"), ("노동", "L30"),
+    ("행정소송", "L31"), ("행정심판", "L31"), ("행정절차", "L31"),
+    ("국가공무원", "L31"), ("지방공무원", "L31"), ("행정", "L31"),
+    ("공정거래", "L32"), ("독점규제", "L32"), ("가맹", "L32"),
+    ("우주항공", "L33"), ("항공우주", "L33"), ("드론", "L33"), ("우주", "L33"),
+    ("개인정보보호", "L34"), ("개인정보", "L34"),
+    ("헌법재판소", "L35"), ("헌법", "L35"),
+    ("문화재보호", "L36"), ("문화재", "L36"), ("문화유산", "L36"),
+    ("소년법", "L37"), ("청소년보호", "L37"), ("아동학대", "L37"), ("아동복지", "L37"),
+    ("아동", "L37"), ("청소년", "L37"),
+    ("소비자기본", "L38"), ("전자상거래", "L38"), ("소비자", "L38"),
+    ("전기통신사업", "L39"), ("전기통신", "L39"), ("통신", "L39"),
+    ("국가인권위원회", "L40"), ("인권", "L40"), ("차별금지", "L40"),
+    ("가사소송", "L41"), ("가족관계", "L41"), ("혼인", "L41"), ("가사", "L41"),
+    ("저작권법", "L42"), ("저작권", "L42"), ("저작", "L42"),
+    ("산업재해보상", "L43"), ("산업재해", "L43"), ("산재", "L43"),
+    ("사회보장기본", "L44"), ("국민기초생활", "L44"), ("사회보장", "L44"), ("복지", "L44"),
+    ("교육기본", "L45"), ("학교폭력", "L45"), ("교육", "L45"),
+    ("국민연금", "L46"), ("국민건강보험", "L46"), ("건강보험", "L46"), ("연금", "L46"),
+    ("규제샌드박스", "L47"), ("신산업특례", "L47"), ("혁신", "L47"),
+    ("문화예술진흥", "L48"), ("예술인", "L48"), ("문화예술", "L48"),
+    ("식품위생", "L49"), ("식품안전", "L49"), ("식품", "L49"), ("보건", "L49"),
+    ("다문화가족", "L50"), ("출입국관리", "L50"), ("국적법", "L50"),
+    ("출입국", "L50"), ("이민", "L50"),
+    ("전통사찰", "L51"), ("종교", "L51"), ("사찰", "L51"),
+    ("언론중재", "L52"), ("방송법", "L52"), ("광고", "L52"), ("언론", "L52"),
+    ("농지법", "L53"), ("농업협동", "L53"), ("축산법", "L53"),
+    ("농지", "L53"), ("농업", "L53"), ("축산", "L53"),
+    ("수산업", "L54"), ("해양환경", "L54"), ("어업", "L54"), ("수산", "L54"),
+    ("과학기술기본", "L55"), ("연구개발", "L55"), ("과학기술", "L55"),
+    ("장애인복지", "L56"), ("장애인차별", "L56"), ("장애인", "L56"),
+    ("상속세및증여세", "L57"), ("신탁법", "L57"), ("상속", "L57"), ("증여", "L57"),
+    ("국민체육진흥", "L58"), ("체육", "L58"), ("스포츠", "L58"),
+]
+
 
 def resolve_leaders_from_ssot(ssot_sources: list) -> Dict[str, int]:
     """
-    SSOT 매칭 결과에서 리더별 점수를 산출.
+    SSOT 매칭 결과에서 리더별 점수를 산출 (3-tier 매칭).
     Returns: {leader_id: boost_score}
     """
     leader_boost = {}
@@ -153,12 +227,64 @@ def resolve_leaders_from_ssot(ssot_sources: list) -> Dict[str, int]:
     for src in ssot_sources:
         law_name = src.get("law", "")
         ssot_score = src.get("score", 0)
+        boost = 30 if ssot_score >= 50 else 20
+
+        # Tier 1: exact match
         leader_id = LAW_TO_LEADER.get(law_name)
+
+        # Tier 2: prefix/base match (시행령/시행규칙 등 하위법령)
+        if not leader_id:
+            for base_law, lid in LAW_TO_LEADER.items():
+                if law_name.startswith(base_law) or base_law.startswith(law_name):
+                    leader_id = lid
+                    break
+
+        # Tier 3: keyword fallback
+        if not leader_id:
+            for keyword, lid in _LEADER_KEYWORD_PATTERNS:
+                if keyword in law_name:
+                    leader_id = lid
+                    break
+
         if leader_id:
-            # SSOT 점수가 높은 법률일수록 더 큰 부스트
-            boost = 30 if ssot_score >= 50 else 20
             leader_boost[leader_id] = leader_boost.get(leader_id, 0) + boost
     return leader_boost
+
+
+# 동일 도메인 충돌 방지: 같은 그룹에서 최고점 1명만 선택
+_LEADER_EXCLUSION_GROUPS: List[frozenset] = [
+    frozenset({"L20", "L24"}),   # 조세 vs 조세불복
+    frozenset({"L26", "L42"}),   # IP/특허 vs 저작권
+    frozenset({"L30", "L43"}),   # 노동법 vs 산업재해
+    frozenset({"L44", "L46"}),   # 사회복지 vs 연금/건강보험
+    frozenset({"L22", "L25"}),   # 형사법 vs 군형법
+    frozenset({"L27", "L54"}),   # 환경법 vs 해양환경
+    frozenset({"L31", "L35"}),   # 행정법 vs 헌법
+]
+_MIN_LEADER_SCORE = 10          # 최소 점수 임계값
+_SCORE_RATIO_THRESHOLD = 0.45   # 2위 이하: 1위 점수의 45% 이상
+
+
+def _resolve_leader_conflicts(
+    domains: List[Tuple[str, int]]
+) -> List[Tuple[str, int]]:
+    """충돌 리더 제거: exclusion group에서 최고점 1명만 유지"""
+    if not domains:
+        return domains
+    group_winners: Dict[int, Tuple[str, int]] = {}
+    for leader_id, score in domains:
+        for g_idx, group in enumerate(_LEADER_EXCLUSION_GROUPS):
+            if leader_id in group:
+                if g_idx not in group_winners or score > group_winners[g_idx][1]:
+                    group_winners[g_idx] = (leader_id, score)
+                break
+    winner_ids = {v[0] for v in group_winners.values()}
+    result = []
+    for leader_id, score in domains:
+        in_group = any(leader_id in g for g in _LEADER_EXCLUSION_GROUPS)
+        if not in_group or leader_id in winner_ids:
+            result.append((leader_id, score))
+    return result
 
 
 class GeminiCircuitBreaker:
@@ -512,6 +638,16 @@ class SwarmOrchestrator:
                 logger.info(f"✅ Gemini 동점 해소: {leader_info.get('name', '?')}({gemini_leader_id})")
                 return [leader_info]
 
+        # 최소 점수 필터링
+        detected_domains = [(lid, s) for lid, s in detected_domains if s >= _MIN_LEADER_SCORE]
+        # 점수 비율 필터링 (1위 기준)
+        if detected_domains:
+            top_score = detected_domains[0][1]
+            detected_domains = [(lid, s) for lid, s in detected_domains
+                                if s >= top_score * _SCORE_RATIO_THRESHOLD]
+        # 충돌 방지
+        detected_domains = _resolve_leader_conflicts(detected_domains)
+
         # 상위 N개 도메인의 Leader 선택
         selected_leaders = []
         for leader_id, score in detected_domains[:self.max_leaders]:
@@ -601,7 +737,7 @@ class SwarmOrchestrator:
                     f"🎯 당신의 역할: {leader_name} ({leader_role})\n"
                     f"🎯 전문 분야: {leader_specialty}\n"
                     f"🎯 관점: {leader_specialty} 전문가 관점에서 이 사안을 분석하세요.\n"
-                    f"📏 **응답은 반드시 2000자 이내로 작성하세요.**\n\n"
+                    f"📏 **응답은 반드시 3000자 이내로 작성하세요.**\n\n"
                     f"**법률 분석 목차 구조**:\n"
                     f"## ⚖️ 핵심 쟁점\n"
                     f"(질문의 핵심 법률 쟁점 요약)\n\n"
@@ -618,7 +754,7 @@ class SwarmOrchestrator:
 
             # 분석 실행 (Function Calling 활성화)
             # 비법률(CCO 단독) → 800 tokens (~500자), 법률 리더 → 4096 tokens (~2000자+)
-            _max_tokens = 800 if clevel_id == "CCO" else 4096
+            _max_tokens = 800 if clevel_id == "CCO" else 5500
             logger.info(f"🔄 {leader_name} ({leader_specialty}) 분석 시작... (max_tokens={_max_tokens})")
 
             if not _gemini_cb.allow_request():
@@ -811,7 +947,7 @@ class SwarmOrchestrator:
         synthesis_prompt += f"""
 
 [통합 지침]
-📏 **전체 응답은 반드시 2000자 이내로 작성하세요.**
+📏 **전체 응답은 반드시 3000자 이내로 작성하세요.**
 
 1. 모든 전문 리더의 분석을 고려하여 종합적인 답변을 작성하세요
 2. 반드시 아래 헤더로 시작하세요:
@@ -863,7 +999,7 @@ class SwarmOrchestrator:
                 config=genai_types.GenerateContentConfig(
                     temperature=0.3,
                     top_p=0.95,
-                    max_output_tokens=3000,
+                    max_output_tokens=4500,
                 ),
             )
             final_response = response.text
@@ -918,7 +1054,7 @@ class SwarmOrchestrator:
         synthesis_prompt += f"""
 
 [통합 지침]
-📏 **전체 응답은 반드시 2000자 이내로 작성하세요.**
+📏 **전체 응답은 반드시 3000자 이내로 작성하세요.**
 
 1. 모든 전문 리더의 분석을 고려하여 종합적인 답변을 작성하세요
 2. 반드시 아래 헤더로 시작하세요:
@@ -974,7 +1110,7 @@ class SwarmOrchestrator:
                     config=genai_types.GenerateContentConfig(
                         temperature=0.3,
                         top_p=0.95,
-                        max_output_tokens=3000,
+                        max_output_tokens=4500,
                     ),
                 )
 
