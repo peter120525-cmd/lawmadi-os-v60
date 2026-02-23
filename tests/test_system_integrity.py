@@ -185,9 +185,9 @@ class TestGeminiAPI:
         from google import genai as genai_sdk
         client = genai_sdk.Client(api_key=key)
         try:
-            from core.constants import DEFAULT_GEMINI_MODEL
+            from core.constants import GEMINI_MODEL
             response = client.models.generate_content(
-                model=os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
+                model=GEMINI_MODEL,
                 contents="Hello"
             )
             assert response.text

@@ -16,7 +16,7 @@ from fastapi import APIRouter, Request, HTTPException, File, UploadFile
 from fastapi.responses import FileResponse
 from google.genai import types as genai_types
 
-from core.constants import OS_VERSION, DEFAULT_GEMINI_MODEL
+from core.constants import OS_VERSION, GEMINI_MODEL
 
 router = APIRouter()
 logger = logging.getLogger("LawmadiOS.Files")
@@ -266,7 +266,7 @@ async def analyze_document(file_id: str, analysis_type: str = "general", request
                         analysis_result.get("summary", "")[:500],
                         analysis_result.get("legal_category", "일반"),
                         analysis_result.get("risk_level", "medium"),
-                        os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
+                        GEMINI_MODEL,
                         f"{safe_id}%"
                     ),
                     fetch="none"
@@ -366,7 +366,7 @@ async def _analyze_image_document(file_path: Path, analysis_type: str) -> Dict[s
     # Gemini Vision call
     image_part = genai_types.Part.from_bytes(data=image_data, mime_type=f"image/{file_path.suffix[1:]}")
     response = gc.models.generate_content(
-        model=os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
+        model=GEMINI_MODEL,
         contents=[prompt, image_part],
     )
 
@@ -442,7 +442,7 @@ async def _analyze_pdf_document(file_path: Path, analysis_type: str) -> Dict[str
 """
 
         response = gc.models.generate_content(
-            model=os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL),
+            model=GEMINI_MODEL,
             contents=prompt,
         )
         result_text = response.text.strip()

@@ -20,8 +20,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 logger = logging.getLogger("LawmadiOS.SwarmOrchestrator")
 
-# Gemini 모델 상수 — main.py의 DEFAULT_GEMINI_MODEL과 동기화
-_DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
+# Gemini 모델 상수 — core.constants 단일 소스
+from core.constants import GEMINI_MODEL
+_DEFAULT_MODEL = GEMINI_MODEL
 
 # =============================================================
 # 📦 법률명 → 리더 매핑 (law_cache.json 기반)
