@@ -903,10 +903,7 @@ async def ask_stream(request: Request):
                 drf_verification = VerificationResult()
                 if answer:
                     yield _sse("status", {"step": "verifying", "leader": leader_name})
-                    loop = asyncio.get_event_loop()
-                    drf_verification = await loop.run_in_executor(
-                        None, lambda: run_pipeline_stage3(answer)
-                    )
+                    drf_verification = await run_pipeline_stage3(answer)
 
                 # FAIL_CLOSED 조기 차단: 30% 이상 미검증 시
                 if drf_verification.total_refs > 0:

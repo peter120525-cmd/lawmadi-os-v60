@@ -314,57 +314,35 @@ def _get_article_text(articles: List[Dict], article_num: int) -> Optional[str]:
     return None
 
 
-def _drf_verify_law_refs(text: str) -> VerificationResult:
-    """Stage 3: 응답에서 인용된 모든 법률 참조를 DRF API로 전수 검증 (조문번호까지 확인)"""
-    result = VerificationResult()
+async def _drf_verify_single_law(
+    svc, law_name: str, article_refs: List[tuple], law_cache_local: Dict[str, Any]
+) -> List[Dict]:
+    """단일 법령에 대한 DRF 검증 (비동기, 법령별 1회 호출)"""
+    entries = []
+    try:
+        # 법령 검색 (법령별 1회, 스레드 풀에서 동기 호출 실행)
+        if law_name not in law_cache_local:
+            loop = asyncio.get_event_loop()
+            raw = await loop.run_in_executor(None, svc.search_law, law_name)
+            law_cache_local[law_name] = raw
+        else:
+            raw = law_cache_local[law_name]
 
-    # 법률 참조 추출: "OO법 제X조" 또는 "OO법 제X조 제Y항"
-    refs = re.findall(r'([가-힣]+법)\s*제(\d+)조(?:\s*제(\d+)항)?', text)
-    if not refs:
-        result.all_passed = True
-        return result
+        law_exists = bool(raw)
+        articles = _extract_articles_from_drf(raw) if raw else []
 
-    svc = _RUNTIME.get("search_service")
-    if not svc:
-        logger.warning("[Stage 3] SearchService 없음 -> 검증 스킵")
-        result.all_passed = True
-        return result
-
-    seen = set()
-    # 법령별로 DRF 호출을 묶어서 최적화
-    law_cache_local: Dict[str, Any] = {}
-
-    for law_name, article_num_str, paragraph_str in refs:
-        article_num = int(article_num_str)
-        key = f"{law_name} 제{article_num}조"
-        if key in seen:
-            continue
-        seen.add(key)
-
-        try:
-            # 법령 검색 (캐시 활용)
-            if law_name not in law_cache_local:
-                raw = svc.search_law(law_name)
-                law_cache_local[law_name] = raw
-            else:
-                raw = law_cache_local[law_name]
-
-            law_exists = bool(raw)
+        for article_num, key in article_refs:
             article_exists = False
             article_text = None
 
             if raw:
-                # 조문 목록에서 조문번호 존재 여부 확인
-                articles = _extract_articles_from_drf(raw)
                 if articles:
                     article_exists = any(
                         _match_article_num(a, article_num) for a in articles
                     )
                     article_text = _get_article_text(articles, article_num)
                 else:
-                    # DRF 응답에 조문 목록이 없는 경우 (법명 검색만 가능한 구조)
-                    # 법령이 존재하면 일단 존재로 처리 (조문번호는 미확인)
-                    article_exists = True  # 법령 존재 시 조문도 존재할 가능성 높음
+                    article_exists = True
                     logger.debug(f"[Stage 3] {key}: 법령 존재하나 조문목록 미제공 -> 존재로 처리")
 
             ref_entry = {
@@ -376,17 +354,14 @@ def _drf_verify_law_refs(text: str) -> VerificationResult:
                 "article_text": article_text,
                 "verified": law_exists and article_exists,
             }
+            if not ref_entry["verified"]:
+                ref_entry["reason"] = "법령 미존재" if not law_exists else f"제{article_num}조 미존재"
+            entries.append(ref_entry)
 
-            if ref_entry["verified"]:
-                result.verified_refs.append(ref_entry)
-            else:
-                reason = "법령 미존재" if not law_exists else f"제{article_num}조 미존재"
-                ref_entry["reason"] = reason
-                result.unverified_refs.append(ref_entry)
-
-        except Exception as e:
-            logger.warning(f"[Stage 3] {key} 검증 실패: {e}")
-            result.unverified_refs.append({
+    except Exception as e:
+        logger.warning(f"[Stage 3] {law_name} 검증 실패: {e}")
+        for article_num, key in article_refs:
+            entries.append({
                 "ref": key,
                 "law_name": law_name,
                 "article_num": article_num,
@@ -397,62 +372,78 @@ def _drf_verify_law_refs(text: str) -> VerificationResult:
                 "reason": f"검증 오류: {type(e).__name__}",
             })
 
-    # ── 판례 검증: "대법원 YYYY다NNNNN" 등 판례번호 추출 + DRF 검증 ──
+    # ── 판례 검증 (비동기 병렬): "대법원 YYYY다NNNNN" 등 판례번호 추출 + DRF 검증 ──
     prec_refs = re.findall(
         r'((?:대법원|대법|헌법재판소|헌재|서울고등법원|서울고법|서울중앙지방법원)\s*'
         r'(\d{4})\s*[.]\s*(\d{1,2})\s*[.]\s*\d{1,2}\s*[.]?\s*선고\s*'
         r'(\d{2,4}[가-힣]+\d+)\s*(?:판결|결정))',
         text
     )
-    # 더 간단한 패턴: "2020다12345", "2012헌바55", "2019헌마439" 등
     if not prec_refs:
         prec_refs_simple = re.findall(
             r'(\d{2,4}'
-            r'(?:헌바|헌마|헌가|헌나|헌라|헌사|헌아|헌자|'  # 헌재결정례
-            r'다|나|가|마|카|타|파|라|바|사|아|자|차|하|'    # 대법원 판례
+            r'(?:헌바|헌마|헌가|헌나|헌라|헌사|헌아|헌자|'
+            r'다|나|가|마|카|타|파|라|바|사|아|자|차|하|'
             r'두|누|구|무|부|수|우|주|추|후|그|드|스|으)'
             r'(?:합)?\d{2,6})',
             text
         )
     else:
-        prec_refs_simple = [p[3] for p in prec_refs]  # 사건번호만 추출
+        prec_refs_simple = [p[3] for p in prec_refs]
 
     if prec_refs_simple:
         drf_inst = _RUNTIME.get("drf")
         prec_seen = set()
-        for case_no in prec_refs_simple:
-            case_no = case_no.strip()
-            if case_no in prec_seen or len(case_no) < 5:
-                continue
-            prec_seen.add(case_no)
+
+        async def _verify_single_precedent(case_no: str) -> Dict:
+            """단일 판례 비동기 검증"""
             try:
                 if drf_inst and hasattr(drf_inst, "search_precedents"):
-                    raw_prec = drf_inst.search_precedents(case_no)
+                    loop = asyncio.get_event_loop()
+                    raw_prec = await loop.run_in_executor(None, drf_inst.search_precedents, case_no)
                     prec_exists = bool(raw_prec)
                 else:
                     prec_exists = False
-                    logger.debug(f"[Stage 4] 판례 DRF 미사용 (drf 인스턴스 없음)")
-
-                ref_entry = {
+                return {
                     "ref": f"판례 {case_no}",
                     "type": "precedent",
                     "case_no": case_no,
                     "verified": prec_exists,
+                    "reason": "" if prec_exists else "판례 미존재",
                 }
-                if prec_exists:
-                    result.verified_refs.append(ref_entry)
-                else:
-                    ref_entry["reason"] = "판례 미존재"
-                    result.unverified_refs.append(ref_entry)
             except Exception as e:
-                logger.warning(f"[Stage 4] 판례 {case_no} 검증 실패: {e}")
-                result.unverified_refs.append({
+                logger.warning(f"[Stage 3] 판례 {case_no} 검증 실패: {e}")
+                return {
                     "ref": f"판례 {case_no}",
                     "type": "precedent",
                     "case_no": case_no,
                     "verified": False,
                     "reason": f"검증 오류: {type(e).__name__}",
-                })
+                }
+
+        prec_tasks = []
+        for case_no in prec_refs_simple:
+            case_no = case_no.strip()
+            if case_no in prec_seen or len(case_no) < 5:
+                continue
+            prec_seen.add(case_no)
+            prec_tasks.append(_verify_single_precedent(case_no))
+
+        if prec_tasks:
+            try:
+                prec_results = await asyncio.wait_for(
+                    asyncio.gather(*prec_tasks, return_exceptions=True),
+                    timeout=5.0
+                )
+                for pr in prec_results:
+                    if isinstance(pr, Exception):
+                        continue
+                    if pr.get("verified"):
+                        result.verified_refs.append(pr)
+                    else:
+                        result.unverified_refs.append(pr)
+            except asyncio.TimeoutError:
+                logger.warning("[Stage 3] 판례 검증 5초 타임아웃 -> 완료된 결과만 사용")
 
     result.total_refs = len(result.verified_refs) + len(result.unverified_refs)
     result.all_passed = len(result.unverified_refs) == 0
@@ -463,13 +454,30 @@ def _drf_verify_law_refs(text: str) -> VerificationResult:
     prec_fail = sum(1 for r in result.unverified_refs if r.get("type") == "precedent")
 
     logger.info(
-        f"[Stage 4] DRF 전수 검증 완료: "
+        f"[Stage 3] DRF 비동기 병렬 검증 완료: "
         f"총 {result.total_refs}건 (법률 {law_count+law_fail}건, 판례 {prec_count+prec_fail}건) | "
         f"통과 {len(result.verified_refs)}건, "
         f"실패 {len(result.unverified_refs)}건"
     )
 
     return result
+
+
+def _drf_verify_law_refs(text: str) -> VerificationResult:
+    """Stage 3 동기 래퍼 (하위 호환용 — 내부적으로 비동기 버전 호출)"""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # 이미 이벤트 루프 안에서 호출된 경우 — 새 태스크로 실행
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(asyncio.run, _drf_verify_law_refs_async(text))
+                return future.result(timeout=6.0)
+        else:
+            return loop.run_until_complete(_drf_verify_law_refs_async(text))
+    except Exception as e:
+        logger.warning(f"[Stage 3] 비동기 검증 폴백: {e}")
+        return VerificationResult()
 
 
 def _match_article_num(article_dict: Dict, target_num: int) -> bool:
@@ -680,6 +688,37 @@ async def _run_legal_pipeline(
 
     rag_context가 전달되면 Stage 1을 건너뛰어 S0+S1 병렬화를 지원.
     """
+    # 전체 파이프라인 18초 타임아웃 래핑
+    try:
+        return await asyncio.wait_for(
+            _run_legal_pipeline_inner(
+                query, analysis, tools, gemini_history, now_kst,
+                ssot_available, lang, mode, rag_context,
+            ),
+            timeout=18.0,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("[Pipeline] 전체 파이프라인 18초 타임아웃 -> DRF 검증 스킵 경고 응답")
+        return (
+            "⚠️ 응답 생성 시간이 초과되었습니다. "
+            "일부 법률 조문의 실시간 검증이 완료되지 않았을 수 있습니다. "
+            "중요한 법적 판단 시 법률 전문가의 확인을 권장합니다.\n\n"
+            "질문을 더 구체적으로 작성하시면 빠른 응답을 받으실 수 있습니다."
+        ), VerificationResult()
+
+
+async def _run_legal_pipeline_inner(
+    query: str,
+    analysis: Dict,
+    tools: list,
+    gemini_history: list,
+    now_kst: str,
+    ssot_available: bool,
+    lang: str = "",
+    mode: str = "general",
+    rag_context: Optional[RAGContext] = None,
+) -> str:
+    """내부 파이프라인 (18초 타임아웃 내에서 실행)"""
     final_text = ""
     drf_verification = VerificationResult()
     cache_name = _RUNTIME.get("gemini_cache_name")
@@ -739,10 +778,10 @@ async def _run_legal_pipeline(
             else:
                 raise RuntimeError("LawmadiLM + Gemini 모두 답변 생성 실패")
 
-    # -- Stage 3: DRF 실시간 전수 검증 --
-    logger.info("[Stage 3/3] DRF 전수 검증")
+    # -- Stage 3: DRF 실시간 전수 검증 (비동기 병렬) --
+    logger.info("[Stage 3/3] DRF 비동기 병렬 검증")
     try:
-        drf_verification = _drf_verify_law_refs(final_text)
+        drf_verification = await _drf_verify_law_refs_async(final_text)
     except Exception as e:
         logger.warning(f"[Stage 3] DRF 검증 실패: {e}")
         drf_verification = VerificationResult()
@@ -788,12 +827,12 @@ async def run_pipeline_stage2(
         return ""
 
 
-def run_pipeline_stage3(text: str) -> VerificationResult:
-    """스트리밍용: Stage 3만 실행"""
+async def run_pipeline_stage3(text: str) -> VerificationResult:
+    """스트리밍용: Stage 3만 실행 (비동기)"""
     if not text:
         return VerificationResult()
     try:
-        return _drf_verify_law_refs(text)
+        return await _drf_verify_law_refs_async(text)
     except Exception as e:
         logger.warning(f"[Stream Stage 3] DRF 검증 실패: {e}")
         return VerificationResult()
