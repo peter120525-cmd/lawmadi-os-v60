@@ -5813,12 +5813,13 @@
 
                 // 서버 에러 (event: error)는 재시도 없이 바로 표시
                 if (error._serverError) {
+                    const isIntegrity = error.message && (error.message.includes('integrity') || error.message.includes('무결성'));
                     this.appendMessage('ai', `
                         <div style="color: #ef4444;">
                             <p><strong>${this.escapeHtml(error.message)}</strong></p>
-                            <button class="retry-btn" onclick="UI.retryLastQuery()">
-                                <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
-                                Retry
+                            <button class="retry-btn" onclick="${isIntegrity ? 'UI.resetConversation()' : 'UI.retryLastQuery()'}">
+                                <span class="material-symbols-outlined" style="font-size: 16px;">${isIntegrity ? 'home' : 'refresh'}</span>
+                                ${isIntegrity ? 'Go Home' : 'Retry'}
                             </button>
                         </div>
                     `);
@@ -5884,6 +5885,20 @@
             const data = await response.json();
 
             this.hideTypingIndicator();
+
+            // System integrity policy block: show Go Home button
+            if (data.status === 'FAIL_CLOSED') {
+                this.appendMessage('ai', `
+                    <div style="color: #ef4444;">
+                        <p><strong>${this.escapeHtml(data.response || 'Response restricted by system integrity policy.')}</strong></p>
+                        <button class="retry-btn" onclick="UI.resetConversation()">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">home</span>
+                            Go Home
+                        </button>
+                    </div>
+                `);
+                return;
+            }
 
             this.conversationHistory.push(
                 { role: 'user', content: query },
@@ -7091,6 +7106,7 @@
         </div>
     </div>
     <div class="install-prompt-actions">
+        <button class="install-btn install-btn-dismiss" id="installLater" aria-label="Later">Later</button>
         <button class="install-btn install-btn-primary" id="installDismiss" aria-label="OK">OK</button>
     </div>
 </div>
@@ -7152,6 +7168,7 @@
 (function() {
     var promptEl = document.getElementById('installPrompt');
     var dismissBtn = document.getElementById('installDismiss');
+    var laterBtn = document.getElementById('installLater');
     var guideText = document.getElementById('shortcutGuideText');
     if (!promptEl || !dismissBtn) return;
 
@@ -7224,6 +7241,14 @@
         promptEl.classList.remove('show');
         localStorage.setItem('shortcut-dismissed', Date.now().toString());
     });
+
+    // "Later" button: show again after 1 day
+    if (laterBtn) {
+        laterBtn.addEventListener('click', function() {
+            promptEl.classList.remove('show');
+            localStorage.setItem('shortcut-dismissed', (Date.now() - cooldown + 86400000).toString());
+        });
+    }
 })();
 </script>
 

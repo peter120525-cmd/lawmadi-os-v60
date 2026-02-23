@@ -372,12 +372,73 @@ async def _drf_verify_single_law(
                 "reason": f"검증 오류: {type(e).__name__}",
             })
 
-    # ── 판례 검증 (비동기 병렬): "대법원 YYYY다NNNNN" 등 판례번호 추출 + DRF 검증 ──
+    return entries
+
+
+async def _drf_verify_law_refs_async(text: str) -> VerificationResult:
+    """Stage 3: DRF 비동기 병렬 전수 검증 (법률 조문 + 판례)"""
+    result = VerificationResult()
+    if not text:
+        return result
+
+    drf_inst = _RUNTIME.get("drf")
+    if not drf_inst:
+        logger.warning("[Stage 3] DRF 인스턴스 없음 - 검증 스킵")
+        return result
+
+    svc = drf_inst
+
+    # ── 1. 법률 참조 추출: "법령명 제N조" 패턴 ──
+    law_refs = re.findall(
+        r'([\w가-힣]+(?:법|법률|규정|규칙|조례|령|시행령|시행규칙))\s*제(\d+)조',
+        text,
+    )
+
+    # 법령별 그룹핑
+    law_groups: Dict[str, List[tuple]] = {}
+    seen_keys: set = set()
+    for law_name, article_num_str in law_refs:
+        key = f"{law_name} 제{article_num_str}조"
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        try:
+            article_num_int = int(article_num_str)
+        except (ValueError, TypeError):
+            continue
+        law_groups.setdefault(law_name, []).append((article_num_int, key))
+
+    # ── 2. 법률별 병렬 검증 (5초 타임아웃) ──
+    if law_groups:
+        law_cache_local: Dict[str, Any] = {}
+        tasks = [
+            _drf_verify_single_law(svc, law_name, refs, law_cache_local)
+            for law_name, refs in law_groups.items()
+        ]
+
+        try:
+            all_results = await asyncio.wait_for(
+                asyncio.gather(*tasks, return_exceptions=True),
+                timeout=5.0,
+            )
+            for res in all_results:
+                if isinstance(res, Exception):
+                    logger.warning(f"[Stage 3] 법률 검증 태스크 실패: {res}")
+                    continue
+                for entry in res:
+                    if entry.get("verified"):
+                        result.verified_refs.append(entry)
+                    else:
+                        result.unverified_refs.append(entry)
+        except asyncio.TimeoutError:
+            logger.warning("[Stage 3] 법률 검증 5초 타임아웃 -> 완료된 결과만 사용")
+
+    # ── 3. 판례 검증 (비동기 병렬) ──
     prec_refs = re.findall(
         r'((?:대법원|대법|헌법재판소|헌재|서울고등법원|서울고법|서울중앙지방법원)\s*'
         r'(\d{4})\s*[.]\s*(\d{1,2})\s*[.]\s*\d{1,2}\s*[.]?\s*선고\s*'
         r'(\d{2,4}[가-힣]+\d+)\s*(?:판결|결정))',
-        text
+        text,
     )
     if not prec_refs:
         prec_refs_simple = re.findall(
@@ -386,14 +447,13 @@ async def _drf_verify_single_law(
             r'다|나|가|마|카|타|파|라|바|사|아|자|차|하|'
             r'두|누|구|무|부|수|우|주|추|후|그|드|스|으)'
             r'(?:합)?\d{2,6})',
-            text
+            text,
         )
     else:
         prec_refs_simple = [p[3] for p in prec_refs]
 
     if prec_refs_simple:
-        drf_inst = _RUNTIME.get("drf")
-        prec_seen = set()
+        prec_seen: set = set()
 
         async def _verify_single_precedent(case_no: str) -> Dict:
             """단일 판례 비동기 검증"""
@@ -433,7 +493,7 @@ async def _drf_verify_single_law(
             try:
                 prec_results = await asyncio.wait_for(
                     asyncio.gather(*prec_tasks, return_exceptions=True),
-                    timeout=5.0
+                    timeout=5.0,
                 )
                 for pr in prec_results:
                     if isinstance(pr, Exception):
@@ -445,6 +505,7 @@ async def _drf_verify_single_law(
             except asyncio.TimeoutError:
                 logger.warning("[Stage 3] 판례 검증 5초 타임아웃 -> 완료된 결과만 사용")
 
+    # ── 4. 결과 집계 ──
     result.total_refs = len(result.verified_refs) + len(result.unverified_refs)
     result.all_passed = len(result.unverified_refs) == 0
 
