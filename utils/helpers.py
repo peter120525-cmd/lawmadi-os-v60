@@ -162,19 +162,30 @@ def _dedup_keep_order(texts: List[str]) -> List[str]:
 # ---------------------------------------------------------------------------
 
 def _safe_extract_gemini_text(response) -> str:
-    """Gemini 응답에서 안전하게 텍스트 추출"""
+    """Gemini 응답에서 안전하게 텍스트 추출 (빈 응답 방지 강화)"""
+    # 1차: response.text 직접 접근
     try:
         if hasattr(response, 'text') and response.text:
             return response.text.strip()
     except Exception as e:
-        logger.warning(f"⚠️ Gemini 응답 추출 실패: {e}")
-        try:
-            if hasattr(response, 'candidates') and response.candidates:
-                finish_reason = response.candidates[0].finish_reason
-                safety_ratings = getattr(response.candidates[0], 'safety_ratings', None)
-                logger.warning(f"finish_reason: {finish_reason}, safety_ratings: {safety_ratings}")
-        except (AttributeError, IndexError, TypeError) as inner_e:
-            logger.debug(f"finish_reason 추출 실패: {inner_e}")
+        logger.warning(f"⚠️ Gemini response.text 추출 실패: {e}")
+
+    # 2차: candidates → parts 순회하여 텍스트 추출
+    try:
+        if hasattr(response, 'candidates') and response.candidates:
+            candidate = response.candidates[0]
+            finish_reason = getattr(candidate, 'finish_reason', None)
+            if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                texts = []
+                for part in candidate.content.parts:
+                    if hasattr(part, 'text') and part.text:
+                        texts.append(part.text.strip())
+                if texts:
+                    return "\n".join(texts)
+            logger.warning(f"⚠️ Gemini 빈 응답: finish_reason={finish_reason}")
+    except (AttributeError, IndexError, TypeError) as e:
+        logger.warning(f"⚠️ Gemini candidates 추출 실패: {e}")
+
     return ""
 
 

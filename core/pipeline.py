@@ -695,6 +695,20 @@ async def _run_legal_pipeline(
         else:
             raise RuntimeError("LawmadiLM + Gemini 모두 답변 생성 실패")
 
+    # 빈 응답 안전장치: Gemini가 빈 텍스트 반환 시 재시도 1회
+    if not final_text or len(final_text.strip()) < 30:
+        logger.warning(f"[Stage 3] Gemini 빈 응답 감지 ({len(final_text)}자) — 재시도")
+        try:
+            final_text = await _gemini_fallback_compose(
+                query, analysis, rag_context, tools, gemini_history,
+                now_kst, ssot_available, lang=lang, mode=mode,
+                lm_draft=lm_draft,
+            )
+        except Exception as e:
+            logger.error(f"[Stage 3 재시도] 실패: {e}")
+        if not final_text or len(final_text.strip()) < 30:
+            raise RuntimeError("Gemini 빈 응답 (재시도 포함)")
+
     # -- Stage 4: DRF 실시간 전수 검증 --
     logger.info("[Stage 4/4] DRF 전수 검증")
     try:

@@ -401,23 +401,55 @@ def match_ssot_sources(query: str, top_k: int = 8) -> list:
                "key_precedents": [...], "key_qa": [...], "score": 150}, ...]
     """
     import re as _re
-    tokens = _re.findall(r'[가-힣]{2,8}', query)
+    import math as _math
+
+    # 1) 토큰 추출: 2~20자 한글 + 접미사 제거
+    raw_tokens = _re.findall(r'[가-힣]{2,20}', query)
+    _SUFFIXES = ("이란", "에서", "에는", "에서는", "대해", "대한", "관한",
+                 "에게", "으로", "에서의", "에는요", "인가요", "인지", "할때",
+                 "할수", "하면", "해야", "인데", "이요", "이고")
+    tokens = []
+    for t in raw_tokens:
+        tokens.append(t)
+        # 접미사 제거 버전도 추가
+        for sfx in _SUFFIXES:
+            if t.endswith(sfx) and len(t) > len(sfx) + 1:
+                tokens.append(t[:-len(sfx)])
     if not tokens:
         return []
 
-    # (type, law) → 누적 점수
-    scores: Dict[tuple, int] = {}
+    # 2) IDF 기반 관련성 점수 (키워드가 적은 법률에 매칭될수록 높은 점수)
+    total_laws = sum(len(d.get("entries", {})) for d in LAW_CACHE.values()) or 1
+    scores: Dict[tuple, float] = {}
     for token in tokens:
         hits = _KEYWORD_INDEX.get(token, [])
+        if not hits:
+            continue
+        # IDF: 매칭 법률 수가 적을수록 높은 가중치
+        idf = _math.log(total_laws / (len(hits) + 1)) + 1.0
         for stype, law_name, qa in hits:
             key = (stype, law_name)
-            scores[key] = scores.get(key, 0) + qa
+            # 법률명과 정확히 일치하면 대폭 부스트
+            if token == law_name:
+                scores[key] = scores.get(key, 0) + 1000.0
+            else:
+                scores[key] = scores.get(key, 0) + idf
 
     if not scores:
         return []
 
-    # 상위 top_k 추출
-    ranked = sorted(scores.items(), key=lambda x: -x[1])[:top_k]
+    # 상위 top_k 추출 (중복 법률명 제거)
+    ranked = sorted(scores.items(), key=lambda x: -x[1])
+    seen_laws = set()
+    deduped = []
+    for item in ranked:
+        law_name = item[0][1]
+        if law_name not in seen_laws:
+            seen_laws.add(law_name)
+            deduped.append(item)
+        if len(deduped) >= top_k:
+            break
+    ranked = deduped
     results = []
     for (stype, law_name), score in ranked:
         type_data = LAW_CACHE.get(stype, {})
