@@ -795,6 +795,7 @@ async def _run_legal_pipeline_inner(
         logger.info("[Stage 1/3] RAG 컨텍스트 외부 전달 (S0+S1 병렬화)")
 
     # -- Stage 2: 답변 생성 --
+    _cached_ok = False
     if cache_name:
         # ─── Cached Pipeline: Gemini CachedContent 직접 답변 ───
         logger.info("[Stage 2/3] Gemini CachedContent 답변 생성")
@@ -803,10 +804,11 @@ async def _run_legal_pipeline_inner(
                 query, analysis, rag_context, tools, gemini_history,
                 now_kst, ssot_available, lang=lang, mode=mode, lm_draft="",
             )
+            _cached_ok = True
         except Exception as e:
-            logger.error(f"[Stage 2] Gemini CachedContent 실패: {e}")
-            raise RuntimeError("Gemini CachedContent 답변 생성 실패")
-    else:
+            logger.warning(f"[Stage 2] Gemini CachedContent 실패 → Legacy 폴백: {e}")
+
+    if not _cached_ok:
         # ─── Legacy: LawmadiLM 초안 → Gemini 완성 ───
         lm_draft = ""
         try:
