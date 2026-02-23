@@ -1,11 +1,11 @@
 """
-Lawmadi OS v60 -- 3-Stage Cached Legal Pipeline.
-Gemini CachedContent(SSOT) + RAG + DRF 전수 검증.
+Lawmadi OS v60 -- 3-Stage Hybrid Legal Pipeline.
+LawmadiLM(강화 프롬프트, 3000토큰) + RAG + DRF 전수 검증, Stage 4 제거.
 
 Pipeline:
   Stage 0: Gemini 질문 분류 (병렬 실행)
   Stage 1: RAG 조문 검색 (ChromaDB + law_cache, Stage 0과 병렬)
-  Stage 2: Gemini CachedContent 답변 (SSOT 캐시 기반, ~5-8초)
+  Stage 2: LawmadiLM 강화 답변 (5단계 프레임워크, RAG 컨텍스트 기반)
   Stage 3: DRF 실시간 전수 검증 (조문번호까지 검증)
   → Fail-Closed → 응답
 
@@ -540,13 +540,12 @@ async def _gemini_fallback_compose(
     mode: str = "general",
     lm_draft: str = "",
 ) -> str:
-    """Gemini 답변 생성 (CachedContent 우선, 미사용 시 system_instruction 직접 설정)"""
+    """Gemini Flash 완성 답변 생성 (LM 초안 기반 또는 단독, 캐시 컨텍스트 최대 활용)"""
     gc = _RUNTIME.get("genai_client")
     if not gc:
         raise RuntimeError("Gemini 클라이언트 미초기화")
 
     model_name = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
-    cache_name = _RUNTIME.get("gemini_cache_name")
     leader_name = analysis.get("leader_name", "마디")
     leader_specialty = analysis.get("leader_specialty", "통합")
 
@@ -559,18 +558,20 @@ async def _gemini_fallback_compose(
             f"초안의 법령명+조문번호를 반드시 포함하세요."
         )
 
-    # RAG/캐시 컨텍스트 주입 (쿼리별 검색 결과)
+    # RAG/캐시 컨텍스트 주입 (SSOT 캐시 최우선 참조)
     ctx_section = ""
     if rag_context.context_text:
         ctx_section = (
-            "\n\n[RAG 검색 결과 — 쿼리별 조문]\n"
-            "아래는 이 질문에 대해 검색된 관련 조문입니다.\n"
-            "SSOT 캐시 데이터와 함께 참조하여 답변하세요.\n"
+            "\n\n[SSOT 캐시 — 반드시 최우선 참조]\n"
+            "아래 SSOT 캐시 데이터는 DRF API에서 사전 검증된 법률 정보입니다.\n"
+            "답변 시 반드시 이 캐시의 법령명·조문번호·판례번호를 그대로 인용하세요.\n"
+            "캐시에 없는 법령이나 판례를 임의 생성하지 마세요.\n"
             f"{rag_context.context_text[:4000]}"
         )
     elif rag_context.cache_context:
         ctx_section = (
-            "\n\n[RAG 검색 결과 — 쿼리별 조문]\n"
+            "\n\n[SSOT 캐시 — 반드시 최우선 참조]\n"
+            "아래 캐시 데이터의 법령명·조문번호·판례번호를 그대로 인용하세요.\n"
             f"{rag_context.cache_context[:2000]}"
         )
 
@@ -592,40 +593,6 @@ async def _gemini_fallback_compose(
     if lang == "en":
         lang_instruction = "\n\nIMPORTANT: Respond entirely in English. Translate Korean legal terms with the original Korean in parentheses."
 
-    # ─── CachedContent 모드: 시스템 지시+SSOT가 캐시에 포함됨 ───
-    if cache_name:
-        effective_model = os.environ.get("_GEMINI_CACHE_MODEL", model_name)
-
-        query_context = (
-            f"[쿼리별 지시]\n"
-            f"현재 당신은 '{leader_name}' 리더입니다.\n"
-            f"전문 분야: {leader_specialty}\n"
-            f"질문 요약: {analysis.get('summary', '')}"
-            f"{draft_section}"
-            f"{ctx_section}"
-            f"{enhance}"
-            f"{lang_instruction}"
-            f"\n\nnow_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
-        )
-
-        # CachedContent 모드: tools/system_instruction은 캐시에 포함 → 요청에서 제외
-        gen_config = genai_types.GenerateContentConfig(
-            cached_content=cache_name,
-            max_output_tokens=max_tokens,
-            automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
-        )
-
-        chat = gc.chats.create(
-            model=effective_model,
-            config=gen_config,
-            history=gemini_history,
-        )
-        resp = chat.send_message(query_context)
-        text = _safe_extract_gemini_text(resp)
-        logger.info(f"[Gemini CachedContent] 답변 완료 ({len(text)}자, mode={mode})")
-        return text
-
-    # ─── 기존 모드: system_instruction 직접 설정 ───
     instruction = (
         f"{build_system_instruction(mode)}\n"
         f"현재 당신은 '{leader_name}' 리더입니다.\n"
@@ -672,83 +639,68 @@ async def _run_legal_pipeline(
     mode: str = "general",
     rag_context: Optional[RAGContext] = None,
 ) -> str:
-    """3-Stage Cached Legal Pipeline:
+    """4-Stage Hybrid Legal Pipeline (LM 초안 → Gemini 완성):
     Stage 1: RAG 조문 검색
-    Stage 2: Gemini CachedContent 답변 (캐시 미사용 시 LawmadiLM → Gemini Fallback)
-    Stage 3: DRF 실시간 전수 검증
+    Stage 2: LawmadiLM 핵심 초안 (~5-6초, 150토큰)
+    Stage 3: Gemini Flash 완성 답변 (LM 초안 기반)
+    Stage 4: DRF 실시간 전수 검증
     → Fail-Closed → 응답
 
+    LawmadiLM 실패 시 Gemini가 단독 작성 (fallback).
     rag_context가 전달되면 Stage 1을 건너뛰어 S0+S1 병렬화를 지원.
     """
     final_text = ""
     drf_verification = VerificationResult()
-    cache_name = _RUNTIME.get("gemini_cache_name")
 
     # -- Stage 1: RAG 조문 검색 (1회만 수행, 외부 전달 시 스킵) --
     if rag_context is None:
-        logger.info("[Stage 1/3] RAG 조문 검색 시작")
+        logger.info("[Stage 1/4] RAG 조문 검색 시작")
         try:
             rag_context = await _stage1_rag_search(query)
         except Exception as e:
             logger.warning(f"[Stage 1] RAG 검색 실패 (빈 컨텍스트 진행): {e}")
             rag_context = RAGContext()
     else:
-        logger.info("[Stage 1/3] RAG 컨텍스트 외부 전달 (S0+S1 병렬화)")
+        logger.info("[Stage 1/4] RAG 컨텍스트 외부 전달 (S0+S1 병렬화)")
 
-    # -- Stage 2: 답변 생성 --
-    _cached_ok = False
-    if cache_name:
-        # ─── Cached Pipeline: Gemini CachedContent 직접 답변 ───
-        logger.info("[Stage 2/3] Gemini CachedContent 답변 생성")
-        try:
-            final_text = await _gemini_fallback_compose(
-                query, analysis, rag_context, tools, gemini_history,
-                now_kst, ssot_available, lang=lang, mode=mode, lm_draft="",
-            )
-            _cached_ok = True
-        except Exception as e:
-            logger.warning(f"[Stage 2] CachedContent 실패 → Legacy 폴백: {e}")
-            # 캐시 비활성화하여 Legacy Gemini 호출 시 재실패 방지
-            _RUNTIME["gemini_cache_name"] = None
-
-    if not _cached_ok:
-        # ─── Legacy: LawmadiLM 초안 → Gemini 완성 ───
-        lm_draft = ""
-        try:
-            logger.info("[Stage 2/3] LawmadiLM 핵심 초안 생성")
-            raw_answer = await _call_lawmadilm(
-                query, analysis, rag_context, lang=lang, mode=mode,
-            )
-            lm_draft = _postprocess_lawmadilm(raw_answer, query)
-            if lm_draft:
-                logger.info(f"[Stage 2] LM 초안 완료 ({len(lm_draft)}자)")
-            else:
-                logger.warning("[Stage 2] 후처리 -> None (품질 미달)")
-                lm_draft = ""
-        except Exception as e:
-            logger.warning(f"[Stage 2] LawmadiLM 실패: {e} -> Gemini 단독 작성")
+    # -- Stage 2: LawmadiLM 핵심 초안 (~5-6초) --
+    lm_draft = ""
+    try:
+        logger.info("[Stage 2/4] LawmadiLM 핵심 초안 생성")
+        raw_answer = await _call_lawmadilm(
+            query, analysis, rag_context, lang=lang, mode=mode,
+        )
+        lm_draft = _postprocess_lawmadilm(raw_answer, query)
+        if lm_draft:
+            logger.info(f"[Stage 2] LM 초안 완료 ({len(lm_draft)}자)")
+        else:
+            logger.warning("[Stage 2] 후처리 -> None (품질 미달)")
             lm_draft = ""
+    except Exception as e:
+        logger.warning(f"[Stage 2] LawmadiLM 실패: {e} -> Gemini 단독 작성")
+        lm_draft = ""
 
-        logger.info(f"[Stage 2/3] Gemini Flash 완성 답변 (LM초안={'있음' if lm_draft else '없음'})")
-        try:
-            final_text = await _gemini_fallback_compose(
-                query, analysis, rag_context, tools, gemini_history,
-                now_kst, ssot_available, lang=lang, mode=mode,
-                lm_draft=lm_draft,
-            )
-        except Exception as e:
-            logger.error(f"[Stage 2] Gemini 완성 실패: {e}")
-            if lm_draft:
-                final_text = lm_draft
-            else:
-                raise RuntimeError("LawmadiLM + Gemini 모두 답변 생성 실패")
+    # -- Stage 3: Gemini Flash 완성 답변 (LM 초안 기반 또는 단독) --
+    logger.info(f"[Stage 3/4] Gemini Flash 완성 답변 (LM초안={'있음' if lm_draft else '없음'})")
+    try:
+        final_text = await _gemini_fallback_compose(
+            query, analysis, rag_context, tools, gemini_history,
+            now_kst, ssot_available, lang=lang, mode=mode,
+            lm_draft=lm_draft,
+        )
+    except Exception as e:
+        logger.error(f"[Stage 3] Gemini 완성 실패: {e}")
+        if lm_draft:
+            final_text = lm_draft
+        else:
+            raise RuntimeError("LawmadiLM + Gemini 모두 답변 생성 실패")
 
-    # -- Stage 3: DRF 실시간 전수 검증 --
-    logger.info("[Stage 3/3] DRF 전수 검증")
+    # -- Stage 4: DRF 실시간 전수 검증 --
+    logger.info("[Stage 4/4] DRF 전수 검증")
     try:
         drf_verification = _drf_verify_law_refs(final_text)
     except Exception as e:
-        logger.warning(f"[Stage 3] DRF 검증 실패: {e}")
+        logger.warning(f"[Stage 4] DRF 검증 실패: {e}")
         drf_verification = VerificationResult()
 
     # FAIL_CLOSED 적용 (미검증 조문 태깅 또는 응답 차단)

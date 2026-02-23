@@ -13,16 +13,11 @@
     <meta property="og:description" content="60 expert leaders collaborate to turn your legal issues into concrete action plans." />
     <meta property="og:url" content="https://lawmadi-db.web.app" />
     <meta property="og:image" content="https://lawmadi-db.web.app/og-image.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:site_name" content="Lawmadi OS" />
     <meta property="og:locale" content="en_US" />
     <!-- SEO: Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Lawmadi OS - Legal Decision Support System" />
     <meta name="twitter:description" content="60 expert leaders collaborate to turn your legal issues into concrete action plans." />
-    <meta name="twitter:image" content="https://lawmadi-db.web.app/og-image.png" />
     <!-- SEO: Canonical -->
     <link rel="canonical" href="https://lawmadi-db.web.app" />
     <!-- PWA (항목 #10) -->
@@ -4730,16 +4725,11 @@
             height: 100vh;
             height: -webkit-fill-available;
             position: relative;
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior: none;
-            touch-action: manipulation;
         }
 
         body.is-inapp-browser .layout-container {
             height: 100vh;
             height: -webkit-fill-available;
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior: none;
         }
 
         /* backdrop-filter fallback for WebViews */
@@ -4771,91 +4761,6 @@
         body.is-inapp-browser.keyboard-open .input-pipeline-wrapper {
             margin-bottom: 0;
             padding-bottom: 8px;
-        }
-
-        /* ═══════════════════════════════════════════════════
-           Mobile More Bottom Sheet (≤768px only)
-        ═══════════════════════════════════════════════════ */
-        .mobile-more-sheet-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.4);
-            z-index: 1200;
-            opacity: 0;
-            transition: opacity 0.25s ease;
-        }
-        .mobile-more-sheet-overlay.show {
-            display: block;
-            opacity: 1;
-        }
-
-        .mobile-more-sheet {
-            display: none;
-            position: fixed;
-            bottom: 0; left: 0; right: 0;
-            z-index: 1300;
-            background: var(--surface);
-            border-radius: 16px 16px 0 0;
-            padding: 8px 0 0 0;
-            padding-bottom: env(safe-area-inset-bottom, 0px);
-            box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
-            transform: translateY(100%);
-            transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-        }
-        .mobile-more-sheet.show {
-            display: block;
-            transform: translateY(0);
-        }
-
-        .mobile-more-sheet-handle {
-            width: 36px;
-            height: 4px;
-            background: var(--border);
-            border-radius: 2px;
-            margin: 0 auto 12px;
-        }
-
-        .mobile-more-sheet-menu {
-            display: flex;
-            flex-direction: column;
-            padding: 0 16px 16px;
-        }
-
-        .mobile-more-sheet-item {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 14px 12px;
-            color: var(--text-primary);
-            text-decoration: none;
-            border-radius: 12px;
-            font-size: 0.95rem;
-            font-weight: 500;
-            transition: background 0.15s ease;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .mobile-more-sheet-item:active {
-            background: rgba(0,0,0,0.05);
-        }
-        .mobile-more-sheet-item .material-symbols-outlined {
-            font-size: 1.3rem;
-            color: var(--text-muted);
-        }
-
-        body.dark-mode .mobile-more-sheet {
-            background: #1e293b;
-            box-shadow: 0 -4px 24px rgba(0,0,0,0.4);
-        }
-        body.dark-mode .mobile-more-sheet-item:active {
-            background: rgba(255,255,255,0.06);
-        }
-
-        @media (min-width: 769px) {
-            .mobile-more-sheet,
-            .mobile-more-sheet-overlay {
-                display: none !important;
-            }
         }
 
     </style>
@@ -5813,13 +5718,12 @@
 
                 // 서버 에러 (event: error)는 재시도 없이 바로 표시
                 if (error._serverError) {
-                    const isIntegrity = error.message && (error.message.includes('integrity') || error.message.includes('무결성'));
                     this.appendMessage('ai', `
                         <div style="color: #ef4444;">
                             <p><strong>${this.escapeHtml(error.message)}</strong></p>
-                            <button class="retry-btn" onclick="${isIntegrity ? 'UI.resetConversation()' : 'UI.retryLastQuery()'}">
-                                <span class="material-symbols-outlined" style="font-size: 16px;">${isIntegrity ? 'home' : 'refresh'}</span>
-                                ${isIntegrity ? 'Go Home' : 'Retry'}
+                            <button class="retry-btn" onclick="UI.retryLastQuery()">
+                                <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
+                                Retry
                             </button>
                         </div>
                     `);
@@ -5885,20 +5789,6 @@
             const data = await response.json();
 
             this.hideTypingIndicator();
-
-            // System integrity policy block: show Go Home button
-            if (data.status === 'FAIL_CLOSED') {
-                this.appendMessage('ai', `
-                    <div style="color: #ef4444;">
-                        <p><strong>${this.escapeHtml(data.response || 'Response restricted by system integrity policy.')}</strong></p>
-                        <button class="retry-btn" onclick="UI.resetConversation()">
-                            <span class="material-symbols-outlined" style="font-size: 16px;">home</span>
-                            Go Home
-                        </button>
-                    </div>
-                `);
-                return;
-            }
 
             this.conversationHistory.push(
                 { role: 'user', content: query },
@@ -6996,24 +6886,8 @@
                     window.location.href = 'leaders-en.html';
                 } else if (action === 'clevel') {
                     window.location.href = 'clevel-en.html';
-                } else if (action === 'more') {
-                    var sheet = document.getElementById('mobileMoreSheet');
-                    var overlay = document.getElementById('mobileMoreOverlay');
-                    if (sheet && overlay) {
-                        var isOpen = sheet.classList.contains('show');
-                        if (isOpen) {
-                            sheet.classList.remove('show');
-                            overlay.classList.remove('show');
-                            sheet.setAttribute('aria-hidden', 'true');
-                            overlay.setAttribute('aria-hidden', 'true');
-                        } else {
-                            sheet.classList.add('show');
-                            overlay.classList.add('show');
-                            sheet.setAttribute('aria-hidden', 'false');
-                            overlay.setAttribute('aria-hidden', 'false');
-                        }
-                    }
-                    updateTabAria(document.getElementById('tabChat'));
+                } else if (action === 'about') {
+                    window.location.href = 'about-en.html';
                 } else if (action === 'favorites') {
                     UI.toggleFavorites();
                     // 저장 탭은 토글이므로 chat 활성 유지
@@ -7021,19 +6895,6 @@
                 }
             });
         });
-
-        var moreOverlay = document.getElementById('mobileMoreOverlay');
-        if (moreOverlay) {
-            moreOverlay.addEventListener('click', function() {
-                var sheet = document.getElementById('mobileMoreSheet');
-                if (sheet) {
-                    sheet.classList.remove('show');
-                    sheet.setAttribute('aria-hidden', 'true');
-                }
-                moreOverlay.classList.remove('show');
-                moreOverlay.setAttribute('aria-hidden', 'true');
-            });
-        }
     };
 
     // Service Worker 정리 (PWA → 홈화면 바로가기 전환)
@@ -7065,9 +6926,9 @@
             <span class="material-symbols-outlined" aria-hidden="true">groups</span>
             <span class="tab-label">Executives</span>
         </button>
-        <button class="tab-item" data-tab="more" id="tabMore" role="tab" aria-selected="false" aria-label="More menu">
-            <span class="material-symbols-outlined" aria-hidden="true">more_horiz</span>
-            <span class="tab-label">More</span>
+        <button class="tab-item" data-tab="about" id="tabAbout" role="tab" aria-selected="false" aria-label="About Lawmadi OS">
+            <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            <span class="tab-label">About</span>
         </button>
         <button class="tab-item" data-tab="favorites" id="tabFavorites" role="tab" aria-selected="false" aria-label="Saved Answers">
             <span class="material-symbols-outlined" aria-hidden="true">bookmark</span>
@@ -7075,26 +6936,6 @@
         </button>
     </div>
 </nav>
-
-<!-- Mobile More Bottom Sheet -->
-<div class="mobile-more-sheet-overlay" id="mobileMoreOverlay" aria-hidden="true"></div>
-<div class="mobile-more-sheet" id="mobileMoreSheet" role="dialog" aria-label="More menu" aria-modal="true" aria-hidden="true">
-    <div class="mobile-more-sheet-handle"></div>
-    <nav class="mobile-more-sheet-menu">
-        <a href="about-en.html" class="mobile-more-sheet-item">
-            <span class="material-symbols-outlined" aria-hidden="true">info</span>
-            <span>About</span>
-        </a>
-        <a href="terms.html" class="mobile-more-sheet-item">
-            <span class="material-symbols-outlined" aria-hidden="true">gavel</span>
-            <span>Terms of Service</span>
-        </a>
-        <a href="privacy.html" class="mobile-more-sheet-item">
-            <span class="material-symbols-outlined" aria-hidden="true">shield</span>
-            <span>Privacy Policy</span>
-        </a>
-    </nav>
-</div>
 
 <!-- 홈화면 바로가기 안내 -->
 <div id="installPrompt" class="install-prompt" role="dialog" aria-label="Add to Home Screen" aria-modal="true">
@@ -7106,7 +6947,6 @@
         </div>
     </div>
     <div class="install-prompt-actions">
-        <button class="install-btn install-btn-dismiss" id="installLater" aria-label="Later">Later</button>
         <button class="install-btn install-btn-primary" id="installDismiss" aria-label="OK">OK</button>
     </div>
 </div>
@@ -7168,7 +7008,6 @@
 (function() {
     var promptEl = document.getElementById('installPrompt');
     var dismissBtn = document.getElementById('installDismiss');
-    var laterBtn = document.getElementById('installLater');
     var guideText = document.getElementById('shortcutGuideText');
     if (!promptEl || !dismissBtn) return;
 
@@ -7241,14 +7080,6 @@
         promptEl.classList.remove('show');
         localStorage.setItem('shortcut-dismissed', Date.now().toString());
     });
-
-    // "Later" button: show again after 1 day
-    if (laterBtn) {
-        laterBtn.addEventListener('click', function() {
-            promptEl.classList.remove('show');
-            localStorage.setItem('shortcut-dismissed', (Date.now() - cooldown + 86400000).toString());
-        });
-    }
 })();
 </script>
 
