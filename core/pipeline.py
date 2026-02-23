@@ -757,3 +757,4 @@ def run_pipeline_stage3(text: str) -> VerificationResult:
 
 # Public alias for external use
 run_legal_pipeline = _run_legal_pipeline
+# Option B: gemini-3-flash-preview + law_cache direct injection (no CachedContent)
