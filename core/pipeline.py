@@ -209,7 +209,7 @@ async def _call_lawmadilm(
         "temperature": 0.3,
     }
 
-    async with httpx.AsyncClient(timeout=15.0) as client:
+    async with httpx.AsyncClient(timeout=3.0) as client:
         resp = await client.post(f"{LAWMADILM_API_URL}/chat", json=payload)
         resp.raise_for_status()
         data = resp.json()
