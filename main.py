@@ -294,20 +294,50 @@ except Exception as e:
     LEADER_REGISTRY = {}
 
 # =============================================================
-# 📦 [LAW_CACHE] SSOT 10종 사전 캐시 (법률별 TOP 100 핵심 조문)
+# 📦 [LAW_CACHE] SSOT 10종 사전 캐시 — 다중 파일 로딩 (398K QA)
 # =============================================================
 LAW_CACHE: Dict[str, Any] = {}
+_CACHE_FILES = [
+    "law_cache_law_1.json",   # law stype 전반부 (ㄱ~ㅁ)
+    "law_cache_law_2.json",   # law stype 후반부 (ㅂ~ㅎ)
+    "law_cache_other.json",   # 나머지 9개 stype
+]
 try:
-    _cache_path = os.path.join(os.path.dirname(__file__), "law_cache.json")
-    if os.path.exists(_cache_path):
-        with open(_cache_path, "r", encoding="utf-8") as f:
-            LAW_CACHE = json.load(f)
-        _total_entries = sum(d.get("entry_count", 0) for d in LAW_CACHE.values())
-        logger.info(f"✅ LAW_CACHE loaded: {len(LAW_CACHE)} types, {_total_entries} entries")
+    _base_dir = os.path.dirname(__file__)
+    _loaded_files = 0
+    for _cf in _CACHE_FILES:
+        _cache_path = os.path.join(_base_dir, _cf)
+        if os.path.exists(_cache_path):
+            with open(_cache_path, "r", encoding="utf-8") as f:
+                _part = json.load(f)
+            for _stype, _sdata in _part.items():
+                if _stype in LAW_CACHE:
+                    # 동일 stype이면 entries 병합
+                    LAW_CACHE[_stype]["entries"].update(_sdata.get("entries", {}))
+                    LAW_CACHE[_stype]["entry_count"] = len(LAW_CACHE[_stype]["entries"])
+                else:
+                    LAW_CACHE[_stype] = _sdata
+            _loaded_files += 1
+    if _loaded_files:
+        _total_entries = sum(len(d.get("entries", {})) for d in LAW_CACHE.values())
+        _total_qa = sum(
+            len(info.get("key_qa", []))
+            for d in LAW_CACHE.values()
+            for info in d.get("entries", {}).values()
+        )
+        logger.info(f"✅ LAW_CACHE loaded: {len(LAW_CACHE)} types, {_total_entries} entries, {_total_qa} QA ({_loaded_files} files)")
     else:
-        logger.warning("⚠️ law_cache.json 미존재: DRF 실시간 검색만 사용")
+        # 레거시 단일 파일 호환
+        _cache_path = os.path.join(_base_dir, "law_cache.json")
+        if os.path.exists(_cache_path):
+            with open(_cache_path, "r", encoding="utf-8") as f:
+                LAW_CACHE = json.load(f)
+            _total_entries = sum(d.get("entry_count", 0) for d in LAW_CACHE.values())
+            logger.info(f"✅ LAW_CACHE loaded (legacy): {len(LAW_CACHE)} types, {_total_entries} entries")
+        else:
+            logger.warning("⚠️ law_cache 파일 미존재: DRF 실시간 검색만 사용")
 except Exception as _e:
-    logger.warning(f"⚠️ law_cache.json 로드 실패: {_e}")
+    logger.warning(f"⚠️ law_cache 로드 실패: {_e}")
 
 # 역 인덱스: keyword → [(ssot_type, law_name, score)] 빌드
 _KEYWORD_INDEX: Dict[str, list] = {}  # keyword -> [(type, law, qa_count)]
