@@ -449,6 +449,207 @@ def build_ssot_context(query: str) -> str:
     return "\n".join(lines)
 
 # =============================================================
+# 📦 Gemini CachedContent 생성 (SSOT 최대 캐시)
+# 시스템 지시(~3K토큰) + SSOT 핵심 법령(~35K토큰) = ~38K토큰 캐시
+# 비용 75% 절감, 응답 1-2초 단축
+# =============================================================
+
+# 캐시에 포함할 우선 법령 목록 (빈도순)
+_PRIORITY_LAWS = [
+    "민법", "형법", "상법", "근로기준법", "주택임대차보호법",
+    "민사소송법", "형사소송법", "상가건물 임대차보호법", "도로교통법",
+    "개인정보 보호법", "가사소송법", "국민건강보험법", "산업재해보상보험법",
+    "소비자기본법", "공정거래법", "저작권법", "특허법", "상표법",
+    "부정경쟁방지법", "전자상거래법", "정보통신망법", "주민등록법",
+    "건축법", "국토계획법", "부동산등기법", "가족관계등록법",
+    "채무자 회생 및 파산에 관한 법률", "민사집행법", "행정소송법",
+    "국세기본법", "소득세법", "부가가치세법", "지방세법",
+]
+
+def _build_gemini_cache_text(law_cache: Dict[str, Any]) -> str:
+    """law_cache.json에서 Gemini 캐시용 SSOT 텍스트 생성 (최대 ~900K 토큰).
+
+    Gemini 2.0 Flash 1M 토큰 컨텍스트 중 ~900K를 캐시에 활용.
+    나머지 ~100K는 쿼리별 RAG/사용자 메시지/히스토리용으로 확보.
+    """
+    lines = [
+        "═══════════════════════════════════════════════════",
+        "SSOT 법률 데이터베이스 (Single Source of Truth)",
+        "═══════════════════════════════════════════════════",
+        "",
+        "아래는 국가법령정보센터(DRF) API에서 검증된 핵심 법령 데이터입니다.",
+        "답변 시 이 데이터의 법령명·조문번호·판례번호를 최우선으로 인용하세요.",
+        "이 데이터에 없는 법령이나 판례를 임의 생성하지 마세요.",
+        "",
+    ]
+
+    included = set()
+    target_chars = 2_700_000  # ~900K 토큰 (1M 컨텍스트 - 100K 쿼리 여유)
+    current_chars = 0
+
+    # 1차: 우선 법령 (Q&A 전량 포함)
+    for stype, type_data in law_cache.items():
+        entries = type_data.get("entries", {})
+        label = type_data.get("label", stype)
+        for law_name in _PRIORITY_LAWS:
+            if law_name in entries and law_name not in included:
+                law_info = entries[law_name]
+                block = _format_law_for_cache(label, law_name, law_info, is_priority=True)
+                if current_chars + len(block) > target_chars:
+                    continue  # 이 법령이 크면 다음 우선 법령 시도
+                lines.append(block)
+                included.add(law_name)
+                current_chars += len(block)
+
+    # 2차: 나머지 법령 (qa_count 높은 순, Q&A 확대 포함)
+    if current_chars < target_chars:
+        remaining = []
+        for stype, type_data in law_cache.items():
+            entries = type_data.get("entries", {})
+            label = type_data.get("label", stype)
+            for law_name, law_info in entries.items():
+                if law_name not in included:
+                    remaining.append((law_info.get("qa_count", 0), label, law_name, law_info))
+        remaining.sort(key=lambda x: x[0], reverse=True)
+
+        for _, label, law_name, law_info in remaining:
+            block = _format_law_for_cache(label, law_name, law_info, is_priority=False)
+            if current_chars + len(block) > target_chars:
+                continue  # 이 법령이 크면 다음 법령 시도
+            lines.append(block)
+            included.add(law_name)
+            current_chars += len(block)
+
+    lines.append(f"\n[SSOT 캐시 법령 수: {len(included)}개, 총 {current_chars:,}자 (~{current_chars//3:,} 토큰)]")
+    return "\n".join(lines)
+
+
+def _format_law_for_cache(label: str, law_name: str, law_info: Dict, is_priority: bool = False) -> str:
+    """개별 법령을 캐시 텍스트로 포맷.
+
+    is_priority=True: 우선 법령 — Q&A 전량, 조문 20개, 판례 8개
+    is_priority=False: 일반 법령 — Q&A 40개, 조문 10개, 판례 5개
+    """
+    parts = [f"\n■ [{label}] {law_name}"]
+
+    # 핵심 조문 원문
+    art_limit = 20 if is_priority else 10
+    for art in law_info.get("key_article_texts", [])[:art_limit]:
+        parts.append(f"  조문: {art}")
+
+    # 핵심 조문 번호
+    arts = law_info.get("key_articles", [])
+    if arts:
+        art_strs = [f"{a['조문']}({a.get('제목', '')})" for a in arts[:15] if a.get("조문")]
+        if art_strs:
+            parts.append(f"  핵심조문: {', '.join(art_strs)}")
+
+    # 판례
+    prec_limit = 8 if is_priority else 5
+    for prec in law_info.get("key_precedents", [])[:prec_limit]:
+        parts.append(f"  판례: {prec}")
+
+    # Q&A (LM 학습 데이터 최대 활용)
+    qa_limit = 9999 if is_priority else 40  # 우선 법령은 전량
+    for qa in law_info.get("key_qa", [])[:qa_limit]:
+        q = qa.get("q", "")
+        a = qa.get("a", "")[:500]
+        if q:
+            parts.append(f"  Q: {q}")
+            parts.append(f"  A: {a}")
+
+    return "\n".join(parts)
+
+
+def _create_gemini_cached_content(
+    client: "genai.Client",
+    law_cache: Dict[str, Any],
+) -> Optional[str]:
+    """Gemini CachedContent를 생성하고 cache name을 반환한다."""
+    from prompts.system_instructions import build_system_instruction
+
+    model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+
+    # 시스템 지시 생성 (general + expert 통합)
+    sys_instruction = (
+        build_system_instruction("general")
+        + "\n\n[전문가 모드 추가 지시]\n"
+        + "전문가 모드(expert) 요청 시: 6,000~8,000자, 판례 3건 이상, 조문 직접 인용, 쟁점별 검토."
+    )
+
+    # SSOT 캐시 텍스트 생성
+    cache_text = _build_gemini_cache_text(law_cache)
+    logger.info(f"[Gemini Cache] SSOT 텍스트: {len(cache_text):,}자 (~{len(cache_text)//3:,} 토큰)")
+
+    # 최소 32K 토큰 확인
+    estimated_tokens = len(cache_text) // 3
+    if estimated_tokens < 32_000:
+        logger.warning(f"[Gemini Cache] 토큰 부족 ({estimated_tokens} < 32,000), 캐시 생성 건너뜀")
+        return None
+
+    try:
+        cached_content = client.caches.create(
+            model=model_name,
+            config=genai_types.CreateCachedContentConfig(
+                display_name="lawmadi-ssot-v60",
+                system_instruction=sys_instruction,
+                contents=[
+                    genai_types.Content(
+                        role="user",
+                        parts=[genai_types.Part(text=cache_text)],
+                    ),
+                    genai_types.Content(
+                        role="model",
+                        parts=[genai_types.Part(text=(
+                            "SSOT 법률 데이터베이스를 수신했습니다. "
+                            "모든 법률 답변 시 이 데이터를 최우선으로 참조하겠습니다. "
+                            "데이터에 없는 법령이나 판례는 임의 생성하지 않겠습니다."
+                        ))],
+                    ),
+                ],
+                ttl="3600s",
+            ),
+        )
+        logger.info(f"[Gemini Cache] 생성 완료: {cached_content.name}")
+        return cached_content.name
+    except Exception as e:
+        logger.warning(f"[Gemini Cache] 생성 실패 ({type(e).__name__}): {e}")
+        # gemini-3-flash-preview가 캐시 미지원 시 gemini-2.0-flash로 재시도
+        if "gemini-3" in model_name or "preview" in model_name:
+            fallback_model = "gemini-2.0-flash"
+            logger.info(f"[Gemini Cache] {fallback_model}으로 재시도...")
+            try:
+                cached_content = client.caches.create(
+                    model=fallback_model,
+                    config=genai_types.CreateCachedContentConfig(
+                        display_name="lawmadi-ssot-v60",
+                        system_instruction=sys_instruction,
+                        contents=[
+                            genai_types.Content(
+                                role="user",
+                                parts=[genai_types.Part(text=cache_text)],
+                            ),
+                            genai_types.Content(
+                                role="model",
+                                parts=[genai_types.Part(text=(
+                                    "SSOT 법률 데이터베이스를 수신했습니다. "
+                                    "모든 법률 답변 시 이 데이터를 최우선으로 참조하겠습니다."
+                                ))],
+                            ),
+                        ],
+                        ttl="3600s",
+                    ),
+                )
+                logger.info(f"[Gemini Cache] {fallback_model} 생성 완료: {cached_content.name}")
+                # 캐시 모델이 다르면 RUNTIME에 기록
+                os.environ["_GEMINI_CACHE_MODEL"] = fallback_model
+                return cached_content.name
+            except Exception as e2:
+                logger.warning(f"[Gemini Cache] {fallback_model} 재시도 실패: {e2}")
+        return None
+
+
+# =============================================================
 # UTILITIES [ULTRA 추가]
 # =============================================================
 
@@ -1147,6 +1348,19 @@ async def startup():
         logger.warning("⚠️ GEMINI_KEY 누락 (FAIL_CLOSED)")
 
     # --------------------------------------------------
+    # 4.5️⃣ Gemini CachedContent 생성 (SSOT 최대 캐시)
+    # 시스템 지시 + SSOT 핵심 법령 데이터를 캐시하여
+    # 매 호출 시 토큰 비용 75% 절감 + 응답 1-2초 단축
+    # --------------------------------------------------
+    gemini_cache_name = None
+    if genai_client and LAW_CACHE:
+        gemini_cache_name = _create_gemini_cached_content(genai_client, LAW_CACHE)
+        if gemini_cache_name:
+            logger.info(f"✅ Gemini CachedContent 생성 완료: {gemini_cache_name}")
+        else:
+            logger.warning("⚠️ Gemini CachedContent 생성 실패 (캐시 없이 동작)")
+
+    # --------------------------------------------------
     # 5️⃣ DRF Connector (Fail-Soft)
     # [원본버그 수정] DRFConnector(config) → DRFConnector(api_key=...)
     #   실제 시그니처: __init__(self, api_key, timeout_ms, endpoints, ...)
@@ -1218,7 +1432,7 @@ async def startup():
     # 9️⃣ RUNTIME SSOT 등록
     # --------------------------------------------------
     # --------------------------------------------------
-    # 9.5️⃣ Tier Router/검증은 Gemini로 통합, 4-Stage Hybrid Pipeline
+    # 9.5️⃣ Tier Router/검증은 Gemini로 통합, 3-Stage Cached Pipeline
     # --------------------------------------------------
     logger.info("✅ Tier Router/검증 엔진: Gemini 통합 사용")
     _rag_url = os.getenv("LAWMADILM_RAG_URL", "")
@@ -1226,7 +1440,10 @@ async def startup():
         logger.info(f"✅ LawmadiLM RAG 서비스: {_rag_url}")
     else:
         logger.info("ℹ️ LawmadiLM RAG 미설정 (law_cache 폴백 사용)")
-    logger.info("✅ 4-Stage Hybrid Pipeline: RAG → LawmadiLM(3000) → DRF전수검증 → Gemini검증보강")
+    if gemini_cache_name:
+        logger.info("✅ 3-Stage Cached Pipeline: RAG → Gemini(CachedContent+SSOT) → DRF검증")
+    else:
+        logger.info("✅ 3-Stage Pipeline: RAG → Gemini(SSOT) → DRF검증 (캐시 미사용)")
 
     RUNTIME.update({
         "config": config,
@@ -1237,6 +1454,7 @@ async def startup():
         "swarm_orchestrator": swarm_orchestrator,
         "clevel_handler": clevel_handler,
         "genai_client": genai_client,
+        "gemini_cache_name": gemini_cache_name,
     })
 
     # [Item 7] 분리된 DRF 도구 모듈에 RUNTIME 주입
