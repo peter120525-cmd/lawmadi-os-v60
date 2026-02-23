@@ -677,11 +677,10 @@ async def _gemini_fallback_compose(
             f"\n\nnow_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
         )
 
+        # CachedContent 모드: tools/system_instruction은 캐시에 포함되어 있으므로 요청에서 제외
         gen_config = genai_types.GenerateContentConfig(
             cached_content=cache_name,
-            tools=tools,
             max_output_tokens=max_tokens,
-            automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
         )
 
         chat = gc.chats.create(
