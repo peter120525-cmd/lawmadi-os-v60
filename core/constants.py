@@ -11,7 +11,7 @@ import os
 OS_VERSION = "v60.0.0"
 
 # Gemini 모델명 통일 상수 (항목 #6)
-DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview"
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 
 # LawmadiLM API 설정 (주력 답변 생성기)
 LAWMADILM_API_URL = os.getenv("LAWMADILM_API_URL", "https://lawmadilm-api-938146962157.asia-southeast1.run.app")
