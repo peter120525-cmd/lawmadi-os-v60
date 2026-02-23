@@ -484,7 +484,7 @@ def _build_gemini_cache_text(law_cache: Dict[str, Any]) -> str:
     ]
 
     included = set()
-    target_chars = 2_700_000  # ~900K 토큰 (1M 컨텍스트 - 100K 쿼리 여유)
+    target_chars = 1_400_000  # ~900K 토큰 (한국어 1.56자/토큰 기준, 1M 중 100K 쿼리 여유)
     current_chars = 0
 
     # 1차: 우선 법령 (Q&A 전량 포함)
