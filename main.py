@@ -394,10 +394,10 @@ def match_ssot_sources(query: str, top_k: int = 8) -> list:
             "label": type_data.get("label", ""),
             "target": type_data.get("target", ""),
             "endpoint": type_data.get("endpoint", ""),
-            "key_articles": law_info.get("key_articles", [])[:5],
-            "key_article_texts": law_info.get("key_article_texts", [])[:3],
-            "key_precedents": law_info.get("key_precedents", [])[:5],
-            "key_qa": law_info.get("key_qa", [])[:3],
+            "key_articles": law_info.get("key_articles", [])[:50],
+            "key_article_texts": law_info.get("key_article_texts", [])[:50],
+            "key_precedents": law_info.get("key_precedents", [])[:20],
+            "key_qa": law_info.get("key_qa", [])[:10],
             "keywords": law_info.get("keywords", [])[:5],
             "score": score,
         })
@@ -409,7 +409,7 @@ def build_cache_context(query: str) -> str:
     질문 → 관련 SSOT 소스 요약 텍스트 (Gemini/Claude에 주입).
     토큰 절약: 핵심 조문만 포함 (전체 법령 대신 관련 3~5개 조문).
     """
-    sources = match_ssot_sources(query, top_k=8)
+    sources = match_ssot_sources(query, top_k=100)
     if not sources:
         return ""
 
@@ -427,8 +427,8 @@ def build_cache_context(query: str) -> str:
 
 
 def build_ssot_context(query: str) -> str:
-    """관련 SSOT: 법률명+조문원문+판례요지+대표Q&A → Gemini/Claude 전달"""
-    sources = match_ssot_sources(query, top_k=8)
+    """관련 SSOT: 법률명+조문원문+판례요지+대표Q&A → Gemini/Claude 전달 (최대 권장 설정)"""
+    sources = match_ssot_sources(query, top_k=100)
     if not sources:
         return ""
 
@@ -436,15 +436,15 @@ def build_ssot_context(query: str) -> str:
     for s in sources:
         lines.append(f"\n■ {s['law']} ({s['label']})")
         # 핵심조문 원문
-        for art in s.get("key_article_texts", [])[:3]:
+        for art in s.get("key_article_texts", [])[:50]:
             lines.append(f"  조문: {art}")
         # 판례요지
-        for prec in s.get("key_precedents", [])[:2]:
+        for prec in s.get("key_precedents", [])[:20]:
             lines.append(f"  판례: {prec}")
         # 대표 Q&A
-        for qa in s.get("key_qa", [])[:1]:
+        for qa in s.get("key_qa", [])[:10]:
             lines.append(f"  참고Q: {qa.get('q', '')}")
-            lines.append(f"  참고A: {qa.get('a', '')[:100]}...")
+            lines.append(f"  참고A: {qa.get('a', '')}")
 
     return "\n".join(lines)
 
