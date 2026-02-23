@@ -294,13 +294,17 @@ except Exception as e:
     LEADER_REGISTRY = {}
 
 # =============================================================
-# 📦 [LAW_CACHE] SSOT 10종 사전 캐시 — 다중 파일 로딩 (398K QA)
+# 📦 [LAW_CACHE] SSOT 10종 사전 캐시 — 다중 파일 로딩 (952K QA)
 # =============================================================
 LAW_CACHE: Dict[str, Any] = {}
 _CACHE_FILES = [
-    "law_cache_law_1.json",   # law stype 전반부 (ㄱ~ㅁ)
-    "law_cache_law_2.json",   # law stype 후반부 (ㅂ~ㅎ)
-    "law_cache_other.json",   # 나머지 9개 stype
+    "law_cache_1.json",
+    "law_cache_2.json",
+    "law_cache_3.json",
+    "law_cache_4.json",
+    "law_cache_5.json",
+    "law_cache_6.json",
+    "law_cache_7.json",
 ]
 try:
     _base_dir = os.path.dirname(__file__)
