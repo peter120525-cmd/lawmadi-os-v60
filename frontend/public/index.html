@@ -5813,12 +5813,13 @@
 
                 // 서버 에러 (event: error)는 재시도 없이 바로 표시
                 if (error._serverError) {
+                    const isIntegrity = error.message && error.message.includes('무결성');
                     this.appendMessage('ai', `
                         <div style="color: #ef4444;">
                             <p><strong>${this.escapeHtml(error.message)}</strong></p>
-                            <button class="retry-btn" onclick="UI.retryLastQuery()">
-                                <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
-                                다시 시도
+                            <button class="retry-btn" onclick="${isIntegrity ? 'UI.resetConversation()' : 'UI.retryLastQuery()'}">
+                                <span class="material-symbols-outlined" style="font-size: 16px;">${isIntegrity ? 'home' : 'refresh'}</span>
+                                ${isIntegrity ? '처음으로' : '다시 시도'}
                             </button>
                         </div>
                     `);
@@ -5883,6 +5884,20 @@
             const data = await response.json();
 
             this.hideTypingIndicator();
+
+            // 시스템 무결성 정책 차단: 처음으로 버튼 표시
+            if (data.status === 'FAIL_CLOSED') {
+                this.appendMessage('ai', `
+                    <div style="color: #ef4444;">
+                        <p><strong>${this.escapeHtml(data.response || '시스템 무결성 정책에 의해 답변이 제한되었습니다.')}</strong></p>
+                        <button class="retry-btn" onclick="UI.resetConversation()">
+                            <span class="material-symbols-outlined" style="font-size: 16px;">home</span>
+                            처음으로
+                        </button>
+                    </div>
+                `);
+                return;
+            }
 
             this.conversationHistory.push(
                 { role: 'user', content: query },
@@ -7092,6 +7107,7 @@
         </div>
     </div>
     <div class="install-prompt-actions">
+        <button class="install-btn install-btn-dismiss" id="installLater" aria-label="나중에">나중에</button>
         <button class="install-btn install-btn-primary" id="installDismiss" aria-label="확인">확인</button>
     </div>
 </div>
@@ -7153,6 +7169,7 @@
 (function() {
     var promptEl = document.getElementById('installPrompt');
     var dismissBtn = document.getElementById('installDismiss');
+    var laterBtn = document.getElementById('installLater');
     var guideText = document.getElementById('shortcutGuideText');
     if (!promptEl || !dismissBtn) return;
 
@@ -7225,6 +7242,14 @@
         promptEl.classList.remove('show');
         localStorage.setItem('shortcut-dismissed', Date.now().toString());
     });
+
+    // "나중에" 버튼: 1일 후 다시 표시
+    if (laterBtn) {
+        laterBtn.addEventListener('click', function() {
+            promptEl.classList.remove('show');
+            localStorage.setItem('shortcut-dismissed', (Date.now() - cooldown + 86400000).toString());
+        });
+    }
 })();
 </script>
 
