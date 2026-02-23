@@ -566,13 +566,13 @@ async def _gemini_fallback_compose(
             "아래 SSOT 캐시 데이터는 DRF API에서 사전 검증된 법률 정보입니다.\n"
             "답변 시 반드시 이 캐시의 법령명·조문번호·판례번호를 그대로 인용하세요.\n"
             "캐시에 없는 법령이나 판례를 임의 생성하지 마세요.\n"
-            f"{rag_context.context_text[:4000]}"
+            f"{rag_context.context_text[:100000]}"
         )
     elif rag_context.cache_context:
         ctx_section = (
             "\n\n[SSOT 캐시 — 반드시 최우선 참조]\n"
             "아래 캐시 데이터의 법령명·조문번호·판례번호를 그대로 인용하세요.\n"
-            f"{rag_context.cache_context[:2000]}"
+            f"{rag_context.cache_context[:50000]}"
         )
 
     # 모드별 보강 지시
