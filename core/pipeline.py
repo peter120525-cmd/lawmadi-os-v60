@@ -200,7 +200,7 @@ async def _call_lawmadilm(
         mode=mode,
     )
 
-    max_tokens = 200 if mode == "expert" else 150
+    max_tokens = 120 if mode == "expert" else 80  # 3초 내 완성 목표 (4vCPU 기준 ~30tok/s)
 
     payload = {
         "messages": [{"role": "user", "content": query}],
@@ -319,7 +319,10 @@ def _drf_verify_law_refs(text: str) -> VerificationResult:
     result = VerificationResult()
 
     # 법률 참조 추출: "OO법 제X조" 또는 "OO법 제X조 제Y항"
-    refs = re.findall(r'([가-힣]+법)\s*제(\d+)조(?:\s*제(\d+)항)?', text)
+    refs = re.findall(
+        r'([가-힣]+(?:법|시행령|시행규칙|규정|조례))\s*제(\d+)조(?:\s*제(\d+)항)?',
+        text
+    )
     if not refs:
         result.all_passed = True
         return result
@@ -363,9 +366,9 @@ def _drf_verify_law_refs(text: str) -> VerificationResult:
                     article_text = _get_article_text(articles, article_num)
                 else:
                     # DRF 응답에 조문 목록이 없는 경우 (법명 검색만 가능한 구조)
-                    # 법령이 존재하면 일단 존재로 처리 (조문번호는 미확인)
-                    article_exists = True  # 법령 존재 시 조문도 존재할 가능성 높음
-                    logger.debug(f"[Stage 3] {key}: 법령 존재하나 조문목록 미제공 -> 존재로 처리")
+                    # 조문번호 미확인 → 미확인 처리 (DRF 강화)
+                    article_exists = False  # 조문 목록 미제공 → 미확인 처리 (DRF 강화)
+                    logger.debug(f"[Stage 3] {key}: 법령 존재하나 조문목록 미제공 -> 미확인 처리")
 
             ref_entry = {
                 "ref": key,
@@ -496,7 +499,8 @@ def _remove_unverified_refs(text: str, drf_verification: VerificationResult) -> 
     for ref_info in drf_verification.unverified_refs:
         ref = ref_info.get("ref", "")
         if ref in text:
-            text = text.replace(ref, f"{ref}(※ 확인 필요)")
+            reason = ref_info.get("reason", "미확인")
+            text = text.replace(ref, f"{ref}(※ {reason})")
     return text
 
 
@@ -508,8 +512,8 @@ def _apply_fail_closed(final_text: str, drf_verification: VerificationResult) ->
     unverified_count = len(drf_verification.unverified_refs)
     total_count = drf_verification.total_refs
 
-    # 30% 이상 미검증: 응답 차단
-    if unverified_count / max(total_count, 1) > 0.3:
+    # 20% 이상 미검증: 응답 차단
+    if unverified_count / max(total_count, 1) > 0.2:
         logger.warning(
             f"[FAIL_CLOSED] 미검증 {unverified_count}/{total_count} "
             f"({unverified_count/total_count*100:.0f}%) -> 응답 차단"
