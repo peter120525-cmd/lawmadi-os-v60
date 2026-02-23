@@ -220,60 +220,6 @@ class SafetyGuard:
             re.IGNORECASE
         )
 
-        # Path Traversal 패턴
-        self.path_traversal_patterns = re.compile(
-            r"("
-            r"\.\./|\.\.\\|%2e%2e"
-            r"|/etc/passwd|/etc/shadow"
-            r"|/proc/self"
-            r"|/var/log"
-            r"|C:\\Windows"
-            r"|\.env\b"
-            r")",
-            re.IGNORECASE
-        )
-
-        # Command Injection 패턴
-        self.command_injection_patterns = re.compile(
-            r"("
-            r"`[^`]+`"
-            r"|\$\([^)]+\)"
-            r"|\|\s*\w"
-            r"|;\s*\w"
-            r"|&&\s*\w"
-            r"|\b(wget|curl|nc|ncat|bash|sh|powershell|cmd)\b\s"
-            r")",
-            re.IGNORECASE
-        )
-
-        # SSRF 패턴
-        self.ssrf_patterns = re.compile(
-            r"("
-            r"127\.0\.0\.1"
-            r"|localhost"
-            r"|0\.0\.0\.0"
-            r"|169\.254\."
-            r"|10\.\d+\.\d+\.\d+"
-            r"|172\.(1[6-9]|2\d|3[01])\."
-            r"|192\.168\."
-            r"|::1"
-            r"|0x7f"
-            r"|metadata\.google"
-            r")",
-            re.IGNORECASE
-        )
-
-        # Template Injection 패턴
-        self.template_injection_patterns = re.compile(
-            r"("
-            r"\{\{.*\}\}"
-            r"|\{%.*%\}"
-            r"|\$\{[^}]+\}"
-            r"|#\{[^}]+\}"
-            r")",
-            re.IGNORECASE
-        )
-
     # ── [IT 기술: 다단계 패킷 검사 (Inspection)] ────────────────────────────────────
     def check(self, user_input: str) -> Union[bool, str]:
         """
@@ -319,27 +265,7 @@ class SafetyGuard:
             logger.warning("[LMD-SECURITY-004] XSS 패턴이 감지되어 차단되었습니다.")
             return False
 
-        # 6. Path Traversal 방어
-        if self.path_traversal_patterns.search(normalized_input):
-            logger.warning("[LMD-SECURITY-005] Path Traversal 패턴이 감지되어 차단되었습니다.")
-            return False
-
-        # 7. Command Injection 방어
-        if self.command_injection_patterns.search(normalized_input):
-            logger.warning("[LMD-SECURITY-006] Command Injection 패턴이 감지되어 차단되었습니다.")
-            return False
-
-        # 8. SSRF 방어
-        if self.ssrf_patterns.search(normalized_input):
-            logger.warning("[LMD-SECURITY-007] SSRF 패턴이 감지되어 차단되었습니다.")
-            return False
-
-        # 9. Template Injection 방어
-        if self.template_injection_patterns.search(normalized_input):
-            logger.warning("[LMD-SECURITY-008] Template Injection 패턴이 감지되어 차단되었습니다.")
-            return False
-
-        # 10. 위급 상황(Crisis) 트리거 감지
+        # 6. 위급 상황(Crisis) 트리거 감지
         if any(kw in lower_input for kw in self.crisis_trigger_keywords):
             return "CRISIS"
 

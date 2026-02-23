@@ -13,16 +13,11 @@
     <meta property="og:description" content="60명의 전문 리더가 협업하여 법률 문제를 구체적인 행동 계획으로 바꿔드립니다." />
     <meta property="og:url" content="https://lawmadi-db.web.app" />
     <meta property="og:image" content="https://lawmadi-db.web.app/og-image.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:site_name" content="Lawmadi OS" />
     <meta property="og:locale" content="ko_KR" />
     <!-- SEO: Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Lawmadi OS - 법률 의사결정 지원 시스템" />
     <meta name="twitter:description" content="60명의 전문 리더가 협업하여 법률 문제를 구체적인 행동 계획으로 바꿔드립니다." />
-    <meta name="twitter:image" content="https://lawmadi-db.web.app/og-image.png" />
     <!-- SEO: Canonical -->
     <link rel="canonical" href="https://lawmadi-db.web.app" />
     <!-- PWA (항목 #10) -->
@@ -4730,16 +4725,11 @@
             height: 100vh;
             height: -webkit-fill-available;
             position: relative;
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior: none;
-            touch-action: manipulation;
         }
 
         body.is-inapp-browser .layout-container {
             height: 100vh;
             height: -webkit-fill-available;
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior: none;
         }
 
         /* backdrop-filter fallback for WebViews */
@@ -4771,91 +4761,6 @@
         body.is-inapp-browser.keyboard-open .input-pipeline-wrapper {
             margin-bottom: 0;
             padding-bottom: 8px;
-        }
-
-        /* ═══════════════════════════════════════════════════
-           Mobile More Bottom Sheet (≤768px only)
-        ═══════════════════════════════════════════════════ */
-        .mobile-more-sheet-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.4);
-            z-index: 1200;
-            opacity: 0;
-            transition: opacity 0.25s ease;
-        }
-        .mobile-more-sheet-overlay.show {
-            display: block;
-            opacity: 1;
-        }
-
-        .mobile-more-sheet {
-            display: none;
-            position: fixed;
-            bottom: 0; left: 0; right: 0;
-            z-index: 1300;
-            background: var(--surface);
-            border-radius: 16px 16px 0 0;
-            padding: 8px 0 0 0;
-            padding-bottom: env(safe-area-inset-bottom, 0px);
-            box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
-            transform: translateY(100%);
-            transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-        }
-        .mobile-more-sheet.show {
-            display: block;
-            transform: translateY(0);
-        }
-
-        .mobile-more-sheet-handle {
-            width: 36px;
-            height: 4px;
-            background: var(--border);
-            border-radius: 2px;
-            margin: 0 auto 12px;
-        }
-
-        .mobile-more-sheet-menu {
-            display: flex;
-            flex-direction: column;
-            padding: 0 16px 16px;
-        }
-
-        .mobile-more-sheet-item {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 14px 12px;
-            color: var(--text-primary);
-            text-decoration: none;
-            border-radius: 12px;
-            font-size: 0.95rem;
-            font-weight: 500;
-            transition: background 0.15s ease;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .mobile-more-sheet-item:active {
-            background: rgba(0,0,0,0.05);
-        }
-        .mobile-more-sheet-item .material-symbols-outlined {
-            font-size: 1.3rem;
-            color: var(--text-muted);
-        }
-
-        body.dark-mode .mobile-more-sheet {
-            background: #1e293b;
-            box-shadow: 0 -4px 24px rgba(0,0,0,0.4);
-        }
-        body.dark-mode .mobile-more-sheet-item:active {
-            background: rgba(255,255,255,0.06);
-        }
-
-        @media (min-width: 769px) {
-            .mobile-more-sheet,
-            .mobile-more-sheet-overlay {
-                display: none !important;
-            }
         }
 
     </style>
@@ -5813,13 +5718,12 @@
 
                 // 서버 에러 (event: error)는 재시도 없이 바로 표시
                 if (error._serverError) {
-                    const isIntegrity = error.message && error.message.includes('무결성');
                     this.appendMessage('ai', `
                         <div style="color: #ef4444;">
                             <p><strong>${this.escapeHtml(error.message)}</strong></p>
-                            <button class="retry-btn" onclick="${isIntegrity ? 'UI.resetConversation()' : 'UI.retryLastQuery()'}">
-                                <span class="material-symbols-outlined" style="font-size: 16px;">${isIntegrity ? 'home' : 'refresh'}</span>
-                                ${isIntegrity ? '처음으로' : '다시 시도'}
+                            <button class="retry-btn" onclick="UI.retryLastQuery()">
+                                <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
+                                다시 시도
                             </button>
                         </div>
                     `);
@@ -5884,20 +5788,6 @@
             const data = await response.json();
 
             this.hideTypingIndicator();
-
-            // 시스템 무결성 정책 차단: 처음으로 버튼 표시
-            if (data.status === 'FAIL_CLOSED') {
-                this.appendMessage('ai', `
-                    <div style="color: #ef4444;">
-                        <p><strong>${this.escapeHtml(data.response || '시스템 무결성 정책에 의해 답변이 제한되었습니다.')}</strong></p>
-                        <button class="retry-btn" onclick="UI.resetConversation()">
-                            <span class="material-symbols-outlined" style="font-size: 16px;">home</span>
-                            처음으로
-                        </button>
-                    </div>
-                `);
-                return;
-            }
 
             this.conversationHistory.push(
                 { role: 'user', content: query },
@@ -6994,26 +6884,8 @@
                     window.location.href = 'leaders.html';
                 } else if (action === 'clevel') {
                     window.location.href = 'clevel.html';
-                } else if (action === 'more') {
-                    // 더보기 바텀시트 토글
-                    var sheet = document.getElementById('mobileMoreSheet');
-                    var overlay = document.getElementById('mobileMoreOverlay');
-                    if (sheet && overlay) {
-                        var isOpen = sheet.classList.contains('show');
-                        if (isOpen) {
-                            sheet.classList.remove('show');
-                            overlay.classList.remove('show');
-                            sheet.setAttribute('aria-hidden', 'true');
-                            overlay.setAttribute('aria-hidden', 'true');
-                        } else {
-                            sheet.classList.add('show');
-                            overlay.classList.add('show');
-                            sheet.setAttribute('aria-hidden', 'false');
-                            overlay.setAttribute('aria-hidden', 'false');
-                        }
-                    }
-                    // 더보기는 토글이므로 이전 활성 탭 유지
-                    updateTabAria(document.getElementById('tabChat'));
+                } else if (action === 'about') {
+                    window.location.href = 'about.html';
                 } else if (action === 'favorites') {
                     UI.toggleFavorites();
                     // 저장 탭은 토글이므로 chat 활성 유지
@@ -7021,20 +6893,6 @@
                 }
             });
         });
-
-        // 더보기 바텀시트: 오버레이 클릭 시 닫기
-        var moreOverlay = document.getElementById('mobileMoreOverlay');
-        if (moreOverlay) {
-            moreOverlay.addEventListener('click', function() {
-                var sheet = document.getElementById('mobileMoreSheet');
-                if (sheet) {
-                    sheet.classList.remove('show');
-                    sheet.setAttribute('aria-hidden', 'true');
-                }
-                moreOverlay.classList.remove('show');
-                moreOverlay.setAttribute('aria-hidden', 'true');
-            });
-        }
     };
 
     // Service Worker 정리 (PWA → 홈화면 바로가기 전환)
@@ -7066,9 +6924,9 @@
             <span class="material-symbols-outlined" aria-hidden="true">groups</span>
             <span class="tab-label">임원</span>
         </button>
-        <button class="tab-item" data-tab="more" id="tabMore" role="tab" aria-selected="false" aria-label="더보기 메뉴">
-            <span class="material-symbols-outlined" aria-hidden="true">more_horiz</span>
-            <span class="tab-label">더보기</span>
+        <button class="tab-item" data-tab="about" id="tabAbout" role="tab" aria-selected="false" aria-label="Lawmadi OS 소개">
+            <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            <span class="tab-label">소개</span>
         </button>
         <button class="tab-item" data-tab="favorites" id="tabFavorites" role="tab" aria-selected="false" aria-label="저장된 답변">
             <span class="material-symbols-outlined" aria-hidden="true">bookmark</span>
@@ -7076,26 +6934,6 @@
         </button>
     </div>
 </nav>
-
-<!-- Mobile More Bottom Sheet -->
-<div class="mobile-more-sheet-overlay" id="mobileMoreOverlay" aria-hidden="true"></div>
-<div class="mobile-more-sheet" id="mobileMoreSheet" role="dialog" aria-label="더보기 메뉴" aria-modal="true" aria-hidden="true">
-    <div class="mobile-more-sheet-handle"></div>
-    <nav class="mobile-more-sheet-menu">
-        <a href="about.html" class="mobile-more-sheet-item">
-            <span class="material-symbols-outlined" aria-hidden="true">info</span>
-            <span>소개</span>
-        </a>
-        <a href="terms.html" class="mobile-more-sheet-item">
-            <span class="material-symbols-outlined" aria-hidden="true">gavel</span>
-            <span>이용약관</span>
-        </a>
-        <a href="privacy.html" class="mobile-more-sheet-item">
-            <span class="material-symbols-outlined" aria-hidden="true">shield</span>
-            <span>개인정보처리방침</span>
-        </a>
-    </nav>
-</div>
 
 <!-- 홈화면 바로가기 안내 -->
 <div id="installPrompt" class="install-prompt" role="dialog" aria-label="홈화면 바로가기 안내" aria-modal="true">
@@ -7107,7 +6945,6 @@
         </div>
     </div>
     <div class="install-prompt-actions">
-        <button class="install-btn install-btn-dismiss" id="installLater" aria-label="나중에">나중에</button>
         <button class="install-btn install-btn-primary" id="installDismiss" aria-label="확인">확인</button>
     </div>
 </div>
@@ -7169,7 +7006,6 @@
 (function() {
     var promptEl = document.getElementById('installPrompt');
     var dismissBtn = document.getElementById('installDismiss');
-    var laterBtn = document.getElementById('installLater');
     var guideText = document.getElementById('shortcutGuideText');
     if (!promptEl || !dismissBtn) return;
 
@@ -7242,14 +7078,6 @@
         promptEl.classList.remove('show');
         localStorage.setItem('shortcut-dismissed', Date.now().toString());
     });
-
-    // "나중에" 버튼: 1일 후 다시 표시
-    if (laterBtn) {
-        laterBtn.addEventListener('click', function() {
-            promptEl.classList.remove('show');
-            localStorage.setItem('shortcut-dismissed', (Date.now() - cooldown + 86400000).toString());
-        });
-    }
 })();
 </script>
 
