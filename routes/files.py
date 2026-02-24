@@ -112,8 +112,10 @@ async def upload_document(file: UploadFile = File(...), request: Request = None)
         uploads_dir = Path("uploads")
         uploads_dir.mkdir(exist_ok=True)
 
-        # Filename: {hash[:8]}_{original}
-        safe_filename = f"{file_hash[:8]}_{file.filename}"
+        # Filename: {hash[:8]}_{sanitized_original}
+        _orig = Path(file.filename).name  # strip directory separators
+        _orig = re.sub(r'[\x00/\\:*?"<>|]', '_', _orig)[:100]  # remove dangerous chars, limit length
+        safe_filename = f"{file_hash[:8]}_{_orig}"
         file_path = uploads_dir / safe_filename
 
         async with aiofiles.open(file_path, "wb") as f:
@@ -503,6 +505,10 @@ async def export_pdf(request: Request):
         if not content:
             raise HTTPException(status_code=400, detail="content 필드가 비어 있습니다.")
 
+        # Content size limit: 100KB
+        if len(content) > 100 * 1024:
+            raise HTTPException(status_code=400, detail="콘텐츠 크기가 너무 큽니다. 최대 100KB까지 허용됩니다.")
+
         from fpdf import FPDF
 
         FONT_PATH = os.path.join(_PROJECT_ROOT, "fonts", "NanumGothic.ttf")
@@ -563,4 +569,4 @@ async def export_pdf(request: Request):
     except Exception as e:
         logger.error(f"[PDF] Generation failed: {e}")
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"PDF 생성 실패: {str(e)}")
+        raise HTTPException(status_code=500, detail="PDF 생성 중 오류가 발생했습니다.")

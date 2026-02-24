@@ -30,9 +30,12 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Create backup
+        env:
+          LABEL: ${{ github.event.inputs.backup_label }}
         run: |
           TIMESTAMP=$(date +%Y-%m-%d-%H%M%S)
-          LABEL="${{ github.event.inputs.backup_label }}"
+          # Sanitize label to prevent injection
+          LABEL=$(echo "${LABEL}" | tr -cd '[:alnum:]-_')
           BACKUP_PATH="${BACKUP_BUCKET}/${TIMESTAMP}-${LABEL}"
           COMMIT_SHA=$(git rev-parse --short HEAD)
 

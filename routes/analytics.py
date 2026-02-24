@@ -1,5 +1,6 @@
 """Verification stats, visitor stats, admin leader/category stats routes."""
 import os
+import hmac
 import logging
 from typing import Any, Dict
 from fastapi import APIRouter, Request, Header, HTTPException
@@ -26,7 +27,7 @@ def _verify_internal_auth(authorization: str = Header(default="")) -> None:
     if not _INTERNAL_API_KEY:
         raise HTTPException(status_code=403, detail="INTERNAL_API_KEY not configured")
     token = authorization.removeprefix("Bearer ").strip()
-    if token != _INTERNAL_API_KEY:
+    if not hmac.compare_digest(token, _INTERNAL_API_KEY):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 

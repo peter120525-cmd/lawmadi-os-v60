@@ -2,6 +2,7 @@
 import os
 import json
 import re
+import hmac
 import logging
 from typing import Any, Dict, List, Callable, Coroutine
 from fastapi import APIRouter, Request, Header, HTTPException
@@ -45,7 +46,7 @@ def _verify_api_key(authorization: str = Header(default="")) -> None:
     if not _API_KEYS:
         raise HTTPException(status_code=403, detail="API_KEYS not configured")
     token = authorization.removeprefix("Bearer ").strip()
-    if token not in _API_KEYS:
+    if not any(hmac.compare_digest(token, k) for k in _API_KEYS):
         raise HTTPException(status_code=401, detail="Invalid API key")
 
 
@@ -113,11 +114,11 @@ async def submit_lawyer_inquiry(request: Request):
         LAWYER_INQUIRY_STORE.append(entry)
         while len(LAWYER_INQUIRY_STORE) > 500:
             LAWYER_INQUIRY_STORE.pop(0)
-        logger.info(f"[LAWYER-INQUIRY] Received: {name} / {leader} (total={len(LAWYER_INQUIRY_STORE)})")
+        logger.info(f"[LAWYER-INQUIRY] Received inquiry (total={len(LAWYER_INQUIRY_STORE)})")
         return {"ok": True, "message": "변호사 상담 신청이 접수되었습니다. 빠른 시일 내 연락드리겠습니다."}
     except Exception as e:
         logger.warning(f"[LAWYER-INQUIRY] error: {e}")
-        return JSONResponse(status_code=400, content={"error": str(e)})
+        return JSONResponse(status_code=400, content={"error": "상담 신청 처리 중 오류가 발생했습니다."})
 
 
 # =============================================================
@@ -147,7 +148,7 @@ async def submit_feedback(request: Request):
         return {"ok": True}
     except Exception as e:
         logger.warning(f"[FEEDBACK] error: {e}")
-        return JSONResponse(status_code=400, content={"error": str(e)})
+        return JSONResponse(status_code=400, content={"error": "피드백 처리 중 오류가 발생했습니다."})
 
 
 # =============================================================

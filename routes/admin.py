@@ -3,6 +3,7 @@ Lawmadi OS v60 — Admin Dashboard API routes.
 비즈니스 메트릭 조회 엔드포인트.
 """
 import os
+import hmac
 import logging
 from typing import Any, Dict
 from fastapi import APIRouter, Header, HTTPException, Query
@@ -18,7 +19,7 @@ def _verify_admin_auth(authorization: str = Header(default="")) -> None:
     if not api_key:
         raise HTTPException(status_code=403, detail="MCP_API_KEY not configured")
     token = authorization.removeprefix("Bearer ").strip()
-    if token != api_key:
+    if not hmac.compare_digest(token, api_key):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
@@ -42,7 +43,7 @@ async def admin_dashboard(days: int = Query(default=7, ge=1, le=90), authorizati
         return db.get_dashboard_metrics(days=days)
     except Exception as e:
         logger.error(f"[Admin] dashboard error: {e}")
-        return JSONResponse(status_code=500, content={"ok": False, "error": str(e)})
+        return JSONResponse(status_code=500, content={"ok": False, "error": "내부 서버 오류가 발생했습니다."})
 
 
 @router.get("/conversion")
@@ -56,7 +57,7 @@ async def admin_conversion(days: int = Query(default=30, ge=1, le=365), authoriz
         return db.get_conversion_metrics(days=days)
     except Exception as e:
         logger.error(f"[Admin] conversion error: {e}")
-        return JSONResponse(status_code=500, content={"ok": False, "error": str(e)})
+        return JSONResponse(status_code=500, content={"ok": False, "error": "내부 서버 오류가 발생했습니다."})
 
 
 @router.get("/retention")
@@ -70,7 +71,7 @@ async def admin_retention(authorization: str = Header(default="")):
         return db.get_retention_metrics()
     except Exception as e:
         logger.error(f"[Admin] retention error: {e}")
-        return JSONResponse(status_code=500, content={"ok": False, "error": str(e)})
+        return JSONResponse(status_code=500, content={"ok": False, "error": "내부 서버 오류가 발생했습니다."})
 
 
 @router.get("/cost-estimate")
@@ -84,7 +85,7 @@ async def admin_cost_estimate(days: int = Query(default=7, ge=1, le=90), authori
         return db.get_cost_estimate(days=days)
     except Exception as e:
         logger.error(f"[Admin] cost-estimate error: {e}")
-        return JSONResponse(status_code=500, content={"ok": False, "error": str(e)})
+        return JSONResponse(status_code=500, content={"ok": False, "error": "내부 서버 오류가 발생했습니다."})
 
 
 @router.get("/feedback-summary")
@@ -98,4 +99,4 @@ async def admin_feedback_summary(days: int = Query(default=30, ge=1, le=365), au
         return db.get_feedback_summary(days=days)
     except Exception as e:
         logger.error(f"[Admin] feedback-summary error: {e}")
-        return JSONResponse(status_code=500, content={"ok": False, "error": str(e)})
+        return JSONResponse(status_code=500, content={"ok": False, "error": "내부 서버 오류가 발생했습니다."})

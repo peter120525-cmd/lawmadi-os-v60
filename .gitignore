@@ -10,6 +10,16 @@ venv/
 # Lawmadi secret files
 .env.cloudrun
 
+# Credential & key files
+*.pem
+*.key
+*.p12
+*.pfx
+serviceAccountKey.json
+*-credentials.json
+*-sa-key.json
+firebase-sa-key.json
+
 # Backup files
 *.bak
 *_backup*

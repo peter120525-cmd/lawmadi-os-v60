@@ -121,7 +121,8 @@ gcloud run deploy lawmadi-os-v50 \
   --memory=2Gi \
   --cpu=2 \
   --max-instances=10 \
-  --set-env-vars="SOFT_MODE=true,SWARM_MULTI=true,LAWGO_DRF_OC=choepeter" \
+  --set-env-vars="SOFT_MODE=true,SWARM_MULTI=true" \
+  --set-secrets="LAWGO_DRF_OC=LAWGO_DRF_OC:latest" \
   --allow-unauthenticated \
   --quiet
 
