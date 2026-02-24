@@ -70,6 +70,7 @@ Thumbs.db
 
 # Test result data (generated at runtime)
 scripts/simulation_results.json
+tests/test_10x_results.json
 tests/test_20_results.json
 tests/test_40_results.json
 

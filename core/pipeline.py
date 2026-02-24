@@ -35,6 +35,10 @@ from prompts.system_instructions import build_lawmadilm_prompt, build_system_ins
 
 logger = logging.getLogger("LawmadiOS.Pipeline")
 
+# 최소 법률 응답 길이 (이 미만이면 재생성 시도)
+MIN_LEGAL_RESPONSE_GENERAL = 2000   # 일반 답변 최소 2000자
+MIN_LEGAL_RESPONSE_EXPERT = 4000    # 전문가 답변 최소 4000자
+
 # ---------------------------------------------------------------------------
 # Module-level state (set via setters from main.py)
 # ---------------------------------------------------------------------------
@@ -578,7 +582,7 @@ def _strip_unverified_sentences(text: str, drf_verification: VerificationResult)
 
 
 def _apply_fail_closed(final_text: str, drf_verification: VerificationResult) -> str:
-    """FAIL_CLOSED 로직: 5% 초과 미검증 시 응답 차단, DRF 자체 오류 시에도 차단"""
+    """FAIL_CLOSED 로직: 0.1% 초과 미검증 시 응답 차단, DRF 자체 오류 시에도 차단"""
 
     # ── 안전장치 1: DRF 검증 시스템 자체 오류 → FAIL_CLOSED ──
     if drf_verification.drf_failed:
@@ -593,11 +597,11 @@ def _apply_fail_closed(final_text: str, drf_verification: VerificationResult) ->
     total_count = drf_verification.total_refs
     ratio = unverified_count / max(total_count, 1)
 
-    # ── 안전장치 2: 미검증 비율 5% 초과 → 응답 차단 (fail-closed 5%) ──
-    if ratio > 0.05:
+    # ── 안전장치 2: 미검증 비율 0.1% 초과 → 응답 차단 (fail-closed 0.1%) ──
+    if ratio > 0.001:
         logger.warning(
             f"[FAIL_CLOSED] 미검증 {unverified_count}/{total_count} "
-            f"({ratio*100:.1f}%) > 5% → 응답 차단"
+            f"({ratio*100:.1f}%) > 0.1% → 응답 차단"
         )
         return FAIL_CLOSED_RESPONSE
 
@@ -805,6 +809,27 @@ async def _run_legal_pipeline(
         if not final_text or len(final_text.strip()) < 30:
             raise RuntimeError("Gemini 빈 응답 (재시도 포함)")
 
+    # -- Stage 3.5: 최소 응답 길이 검증 (법률 응답) --
+    is_legal = analysis.get("is_legal", True)
+    min_len = MIN_LEGAL_RESPONSE_EXPERT if mode == "expert" else MIN_LEGAL_RESPONSE_GENERAL
+    if is_legal and len(final_text.strip()) < min_len:
+        logger.warning(
+            f"[Stage 3.5] 법률 응답 길이 부족 ({len(final_text)}자 < {min_len}자, mode={mode}) — 재생성"
+        )
+        try:
+            retry_text = await _gemini_fallback_compose(
+                query, analysis, rag_context, tools, gemini_history,
+                now_kst, ssot_available, lang=lang, mode=mode,
+                lm_draft=lm_draft,
+            )
+            if retry_text and len(retry_text.strip()) >= min_len:
+                final_text = retry_text
+                logger.info(f"[Stage 3.5] 재생성 성공 ({len(final_text)}자)")
+            else:
+                logger.warning(f"[Stage 3.5] 재생성도 길이 부족 ({len(retry_text) if retry_text else 0}자)")
+        except Exception as e:
+            logger.warning(f"[Stage 3.5] 재생성 실패: {e}")
+
     # -- Stage 4: DRF 실시간 전수 검증 --
     logger.info("[Stage 4/4] DRF 전수 검증")
     try:
@@ -813,10 +838,34 @@ async def _run_legal_pipeline(
         logger.error(f"[Stage 4] DRF 검증 시스템 오류 → FAIL_CLOSED: {e}")
         drf_verification = VerificationResult(drf_failed=True)
 
-    # FAIL_CLOSED 적용 (5% 초과 미검증 또는 DRF 오류 시 차단, 5% 이하 미검증 문장 삭제)
-    final_text = _apply_fail_closed(final_text, drf_verification)
+    # FAIL_CLOSED 적용 (0.1% 초과 미검증 또는 DRF 오류 시 차단)
+    fail_closed_result = _apply_fail_closed(final_text, drf_verification)
 
-    return final_text, drf_verification
+    # -- FAIL_CLOSED 재시도: 차단 시 1회 재생성 후 재검증 --
+    if fail_closed_result == FAIL_CLOSED_RESPONSE:
+        logger.warning("[FAIL_CLOSED 재시도] 1회 재생성 시도")
+        try:
+            retry_text = await _gemini_fallback_compose(
+                query, analysis, rag_context, tools, gemini_history,
+                now_kst, ssot_available, lang=lang, mode=mode,
+                lm_draft=lm_draft,
+            )
+            if retry_text and len(retry_text.strip()) >= 30:
+                retry_drf = await _drf_verify_law_refs(retry_text)
+                retry_result = _apply_fail_closed(retry_text, retry_drf)
+                if retry_result != FAIL_CLOSED_RESPONSE:
+                    logger.info("[FAIL_CLOSED 재시도] 재생성 + 재검증 통과")
+                    return retry_result, retry_drf
+                else:
+                    logger.warning("[FAIL_CLOSED 재시도] 재검증도 실패 → FAIL_CLOSED 유지")
+            else:
+                logger.warning("[FAIL_CLOSED 재시도] 재생성 실패 (빈 응답)")
+        except Exception as e:
+            logger.warning(f"[FAIL_CLOSED 재시도] 오류: {e}")
+
+        return fail_closed_result, drf_verification
+
+    return fail_closed_result, drf_verification
 
 
 # =============================================================
