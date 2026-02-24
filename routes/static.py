@@ -1,7 +1,7 @@
 """Static page routes — no RUNTIME dependency."""
 import os
 from fastapi import APIRouter
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from core.constants import OS_VERSION
 
 router = APIRouter()
@@ -130,3 +130,27 @@ async def serve_privacy():
     if os.path.exists(frontend_path):
         return FileResponse(frontend_path)
     return {"message": "Privacy page not found", "version": OS_VERSION}
+
+
+# =============================================================
+# .html 확장자 경로 → 확장자 없는 경로로 리다이렉트
+# 모바일/인앱 브라우저에서 .html 링크 호환성 보장
+# =============================================================
+
+_HTML_REDIRECTS = {
+    "/terms.html": "/terms",
+    "/privacy.html": "/privacy",
+    "/about.html": "/about",
+    "/about-en.html": "/about-en",
+    "/leaders.html": "/leaders",
+    "/leaders-en.html": "/leaders-en",
+    "/clevel-en.html": "/clevel-en",
+    "/index-en.html": "/en",
+}
+
+for _src, _dst in _HTML_REDIRECTS.items():
+    def _make_redirect(dst=_dst):
+        async def _redirect():
+            return RedirectResponse(url=dst, status_code=301)
+        return _redirect
+    router.add_api_route(_src, _make_redirect(), methods=["GET"])
