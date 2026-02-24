@@ -512,8 +512,8 @@ def _apply_fail_closed(final_text: str, drf_verification: VerificationResult) ->
     unverified_count = len(drf_verification.unverified_refs)
     total_count = drf_verification.total_refs
 
-    # 20% 이상 미검증: 응답 차단
-    if unverified_count / max(total_count, 1) > 0.2:
+    # 미검증 1건이라도 있으면 응답 차단 (fail-closed 0%)
+    if unverified_count / max(total_count, 1) > 0.0:
         logger.warning(
             f"[FAIL_CLOSED] 미검증 {unverified_count}/{total_count} "
             f"({unverified_count/total_count*100:.0f}%) -> 응답 차단"

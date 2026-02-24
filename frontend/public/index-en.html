@@ -5283,7 +5283,7 @@
         '이룸': 'Education & Youth', '다올': 'Insurance & Pension', '새론': 'Venture & Innovation', '나래': 'Culture & Arts',
         '가람': 'Food & Health', '빛나': 'Multicultural & Immigration', '소울': 'Religion & Tradition', '미소': 'Advertising & Media',
         '늘솔': 'Agriculture & Livestock', '이서': 'Maritime & Fisheries', '윤빛': 'Science & Tech', '다인': 'Disability & Welfare',
-        '세움': 'Inheritance & Trust', '예온': 'Sports & Leisure', '한빛': 'Data & AI Ethics', '마디': 'System Director',
+        '세움': 'Inheritance & Trust', '예온': 'Sports & Leisure', '한빛': 'Data & Tech Ethics', '마디': 'System Director',
         '서연': 'Strategic Planning', '지유': 'Technical Verification', '유나': 'Content Design',
     };
 
@@ -6510,7 +6510,7 @@
 
                     const expertCta = document.createElement('button');
                     expertCta.className = 'bottom-cta-btn expert';
-                    expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> Get Expert Verification <span style="font-size:0.8em;opacity:0.7">(Paid)</span>';
+                    expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> Get Expert Verification <span style="font-size:0.8em;opacity:0.7">(Coming Soon)</span>';
                     expertCta.onclick = async () => {
                         expertCta.disabled = true;
                         expertCta.innerHTML = '<span class="material-symbols-outlined">hourglass_top</span> Verifying...';
@@ -6540,7 +6540,7 @@
                             } else { throw new Error('Verification failed'); }
                         } catch (e) {
                             expertCta.disabled = false;
-                            expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> Get Expert Verification <span style="font-size:0.8em;opacity:0.7">(Paid)</span>';
+                            expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> Get Expert Verification <span style="font-size:0.8em;opacity:0.7">(Coming Soon)</span>';
                             console.error('Expert verification failed:', e);
                         }
                     };
