@@ -642,7 +642,22 @@
 
             .badge-grid {
                 grid-template-columns: repeat(2, 1fr);
-                gap: 10px;
+                gap: 8px;
+            }
+
+            .badge-avatar {
+                width: 44px;
+                height: 44px;
+                margin-right: 6px;
+            }
+
+            .category-badge {
+                padding: 12px 10px;
+                font-size: 1rem;
+            }
+
+            .category-badge .name {
+                font-size: 0.9rem;
             }
 
             .clevel-row {
@@ -706,8 +721,19 @@
 
         /* Small devices (< 400px) */
         @media (max-width: 400px) {
-            .badge-grid {
-                grid-template-columns: 1fr;
+            .badge-avatar {
+                width: 36px;
+                height: 36px;
+            }
+
+            .category-badge {
+                padding: 10px 8px;
+                font-size: 0.9rem;
+                gap: 4px;
+            }
+
+            .category-badge .name {
+                font-size: 0.8rem;
             }
 
             .back-button {
