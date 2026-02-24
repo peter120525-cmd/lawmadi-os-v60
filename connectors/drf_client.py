@@ -280,8 +280,14 @@ class DRFConnector:
         try:
             cached = _cache_get(cache_key)
             if cached and cached.get("data"):
-                logger.info(f"🎯 [Cache HIT] lawService, query={law_name[:30]}")
-                return cached["data"]
+                # 캐시 검증: 조문 수가 너무 적으면 잘린 데이터일 수 있음 → 재조회
+                cached_data = cached["data"]
+                arts = cached_data.get("법령", {}).get("조문", {}).get("조문단위", [])
+                if isinstance(arts, list) and len(arts) < 10:
+                    logger.warning(f"⚠️ [Cache STALE] lawService {law_name}: 조문 {len(arts)}건 → 재조회")
+                else:
+                    logger.info(f"🎯 [Cache HIT] lawService, query={law_name[:30]} ({len(arts) if isinstance(arts, list) else '?'}건)")
+                    return cached_data
         except Exception:
             pass
 
@@ -324,7 +330,7 @@ class DRFConnector:
             return None
 
         logger.info(f"🔍 [lawService] {law_name} → MST={mst}")
-        # Step 2: lawService.do로 조문 상세 조회
+        # Step 2: lawService.do로 조문 상세 조회 (타임아웃 10초: 민법 등 대용량 법령)
         try:
             params = {
                 "OC": self.drf_key,
@@ -332,12 +338,12 @@ class DRFConnector:
                 "MST": mst,
                 "type": "JSON",
             }
-            r = requests.get(_LAW_SERVICE_URL, params=params, timeout=self.timeout_sec)
+            r = requests.get(_LAW_SERVICE_URL, params=params, timeout=max(self.timeout_sec, 10))
             if r.status_code != 200:
                 return None
             data = r.json()
             try:
-                _cache_set(cache_key, {"data": data, "law_name": law_name, "mst": mst}, ttl_seconds=3600)
+                _cache_set(cache_key, {"data": data, "law_name": law_name, "mst": mst}, ttl_seconds=86400)
             except Exception:
                 pass
             return data

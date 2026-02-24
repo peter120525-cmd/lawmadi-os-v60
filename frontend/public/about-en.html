@@ -304,14 +304,17 @@
         }
 
         .badge-grid {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
             gap: 10px;
             margin-bottom: 28px;
         }
 
         .category-badge {
-            padding: 10px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
             background: rgba(30, 41, 59, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
@@ -319,6 +322,11 @@
             font-weight: 700;
             color: var(--text-primary);
             transition: all 0.3s;
+        }
+
+        a.category-badge {
+            text-decoration: none;
+            color: inherit;
         }
 
         .category-badge:hover {
@@ -329,8 +337,10 @@
         .category-badge .name {
             color: var(--text-secondary);
             font-weight: 400;
-            margin-left: 6px;
+            margin-left: auto;
+            padding-left: 8px;
             font-size: 0.8rem;
+            flex-shrink: 0;
         }
 
         .clevel-row {
@@ -353,6 +363,11 @@
             transition: all 0.3s;
             position: relative;
             overflow: hidden;
+        }
+
+        a.clevel-mini {
+            text-decoration: none;
+            color: inherit;
         }
 
         .clevel-mini:hover {
@@ -646,58 +661,58 @@
         <div class="section">
             <h2 class="section-title">60 Leaders &amp; C-Level Executives</h2>
             <div class="badge-grid">
-                <span class="category-badge">Civil Law<span class="name">Hwiyul</span></span>
-                <span class="category-badge">Real Estate<span class="name">Bonui</span></span>
-                <span class="category-badge">Construction<span class="name">Damseul</span></span>
-                <span class="category-badge">Redevelopment<span class="name">Aki</span></span>
-                <span class="category-badge">Medical<span class="name">Yeonwoo</span></span>
-                <span class="category-badge">Traffic Accident<span class="name">Hanui</span></span>
-                <span class="category-badge">Tenancy<span class="name">Onyu</span></span>
-                <span class="category-badge">Labor Law<span class="name">Damwoo</span></span>
-                <span class="category-badge">Criminal Law<span class="name">Mugyeol</span></span>
-                <span class="category-badge">Administrative<span class="name">Roun</span></span>
-                <span class="category-badge">Constitutional<span class="name">Maru</span></span>
-                <span class="category-badge">Family &amp; Divorce<span class="name">Sandeul</span></span>
-                <span class="category-badge">Tax &amp; Finance<span class="name">Chansol</span></span>
-                <span class="category-badge">IT &amp; Security<span class="name">Hwiyun</span></span>
-                <span class="category-badge">Privacy<span class="name">Jinu</span></span>
-                <span class="category-badge">IP Rights<span class="name">Ruda</span></span>
-                <span class="category-badge">Copyright<span class="name">Haram</span></span>
-                <span class="category-badge">Fair Trade<span class="name">Bareum</span></span>
-                <span class="category-badge">Environmental<span class="name">Surim</span></span>
-                <span class="category-badge">International<span class="name">Mir</span></span>
-                <span class="category-badge">Trade &amp; Customs<span class="name">Haeseul</span></span>
-                <span class="category-badge">Insurance<span class="name">Seula</span></span>
-                <span class="category-badge">Industrial Accident<span class="name">Haena</span></span>
-                <span class="category-badge">Consumer<span class="name">Seulbi</span></span>
-                <span class="category-badge">Inheritance &amp; Trust<span class="name">Seum</span></span>
-                <span class="category-badge">Space &amp; Aviation 🆕<span class="name">Byeoli</span></span>
-                <span class="category-badge">Data &amp; Tech Ethics 🆕<span class="name">Hanbit</span></span>
-                <span class="category-badge">Venture &amp; NewBiz 🆕<span class="name">Saeron</span></span>
+                <a href="leader-profile.html?id=L01" class="category-badge">Civil Law<span class="name">Hwiyul</span></a>
+                <a href="leader-profile.html?id=L02" class="category-badge">Real Estate<span class="name">Bonui</span></a>
+                <a href="leader-profile.html?id=L03" class="category-badge">Construction<span class="name">Damseul</span></a>
+                <a href="leader-profile.html?id=L04" class="category-badge">Redevelopment<span class="name">Aki</span></a>
+                <a href="leader-profile.html?id=L05" class="category-badge">Medical<span class="name">Yeonwoo</span></a>
+                <a href="leader-profile.html?id=L07" class="category-badge">Traffic Accident<span class="name">Hanui</span></a>
+                <a href="leader-profile.html?id=L08" class="category-badge">Tenancy<span class="name">Onyu</span></a>
+                <a href="leader-profile.html?id=L30" class="category-badge">Labor Law<span class="name">Damwoo</span></a>
+                <a href="leader-profile.html?id=L22" class="category-badge">Criminal Law<span class="name">Mugyeol</span></a>
+                <a href="leader-profile.html?id=L31" class="category-badge">Administrative<span class="name">Roun</span></a>
+                <a href="leader-profile.html?id=L35" class="category-badge">Constitutional<span class="name">Maru</span></a>
+                <a href="leader-profile.html?id=L41" class="category-badge">Family &amp; Divorce<span class="name">Sandeul</span></a>
+                <a href="leader-profile.html?id=L20" class="category-badge">Tax &amp; Finance<span class="name">Chansol</span></a>
+                <a href="leader-profile.html?id=L21" class="category-badge">IT &amp; Security<span class="name">Hwiyun</span></a>
+                <a href="leader-profile.html?id=L34" class="category-badge">Privacy<span class="name">Jinu</span></a>
+                <a href="leader-profile.html?id=L26" class="category-badge">IP Rights<span class="name">Ruda</span></a>
+                <a href="leader-profile.html?id=L42" class="category-badge">Copyright<span class="name">Haram</span></a>
+                <a href="leader-profile.html?id=L32" class="category-badge">Fair Trade<span class="name">Bareum</span></a>
+                <a href="leader-profile.html?id=L27" class="category-badge">Environmental<span class="name">Surim</span></a>
+                <a href="leader-profile.html?id=L17" class="category-badge">International<span class="name">Mir</span></a>
+                <a href="leader-profile.html?id=L28" class="category-badge">Trade &amp; Customs<span class="name">Haeseul</span></a>
+                <a href="leader-profile.html?id=L16" class="category-badge">Insurance<span class="name">Seula</span></a>
+                <a href="leader-profile.html?id=L43" class="category-badge">Industrial Accident<span class="name">Haena</span></a>
+                <a href="leader-profile.html?id=L38" class="category-badge">Consumer<span class="name">Seulbi</span></a>
+                <a href="leader-profile.html?id=L57" class="category-badge">Inheritance &amp; Trust<span class="name">Seum</span></a>
+                <a href="leader-profile.html?id=L33" class="category-badge">Space &amp; Aviation 🆕<span class="name">Byeoli</span></a>
+                <a href="leader-profile.html?id=L59" class="category-badge">Data &amp; Tech Ethics 🆕<span class="name">Hanbit</span></a>
+                <a href="leader-profile.html?id=L47" class="category-badge">Venture &amp; NewBiz 🆕<span class="name">Saeron</span></a>
             </div>
 
             <div class="clevel-row">
-                <div class="clevel-mini cso">
+                <a href="clevel-en.html" class="clevel-mini cso">
                     <div class="clevel-mini-avatar">S</div>
                     <div class="clevel-mini-info">
                         <h4>Seoyeon</h4>
                         <span>CSO · Strategy</span>
                     </div>
-                </div>
-                <div class="clevel-mini cto">
+                </a>
+                <a href="clevel-en.html" class="clevel-mini cto">
                     <div class="clevel-mini-avatar">J</div>
                     <div class="clevel-mini-info">
                         <h4>Jiyu</h4>
                         <span>CTO · Technology</span>
                     </div>
-                </div>
-                <div class="clevel-mini cco">
+                </a>
+                <a href="clevel-en.html" class="clevel-mini cco">
                     <div class="clevel-mini-avatar">Y</div>
                     <div class="clevel-mini-info">
                         <h4>Yuna</h4>
                         <span>CCO · Content</span>
                     </div>
-                </div>
+                </a>
             </div>
 
             <div class="view-links">

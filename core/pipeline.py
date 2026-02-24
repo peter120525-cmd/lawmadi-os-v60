@@ -14,6 +14,7 @@ Pipeline:
     set_runtime(RUNTIME)
     set_law_cache(LAW_CACHE, build_cache_context, match_ssot_sources, build_ssot_context)
 """
+import json
 import os
 import re
 import logging
@@ -39,9 +40,53 @@ logger = logging.getLogger("LawmadiOS.Pipeline")
 # ---------------------------------------------------------------------------
 _RUNTIME: Dict[str, Any] = {}
 _LAW_CACHE: Dict[str, Any] = {}
+_LEADER_PROFILES: Dict[str, Any] = {}
 _build_cache_context_fn = None
 _match_ssot_sources_fn = None
 _build_ssot_context_fn = None
+
+
+def _load_leader_profiles() -> Dict[str, Any]:
+    """leader-profiles.json 로드 (리더 철학·접근방식·정체성)"""
+    global _LEADER_PROFILES
+    if _LEADER_PROFILES:
+        return _LEADER_PROFILES
+    try:
+        path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            "frontend", "public", "leader-profiles.json",
+        )
+        with open(path, "r", encoding="utf-8") as f:
+            _LEADER_PROFILES = json.load(f)
+        logger.info(f"✅ 리더 프로필 로드 완료: {len(_LEADER_PROFILES)}명")
+    except Exception as e:
+        logger.warning(f"🟡 리더 프로필 로드 실패: {e}")
+        _LEADER_PROFILES = {}
+    return _LEADER_PROFILES
+
+
+def _build_leader_persona(leader_id: str) -> str:
+    """리더 프로필에서 핵심 인격·철학 텍스트 생성"""
+    profiles = _load_leader_profiles()
+    p = profiles.get(leader_id)
+    if not p:
+        return ""
+    parts = []
+    if p.get("hero"):
+        parts.append(f"신조: {p['hero']}")
+    identity = p.get("identity", {})
+    if identity.get("what"):
+        parts.append(f"역할: {identity['what']}")
+    if identity.get("why"):
+        parts.append(f"사명: {identity['why']}")
+    solve = p.get("whatWeSolve", {})
+    if solve.get("approach"):
+        parts.append(f"접근방식: {solve['approach']}")
+    if p.get("philosophy"):
+        parts.append(f"철학: {p['philosophy']}")
+    if not parts:
+        return ""
+    return "\n".join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -182,6 +227,7 @@ async def _call_lawmadilm(
     """Stage 2: LawmadiLM 핵심 법률 초안 (5-6초 내 완료, 150토큰)"""
     leader_name = analysis.get("leader_name", "마디")
     leader_specialty = analysis.get("leader_specialty", "통합")
+    leader_id = analysis.get("leader_id", "")
 
     # RAG 컨텍스트 텍스트 준비
     rag_text = ""
@@ -189,6 +235,9 @@ async def _call_lawmadilm(
         rag_text = rag_context.context_text[:4000]
     elif rag_context.cache_context:
         rag_text = rag_context.cache_context[:2000]
+
+    # 리더 인격·철학 텍스트
+    persona_text = _build_leader_persona(leader_id)
 
     # 5단계 프레임워크 강화 프롬프트 생성
     system_prompt = build_lawmadilm_prompt(
@@ -198,9 +247,10 @@ async def _call_lawmadilm(
         drf_verification=drf_verification,
         lang=lang,
         mode=mode,
+        leader_persona=persona_text,
     )
 
-    max_tokens = 120 if mode == "expert" else 80  # 3초 내 완성 목표 (4vCPU 기준 ~30tok/s)
+    max_tokens = 100 if mode == "expert" else 60  # 5초 내 완성 목표 (네트워크 지연 포함)
 
     payload = {
         "messages": [{"role": "user", "content": query}],
@@ -209,7 +259,7 @@ async def _call_lawmadilm(
         "temperature": 0.3,
     }
 
-    async with httpx.AsyncClient(timeout=3.0) as client:
+    async with httpx.AsyncClient(timeout=5.0) as client:
         resp = await client.post(f"{LAWMADILM_API_URL}/chat", json=payload)
         resp.raise_for_status()
         data = resp.json()
@@ -598,10 +648,18 @@ async def _gemini_fallback_compose(
     if lang == "en":
         lang_instruction = "\n\nIMPORTANT: Respond entirely in English. Translate Korean legal terms with the original Korean in parentheses."
 
+    # 리더 인격·철학 주입
+    leader_id = analysis.get("leader_id", "")
+    persona_section = ""
+    persona_text = _build_leader_persona(leader_id)
+    if persona_text:
+        persona_section = f"\n\n[리더 인격]\n{persona_text}"
+
     instruction = (
         f"{build_system_instruction(mode)}\n"
         f"현재 당신은 '{leader_name}' 리더입니다.\n"
-        f"전문 분야: {leader_specialty}\n"
+        f"전문 분야: {leader_specialty}"
+        f"{persona_section}\n"
         f"질문 요약: {analysis.get('summary', '')}"
         f"{draft_section}"
         f"{ctx_section}"
@@ -644,12 +702,14 @@ async def _run_legal_pipeline(
     mode: str = "general",
     rag_context: Optional[RAGContext] = None,
 ) -> str:
-    """3-Stage Legal Pipeline (Gemini 단독):
+    """4-Stage Hybrid Legal Pipeline (LM 5초 초안 → Gemini 완성):
     Stage 1: RAG 조문 검색
-    Stage 2: Gemini Flash 답변 생성
-    Stage 3: DRF 실시간 전수 검증
+    Stage 2: LawmadiLM 초안 (5초 타임아웃)
+    Stage 3: Gemini Flash 완성 답변 (LM 초안 기반 또는 단독)
+    Stage 4: DRF 실시간 전수 검증
     → Fail-Closed → 응답
 
+    LawmadiLM 실패/타임아웃 시 Gemini가 단독 작성 (fallback).
     rag_context가 전달되면 Stage 1을 건너뛰어 S0+S1 병렬화를 지원.
     """
     final_text = ""
@@ -657,43 +717,63 @@ async def _run_legal_pipeline(
 
     # -- Stage 1: RAG 조문 검색 (1회만 수행, 외부 전달 시 스킵) --
     if rag_context is None:
-        logger.info("[Stage 1/3] RAG 조문 검색 시작")
+        logger.info("[Stage 1/4] RAG 조문 검색 시작")
         try:
             rag_context = await _stage1_rag_search(query)
         except Exception as e:
             logger.warning(f"[Stage 1] RAG 검색 실패 (빈 컨텍스트 진행): {e}")
             rag_context = RAGContext()
     else:
-        logger.info("[Stage 1/3] RAG 컨텍스트 외부 전달 (S0+S1 병렬화)")
+        logger.info("[Stage 1/4] RAG 컨텍스트 외부 전달 (S0+S1 병렬화)")
 
-    # -- Stage 2: Gemini Flash 답변 생성 (단독) --
-    logger.info("[Stage 2/3] Gemini Flash 답변 생성")
+    # -- Stage 2: LawmadiLM 초안 (5초 타임아웃) --
+    lm_draft = ""
+    try:
+        logger.info("[Stage 2/4] LawmadiLM 초안 생성 (5초)")
+        raw_answer = await _call_lawmadilm(
+            query, analysis, rag_context, lang=lang, mode=mode,
+        )
+        lm_draft = _postprocess_lawmadilm(raw_answer, query)
+        if lm_draft:
+            logger.info(f"[Stage 2] LM 초안 완료 ({len(lm_draft)}자)")
+        else:
+            logger.warning("[Stage 2] 후처리 -> None (품질 미달)")
+            lm_draft = ""
+    except Exception as e:
+        logger.warning(f"[Stage 2] LawmadiLM 실패/타임아웃: {e} -> Gemini 단독")
+        lm_draft = ""
+
+    # -- Stage 3: Gemini Flash 완성 답변 (LM 초안 기반 또는 단독) --
+    logger.info(f"[Stage 3/4] Gemini Flash 답변 (LM초안={'있음' if lm_draft else '없음'})")
     try:
         final_text = await _gemini_fallback_compose(
             query, analysis, rag_context, tools, gemini_history,
             now_kst, ssot_available, lang=lang, mode=mode,
-            lm_draft="",
+            lm_draft=lm_draft,
         )
     except Exception as e:
-        logger.error(f"[Stage 2] Gemini 답변 생성 실패: {e}")
-        raise RuntimeError("Gemini 답변 생성 실패")
+        logger.error(f"[Stage 3] Gemini 답변 생성 실패: {e}")
+        if lm_draft:
+            final_text = lm_draft
+        else:
+            raise RuntimeError("LawmadiLM + Gemini 모두 답변 생성 실패")
 
     # 빈 응답 안전장치: Gemini가 빈 텍스트 반환 시 재시도 1회
     if not final_text or len(final_text.strip()) < 30:
-        logger.warning(f"[Stage 2] Gemini 빈 응답 감지 ({len(final_text)}자) — 재시도")
+        logger.warning(f"[Stage 3] Gemini 빈 응답 감지 ({len(final_text)}자) — 재시도")
         try:
             final_text = await _gemini_fallback_compose(
                 query, analysis, rag_context, tools, gemini_history,
                 now_kst, ssot_available, lang=lang, mode=mode,
-                lm_draft="",
+                lm_draft=lm_draft,
             )
         except Exception as e:
-            logger.error(f"[Stage 2 재시도] 실패: {e}")
+            logger.error(f"[Stage 3 재시도] 실패: {e}")
         if not final_text or len(final_text.strip()) < 30:
             raise RuntimeError("Gemini 빈 응답 (재시도 포함)")
 
-    # -- Stage 3: DRF 실시간 전수 검증 --
-    logger.info("[Stage 3/3] DRF 전수 검증")
+    # -- Stage 4: DRF 실시간 전수 검증 --
+    logger.info("[Stage 4/4] DRF 전수 검증")
     try:
         drf_verification = _drf_verify_law_refs(final_text)
     except Exception as e:
