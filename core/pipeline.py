@@ -597,15 +597,15 @@ def _apply_fail_closed(final_text: str, drf_verification: VerificationResult) ->
     total_count = drf_verification.total_refs
     ratio = unverified_count / max(total_count, 1)
 
-    # ── 안전장치 2: 미검증 비율 0.1% 초과 → 응답 차단 (fail-closed 0.1%) ──
-    if ratio > 0.001:
+    # ── 안전장치 2: 미검증 비율 30% 초과 → 응답 차단 (fail-closed) ──
+    if ratio > 0.30:
         logger.warning(
             f"[FAIL_CLOSED] 미검증 {unverified_count}/{total_count} "
-            f"({ratio*100:.1f}%) > 0.1% → 응답 차단"
+            f"({ratio*100:.1f}%) > 30% → 응답 차단"
         )
         return FAIL_CLOSED_RESPONSE
 
-    # ── 안전장치 3: 5% 이하 미검증 → 해당 조문 완전 삭제 (태깅 아님) ──
+    # ── 안전장치 3: 30% 이하 미검증 → 해당 조문 완전 삭제 (태깅 아님) ──
     if unverified_count > 0:
         final_text = _strip_unverified_sentences(final_text, drf_verification)
         logger.info(
