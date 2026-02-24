@@ -5514,6 +5514,9 @@
             const leaderParam = urlParams.get('leader');
             if (leaderParam) {
                 history.replaceState(null, '', window.location.pathname);
+                // 화이트리스트 검증: 등록된 리더 이름만 허용
+                const allowedLeaders = new Set(['서연','지유','유나','휘율','보늬','담슬','아키','연우','벼리','하늬','온유','한울','결휘','오름','아슬','누리','다솜','별하','슬아','미르','다온','슬옹','찬솔','휘윤','무결','가비','도울','강무','루다','수림','해슬','라온','담우','로운','바름','별이','지누','마루','단아','예솔','슬비','가온','한결','산들','하람','해나','보람','이룸','다올','새론','나래','가람','빛나','소울','미소','늘솔','이서','윤빛','다인','세움','예온','한빛','마디']);
+                if (!allowedLeaders.has(leaderParam)) return;
                 const clevelTitles = { '서연': 'CSO', '지유': 'CTO', '유나': 'CCO' };
                 const title = clevelTitles[leaderParam];
                 const honorific = title ? `${leaderParam} ${title}님` : `${leaderParam} 리더님`;
