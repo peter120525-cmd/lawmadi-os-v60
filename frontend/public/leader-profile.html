@@ -625,6 +625,12 @@
             document.getElementById('errorState').style.display = 'flex';
         }
 
+        function esc(text) {
+            const d = document.createElement('div');
+            d.textContent = text || '';
+            return d.innerHTML;
+        }
+
         function renderProfile(basic, profile, code) {
             // Update page title
             document.title = `${basic.name} - ${basic.specialty || basic.role} | Lawmadi OS`;
@@ -647,11 +653,11 @@
                 identityGrid.innerHTML = `
                     <div class="identity-box">
                         <h4>What We Do</h4>
-                        <p>${profile.identity.what}</p>
+                        <p>${esc(profile.identity.what)}</p>
                     </div>
                     <div class="identity-box">
                         <h4>Why We Exist</h4>
-                        <p>${profile.identity.why}</p>
+                        <p>${esc(profile.identity.why)}</p>
                     </div>
                 `;
             }
@@ -665,21 +671,21 @@
                         <div class="solve-icon"><span class="material-symbols-outlined">report_problem</span></div>
                         <div>
                             <h4>기존의 문제</h4>
-                            <p>${ws.problem}</p>
+                            <p>${esc(ws.problem)}</p>
                         </div>
                     </div>
                     <div class="solve-item">
                         <div class="solve-icon"><span class="material-symbols-outlined">block</span></div>
                         <div>
                             <h4>기존의 한계</h4>
-                            <p>${ws.limit}</p>
+                            <p>${esc(ws.limit)}</p>
                         </div>
                     </div>
                     <div class="solve-item">
                         <div class="solve-icon"><span class="material-symbols-outlined">tips_and_updates</span></div>
                         <div>
                             <h4>우리의 접근</h4>
-                            <p>${ws.approach}</p>
+                            <p>${esc(ws.approach)}</p>
                         </div>
                     </div>
                 `;
@@ -691,11 +697,11 @@
                 expertiseGrid.innerHTML = profile.expertise.map(e => `
                     <div class="expertise-item">
                         <div class="expertise-icon">
-                            <span class="material-symbols-outlined">${e.icon}</span>
+                            <span class="material-symbols-outlined">${esc(e.icon)}</span>
                         </div>
                         <div>
-                            <div class="expertise-label">${e.label}</div>
-                            <div class="expertise-desc">${e.desc}</div>
+                            <div class="expertise-label">${esc(e.label)}</div>
+                            <div class="expertise-desc">${esc(e.desc)}</div>
                         </div>
                     </div>
                 `).join('');
@@ -703,17 +709,17 @@
 
             // Philosophy
             if (profile.philosophy) {
-                document.getElementById('philosophyCard').innerHTML = `<p>${profile.philosophy}</p>`;
+                document.getElementById('philosophyCard').innerHTML = `<p>${esc(profile.philosophy)}</p>`;
             }
 
             // Impact
             if (profile.impact) {
-                document.getElementById('impactCard').innerHTML = `<p>${profile.impact}</p>`;
+                document.getElementById('impactCard').innerHTML = `<p>${esc(profile.impact)}</p>`;
             }
 
             // Vision
             if (profile.vision) {
-                document.getElementById('visionCard').innerHTML = `<p>${profile.vision}</p>`;
+                document.getElementById('visionCard').innerHTML = `<p>${esc(profile.vision)}</p>`;
             }
 
             // Show content

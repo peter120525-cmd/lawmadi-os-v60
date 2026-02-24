@@ -10,7 +10,7 @@ on:
 
 env:
   PROJECT_ID: lawmadi-db
-  BACKUP_BUCKET: gs://lawmadi-backups-v50/backups
+  BACKUP_BUCKET: gs://lawmadi-backups-v60/backups
 
 jobs:
   backup:

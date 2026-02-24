@@ -641,9 +641,15 @@
                 document.getElementById('leadersGrid').innerHTML =
                     `<p style="text-align: center; color: var(--text-secondary); padding: 40px;">
                         An error occurred while loading data.<br>
-                        <small>${error.message}</small>
+                        <small>${esc(error.message)}</small>
                     </p>`;
             }
+        }
+
+        function esc(text) {
+            const d = document.createElement('div');
+            d.textContent = text || '';
+            return d.innerHTML;
         }
 
         function renderLeaders(searchTerm = '') {
@@ -678,24 +684,25 @@
 
             grid.innerHTML = filteredLeaders.map((leader, index) => {
                 const img = leaderImages[leader.code];
+                const safeName = esc(leader.name);
                 const avatarContent = img
-                    ? `<img src="${img.profile}" alt="${leader.name}" loading="lazy">`
-                    : leader.name.charAt(0);
+                    ? `<img src="${esc(img.profile)}" alt="${safeName}" loading="lazy">`
+                    : safeName.charAt(0);
                 const bannerHtml = img
-                    ? `<div class="leader-banner"><img src="${img.banner}" alt="${leader.name}" loading="lazy"></div>`
+                    ? `<div class="leader-banner"><img src="${esc(img.banner)}" alt="${safeName}" loading="lazy"></div>`
                     : '';
                 return `
-                <div class="leader-card" data-name="${leader.name}" style="animation-delay: ${index * 0.02}s">
+                <div class="leader-card" data-name="${safeName}" style="animation-delay: ${index * 0.02}s">
                     <div class="leader-header">
                         <div class="leader-avatar">${avatarContent}</div>
                         <div class="leader-name-group">
-                            <div class="leader-name">${leader.name}</div>
-                            <div class="leader-code">${leader.code}</div>
+                            <div class="leader-name">${safeName}</div>
+                            <div class="leader-code">${esc(leader.code)}</div>
                         </div>
                     </div>
-                    <div class="leader-specialty">${leader.specialty}</div>
-                    <div class="leader-role">${leader.role}</div>
-                    <div class="leader-profile">${leader.profile}</div>
+                    <div class="leader-specialty">${esc(leader.specialty)}</div>
+                    <div class="leader-role">${esc(leader.role)}</div>
+                    <div class="leader-profile">${esc(leader.profile)}</div>
                     ${bannerHtml}
                 </div>`;
             }).join('');
