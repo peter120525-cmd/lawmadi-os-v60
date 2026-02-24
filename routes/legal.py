@@ -245,7 +245,9 @@ async def ask(request: Request):
 
         # IP 주소를 사용자 ID로 사용 (자동 추출)
         visitor_id = _get_client_ip_fn(request)
-        logger.info(f"🔍 Request from IP: {visitor_id}")
+        import hashlib
+        _masked_ip = hashlib.sha256(visitor_id.encode()).hexdigest()[:12]
+        logger.info(f"🔍 Request from visitor: {_masked_ip}")
 
         config = _RUNTIME.get("config", {})
 

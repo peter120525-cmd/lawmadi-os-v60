@@ -188,25 +188,25 @@ def rate_limit_hit(provider: str, window_seconds: int = 60):
         cur = conn.cursor()
         # SQL 수준에서 윈도우 교체 및 카운트 증가를 한 번에 처리 (Race Condition 방어)
         cur.execute(
-            f"""
+            """
             INSERT INTO rate_limit_tracker (provider, call_count, window_start, window_end, env_version)
-            VALUES (%s, 1, %s, %s, '{_ENV_VERSION}')
+            VALUES (%s, 1, %s, %s, %s)
             ON CONFLICT (provider)
             DO UPDATE SET
-                call_count = CASE 
-                    WHEN rate_limit_tracker.window_end <= EXCLUDED.window_start THEN 1 
-                    ELSE rate_limit_tracker.call_count + 1 
+                call_count = CASE
+                    WHEN rate_limit_tracker.window_end <= EXCLUDED.window_start THEN 1
+                    ELSE rate_limit_tracker.call_count + 1
                 END,
-                window_start = CASE 
-                    WHEN rate_limit_tracker.window_end <= EXCLUDED.window_start THEN EXCLUDED.window_start 
-                    ELSE rate_limit_tracker.window_start 
+                window_start = CASE
+                    WHEN rate_limit_tracker.window_end <= EXCLUDED.window_start THEN EXCLUDED.window_start
+                    ELSE rate_limit_tracker.window_start
                 END,
-                window_end = CASE 
-                    WHEN rate_limit_tracker.window_end <= EXCLUDED.window_start THEN EXCLUDED.window_end 
-                    ELSE rate_limit_tracker.window_end 
+                window_end = CASE
+                    WHEN rate_limit_tracker.window_end <= EXCLUDED.window_start THEN EXCLUDED.window_end
+                    ELSE rate_limit_tracker.window_end
                 END;
             """,
-            (provider, now, new_window_end)
+            (provider, now, new_window_end, _ENV_VERSION)
         )
         conn.commit()
     except Exception as e:

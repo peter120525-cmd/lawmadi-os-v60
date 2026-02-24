@@ -1,5 +1,6 @@
 from connectors.db_driver_adapter import create_connection
 import os
+import re
 import json
 import hashlib
 import queue
@@ -112,27 +113,27 @@ def init_tables():
     try:
         cur = conn.cursor()
         # LMD-CONST-005 준수를 위한 캐시 테이블 정의
-        # DDL DEFAULT는 파라미터화 불가 — 상수 SQL 이스케이프 적용
-        _safe_ver = _ENV_VERSION.replace("'", "''")
-        cur.execute(f"""
+        # DDL DEFAULT — 상수 assert로 안전성 보장 (f-string 제거)
+        assert re.fullmatch(r'v\d+\.\d+\.\d+', _ENV_VERSION), f"Invalid version: {_ENV_VERSION}"
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS drf_cache (
                 cache_key       VARCHAR(255) PRIMARY KEY,
                 content         JSONB        NOT NULL,
                 signature       VARCHAR(64)  NOT NULL,
                 created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
                 expires_at      TIMESTAMP WITH TIME ZONE NOT NULL,
-                env_version     VARCHAR(50)  NOT NULL DEFAULT '{ _safe_ver }'
+                env_version     VARCHAR(50)  NOT NULL DEFAULT 'v60.0.0'
             );
         """)
 
         # API 트래픽 제어를 위한 레이트 리밋 테이블 정의
-        cur.execute(f"""
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS rate_limit_tracker (
                 provider        VARCHAR(100) PRIMARY KEY,
                 call_count      INTEGER      NOT NULL DEFAULT 0,
                 window_start    TIMESTAMP WITH TIME ZONE NOT NULL,
                 window_end      TIMESTAMP WITH TIME ZONE NOT NULL,
-                env_version     VARCHAR(50)  NOT NULL DEFAULT '{ _safe_ver }'
+                env_version     VARCHAR(50)  NOT NULL DEFAULT 'v60.0.0'
             );
         """)
 
