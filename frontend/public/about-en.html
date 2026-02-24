@@ -39,6 +39,7 @@
             min-height: 100vh;
             color: var(--text-primary);
             overflow-x: hidden;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
         }
 
         .animated-bg {
@@ -93,7 +94,7 @@
             z-index: 1;
             max-width: 1200px;
             margin: 0 auto;
-            padding: 40px 20px 80px;
+            padding: 40px 20px calc(80px + env(safe-area-inset-bottom, 0px));
         }
 
         .header {
@@ -322,6 +323,7 @@
             font-weight: 700;
             color: var(--text-primary);
             transition: all 0.3s;
+            min-height: 44px;
         }
 
         a.category-badge {
@@ -518,7 +520,7 @@
 
         .cta-section {
             text-align: center;
-            padding: 60px 20px;
+            padding: 60px 20px calc(20px + env(safe-area-inset-bottom, 0px));
         }
 
         .cta-button {
@@ -568,17 +570,18 @@
         }
 
         @media (max-width: 768px) {
-            .container { padding: 20px 16px 60px; }
+            .container { padding: 20px 16px calc(60px + env(safe-area-inset-bottom, 0px)); }
             .back-button { top: 12px; left: 12px; padding: 8px 14px; font-size: 0.85rem; min-height: 44px; }
             .header { margin-top: 40px; margin-bottom: 40px; }
             .header h1 { font-size: 2rem; }
             .header p { font-size: 1rem; }
             .hero-text { font-size: 1.15rem; }
             .keyword-grid { grid-template-columns: 1fr; gap: 14px; }
-            .keyword-card { padding: 24px 20px; }
+            .keyword-card { padding: 24px 20px; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
             .step-card { padding: 18px; gap: 14px; }
             .step-number { width: 40px; height: 40px; font-size: 1rem; }
             .clevel-row { grid-template-columns: 1fr; gap: 12px; }
+            .clevel-mini { -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
             .trust-grid { grid-template-columns: 1fr; gap: 12px; }
             .stats-bar { grid-template-columns: repeat(2, 1fr); padding: 24px; gap: 12px; }
             .stat-number { font-size: 1.8rem; }
@@ -586,6 +589,79 @@
             .view-links { flex-direction: column; gap: 10px; }
             .view-link { min-height: 44px; padding: 10px 0; }
             .cta-button { padding: 16px 36px; font-size: 1rem; }
+            .floating-shape.shape1 { width: 200px; height: 200px; }
+            .floating-shape.shape2 { width: 150px; height: 150px; }
+            .floating-shape.shape3 { width: 175px; height: 175px; }
+        }
+
+        /* Small devices (< 400px) */
+        @media (max-width: 400px) {
+            .badge-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .back-button {
+                top: 8px;
+                left: 8px;
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+
+            .header {
+                margin-top: 48px;
+            }
+
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+                padding: 16px;
+                gap: 8px;
+            }
+
+            .stat-number {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* In-App Browser Fixes (KakaoTalk, Facebook, Instagram, LINE, NAVER) */
+        body.is-inapp-browser {
+            height: 100vh;
+            height: -webkit-fill-available;
+            position: relative;
+        }
+
+        body.is-inapp-browser .keyword-card,
+        body.is-inapp-browser .clevel-mini,
+        body.is-inapp-browser .step-card,
+        body.is-inapp-browser .trust-card {
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            background: rgba(30, 41, 59, 0.95);
+        }
+
+        body.is-inapp-browser .back-button {
+            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Reduced motion accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            .grid-pattern,
+            .floating-shape,
+            .section,
+            .header {
+                animation: none !important;
+            }
+
+            .keyword-card,
+            .step-card,
+            .clevel-mini,
+            .trust-card,
+            .cta-button,
+            .back-button,
+            .view-link {
+                transition: none !important;
+            }
         }
     </style>
 </head>
@@ -797,6 +873,23 @@
     </div>
 
     <script>
+        // In-app browser detection & viewport fix
+        (function() {
+            var ua = navigator.userAgent || '';
+            var isInApp = /KAKAOTALK|FBAN|FBAV|Instagram|Line\/|NAVER|Snapchat|Twitter/i.test(ua);
+            if (isInApp) {
+                document.body.classList.add('is-inapp-browser');
+                function setVH() {
+                    var vh = window.innerHeight;
+                    document.documentElement.style.setProperty('--app-height', vh + 'px');
+                    document.body.style.height = vh + 'px';
+                }
+                setVH();
+                window.addEventListener('resize', setVH);
+            }
+        })();
+
+        // Page load animation
         window.addEventListener('load', () => {
             document.body.style.opacity = '0';
             setTimeout(() => {
