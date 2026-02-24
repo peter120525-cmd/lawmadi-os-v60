@@ -37,6 +37,7 @@ import datetime
 import re
 import hashlib
 import traceback
+import threading
 from typing import Any, List, Dict, Optional, Union
 from importlib import import_module
 
@@ -248,12 +249,14 @@ METRICS: Dict[str, Any] = {
     "boot_time": None,
     "mcp_requests": 0,
 }
+_METRICS_LOCK = threading.Lock()
 
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
     """보안 헤더 주입 + MCP 모니터링"""
     if request.url.path.startswith("/mcp"):
-        METRICS["mcp_requests"] += 1
+        with _METRICS_LOCK:
+            METRICS["mcp_requests"] += 1
         logger.info(f"[MCP] {request.method} {request.url.path}")
     response = await call_next(request)
     response.headers["X-Frame-Options"] = "DENY"
@@ -1375,7 +1378,8 @@ app.include_router(admin_router)
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    METRICS["errors"] += 1
+    with _METRICS_LOCK:
+        METRICS["errors"] += 1
     logger.error(f"[GLOBAL] {exc}")
     logger.error(traceback.format_exc())
     return JSONResponse(

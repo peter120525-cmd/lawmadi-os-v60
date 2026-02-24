@@ -369,8 +369,10 @@ def _get_article_text(articles: List[Dict], article_num: int) -> Optional[str]:
     return None
 
 
-def _drf_verify_law_refs(text: str) -> VerificationResult:
-    """Stage 3: 응답에서 인용된 모든 법률 참조를 DRF API로 전수 검증 (조문번호까지 확인)"""
+async def _drf_verify_law_refs(text: str) -> VerificationResult:
+    """Stage 3: 응답에서 인용된 모든 법률 참조를 DRF API로 전수 검증 (조문번호까지 확인).
+    비동기 메서드 사용 가능 시 httpx로 직접 호출, 없으면 동기 fallback.
+    """
     result = VerificationResult()
 
     # 법률 참조 추출: "OO법 제X조" 또는 "OO법 제X조 제Y항"
@@ -402,7 +404,10 @@ def _drf_verify_law_refs(text: str) -> VerificationResult:
         try:
             # lawService.do로 조문 상세 조회 (법령별 1회만 호출)
             if law_name not in law_articles_cache:
-                raw = svc.get_law_articles(law_name)
+                if hasattr(svc, "get_law_articles_async"):
+                    raw = await svc.get_law_articles_async(law_name)
+                else:
+                    raw = svc.get_law_articles(law_name)
                 law_articles_cache[law_name] = raw
             else:
                 raw = law_articles_cache[law_name]
@@ -481,7 +486,10 @@ def _drf_verify_law_refs(text: str) -> VerificationResult:
                 continue
             prec_seen.add(case_no)
             try:
-                if drf_inst and hasattr(drf_inst, "search_precedents"):
+                if drf_inst and hasattr(drf_inst, "search_precedents_async"):
+                    raw_prec = await drf_inst.search_precedents_async(case_no)
+                    prec_exists = bool(raw_prec)
+                elif drf_inst and hasattr(drf_inst, "search_precedents"):
                     raw_prec = drf_inst.search_precedents(case_no)
                     prec_exists = bool(raw_prec)
                 else:
@@ -800,7 +808,7 @@ async def _run_legal_pipeline(
     # -- Stage 4: DRF 실시간 전수 검증 --
     logger.info("[Stage 4/4] DRF 전수 검증")
     try:
-        drf_verification = _drf_verify_law_refs(final_text)
+        drf_verification = await _drf_verify_law_refs(final_text)
     except Exception as e:
         logger.error(f"[Stage 4] DRF 검증 시스템 오류 → FAIL_CLOSED: {e}")
         drf_verification = VerificationResult(drf_failed=True)
@@ -846,12 +854,12 @@ async def run_pipeline_stage2(
         return ""
 
 
-def run_pipeline_stage3(text: str) -> VerificationResult:
+async def run_pipeline_stage3(text: str) -> VerificationResult:
     """스트리밍용: Stage 3만 실행"""
     if not text:
         return VerificationResult()
     try:
-        return _drf_verify_law_refs(text)
+        return await _drf_verify_law_refs(text)
     except Exception as e:
         logger.error(f"[Stream Stage 3] DRF 검증 시스템 오류 → FAIL_CLOSED: {e}")
         return VerificationResult(drf_failed=True)
