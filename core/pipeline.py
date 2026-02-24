@@ -137,6 +137,7 @@ class VerificationResult:
     unverified_refs: List[Dict] = field(default_factory=list)
     all_passed: bool = True
     total_refs: int = 0
+    drf_failed: bool = False  # DRF 자체 오류 발생 여부
 
 
 
@@ -555,26 +556,50 @@ def _remove_unverified_refs(text: str, drf_verification: VerificationResult) -> 
     return text
 
 
+def _strip_unverified_sentences(text: str, drf_verification: VerificationResult) -> str:
+    """미검증 조문이 포함된 문장을 텍스트에서 완전 삭제"""
+    lines = text.split("\n")
+    bad_refs = [r.get("ref", "") for r in drf_verification.unverified_refs if r.get("ref")]
+    cleaned = []
+    for line in lines:
+        if any(ref in line for ref in bad_refs):
+            logger.debug(f"[STRIP] 미검증 조문 포함 문장 삭제: {line[:60]}...")
+            continue
+        cleaned.append(line)
+    return "\n".join(cleaned)
+
+
 def _apply_fail_closed(final_text: str, drf_verification: VerificationResult) -> str:
-    """FAIL_CLOSED 로직: 30% 이상 미검증 시 응답 차단, 아니면 미검증 조문 태깅"""
+    """FAIL_CLOSED 로직: 5% 초과 미검증 시 응답 차단, DRF 자체 오류 시에도 차단"""
+
+    # ── 안전장치 1: DRF 검증 시스템 자체 오류 → FAIL_CLOSED ──
+    if drf_verification.drf_failed:
+        logger.warning("[FAIL_CLOSED] DRF 검증 시스템 오류 → 응답 차단")
+        return FAIL_CLOSED_RESPONSE
+
+    # 법률 조문 참조가 없는 응답 → 통과 (일반 상담/설명)
     if drf_verification.total_refs == 0:
         return final_text
 
     unverified_count = len(drf_verification.unverified_refs)
     total_count = drf_verification.total_refs
+    ratio = unverified_count / max(total_count, 1)
 
-    # 미검증 비율 10% 초과 시 응답 차단 (fail-closed 10%)
-    if unverified_count / max(total_count, 1) > 0.1:
+    # ── 안전장치 2: 미검증 비율 5% 초과 → 응답 차단 (fail-closed 5%) ──
+    if ratio > 0.05:
         logger.warning(
             f"[FAIL_CLOSED] 미검증 {unverified_count}/{total_count} "
-            f"({unverified_count/total_count*100:.0f}%) -> 응답 차단"
+            f"({ratio*100:.1f}%) > 5% → 응답 차단"
         )
         return FAIL_CLOSED_RESPONSE
 
-    # 30% 미만: 미검증 조문만 태깅
+    # ── 안전장치 3: 5% 이하 미검증 → 해당 조문 완전 삭제 (태깅 아님) ──
     if unverified_count > 0:
-        final_text = _remove_unverified_refs(final_text, drf_verification)
-        final_text += "\n\n> ※ 일부 조문은 정확성 확인 중입니다. 중요한 법적 판단 시 법률 전문가의 확인을 권장합니다."
+        final_text = _strip_unverified_sentences(final_text, drf_verification)
+        logger.info(
+            f"[SAFE] 미검증 {unverified_count}건 조문 문장 삭제 "
+            f"({ratio*100:.1f}%)"
+        )
 
     return final_text
 
@@ -777,10 +802,10 @@ async def _run_legal_pipeline(
     try:
         drf_verification = _drf_verify_law_refs(final_text)
     except Exception as e:
-        logger.warning(f"[Stage 4] DRF 검증 실패: {e}")
-        drf_verification = VerificationResult()
+        logger.error(f"[Stage 4] DRF 검증 시스템 오류 → FAIL_CLOSED: {e}")
+        drf_verification = VerificationResult(drf_failed=True)
 
-    # FAIL_CLOSED 적용 (미검증 조문 태깅 또는 응답 차단)
+    # FAIL_CLOSED 적용 (5% 초과 미검증 또는 DRF 오류 시 차단, 5% 이하 미검증 문장 삭제)
     final_text = _apply_fail_closed(final_text, drf_verification)
 
     return final_text, drf_verification
@@ -828,8 +853,8 @@ def run_pipeline_stage3(text: str) -> VerificationResult:
     try:
         return _drf_verify_law_refs(text)
     except Exception as e:
-        logger.warning(f"[Stream Stage 3] DRF 검증 실패: {e}")
-        return VerificationResult()
+        logger.error(f"[Stream Stage 3] DRF 검증 시스템 오류 → FAIL_CLOSED: {e}")
+        return VerificationResult(drf_failed=True)
 
 
 # Public alias for external use

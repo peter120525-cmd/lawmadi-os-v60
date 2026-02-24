@@ -909,24 +909,20 @@ async def ask_stream(request: Request):
                         None, lambda: run_pipeline_stage3(gemini_answer)
                     )
 
-                # FAIL_CLOSED 조기 차단: 30% 이상 미검증 시
-                if drf_verification.total_refs > 0:
-                    unverified_ratio = len(drf_verification.unverified_refs) / max(drf_verification.total_refs, 1)
-                    if unverified_ratio > 0.3:
-                        logger.warning(f"[Stream FAIL_CLOSED] 미검증 {unverified_ratio*100:.0f}% > 30%")
-                        yield _sse("chunk", {"text": FAIL_CLOSED_RESPONSE})
-                        final_text = FAIL_CLOSED_RESPONSE
-                        latency_ms = int((time.time() - start_time) * 1000)
-                        _METRICS["requests"] += 1
-                        yield _sse("done", {
-                            "leader": leader_name, "leader_specialty": leader_specialty,
-                            "latency_ms": latency_ms, "trace_id": trace,
-                            "swarm_mode": False, "response": FAIL_CLOSED_RESPONSE, "status": "FAIL_CLOSED",
-                        })
-                        return
-
-                # 미검증 조문 태깅 적용
+                # FAIL_CLOSED 적용 (5% 초과 미검증 또는 DRF 오류 시 차단)
                 final_text = _apply_fail_closed(gemini_answer, drf_verification) if gemini_answer else ""
+
+                if final_text == FAIL_CLOSED_RESPONSE:
+                    logger.warning("[Stream FAIL_CLOSED] 응답 차단됨")
+                    yield _sse("chunk", {"text": FAIL_CLOSED_RESPONSE})
+                    latency_ms = int((time.time() - start_time) * 1000)
+                    _METRICS["requests"] += 1
+                    yield _sse("done", {
+                        "leader": leader_name, "leader_specialty": leader_specialty,
+                        "latency_ms": latency_ms, "trace_id": trace,
+                        "swarm_mode": False, "response": FAIL_CLOSED_RESPONSE, "status": "FAIL_CLOSED",
+                    })
+                    return
 
                 # 청크 단위로 스트리밍 (문단 기준 분할)
                 if final_text:
