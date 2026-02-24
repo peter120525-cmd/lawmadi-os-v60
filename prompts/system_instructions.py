@@ -1167,8 +1167,31 @@ def build_lawmadilm_prompt(
     if leader_persona:
         prompt = f"{prompt}\n\n[리더 인격]\n{leader_persona}"
 
+    # 리더별 핵심 참조 법률 주입 (DRF 검증 통과율 향상)
+    core_laws = _LEADER_CORE_LAWS.get(leader_name, "")
+    if core_laws:
+        prompt = f"{prompt}\n\n[핵심 참조 법률 - 반드시 이 법률을 우선 인용하세요]\n{core_laws}"
+
     # RAG 컨텍스트 삽입
     if rag_context:
         prompt = f"{prompt}\n\n[참고 법령 조문]\n{rag_context[:4000]}"
 
     return prompt
+
+
+# 리더별 핵심 참조 법률 (DRF 검증 통과율 향상용)
+_LEADER_CORE_LAWS = {
+    "미소": (
+        "• 형법 제307조 (명예훼손) - 사실/허위사실 적시 명예훼손\n"
+        "• 형법 제309조 (출판물 등에 의한 명예훼손)\n"
+        "• 형법 제311조 (모욕)\n"
+        "• 형법 제308조 (사자의 명예훼손)\n"
+        "• 정보통신망 이용촉진 및 정보보호 등에 관한 법률 제70조 (벌칙) - 인터넷/SNS 명예훼손\n"
+        "• 언론중재 및 피해구제 등에 관한 법률 제14조 (정정보도청구권)\n"
+        "• 언론중재 및 피해구제 등에 관한 법률 제16조 (반론보도청구권)\n"
+        "• 민법 제750조 (불법행위의 내용) - 명예훼손 손해배상\n"
+        "• 민법 제751조 (재산 이외의 손해의 배상) - 위자료\n"
+        "• 형사소송법 제230조 (고소기간) - 친고죄 6개월\n"
+        "• 형사소송법 제232조 (고소의 취소)"
+    ),
+}
