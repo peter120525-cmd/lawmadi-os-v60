@@ -3459,6 +3459,88 @@
             box-shadow: 0 -2px 12px rgba(0,0,0,0.3);
         }
 
+        /* ═══════════════════════════════════════════════════
+           더보기 Bottom Sheet
+        ═══════════════════════════════════════════════════ */
+        .more-sheet-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1200;
+            background: rgba(0,0,0,0.4);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .more-sheet-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .more-sheet {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1300;
+            background: var(--surface, #ffffff);
+            border-radius: 16px 16px 0 0;
+            padding: 8px 0 calc(12px + env(safe-area-inset-bottom, 0px));
+            box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
+            transform: translateY(100%);
+            pointer-events: none;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .more-sheet.active {
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .more-sheet-handle {
+            width: 36px;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--border, #e2e8f0);
+            margin: 4px auto 12px;
+        }
+
+        .more-sheet-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 24px;
+            color: var(--text-primary, #1e293b);
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: background 0.15s ease;
+        }
+        .more-sheet-item:hover,
+        .more-sheet-item:active {
+            background: var(--bg-secondary, #f1f5f9);
+        }
+        .more-sheet-item .material-symbols-outlined {
+            font-size: 1.3rem;
+            color: var(--text-muted, #64748b);
+        }
+
+        body.dark-mode .more-sheet {
+            background: #1e293b;
+            box-shadow: 0 -4px 24px rgba(0,0,0,0.4);
+        }
+        body.dark-mode .more-sheet-handle {
+            background: #475569;
+        }
+        body.dark-mode .more-sheet-item {
+            color: #e2e8f0;
+        }
+        body.dark-mode .more-sheet-item:hover,
+        body.dark-mode .more-sheet-item:active {
+            background: #334155;
+        }
+        body.dark-mode .more-sheet-item .material-symbols-outlined {
+            color: #94a3b8;
+        }
+
         @media (max-width: 768px) {
             .mobile-tab-bar {
                 display: block;
@@ -6884,8 +6966,15 @@
                     window.location.href = 'leaders.html';
                 } else if (action === 'clevel') {
                     window.location.href = 'clevel.html';
-                } else if (action === 'about') {
-                    window.location.href = 'about.html';
+                } else if (action === 'more') {
+                    const sheet = document.getElementById('moreSheet');
+                    const sheetOverlay = document.getElementById('moreSheetOverlay');
+                    if (sheet) {
+                        sheet.classList.toggle('active');
+                        sheetOverlay.classList.toggle('active');
+                    }
+                    updateTabAria(document.getElementById('tabChat'));
+                    return;
                 } else if (action === 'favorites') {
                     UI.toggleFavorites();
                     // 저장 탭은 토글이므로 chat 활성 유지
@@ -6910,6 +6999,24 @@
 </script>
 
 <!-- Mobile Bottom Tab Bar -->
+<!-- 더보기 바텀시트 -->
+<div id="moreSheetOverlay" class="more-sheet-overlay" onclick="this.classList.remove('active');document.getElementById('moreSheet').classList.remove('active');"></div>
+<div id="moreSheet" class="more-sheet" role="dialog" aria-label="더보기 메뉴">
+    <div class="more-sheet-handle"></div>
+    <a href="about.html" class="more-sheet-item">
+        <span class="material-symbols-outlined" aria-hidden="true">info</span>
+        <span>소개</span>
+    </a>
+    <a href="terms.html" class="more-sheet-item">
+        <span class="material-symbols-outlined" aria-hidden="true">gavel</span>
+        <span>이용약관</span>
+    </a>
+    <a href="privacy.html" class="more-sheet-item">
+        <span class="material-symbols-outlined" aria-hidden="true">shield</span>
+        <span>개인정보처리방침</span>
+    </a>
+</div>
+
 <nav class="mobile-tab-bar" id="mobileTabBar" aria-label="모바일 내비게이션">
     <div class="tab-bar-inner" role="tablist">
         <button class="tab-item active" data-tab="chat" id="tabChat" role="tab" aria-selected="true" aria-label="법률 분석">
@@ -6924,9 +7031,9 @@
             <span class="material-symbols-outlined" aria-hidden="true">groups</span>
             <span class="tab-label">임원</span>
         </button>
-        <button class="tab-item" data-tab="about" id="tabAbout" role="tab" aria-selected="false" aria-label="Lawmadi OS 소개">
-            <span class="material-symbols-outlined" aria-hidden="true">info</span>
-            <span class="tab-label">소개</span>
+        <button class="tab-item" data-tab="more" id="tabMore" role="tab" aria-selected="false" aria-label="더보기">
+            <span class="material-symbols-outlined" aria-hidden="true">more_horiz</span>
+            <span class="tab-label">더보기</span>
         </button>
         <button class="tab-item" data-tab="favorites" id="tabFavorites" role="tab" aria-selected="false" aria-label="저장된 답변">
             <span class="material-symbols-outlined" aria-hidden="true">bookmark</span>

@@ -34,6 +34,7 @@ from core.classifier import (
 from core.pipeline import (
     _run_legal_pipeline,
     run_pipeline_stage1,
+    run_pipeline_stage2,
     run_pipeline_stage3,
     _apply_fail_closed,
     _drf_verify_law_refs,
@@ -876,7 +877,14 @@ async def ask_stream(request: Request):
                 # Stage 1: 이미 S0+S1 병렬 완료 (rag_context_pre 사용)
                 yield _sse("status", {"step": "searching_laws", "leader": leader_name})
 
-                # Stage 2: Gemini Flash 답변 생성 (단독)
+                # Stage 2: LawmadiLM 초안 (5초 타임아웃)
+                yield _sse("status", {"step": "analyzing", "leader": leader_name})
+                lm_draft = await run_pipeline_stage2(
+                    query, analysis, rag_context_pre,
+                    lang=lang, mode=stream_mode,
+                )
+
+                # Stage 3: Gemini Flash 완성 답변
                 yield _sse("status", {"step": "composing", "leader": leader_name})
                 gemini_answer = ""
                 try:
@@ -885,12 +893,14 @@ async def ask_stream(request: Request):
                     gemini_answer = await _gemini_fallback_compose(
                         query, analysis, rag_context_pre, tools, gemini_history,
                         now_kst, ssot_available, lang=lang, mode=stream_mode,
-                        lm_draft="",
+                        lm_draft=lm_draft or "",
                     )
                 except Exception as gemini_err:
                     logger.error(f"[Stream] Gemini 답변 생성 실패: {gemini_err}")
+                    if lm_draft:
+                        gemini_answer = lm_draft
 
-                # Stage 3: DRF 전수 검증
+                # Stage 4: DRF 전수 검증
                 drf_verification = VerificationResult()
                 if gemini_answer:
                     yield _sse("status", {"step": "verifying", "leader": leader_name})

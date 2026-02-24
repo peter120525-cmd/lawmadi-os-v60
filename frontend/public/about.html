@@ -311,14 +311,17 @@
 
         /* ===== Section 4: Leaders + C-Level Highlight ===== */
         .badge-grid {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
             gap: 10px;
             margin-bottom: 28px;
         }
 
         .category-badge {
-            padding: 10px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
             background: rgba(30, 41, 59, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
@@ -326,6 +329,11 @@
             font-weight: 700;
             color: var(--text-primary);
             transition: all 0.3s;
+        }
+
+        a.category-badge {
+            text-decoration: none;
+            color: inherit;
         }
 
         .category-badge:hover {
@@ -336,8 +344,10 @@
         .category-badge .name {
             color: var(--text-secondary);
             font-weight: 400;
-            margin-left: 6px;
+            margin-left: auto;
+            padding-left: 8px;
             font-size: 0.8rem;
+            flex-shrink: 0;
         }
 
         .clevel-row {
@@ -358,6 +368,11 @@
             align-items: center;
             gap: 14px;
             transition: all 0.3s;
+        }
+
+        a.clevel-mini {
+            text-decoration: none;
+            color: inherit;
         }
 
         .clevel-mini:hover {
@@ -734,58 +749,58 @@
         <div class="section">
             <h2 class="section-title">60명 리더 &amp; C-Level 임원</h2>
             <div class="badge-grid">
-                <span class="category-badge">민사<span class="name">휘율</span></span>
-                <span class="category-badge">부동산<span class="name">보늬</span></span>
-                <span class="category-badge">건설<span class="name">담슬</span></span>
-                <span class="category-badge">재개발<span class="name">아키</span></span>
-                <span class="category-badge">의료<span class="name">연우</span></span>
-                <span class="category-badge">교통사고<span class="name">하늬</span></span>
-                <span class="category-badge">임대차<span class="name">온유</span></span>
-                <span class="category-badge">노동<span class="name">담우</span></span>
-                <span class="category-badge">형사<span class="name">무결</span></span>
-                <span class="category-badge">행정<span class="name">로운</span></span>
-                <span class="category-badge">헌법<span class="name">마루</span></span>
-                <span class="category-badge">가족·이혼<span class="name">산들</span></span>
-                <span class="category-badge">조세·금융<span class="name">찬솔</span></span>
-                <span class="category-badge">IT·보안<span class="name">휘윤</span></span>
-                <span class="category-badge">개인정보<span class="name">지누</span></span>
-                <span class="category-badge">지식재산<span class="name">루다</span></span>
-                <span class="category-badge">저작권<span class="name">하람</span></span>
-                <span class="category-badge">공정거래<span class="name">바름</span></span>
-                <span class="category-badge">환경<span class="name">수림</span></span>
-                <span class="category-badge">국제거래<span class="name">미르</span></span>
-                <span class="category-badge">무역·관세<span class="name">해슬</span></span>
-                <span class="category-badge">보험<span class="name">슬아</span></span>
-                <span class="category-badge">산업재해<span class="name">해나</span></span>
-                <span class="category-badge">소비자<span class="name">슬비</span></span>
-                <span class="category-badge">상속·신탁<span class="name">세움</span></span>
-                <span class="category-badge">우주항공 🆕<span class="name">별이</span></span>
-                <span class="category-badge">데이터·AI윤리 🆕<span class="name">한빛</span></span>
-                <span class="category-badge">벤처·신산업 🆕<span class="name">새론</span></span>
+                <a href="leader-profile.html?id=L01" class="category-badge">민사<span class="name">휘율</span></a>
+                <a href="leader-profile.html?id=L02" class="category-badge">부동산<span class="name">보늬</span></a>
+                <a href="leader-profile.html?id=L03" class="category-badge">건설<span class="name">담슬</span></a>
+                <a href="leader-profile.html?id=L04" class="category-badge">재개발<span class="name">아키</span></a>
+                <a href="leader-profile.html?id=L05" class="category-badge">의료<span class="name">연우</span></a>
+                <a href="leader-profile.html?id=L07" class="category-badge">교통사고<span class="name">하늬</span></a>
+                <a href="leader-profile.html?id=L08" class="category-badge">임대차<span class="name">온유</span></a>
+                <a href="leader-profile.html?id=L30" class="category-badge">노동<span class="name">담우</span></a>
+                <a href="leader-profile.html?id=L22" class="category-badge">형사<span class="name">무결</span></a>
+                <a href="leader-profile.html?id=L31" class="category-badge">행정<span class="name">로운</span></a>
+                <a href="leader-profile.html?id=L35" class="category-badge">헌법<span class="name">마루</span></a>
+                <a href="leader-profile.html?id=L41" class="category-badge">가족·이혼<span class="name">산들</span></a>
+                <a href="leader-profile.html?id=L20" class="category-badge">조세·금융<span class="name">찬솔</span></a>
+                <a href="leader-profile.html?id=L21" class="category-badge">IT·보안<span class="name">휘윤</span></a>
+                <a href="leader-profile.html?id=L34" class="category-badge">개인정보<span class="name">지누</span></a>
+                <a href="leader-profile.html?id=L26" class="category-badge">지식재산<span class="name">루다</span></a>
+                <a href="leader-profile.html?id=L42" class="category-badge">저작권<span class="name">하람</span></a>
+                <a href="leader-profile.html?id=L32" class="category-badge">공정거래<span class="name">바름</span></a>
+                <a href="leader-profile.html?id=L27" class="category-badge">환경<span class="name">수림</span></a>
+                <a href="leader-profile.html?id=L17" class="category-badge">국제거래<span class="name">미르</span></a>
+                <a href="leader-profile.html?id=L28" class="category-badge">무역·관세<span class="name">해슬</span></a>
+                <a href="leader-profile.html?id=L16" class="category-badge">보험<span class="name">슬아</span></a>
+                <a href="leader-profile.html?id=L43" class="category-badge">산업재해<span class="name">해나</span></a>
+                <a href="leader-profile.html?id=L38" class="category-badge">소비자<span class="name">슬비</span></a>
+                <a href="leader-profile.html?id=L57" class="category-badge">상속·신탁<span class="name">세움</span></a>
+                <a href="leader-profile.html?id=L33" class="category-badge">우주항공 🆕<span class="name">별이</span></a>
+                <a href="leader-profile.html?id=L59" class="category-badge">데이터·AI윤리 🆕<span class="name">한빛</span></a>
+                <a href="leader-profile.html?id=L47" class="category-badge">벤처·신산업 🆕<span class="name">새론</span></a>
             </div>
 
             <div class="clevel-row">
-                <div class="clevel-mini cso">
+                <a href="clevel.html" class="clevel-mini cso">
                     <div class="clevel-mini-avatar">서</div>
                     <div class="clevel-mini-info">
                         <h4>서연</h4>
                         <span>CSO · 전략 총괄</span>
                     </div>
-                </div>
-                <div class="clevel-mini cto">
+                </a>
+                <a href="clevel.html" class="clevel-mini cto">
                     <div class="clevel-mini-avatar">지</div>
                     <div class="clevel-mini-info">
                         <h4>지유</h4>
                         <span>CTO · 기술 총괄</span>
                     </div>
-                </div>
-                <div class="clevel-mini cco">
+                </a>
+                <a href="clevel.html" class="clevel-mini cco">
                     <div class="clevel-mini-avatar">유</div>
                     <div class="clevel-mini-info">
                         <h4>유나</h4>
                         <span>CCO · 콘텐츠 총괄</span>
                     </div>
-                </div>
+                </a>
             </div>
 
             <div class="view-links">

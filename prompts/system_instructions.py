@@ -1112,6 +1112,7 @@ def build_lawmadilm_prompt(
     drf_verification=None,
     lang: str = "",
     mode: str = "general",
+    leader_persona: str = "",
 ) -> str:
     """LawmadiLM Stage 2 전용 시스템 프롬프트 생성.
 
@@ -1122,6 +1123,7 @@ def build_lawmadilm_prompt(
         drf_verification: DRF 검증 결과 (VerificationResult, 재시도 시 전달)
         lang: 언어 ("en" for English)
         mode: 응답 모드 ("general" or "expert")
+        leader_persona: 리더 인격·철학 텍스트 (pipeline에서 주입)
     """
     # DRF 검증 결과 섹션
     drf_section = "- 아직 DRF 검증이 수행되지 않았습니다. [참고 법령 조문]을 근거로 답변하세요."
@@ -1160,6 +1162,10 @@ def build_lawmadilm_prompt(
         drf_section=drf_section,
         lang_instruction=lang_instruction,
     )
+
+    # 리더 인격·철학 주입
+    if leader_persona:
+        prompt = f"{prompt}\n\n[리더 인격]\n{leader_persona}"
 
     # RAG 컨텍스트 삽입
     if rag_context:
