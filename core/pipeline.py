@@ -69,6 +69,30 @@ def _load_leader_profiles() -> Dict[str, Any]:
     return _LEADER_PROFILES
 
 
+# 리더별 핵심 법률 (DRF 검증 통과율 향상 - RAG 컨텍스트 주입용)
+_LEADER_LAW_BOOST = {
+    "L52": (
+        "• 형법 제307조 제1항: 공연히 사실을 적시하여 사람의 명예를 훼손한 자는 2년 이하의 징역이나 금고 또는 500만원 이하의 벌금에 처한다.\n"
+        "• 형법 제307조 제2항: 공연히 허위의 사실을 적시하여 사람의 명예를 훼손한 자는 5년 이하의 징역, 10년 이하의 자격정지 또는 1천만원 이하의 벌금에 처한다.\n"
+        "• 형법 제309조 제1항: 사람을 비방할 목적으로 신문, 잡지 또는 라디오 기타 출판물에 의하여 제307조 제1항의 죄를 범한 자는 3년 이하의 징역이나 금고 또는 700만원 이하의 벌금에 처한다.\n"
+        "• 형법 제309조 제2항: 제1항의 방법으로 제307조 제2항의 죄를 범한 자는 7년 이하의 징역, 10년 이하의 자격정지 또는 1천500만원 이하의 벌금에 처한다.\n"
+        "• 형법 제311조: 공연히 사람을 모욕한 자는 1년 이하의 징역이나 금고 또는 200만원 이하의 벌금에 처한다.\n"
+        "• 형법 제312조 제1항: 제308조와 제311조의 죄는 고소가 있어야 공소를 제기할 수 있다.\n"
+        "• 형법 제312조 제2항: 제307조와 제309조의 죄는 피해자의 명시한 의사에 반하여 공소를 제기할 수 없다.\n"
+        "• 정보통신망 이용촉진 및 정보보호 등에 관한 법률 제70조 제1항: 사람을 비방할 목적으로 정보통신망을 통하여 공공연하게 사실을 드러내어 다른 사람의 명예를 훼손한 자는 3년 이하의 징역 또는 3천만원 이하의 벌금에 처한다.\n"
+        "• 정보통신망 이용촉진 및 정보보호 등에 관한 법률 제70조 제2항: 사람을 비방할 목적으로 정보통신망을 통하여 공공연하게 거짓의 사실을 드러내어 다른 사람의 명예를 훼손한 자는 7년 이하의 징역, 10년 이하의 자격정지 또는 5천만원 이하의 벌금에 처한다.\n"
+        "• 민법 제750조: 고의 또는 과실로 인한 위법행위로 타인에게 손해를 가한 자는 그 손해를 배상할 책임이 있다.\n"
+        "• 민법 제751조 제1항: 타인의 신체, 자유 또는 명예를 해하거나 기타 정신상고통을 가한 자는 재산 이외의 손해에 대하여도 배상할 책임이 있다.\n"
+        "• 형사소송법 제230조 제1항: 친고죄에 대하여는 범인을 알게 된 날로부터 6개월을 경과하면 고소하지 못한다."
+    ),
+}
+
+
+def _get_leader_law_boost(leader_id: str) -> str:
+    """리더별 핵심 법률 텍스트 반환 (RAG 컨텍스트 보강용)"""
+    return _LEADER_LAW_BOOST.get(leader_id, "")
+
+
 def _build_leader_persona(leader_id: str) -> str:
     """리더 프로필에서 핵심 인격·철학 텍스트 생성"""
     profiles = _load_leader_profiles()
@@ -762,6 +786,19 @@ async def _run_legal_pipeline(
             rag_context = RAGContext()
     else:
         logger.info("[Stage 1/4] RAG 컨텍스트 외부 전달 (S0+S1 병렬화)")
+
+    # -- Stage 1.5: 리더별 핵심 법률 RAG 컨텍스트 보강 --
+    leader_id = analysis.get("leader_id", "")
+    _leader_law_boost = _get_leader_law_boost(leader_id)
+    if _leader_law_boost:
+        boost_text = f"\n\n[리더 핵심 참조 법률 - 반드시 우선 인용]\n{_leader_law_boost}"
+        if rag_context.context_text:
+            rag_context.context_text = boost_text + "\n" + rag_context.context_text
+        elif rag_context.cache_context:
+            rag_context.cache_context = boost_text + "\n" + rag_context.cache_context
+        else:
+            rag_context.context_text = boost_text
+        logger.info(f"[Stage 1.5] 리더 {leader_id} 핵심 법률 RAG 주입")
 
     # -- Stage 2: LawmadiLM 초안 (5초 타임아웃) --
     lm_draft = ""
