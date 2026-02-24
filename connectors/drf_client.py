@@ -295,20 +295,35 @@ class DRFConnector:
             law_list = search_result.get("LawSearch", {}).get("law", [])
             if isinstance(law_list, dict):
                 law_list = [law_list]
+            # 1순위: 법령명 정확 일치
             for law in law_list:
                 name = law.get("법령명한글", "")
-                if law_name in name or name in law_name:
+                if name == law_name:
                     mst = law.get("법령일련번호")
                     break
-            if not mst and law_list:
-                mst = law_list[0].get("법령일련번호")
+            # 2순위: 법령명이 검색어로 시작 (예: "주택임대차보호법 시행령" 방지)
+            if not mst:
+                for law in law_list:
+                    name = law.get("법령명한글", "")
+                    if name.startswith(law_name) and law.get("법령구분명") == "법률":
+                        mst = law.get("법령일련번호")
+                        break
+            # 3순위: 법률 구분 중 가장 유사한 것
+            if not mst:
+                for law in law_list:
+                    name = law.get("법령명한글", "")
+                    if law_name in name and law.get("법령구분명") == "법률":
+                        mst = law.get("법령일련번호")
+                        break
         except Exception as e:
             logger.warning(f"⚠️ MST 추출 실패: {e}")
             return None
 
         if not mst:
+            logger.warning(f"⚠️ [lawService] MST 미발견: {law_name}")
             return None
 
+        logger.info(f"🔍 [lawService] {law_name} → MST={mst}")
         # Step 2: lawService.do로 조문 상세 조회
         try:
             params = {
