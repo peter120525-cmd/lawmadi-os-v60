@@ -345,6 +345,12 @@
             flex-shrink: 0;
         }
 
+        .category-badge {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         .badge-avatar {
             width: 28px;
             height: 28px;
@@ -580,6 +586,10 @@
             .keyword-card { padding: 24px 20px; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
             .step-card { padding: 18px; gap: 14px; }
             .step-number { width: 40px; height: 40px; font-size: 1rem; }
+            .badge-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .category-badge { padding: 10px 12px; font-size: 0.8rem; }
+            .category-badge .name { font-size: 0.75rem; }
+            .badge-avatar { width: 28px; height: 28px; margin-right: 6px; }
             .clevel-row { grid-template-columns: 1fr; gap: 12px; }
             .clevel-mini { -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
             .trust-grid { grid-template-columns: 1fr; gap: 12px; }
@@ -598,6 +608,11 @@
         @media (max-width: 400px) {
             .badge-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .category-badge {
+                padding: 8px 10px;
+                font-size: 0.8rem;
             }
 
             .back-button {
@@ -701,7 +716,7 @@
                 <div class="keyword-card">
                     <div class="icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">fact_check</span></div>
                     <h3>Enhanced DRF Verification</h3>
-                    <p>Full statute cross-check · fail-closed at 20% unverified threshold</p>
+                    <p>Full statute cross-check · fail-closed at 0.1% unverified threshold</p>
                 </div>
             </div>
         </div>
@@ -738,7 +753,7 @@
                     <span class="material-symbols-outlined step-icon">shield</span>
                     <div class="step-content">
                         <h3>DRF Full Verification</h3>
-                        <p>Cross-checks statutes, enforcement decrees &amp; rules · auto-blocks response if unverified exceeds 20% (fail-closed)</p>
+                        <p>Cross-checks statutes, enforcement decrees &amp; rules · auto-blocks response if unverified exceeds 0.1% (fail-closed)</p>
                     </div>
                 </div>
             </div>
