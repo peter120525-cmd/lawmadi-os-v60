@@ -11,6 +11,7 @@ main.py에서 분리됨.
 import os
 import re
 import logging
+import asyncio
 from typing import Any, Dict, List, Optional
 
 from core.constants import GEMINI_MODEL
@@ -530,8 +531,14 @@ TIER_ANALYSIS_PROMPT = """당신은 Lawmadi OS의 질문 분류 엔진입니다.
 {{"tier": 1, "complexity": "simple", "is_document": false, "leader_id": "L08", "leader_name": "리더이름", "leader_specialty": "전문분야", "summary": "요약", "is_legal": true}}"""
 
 
+_GEMINI_CLASSIFY_TIMEOUT = 10  # seconds
+
+
 async def _gemini_analyze_query(query: str) -> Optional[Dict[str, Any]]:
-    """Gemini로 질문 분석/분류/리더 배정 (답변 X)"""
+    """Gemini로 질문 분석/분류/리더 배정 (답변 X).
+    동기 Gemini SDK 호출을 run_in_executor로 감싸고 10초 타임아웃 적용.
+    타임아웃 시 None 반환 → 기존 키워드 fallback 경로 자동 작동.
+    """
     genai_client = _RUNTIME.get("genai_client")
     if not genai_client:
         logger.warning("Gemini 클라이언트 없음 -> 키워드 기반 fallback")
@@ -539,7 +546,8 @@ async def _gemini_analyze_query(query: str) -> Optional[Dict[str, Any]]:
 
     leader_summary = _build_leader_summary_for_gemini()
     model_name = GEMINI_MODEL
-    try:
+
+    def _sync_call():
         resp = genai_client.models.generate_content(
             model=model_name,
             contents=f"질문: {query}",
@@ -549,7 +557,14 @@ async def _gemini_analyze_query(query: str) -> Optional[Dict[str, Any]]:
                 "temperature": 0.1,
             },
         )
-        text = resp.text.strip() if resp.text else ""
+        return resp.text.strip() if resp.text else ""
+
+    try:
+        loop = asyncio.get_running_loop()
+        text = await asyncio.wait_for(
+            loop.run_in_executor(None, _sync_call),
+            timeout=_GEMINI_CLASSIFY_TIMEOUT,
+        )
         # JSON 추출 (중첩 JSON 및 코드블록 지원)
         result = _safe_extract_json(text)
         if result:
@@ -558,6 +573,9 @@ async def _gemini_analyze_query(query: str) -> Optional[Dict[str, Any]]:
                        f"complexity={result.get('complexity')}, is_document={result.get('is_document')}")
             return result
         logger.warning(f"Gemini 분석 JSON 파싱 실패: {text[:200]}")
+        return None
+    except asyncio.TimeoutError:
+        logger.warning(f"Gemini 분류 타임아웃 ({_GEMINI_CLASSIFY_TIMEOUT}s) -> 키워드 fallback")
         return None
     except Exception as e:
         logger.warning(f"Gemini 분석 실패: {e}")

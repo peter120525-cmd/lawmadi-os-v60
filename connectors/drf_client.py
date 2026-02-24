@@ -1,10 +1,17 @@
 from core.drf_integrity import validate_drf_xml
 import os
+import time as _time
 import requests
 import xml.etree.ElementTree as ET
 import logging
 import hashlib
 from typing import Optional, Dict, Any
+
+try:
+    import httpx
+    _HTTPX_AVAILABLE = True
+except ImportError:
+    _HTTPX_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -280,14 +287,19 @@ class DRFConnector:
         try:
             cached = _cache_get(cache_key)
             if cached and cached.get("data"):
-                # 캐시 검증: 조문 수가 너무 적으면 잘린 데이터일 수 있음 → 재조회
-                cached_data = cached["data"]
-                arts = cached_data.get("법령", {}).get("조문", {}).get("조문단위", [])
-                if isinstance(arts, list) and len(arts) < 10:
-                    logger.warning(f"⚠️ [Cache STALE] lawService {law_name}: 조문 {len(arts)}건 → 재조회")
+                # 시간 기반 만료: _cached_at 타임스탬프 확인 (6시간 TTL)
+                cached_at = cached.get("_cached_at", 0)
+                if cached_at and (_time.time() - cached_at) > 21600:  # 6h
+                    logger.warning(f"⚠️ [Cache EXPIRED] lawService {law_name}: 캐시 6시간 초과 → 재조회")
                 else:
-                    logger.info(f"🎯 [Cache HIT] lawService, query={law_name[:30]} ({len(arts) if isinstance(arts, list) else '?'}건)")
-                    return cached_data
+                    # 캐시 검증: 조문 수가 너무 적으면 잘린 데이터일 수 있음 → 재조회
+                    cached_data = cached["data"]
+                    arts = cached_data.get("법령", {}).get("조문", {}).get("조문단위", [])
+                    if isinstance(arts, list) and len(arts) < 50:
+                        logger.warning(f"⚠️ [Cache STALE] lawService {law_name}: 조문 {len(arts)}건 → 재조회")
+                    else:
+                        logger.info(f"🎯 [Cache HIT] lawService, query={law_name[:30]} ({len(arts) if isinstance(arts, list) else '?'}건)")
+                        return cached_data
         except Exception:
             pass
 
@@ -343,7 +355,7 @@ class DRFConnector:
                 return None
             data = r.json()
             try:
-                _cache_set(cache_key, {"data": data, "law_name": law_name, "mst": mst}, ttl_seconds=86400)
+                _cache_set(cache_key, {"data": data, "law_name": law_name, "mst": mst, "_cached_at": _time.time()}, ttl_seconds=21600)
             except Exception:
                 pass
             return data
@@ -500,3 +512,163 @@ class DRFConnector:
 
         logger.error(f"[lawService] Failed for target=trty, ID={doc_id}")
         return None
+
+    # -------------------------------------------------
+    # Async variants (httpx.AsyncClient)
+    # 기존 동기 메서드 유지 + _async 비동기 메서드 병행
+    # -------------------------------------------------
+
+    async def _call_drf_async(self, query, target="law", _retries=3):
+        """DRF API 비동기 호출 (httpx.AsyncClient, 지수 백오프 재시도)"""
+        if not _HTTPX_AVAILABLE:
+            raise RuntimeError("httpx not available for async DRF call")
+        if not self.drf_key or not self.drf_url:
+            raise RuntimeError("DRF not available")
+
+        params = {
+            "OC": self.drf_key,
+            "target": target,
+            "type": "JSON",
+            "query": query,
+        }
+
+        last_err = None
+        for attempt in range(_retries):
+            try:
+                async with httpx.AsyncClient(timeout=float(self.timeout_sec)) as client:
+                    r = await client.get(self.drf_url, params=params)
+
+                if r.status_code != 200:
+                    raise RuntimeError(f"DRF HTTP {r.status_code}")
+
+                content_type = r.headers.get("Content-Type", "")
+                if "json" not in content_type.lower():
+                    raise RuntimeError(f"DRF unexpected Content-Type: {content_type}")
+
+                return r.json()
+            except Exception as e:
+                last_err = e
+                if attempt < _retries - 1:
+                    import asyncio
+                    wait = (2 ** attempt) * 0.5
+                    logger.warning(f"⚠️ DRF async 재시도 {attempt+1}/{_retries} ({target}): {e}, {wait}s 대기")
+                    await asyncio.sleep(wait)
+
+        raise RuntimeError(f"DRF async {_retries}회 시도 실패: {last_err}")
+
+    async def search_by_target_async(self, query: str, target: str = "law") -> Optional[Any]:
+        """비동기 target 검색 (캐싱 포함)"""
+        _init_cache()
+
+        cache_key = f"drf:v2:{target}:{hashlib.md5(query.encode('utf-8')).hexdigest()}"
+        try:
+            cached_data = _cache_get(cache_key)
+            if cached_data and cached_data.get("data"):
+                logger.info(f"🎯 [Cache HIT async] target={target}, query={query[:30]}")
+                return cached_data["data"]
+        except Exception:
+            pass
+
+        logger.info(f"🔍 [Cache MISS async] target={target}, query={query[:30]}")
+        try:
+            result = await self._call_drf_async(query, target=target)
+            if result is not None:
+                logger.info(f"[DualSSOT async] SUCCESS (target={target})")
+                try:
+                    _cache_set(cache_key, {"data": result, "query": query[:200], "target": target}, ttl_seconds=3600)
+                except Exception:
+                    pass
+                return result
+        except Exception as e:
+            logger.warning(f"[DualSSOT async] failed: {e}")
+
+        # Fallback to sync if async fails
+        return self.search_by_target(query, target=target)
+
+    async def law_search_async(self, query: str) -> Optional[Any]:
+        """비동기 법률 검색"""
+        return await self.search_by_target_async(query, target="law")
+
+    async def search_precedents_async(self, query: str) -> Optional[Any]:
+        """비동기 판례 검색"""
+        return await self.search_by_target_async(query, target="prec")
+
+    async def get_law_articles_async(self, law_name: str) -> Optional[Any]:
+        """비동기 법령 조문 상세 조회 (lawSearch → MST → lawService)"""
+        if not _HTTPX_AVAILABLE:
+            return self.get_law_articles(law_name)
+
+        _init_cache()
+
+        cache_key = f"drf:v2:lawsvc:{hashlib.md5(law_name.encode('utf-8')).hexdigest()}"
+        try:
+            cached = _cache_get(cache_key)
+            if cached and cached.get("data"):
+                cached_at = cached.get("_cached_at", 0)
+                if cached_at and (_time.time() - cached_at) > 21600:
+                    logger.warning(f"⚠️ [Cache EXPIRED async] lawService {law_name}: 캐시 6시간 초과 → 재조회")
+                else:
+                    cached_data = cached["data"]
+                    arts = cached_data.get("법령", {}).get("조문", {}).get("조문단위", [])
+                    if isinstance(arts, list) and len(arts) < 50:
+                        logger.warning(f"⚠️ [Cache STALE async] lawService {law_name}: 조문 {len(arts)}건 → 재조회")
+                    else:
+                        return cached_data
+        except Exception:
+            pass
+
+        # Step 1: lawSearch.do로 MST 조회 (async)
+        search_result = await self.law_search_async(law_name)
+        if not search_result:
+            return None
+
+        mst = None
+        try:
+            law_list = search_result.get("LawSearch", {}).get("law", [])
+            if isinstance(law_list, dict):
+                law_list = [law_list]
+            for law in law_list:
+                name = law.get("법령명한글", "")
+                if name == law_name:
+                    mst = law.get("법령일련번호")
+                    break
+            if not mst:
+                for law in law_list:
+                    name = law.get("법령명한글", "")
+                    if name.startswith(law_name) and law.get("법령구분명") == "법률":
+                        mst = law.get("법령일련번호")
+                        break
+            if not mst:
+                for law in law_list:
+                    name = law.get("법령명한글", "")
+                    if law_name in name and law.get("법령구분명") == "법률":
+                        mst = law.get("법령일련번호")
+                        break
+        except Exception as e:
+            logger.warning(f"⚠️ MST 추출 실패 (async): {e}")
+            return None
+
+        if not mst:
+            return None
+
+        # Step 2: lawService.do 비동기 호출
+        try:
+            params = {
+                "OC": self.drf_key,
+                "target": "law",
+                "MST": mst,
+                "type": "JSON",
+            }
+            async with httpx.AsyncClient(timeout=max(float(self.timeout_sec), 10.0)) as client:
+                r = await client.get(_LAW_SERVICE_URL, params=params)
+            if r.status_code != 200:
+                return None
+            data = r.json()
+            try:
+                _cache_set(cache_key, {"data": data, "law_name": law_name, "mst": mst, "_cached_at": _time.time()}, ttl_seconds=21600)
+            except Exception:
+                pass
+            return data
+        except Exception as e:
+            logger.warning(f"⚠️ lawService async 조회 실패: {e}")
+            return None

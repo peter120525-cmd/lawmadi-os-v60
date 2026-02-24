@@ -161,3 +161,31 @@ class SearchService:
         except Exception as e:
             logger.warning(f"⚠️ search_treaty failed: {e}")
             return None
+
+    # -------------------------------------------------
+    # Async variants — hasattr fallback으로 비동기 미지원 시 동기 자동 사용
+    # -------------------------------------------------
+
+    async def get_law_articles_async(self, law_name: str) -> Optional[Any]:
+        """비동기 조문 상세 조회"""
+        if not self.ready or not self.drf:
+            return None
+        try:
+            if hasattr(self.drf, "get_law_articles_async"):
+                return await self.drf.get_law_articles_async(law_name)
+            return self.drf.get_law_articles(law_name)
+        except Exception as e:
+            logger.warning(f"⚠️ get_law_articles_async failed: {e}")
+            return None
+
+    async def search_precedents_async(self, query: str) -> Optional[Any]:
+        """비동기 판례 검색"""
+        if not self.ready or not self.drf:
+            return None
+        try:
+            if hasattr(self.drf, "search_precedents_async"):
+                return await self.drf.search_precedents_async(query)
+            return self.drf.search_precedents(query)
+        except Exception as e:
+            logger.warning(f"⚠️ search_precedents_async failed: {e}")
+            return None

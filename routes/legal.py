@@ -12,6 +12,7 @@ import asyncio
 import logging
 import datetime
 import traceback
+import threading
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from fastapi import APIRouter, Request, HTTPException
@@ -64,6 +65,7 @@ logger = logging.getLogger("LawmadiOS.Legal")
 # ---------------------------------------------------------------------------
 _RUNTIME: Dict[str, Any] = {}
 _METRICS: Dict[str, Any] = {}
+_METRICS_LOCK = threading.Lock()
 _LEADER_REGISTRY: Dict[str, Any] = {}
 _limiter = None
 
@@ -411,7 +413,8 @@ async def ask(request: Request):
         if not is_legal:
             instant_msg = await _generate_yuna_response(query, lang)
             latency = int((time.time() - start_time) * 1000)
-            _METRICS["requests"] += 1
+            with _METRICS_LOCK:
+                _METRICS["requests"] += 1
             _audit_fn("ask_non_legal", {"query": query, "status": "SUCCESS_NON_LEGAL", "leader": "유나", "latency_ms": latency})
             return JSONResponse(content={
                 "trace_id": trace,
@@ -487,10 +490,11 @@ async def ask(request: Request):
         # -------------------------------------------------
         # 7) Metrics
         # -------------------------------------------------
-        _METRICS["requests"] += 1
-        req_count = _METRICS["requests"]
-        prev_avg = _METRICS["avg_latency_ms"]
-        _METRICS["avg_latency_ms"] = int(((prev_avg * (req_count - 1)) + latency_ms) / max(req_count, 1))
+        with _METRICS_LOCK:
+            _METRICS["requests"] += 1
+            req_count = _METRICS["requests"]
+            prev_avg = _METRICS["avg_latency_ms"]
+            _METRICS["avg_latency_ms"] = int(((prev_avg * (req_count - 1)) + latency_ms) / max(req_count, 1))
 
         # -------------------------------------------------
         # 8) Audit
@@ -597,7 +601,8 @@ async def ask(request: Request):
         }
 
     except Exception as e:
-        _METRICS["errors"] += 1
+        with _METRICS_LOCK:
+            _METRICS["errors"] += 1
         ref = datetime.datetime.now().strftime("%H%M%S")
         logger.error(f"💥 커널 에러 (trace={trace}, ref={ref}): {type(e).__name__}: {e}")
         logger.error(traceback.format_exc())
@@ -826,7 +831,8 @@ async def ask_stream(request: Request):
                 leader_name = "유나"
                 leader_specialty = "콘텐츠 설계"
                 latency_ms = int((time.time() - start_time) * 1000)
-                _METRICS["requests"] += 1
+                with _METRICS_LOCK:
+                    _METRICS["requests"] += 1
                 yield _sse("done", {
                     "leader": "유나", "leader_specialty": "콘텐츠 설계",
                     "latency_ms": latency_ms, "trace_id": trace,
@@ -900,14 +906,11 @@ async def ask_stream(request: Request):
                     if lm_draft:
                         gemini_answer = lm_draft
 
-                # Stage 4: DRF 전수 검증
+                # Stage 4: DRF 전수 검증 (async — run_in_executor 불필요)
                 drf_verification = VerificationResult()
                 if gemini_answer:
                     yield _sse("status", {"step": "verifying", "leader": leader_name})
-                    loop = asyncio.get_event_loop()
-                    drf_verification = await loop.run_in_executor(
-                        None, lambda: run_pipeline_stage3(gemini_answer)
-                    )
+                    drf_verification = await run_pipeline_stage3(gemini_answer)
 
                 # FAIL_CLOSED 적용 (5% 초과 미검증 또는 DRF 오류 시 차단)
                 final_text = _apply_fail_closed(gemini_answer, drf_verification) if gemini_answer else ""
@@ -916,7 +919,8 @@ async def ask_stream(request: Request):
                     logger.warning("[Stream FAIL_CLOSED] 응답 차단됨")
                     yield _sse("chunk", {"text": FAIL_CLOSED_RESPONSE})
                     latency_ms = int((time.time() - start_time) * 1000)
-                    _METRICS["requests"] += 1
+                    with _METRICS_LOCK:
+                        _METRICS["requests"] += 1
                     yield _sse("done", {
                         "leader": leader_name, "leader_specialty": leader_specialty,
                         "latency_ms": latency_ms, "trace_id": trace,
@@ -948,10 +952,11 @@ async def ask_stream(request: Request):
                 logger.warning(f"🐌 [SLOW_REQUEST] {latency_ms}ms | query={query[:80]} | leader={leader_name}")
 
             # Metrics
-            _METRICS["requests"] += 1
-            req_count = _METRICS["requests"]
-            prev_avg = _METRICS["avg_latency_ms"]
-            _METRICS["avg_latency_ms"] = int(((prev_avg * (req_count - 1)) + latency_ms) / max(req_count, 1))
+            with _METRICS_LOCK:
+                _METRICS["requests"] += 1
+                req_count = _METRICS["requests"]
+                prev_avg = _METRICS["avg_latency_ms"]
+                _METRICS["avg_latency_ms"] = int(((prev_avg * (req_count - 1)) + latency_ms) / max(req_count, 1))
 
             # Audit
             _audit_fn("ask_stream", {
@@ -1024,7 +1029,8 @@ async def ask_stream(request: Request):
             asyncio.create_task(_bg_verify())
 
         except Exception as e:
-            _METRICS["errors"] += 1
+            with _METRICS_LOCK:
+                _METRICS["errors"] += 1
             ref = datetime.datetime.now().strftime("%H%M%S")
             logger.error(f"💥 스트리밍 에러 (trace={trace}, ref={ref}): {type(e).__name__}: {e}")
             logger.error(traceback.format_exc())
