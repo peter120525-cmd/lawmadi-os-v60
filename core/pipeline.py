@@ -245,37 +245,46 @@ def _postprocess_lawmadilm(draft: str, query: str) -> Optional[str]:
 # =============================================================
 
 def _extract_articles_from_drf(raw_response) -> List[Dict]:
-    """DRF 응답에서 조문 목록을 추출"""
+    """DRF lawService.do 응답에서 조문 목록을 추출
+
+    lawService.do 응답 구조: {"법령": {"조문": {"조문단위": [...]}}}
+    각 조문단위: {"조문번호": "3", "조문내용": "제3조(대항력) ...", ...}
+    """
     if not raw_response:
         return []
 
     articles = []
     try:
         if isinstance(raw_response, dict):
-            # LawSearch 응답 구조: {"LawSearch": {"law": [...]}} 또는 {"LawSearch": {"law": {...}}}
-            law_data = raw_response.get("LawSearch", {})
-            if isinstance(law_data, dict):
-                law_list = law_data.get("law", [])
-                if isinstance(law_list, dict):
-                    law_list = [law_list]
-                if isinstance(law_list, list):
-                    for law in law_list:
-                        # 조문목록 추출
-                        jo_list = law.get("조문", [])
-                        if isinstance(jo_list, dict):
-                            jo_list = [jo_list]
-                        for jo in jo_list:
-                            if isinstance(jo, dict):
-                                article_num = jo.get("조문번호", "")
-                                if article_num:
-                                    try:
-                                        article_num = int(str(article_num).strip())
-                                    except (ValueError, TypeError):
-                                        continue
-                                articles.append(jo)
+            # lawService.do 응답: {"법령": {"조문": {"조문단위": [...]}}}
+            law_root = raw_response.get("법령", raw_response)
+            if isinstance(law_root, dict):
+                jo_section = law_root.get("조문", {})
+                if isinstance(jo_section, dict):
+                    jo_list = jo_section.get("조문단위", [])
+                    if isinstance(jo_list, dict):
+                        jo_list = [jo_list]
+                    if isinstance(jo_list, list):
+                        articles.extend(jo_list)
+
+            # Fallback: LawSearch 응답 구조 (하위 호환)
+            if not articles:
+                law_data = raw_response.get("LawSearch", {})
+                if isinstance(law_data, dict):
+                    law_list = law_data.get("law", [])
+                    if isinstance(law_list, dict):
+                        law_list = [law_list]
+                    if isinstance(law_list, list):
+                        for law in law_list:
+                            jo_list = law.get("조문", [])
+                            if isinstance(jo_list, dict):
+                                jo_list = [jo_list]
+                            for jo in jo_list:
+                                if isinstance(jo, dict):
+                                    articles.append(jo)
 
             # 직접 리스트 형식
-            if not articles and isinstance(raw_response, dict):
+            if not articles:
                 for key in ["law", "조문", "조문목록"]:
                     items = raw_response.get(key, [])
                     if isinstance(items, list):
@@ -285,11 +294,6 @@ def _extract_articles_from_drf(raw_response) -> List[Dict]:
 
         elif isinstance(raw_response, list):
             articles = raw_response
-
-        # 문자열 응답에서 조문 정보 추출 시도
-        if not articles and isinstance(raw_response, str):
-            # DRF가 문자열로 응답한 경우 -> 법령이 존재함을 의미
-            pass
 
     except Exception as e:
         logger.debug(f"[DRF Parse] 조문 추출 실패: {e}")
@@ -334,8 +338,8 @@ def _drf_verify_law_refs(text: str) -> VerificationResult:
         return result
 
     seen = set()
-    # 법령별로 DRF 호출을 묶어서 최적화
-    law_cache_local: Dict[str, Any] = {}
+    # 법령별로 lawService.do 호출 캐시 (조문 상세 포함)
+    law_articles_cache: Dict[str, Any] = {}
 
     for law_name, article_num_str, paragraph_str in refs:
         article_num = int(article_num_str)
@@ -345,30 +349,24 @@ def _drf_verify_law_refs(text: str) -> VerificationResult:
         seen.add(key)
 
         try:
-            # 법령 검색 (캐시 활용)
-            if law_name not in law_cache_local:
-                raw = svc.search_law(law_name)
-                law_cache_local[law_name] = raw
+            # lawService.do로 조문 상세 조회 (법령별 1회만 호출)
+            if law_name not in law_articles_cache:
+                raw = svc.get_law_articles(law_name)
+                law_articles_cache[law_name] = raw
             else:
-                raw = law_cache_local[law_name]
+                raw = law_articles_cache[law_name]
 
             law_exists = bool(raw)
             article_exists = False
             article_text = None
 
             if raw:
-                # 조문 목록에서 조문번호 존재 여부 확인
                 articles = _extract_articles_from_drf(raw)
                 if articles:
                     article_exists = any(
                         _match_article_num(a, article_num) for a in articles
                     )
                     article_text = _get_article_text(articles, article_num)
-                else:
-                    # DRF 응답에 조문 목록이 없는 경우 (법명 검색만 가능한 구조)
-                    # 조문번호 미확인 → 미확인 처리 (DRF 강화)
-                    article_exists = False  # 조문 목록 미제공 → 미확인 처리 (DRF 강화)
-                    logger.debug(f"[Stage 3] {key}: 법령 존재하나 조문목록 미제공 -> 미확인 처리")
 
             ref_entry = {
                 "ref": key,

@@ -267,6 +267,69 @@ class DRFConnector:
         except Exception as e:
             raise RuntimeError(f"lawService JSON parse error: {e}")
 
+    def get_law_articles(self, law_name: str) -> Optional[Any]:
+        """
+        법령명으로 lawSearch → MST 추출 → lawService로 조문 상세 조회
+
+        Returns:
+            lawService.do JSON 응답 (조문단위 포함) 또는 None
+        """
+        _init_cache()
+
+        cache_key = f"drf:v2:lawsvc:{hashlib.md5(law_name.encode('utf-8')).hexdigest()}"
+        try:
+            cached = _cache_get(cache_key)
+            if cached and cached.get("data"):
+                logger.info(f"🎯 [Cache HIT] lawService, query={law_name[:30]}")
+                return cached["data"]
+        except Exception:
+            pass
+
+        # Step 1: lawSearch.do로 법령일련번호(MST) 조회
+        search_result = self.law_search(law_name)
+        if not search_result:
+            return None
+
+        mst = None
+        try:
+            law_list = search_result.get("LawSearch", {}).get("law", [])
+            if isinstance(law_list, dict):
+                law_list = [law_list]
+            for law in law_list:
+                name = law.get("법령명한글", "")
+                if law_name in name or name in law_name:
+                    mst = law.get("법령일련번호")
+                    break
+            if not mst and law_list:
+                mst = law_list[0].get("법령일련번호")
+        except Exception as e:
+            logger.warning(f"⚠️ MST 추출 실패: {e}")
+            return None
+
+        if not mst:
+            return None
+
+        # Step 2: lawService.do로 조문 상세 조회
+        try:
+            params = {
+                "OC": self.drf_key,
+                "target": "law",
+                "MST": mst,
+                "type": "JSON",
+            }
+            r = requests.get(_LAW_SERVICE_URL, params=params, timeout=self.timeout_sec)
+            if r.status_code != 200:
+                return None
+            data = r.json()
+            try:
+                _cache_set(cache_key, {"data": data, "law_name": law_name, "mst": mst}, ttl_seconds=3600)
+            except Exception:
+                pass
+            return data
+        except Exception as e:
+            logger.warning(f"⚠️ lawService 조회 실패: {e}")
+            return None
+
     def search_legal_term(self, query: str) -> Optional[Any]:
         """
         법령용어 검색 (SSOT #10)
