@@ -597,15 +597,15 @@ def _apply_fail_closed(final_text: str, drf_verification: VerificationResult) ->
     total_count = drf_verification.total_refs
     ratio = unverified_count / max(total_count, 1)
 
-    # ── 안전장치 2: 미검증 비율 30% 초과 → 응답 차단 (fail-closed) ──
-    if ratio > 0.30:
+    # ── 안전장치 2: 미검증 비율 0.1% 초과 → 응답 차단 (fail-closed 0.1%) ──
+    if ratio > 0.001:
         logger.warning(
             f"[FAIL_CLOSED] 미검증 {unverified_count}/{total_count} "
-            f"({ratio*100:.1f}%) > 30% → 응답 차단"
+            f"({ratio*100:.1f}%) > 0.1% → 응답 차단"
         )
         return FAIL_CLOSED_RESPONSE
 
-    # ── 안전장치 3: 30% 이하 미검증 → 해당 조문 완전 삭제 (태깅 아님) ──
+    # ── 안전장치 3: 미검증 → 해당 조문 완전 삭제 (태깅 아님) ──
     if unverified_count > 0:
         final_text = _strip_unverified_sentences(final_text, drf_verification)
         logger.info(
@@ -844,6 +844,19 @@ async def _run_legal_pipeline(
     # -- FAIL_CLOSED 재시도: 차단 시 1회 재생성 후 재검증 --
     if fail_closed_result == FAIL_CLOSED_RESPONSE:
         logger.warning("[FAIL_CLOSED 재시도] 1회 재생성 시도")
+        # 미검증 법률 목록을 금지 목록으로 주입
+        banned_laws = [r["ref"] for r in drf_verification.unverified_refs]
+        if banned_laws:
+            ban_text = ", ".join(banned_laws)
+            ban_instruction = (
+                f"\n\n⚠️ 아래 법률은 DRF 검증에서 미확인되었으므로 절대 인용하지 마세요: {ban_text}\n"
+                f"반드시 [참고 법령 조문] 또는 [SSOT 캐시]에 있는 법률만 인용하세요."
+            )
+            # lm_draft에 금지 목록 추가
+            if lm_draft:
+                lm_draft = lm_draft + ban_instruction
+            else:
+                lm_draft = ban_instruction
         try:
             retry_text = await _gemini_fallback_compose(
                 query, analysis, rag_context, tools, gemini_history,
