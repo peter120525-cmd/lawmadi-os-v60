@@ -359,6 +359,7 @@ def _drf_verify_law_refs(text: str) -> VerificationResult:
             law_exists = bool(raw)
             article_exists = False
             article_text = None
+            articles = []
 
             if raw:
                 articles = _extract_articles_from_drf(raw)
@@ -380,10 +381,12 @@ def _drf_verify_law_refs(text: str) -> VerificationResult:
 
             if ref_entry["verified"]:
                 result.verified_refs.append(ref_entry)
+                logger.info(f"[Stage 3] ✅ {key}: 검증 통과")
             else:
                 reason = "법령 미존재" if not law_exists else f"제{article_num}조 미존재"
                 ref_entry["reason"] = reason
                 result.unverified_refs.append(ref_entry)
+                logger.warning(f"[Stage 3] ❌ {key}: {reason} (law_exists={law_exists}, articles={len(articles) if raw and articles else 0})")
 
         except Exception as e:
             logger.warning(f"[Stage 3] {key} 검증 실패: {e}")
