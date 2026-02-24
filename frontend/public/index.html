@@ -3072,6 +3072,67 @@
         }
         @keyframes expertFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* Expert Verification Waiting Indicator */
+        .expert-waiting-indicator {
+            margin-top: 12px;
+            padding: 20px;
+            border: 1px solid rgba(124, 58, 237, 0.3);
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(124,58,237,0.05) 0%, rgba(109,40,217,0.08) 100%);
+            animation: expertFadeIn 0.3s ease;
+        }
+        [data-theme="dark"] .expert-waiting-indicator {
+            background: linear-gradient(135deg, rgba(124,58,237,0.1) 0%, rgba(109,40,217,0.13) 100%);
+        }
+        .expert-waiting-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #7c3aed;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .expert-waiting-title .material-symbols-outlined {
+            font-size: 1.1rem;
+            animation: expertSpin 1.2s linear infinite;
+        }
+        @keyframes expertSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .expert-waiting-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .expert-wait-step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            transition: all 0.3s;
+        }
+        .expert-wait-step.active {
+            color: #7c3aed;
+            font-weight: 600;
+        }
+        .expert-wait-step.done {
+            color: var(--success);
+        }
+        .expert-wait-step .ew-icon {
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .expert-wait-elapsed {
+            margin-top: 8px;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
         /* ═══ 스트리밍 실시간 텍스트 ═══ */
         .stream-content {
             font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -5210,7 +5271,7 @@
             <div class="input-container">
                 <!-- 파일 업로드 버튼 (v60) -->
                 <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.webp,.pdf" style="display: none;" aria-label="문서 또는 이미지 파일 선택" />
-                <button id="uploadBtn" class="send-action" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);" title="문서/이미지 업로드" aria-label="문서/이미지 업로드">
+                <button id="uploadBtn" class="send-action" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);" title="파일 업로드 (서비스 예정 · 1MB 제한)" aria-label="파일 업로드 (서비스 예정)">
                     <span class="material-symbols-outlined" style="font-size: 1.4rem;" aria-hidden="true">upload_file</span>
                 </button>
 
@@ -5458,8 +5519,8 @@
 
             this.initVisitorTracking();
 
-            // v60: 파일 업로드 이벤트 핸들러
-            this.uploadBtn.onclick = () => this.fileInput.click();
+            // v60: 파일 업로드 (서비스 예정)
+            this.uploadBtn.onclick = () => this.showUploadComingSoon();
             this.fileInput.onchange = (e) => this.handleFileSelect(e);
             this.removeFileBtn.onclick = () => this.clearUploadedFile();
 
@@ -5646,6 +5707,36 @@
             this.uploadedFile = null;
             this.fileInput.value = '';
             this.uploadedFilePreview.style.display = 'none';
+        },
+
+        showPdfComingSoon() {
+            const existing = document.getElementById('pdf-coming-soon');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.id = 'pdf-coming-soon';
+            toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#1e293b,#334155);color:#f1f5f9;padding:16px 28px;border-radius:14px;border:1px solid rgba(37,99,235,0.4);box-shadow:0 8px 32px rgba(0,0,0,0.3);z-index:9999;display:flex;align-items:center;gap:12px;font-size:0.95rem;font-weight:600;animation:expertFadeIn 0.3s ease;max-width:90vw;';
+            toast.innerHTML = '<span class="material-symbols-outlined" style="color:#3b82f6;font-size:1.5rem;">picture_as_pdf</span><div><div>PDF 다운로드 — <span style="color:#f59e0b;">서비스 예정</span></div><div style="font-size:0.8rem;font-weight:400;color:#94a3b8;margin-top:4px;">법률 분석 결과를 PDF로 저장하는 기능이 곧 제공됩니다</div></div>';
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.transition = 'opacity 0.4s';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 400);
+            }, 3000);
+        },
+
+        showUploadComingSoon() {
+            const existing = document.getElementById('upload-coming-soon');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.id = 'upload-coming-soon';
+            toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#1e293b,#334155);color:#f1f5f9;padding:16px 28px;border-radius:14px;border:1px solid rgba(139,92,246,0.4);box-shadow:0 8px 32px rgba(0,0,0,0.3);z-index:9999;display:flex;align-items:center;gap:12px;font-size:0.95rem;font-weight:600;animation:expertFadeIn 0.3s ease;max-width:90vw;';
+            toast.innerHTML = '<span class="material-symbols-outlined" style="color:#8b5cf6;font-size:1.5rem;">upload_file</span><div><div>파일 업로드 — <span style="color:#f59e0b;">서비스 예정</span></div><div style="font-size:0.8rem;font-weight:400;color:#94a3b8;margin-top:4px;">업로드 파일 1MB 제한 · JPG, PNG, WEBP, PDF 지원</div></div>';
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.transition = 'opacity 0.4s';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 400);
+            }, 3000);
         },
 
         formatFileSize(bytes) {
@@ -6532,36 +6623,8 @@
                     });
                     g1.appendChild(shareBtn);
 
-                    const exportBtn = this._createToolbarBtn('picture_as_pdf', 'PDF 저장', async () => {
-                        const icon = exportBtn.querySelector('.material-symbols-outlined');
-                        icon.textContent = 'hourglass_top';
-                        exportBtn.disabled = true;
-                        try {
-                            let pdfTitle = '법률 분석';
-                            if (leaderName) pdfTitle = `${leaderName} 분석`;
-                            let pdfContent = `[질문]\n${originalQuery}\n\n`;
-                            if (leaderName) pdfContent += `[담당] ${leaderName}${leaderSpecialtyFromServer ? ' (' + leaderSpecialtyFromServer + ')' : ''}\n\n`;
-                            pdfContent += `[답변]\n${rawResponse}`;
-                            const pdfRes = await fetch(`${this.BASE_URL}/export-pdf`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ title: pdfTitle, content: pdfContent })
-                            });
-                            if (!pdfRes.ok) throw new Error('PDF 생성 실패');
-                            const blob = await pdfRes.blob();
-                            const url = URL.createObjectURL(blob);
-                            const now = new Date();
-                            const pad = n => String(n).padStart(2, '0');
-                            const fname = `lawmadi-분석-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.pdf`;
-                            const a = document.createElement('a'); a.href = url; a.download = fname; a.click();
-                            URL.revokeObjectURL(url);
-                            icon.textContent = 'check';
-                            setTimeout(() => { icon.textContent = 'picture_as_pdf'; exportBtn.disabled = false; }, 2000);
-                        } catch (e) {
-                            icon.textContent = 'error';
-                            exportBtn.disabled = false;
-                            setTimeout(() => { icon.textContent = 'picture_as_pdf'; }, 2000);
-                        }
+                    const exportBtn = this._createToolbarBtn('picture_as_pdf', 'PDF 저장 (서비스 예정)', () => {
+                        this.showPdfComingSoon();
                     });
                     g1.appendChild(exportBtn);
                     toolbar.appendChild(g1);
@@ -6597,6 +6660,51 @@
                     expertCta.onclick = async () => {
                         expertCta.disabled = true;
                         expertCta.innerHTML = '<span class="material-symbols-outlined">hourglass_top</span> 검증 중...';
+
+                        // ── 대기 문구 표시 ──
+                        const waitingDiv = document.createElement('div');
+                        waitingDiv.className = 'expert-waiting-indicator';
+                        waitingDiv.innerHTML = `
+                            <div class="expert-waiting-title">
+                                <span class="material-symbols-outlined">sync</span>
+                                전문가 검증 진행 중
+                            </div>
+                            <div class="expert-waiting-steps">
+                                <div class="expert-wait-step active" data-ew="1"><span class="ew-icon">🔍</span> 원본 답변 분석 중...</div>
+                                <div class="expert-wait-step" data-ew="2"><span class="ew-icon">📖</span> DRF 법조문 전수검증 중...</div>
+                                <div class="expert-wait-step" data-ew="3"><span class="ew-icon">⚖️</span> 시행령·시행규칙 교차 검증 중...</div>
+                                <div class="expert-wait-step" data-ew="4"><span class="ew-icon">📋</span> 검증 보고서 작성 중...</div>
+                            </div>
+                            <div class="expert-wait-elapsed">0초 경과</div>
+                        `;
+                        msgDiv.insertBefore(waitingDiv, ctaBar);
+                        this._smartScroll(true);
+
+                        const ewSteps = [
+                            { ew: '1', delay: 0 },
+                            { ew: '2', delay: 2000 },
+                            { ew: '3', delay: 5000 },
+                            { ew: '4', delay: 9000 }
+                        ];
+                        const ewTimers = [];
+                        ewSteps.forEach((s, idx) => {
+                            const t = setTimeout(() => {
+                                const el = waitingDiv.querySelector(`[data-ew="${s.ew}"]`);
+                                if (el) { el.classList.add('active'); }
+                                if (idx > 0) {
+                                    const prev = waitingDiv.querySelector(`[data-ew="${ewSteps[idx-1].ew}"]`);
+                                    if (prev) { prev.classList.remove('active'); prev.classList.add('done'); }
+                                }
+                            }, s.delay);
+                            ewTimers.push(t);
+                        });
+                        let ewSec = 0;
+                        const ewElapsed = setInterval(() => {
+                            ewSec++;
+                            const el = waitingDiv.querySelector('.expert-wait-elapsed');
+                            if (el) el.textContent = `${ewSec}초 경과`;
+                        }, 1000);
+
                         try {
                             const expertRes = await fetch(`${this.BASE_URL}/ask-expert`, {
                                 method: 'POST',
@@ -6605,6 +6713,10 @@
                             });
                             if (!expertRes.ok) throw new Error('전문가 검증 실패');
                             const expertData = await expertRes.json();
+                            ewTimers.forEach(t => clearTimeout(t));
+                            clearInterval(ewElapsed);
+                            waitingDiv.remove();
+
                             if (expertData.status === 'SUCCESS' && expertData.response) {
                                 const panel = document.createElement('div');
                                 panel.className = 'expert-response-panel';
@@ -6622,6 +6734,9 @@
                                 expertCta.classList.add('done');
                             } else { throw new Error('검증 실패'); }
                         } catch (e) {
+                            ewTimers.forEach(t => clearTimeout(t));
+                            clearInterval(ewElapsed);
+                            waitingDiv.remove();
                             expertCta.disabled = false;
                             expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기 <span style="font-size:0.8em;opacity:0.7">(유료 예정)</span>';
                             console.error('Expert verification failed:', e);
@@ -6664,34 +6779,8 @@
 
                             const pdfBtn = document.createElement('button');
                             pdfBtn.className = 'pdf-download-btn';
-                            pdfBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">picture_as_pdf</span> PDF 다운로드';
-                            pdfBtn.onclick = async () => {
-                                pdfBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">hourglass_top</span> 생성 중...';
-                                pdfBtn.disabled = true;
-                                try {
-                                    const pdfRes = await fetch(`${this.BASE_URL}/export-pdf`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ title: docTitle, content: docContent })
-                                    });
-                                    if (!pdfRes.ok) throw new Error('PDF 생성 실패');
-                                    const blob = await pdfRes.blob();
-                                    const url = window.URL.createObjectURL(blob);
-                                    const a = document.createElement('a');
-                                    a.href = url;
-                                    a.download = `${docTitle}.pdf`;
-                                    a.click();
-                                    window.URL.revokeObjectURL(url);
-                                    pdfBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">check_circle</span> 다운로드 완료';
-                                    setTimeout(() => {
-                                        pdfBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">picture_as_pdf</span> PDF 다운로드';
-                                        pdfBtn.disabled = false;
-                                    }, 2000);
-                                } catch (e) {
-                                    pdfBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">error</span> 실패 - 다시 시도';
-                                    pdfBtn.disabled = false;
-                                }
-                            };
+                            pdfBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">picture_as_pdf</span> PDF 다운로드 <span style="font-size:0.75em;opacity:0.7;">(서비스 예정)</span>';
+                            pdfBtn.onclick = () => this.showPdfComingSoon();
                             msgDiv.appendChild(pdfBtn);
                         }
                     }

@@ -111,7 +111,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 12px 24px;
+            padding: 14px 28px;
             background: rgba(255, 255, 255, 0.1);
             -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
@@ -119,6 +119,7 @@
             border-radius: 12px;
             color: white;
             text-decoration: none;
+            font-size: 1.05rem;
             font-weight: 600;
             transition: all 0.3s;
             z-index: 10;
@@ -131,10 +132,10 @@
 
         .header-badge {
             display: inline-block;
-            padding: 8px 20px;
+            padding: 10px 24px;
             background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
             border-radius: 20px;
-            font-size: 0.85rem;
+            font-size: 1.05rem;
             font-weight: 700;
             letter-spacing: 1px;
             margin-bottom: 20px;
@@ -142,7 +143,7 @@
         }
 
         .header h1 {
-            font-size: 3rem;
+            font-size: 3.5rem;
             font-weight: 900;
             background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
             -webkit-background-clip: text;
@@ -153,16 +154,16 @@
         }
 
         .header p {
-            font-size: 1.2rem;
+            font-size: 1.4rem;
             color: var(--text-secondary);
-            max-width: 600px;
+            max-width: 700px;
             margin: 0 auto;
             line-height: 1.6;
         }
 
         /* Section Title */
         .section-title {
-            font-size: 1.6rem;
+            font-size: 2rem;
             font-weight: 900;
             color: white;
             margin-bottom: 24px;
@@ -189,7 +190,7 @@
         /* ===== Section 2: Keyword Cards ===== */
         .hero-text {
             text-align: center;
-            font-size: 1.4rem;
+            font-size: 1.7rem;
             font-weight: 700;
             color: var(--text-primary);
             margin-bottom: 32px;
@@ -208,7 +209,7 @@
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 20px;
-            padding: 32px 24px;
+            padding: 40px 32px;
             text-align: center;
             transition: all 0.4s;
         }
@@ -220,7 +221,7 @@
         }
 
         .keyword-card .icon {
-            font-size: 2.5rem;
+            font-size: 3.2rem;
             color: var(--primary);
             margin-bottom: 16px;
         }
@@ -229,14 +230,14 @@
         .keyword-card:nth-child(3) .icon { color: var(--purple); }
 
         .keyword-card h3 {
-            font-size: 1.15rem;
+            font-size: 1.4rem;
             font-weight: 800;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             color: white;
         }
 
         .keyword-card p {
-            font-size: 0.9rem;
+            font-size: 1.1rem;
             color: var(--text-secondary);
             line-height: 1.5;
         }
@@ -251,13 +252,13 @@
         .step-card {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 24px;
             background: rgba(30, 41, 59, 0.6);
             -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
-            padding: 24px;
+            padding: 30px;
             transition: all 0.3s;
         }
 
@@ -268,14 +269,14 @@
         }
 
         .step-number {
-            width: 48px;
-            height: 48px;
+            width: 56px;
+            height: 56px;
             border-radius: 14px;
             background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
+            font-size: 1.4rem;
             font-weight: 900;
             color: white;
             flex-shrink: 0;
@@ -287,7 +288,7 @@
         .step-card:nth-child(5) .step-number { background: linear-gradient(135deg, var(--purple) 0%, #ec4899 100%); }
 
         .step-icon {
-            font-size: 1.8rem;
+            font-size: 2.2rem;
             color: var(--primary);
             flex-shrink: 0;
         }
@@ -298,21 +299,21 @@
         .step-card:nth-child(5) .step-icon { color: var(--purple); }
 
         .step-content h3 {
-            font-size: 1.05rem;
+            font-size: 1.3rem;
             font-weight: 800;
             color: white;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
         }
 
         .step-content p {
-            font-size: 0.9rem;
+            font-size: 1.1rem;
             color: var(--text-secondary);
         }
 
         /* ===== Section 4: Leaders + C-Level Highlight ===== */
         .badge-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 10px;
             margin-bottom: 28px;
         }
@@ -320,12 +321,12 @@
         .category-badge {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 12px 16px;
+            gap: 8px;
+            padding: 16px 22px;
             background: rgba(30, 41, 59, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            font-size: 0.85rem;
+            border-radius: 14px;
+            font-size: 1.25rem;
             font-weight: 700;
             color: var(--text-primary);
             transition: all 0.3s;
@@ -344,19 +345,18 @@
         .category-badge .name {
             color: var(--text-secondary);
             font-weight: 400;
-            margin-left: auto;
-            padding-left: 8px;
-            font-size: 0.8rem;
+            margin-left: 4px;
+            font-size: 1.15rem;
             flex-shrink: 0;
         }
 
         .badge-avatar {
-            width: 28px;
-            height: 28px;
+            width: 78px;
+            height: 78px;
             border-radius: 50%;
             object-fit: cover;
             flex-shrink: 0;
-            margin-right: 8px;
+            margin-right: 10px;
         }
 
         .clevel-row {
@@ -372,10 +372,10 @@
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 16px;
-            padding: 20px;
+            padding: 26px;
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 16px;
             transition: all 0.3s;
         }
 
@@ -411,14 +411,14 @@
         }
 
         .clevel-mini-avatar {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
+            width: 108px;
+            height: 108px;
+            border-radius: 16px;
             background: linear-gradient(135deg, var(--clevel-color) 0%, rgba(255, 255, 255, 0.1) 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
+            font-size: 1.4rem;
             font-weight: 900;
             color: white;
             flex-shrink: 0;
@@ -426,14 +426,14 @@
         }
 
         .clevel-mini-info h4 {
-            font-size: 0.95rem;
+            font-size: 1.4rem;
             font-weight: 800;
             color: white;
-            margin-bottom: 2px;
+            margin-bottom: 4px;
         }
 
         .clevel-mini-info span {
-            font-size: 0.8rem;
+            font-size: 1.15rem;
             color: var(--clevel-color);
             font-weight: 600;
         }
@@ -446,10 +446,10 @@
         .view-link {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             color: var(--primary);
             font-weight: 700;
-            font-size: 0.9rem;
+            font-size: 1.1rem;
             text-decoration: none;
             transition: all 0.3s;
         }
@@ -472,7 +472,7 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
-            padding: 24px;
+            padding: 32px;
             text-align: center;
             transition: all 0.3s;
         }
@@ -484,13 +484,13 @@
         }
 
         .trust-card .icon {
-            font-size: 2rem;
+            font-size: 2.6rem;
             color: var(--green);
-            margin-bottom: 12px;
+            margin-bottom: 14px;
         }
 
         .trust-card h4 {
-            font-size: 0.95rem;
+            font-size: 1.15rem;
             font-weight: 800;
             color: white;
             line-height: 1.4;
@@ -513,17 +513,17 @@
         }
 
         .stat-number {
-            font-size: 2.2rem;
+            font-size: 2.8rem;
             font-weight: 900;
             background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
 
         .stat-label {
-            font-size: 0.85rem;
+            font-size: 1.05rem;
             color: var(--text-secondary);
             font-weight: 600;
         }
@@ -537,13 +537,13 @@
         .cta-button {
             display: inline-flex;
             align-items: center;
-            gap: 10px;
-            padding: 18px 48px;
+            gap: 12px;
+            padding: 22px 56px;
             background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 100%);
             border: none;
             border-radius: 16px;
             color: white;
-            font-size: 1.15rem;
+            font-size: 1.35rem;
             font-weight: 800;
             text-decoration: none;
             transition: all 0.4s;
@@ -711,7 +711,7 @@
                 <div class="keyword-card">
                     <div class="icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">fact_check</span></div>
                     <h3>DRF 강화 검증</h3>
-                    <p>법조문 전수검증 · fail-closed 20% 임계값</p>
+                    <p>법조문 전수검증 · fail-closed 0.1% 임계값</p>
                 </div>
             </div>
         </div>
@@ -749,7 +749,7 @@
                     <span class="material-symbols-outlined step-icon">shield</span>
                     <div class="step-content">
                         <h3>DRF 전수검증</h3>
-                        <p>법조문·시행령·시행규칙 교차검증 · 미검증 20% 초과 시 자동 차단(fail-closed)</p>
+                        <p>법조문·시행령·시행규칙 교차검증 · 미검증 0.1% 초과 시 자동 차단(fail-closed)</p>
                     </div>
                 </div>
             </div>
@@ -764,29 +764,61 @@
                 <a href="leader-profile.html?id=L03" class="category-badge"><img src="images/leaders/L03-damseul.jpg" alt="담슬" class="badge-avatar">건설<span class="name">담슬</span></a>
                 <a href="leader-profile.html?id=L04" class="category-badge"><img src="images/leaders/L04-aki.jpg" alt="아키" class="badge-avatar">재개발<span class="name">아키</span></a>
                 <a href="leader-profile.html?id=L05" class="category-badge"><img src="images/leaders/L05-yeonwoo.jpg" alt="연우" class="badge-avatar">의료<span class="name">연우</span></a>
+                <a href="leader-profile.html?id=L06" class="category-badge"><img src="images/leaders/L06-byeori.jpg" alt="벼리" class="badge-avatar">손해배상<span class="name">벼리</span></a>
                 <a href="leader-profile.html?id=L07" class="category-badge"><img src="images/leaders/L07-hanui.jpg" alt="하늬" class="badge-avatar">교통사고<span class="name">하늬</span></a>
                 <a href="leader-profile.html?id=L08" class="category-badge"><img src="images/leaders/L08-onyu.jpg" alt="온유" class="badge-avatar">임대차<span class="name">온유</span></a>
-                <a href="leader-profile.html?id=L30" class="category-badge"><img src="images/leaders/L30-damwoo.jpg" alt="담우" class="badge-avatar">노동<span class="name">담우</span></a>
-                <a href="leader-profile.html?id=L22" class="category-badge"><img src="images/leaders/L22-gaon.jpg" alt="무결" class="badge-avatar">형사<span class="name">무결</span></a>
-                <a href="leader-profile.html?id=L31" class="category-badge"><img src="images/leaders/L31-roun.jpg" alt="로운" class="badge-avatar">행정<span class="name">로운</span></a>
-                <a href="leader-profile.html?id=L35" class="category-badge"><img src="images/leaders/L35-maru.jpg" alt="마루" class="badge-avatar">헌법<span class="name">마루</span></a>
-                <a href="leader-profile.html?id=L41" class="category-badge"><img src="images/leaders/L41-sandeul.jpg" alt="산들" class="badge-avatar">가족·이혼<span class="name">산들</span></a>
+                <a href="leader-profile.html?id=L09" class="category-badge"><img src="images/leaders/L09-hanul.jpg" alt="한울" class="badge-avatar">국가계약<span class="name">한울</span></a>
+                <a href="leader-profile.html?id=L10" class="category-badge"><img src="images/leaders/L10-gyeolhwi.jpg" alt="결휘" class="badge-avatar">민사집행<span class="name">결휘</span></a>
+                <a href="leader-profile.html?id=L11" class="category-badge"><img src="images/leaders/L11-oreum.jpg" alt="오름" class="badge-avatar">채권추심<span class="name">오름</span></a>
+                <a href="leader-profile.html?id=L12" class="category-badge"><img src="images/leaders/L12-aseul.jpg" alt="아슬" class="badge-avatar">등기·경매<span class="name">아슬</span></a>
+                <a href="leader-profile.html?id=L13" class="category-badge"><img src="images/leaders/L13-nuri.jpg" alt="누리" class="badge-avatar">상사<span class="name">누리</span></a>
+                <a href="leader-profile.html?id=L14" class="category-badge"><img src="images/leaders/L14-dasom.jpg" alt="다솜" class="badge-avatar">회사·M&amp;A<span class="name">다솜</span></a>
+                <a href="leader-profile.html?id=L15" class="category-badge"><img src="images/leaders/L15-byeolha.jpg" alt="별하" class="badge-avatar">스타트업<span class="name">별하</span></a>
+                <a href="leader-profile.html?id=L16" class="category-badge"><img src="images/leaders/L16-seula.jpg" alt="슬아" class="badge-avatar">보험<span class="name">슬아</span></a>
+                <a href="leader-profile.html?id=L17" class="category-badge"><img src="images/leaders/L17-mir.jpg" alt="미르" class="badge-avatar">국제거래<span class="name">미르</span></a>
+                <a href="leader-profile.html?id=L18" class="category-badge"><img src="images/leaders/L18-daon.jpg" alt="다온" class="badge-avatar">에너지·자원<span class="name">다온</span></a>
+                <a href="leader-profile.html?id=L19" class="category-badge"><img src="images/leaders/L19-selong.jpg" alt="슬옹" class="badge-avatar">해상·항공<span class="name">슬옹</span></a>
                 <a href="leader-profile.html?id=L20" class="category-badge"><img src="images/leaders/L20-chansol.jpg" alt="찬솔" class="badge-avatar">조세·금융<span class="name">찬솔</span></a>
                 <a href="leader-profile.html?id=L21" class="category-badge"><img src="images/leaders/L21-sebin.jpg" alt="휘윤" class="badge-avatar">IT·보안<span class="name">휘윤</span></a>
-                <a href="leader-profile.html?id=L34" class="category-badge"><img src="images/leaders/L34-jinu.jpg" alt="지누" class="badge-avatar">개인정보<span class="name">지누</span></a>
+                <a href="leader-profile.html?id=L22" class="category-badge"><img src="images/leaders/L22-gaon.jpg" alt="무결" class="badge-avatar">형사<span class="name">무결</span></a>
+                <a href="leader-profile.html?id=L23" class="category-badge"><img src="images/leaders/L23-seoun.jpg" alt="가비" class="badge-avatar">엔터<span class="name">가비</span></a>
+                <a href="leader-profile.html?id=L24" class="category-badge"><img src="images/leaders/L24-doul.jpg" alt="도울" class="badge-avatar">조세불복<span class="name">도울</span></a>
+                <a href="leader-profile.html?id=L25" class="category-badge"><img src="images/leaders/L25-damwoo.jpg" alt="강무" class="badge-avatar">군형법<span class="name">강무</span></a>
                 <a href="leader-profile.html?id=L26" class="category-badge"><img src="images/leaders/L26-jinu.jpg" alt="루다" class="badge-avatar">지식재산<span class="name">루다</span></a>
-                <a href="leader-profile.html?id=L42" class="category-badge"><img src="images/leaders/L42-haram.jpg" alt="하람" class="badge-avatar">저작권<span class="name">하람</span></a>
-                <a href="leader-profile.html?id=L32" class="category-badge"><img src="images/leaders/L32-bareum.jpg" alt="바름" class="badge-avatar">공정거래<span class="name">바름</span></a>
                 <a href="leader-profile.html?id=L27" class="category-badge"><img src="images/leaders/L27-ruda.jpg" alt="수림" class="badge-avatar">환경<span class="name">수림</span></a>
-                <a href="leader-profile.html?id=L17" class="category-badge"><img src="images/leaders/L17-mir.jpg" alt="미르" class="badge-avatar">국제거래<span class="name">미르</span></a>
                 <a href="leader-profile.html?id=L28" class="category-badge"><img src="images/leaders/L28-haeseul.jpg" alt="해슬" class="badge-avatar">무역·관세<span class="name">해슬</span></a>
-                <a href="leader-profile.html?id=L16" class="category-badge"><img src="images/leaders/L16-seula.jpg" alt="슬아" class="badge-avatar">보험<span class="name">슬아</span></a>
-                <a href="leader-profile.html?id=L43" class="category-badge"><img src="images/leaders/L43-haena.jpg" alt="해나" class="badge-avatar">산업재해<span class="name">해나</span></a>
+                <a href="leader-profile.html?id=L29" class="category-badge"><img src="images/leaders/L29-raon.jpg" alt="라온" class="badge-avatar">게임·콘텐츠<span class="name">라온</span></a>
+                <a href="leader-profile.html?id=L30" class="category-badge"><img src="images/leaders/L30-damwoo.jpg" alt="담우" class="badge-avatar">노동<span class="name">담우</span></a>
+                <a href="leader-profile.html?id=L31" class="category-badge"><img src="images/leaders/L31-roun.jpg" alt="로운" class="badge-avatar">행정<span class="name">로운</span></a>
+                <a href="leader-profile.html?id=L32" class="category-badge"><img src="images/leaders/L32-bareum.jpg" alt="바름" class="badge-avatar">공정거래<span class="name">바름</span></a>
+                <a href="leader-profile.html?id=L33" class="category-badge"><img src="images/leaders/L33-byeoli.jpg" alt="별이" class="badge-avatar">우주항공<span class="name">별이</span></a>
+                <a href="leader-profile.html?id=L34" class="category-badge"><img src="images/leaders/L34-jinu.jpg" alt="지누" class="badge-avatar">개인정보<span class="name">지누</span></a>
+                <a href="leader-profile.html?id=L35" class="category-badge"><img src="images/leaders/L35-maru.jpg" alt="마루" class="badge-avatar">헌법<span class="name">마루</span></a>
+                <a href="leader-profile.html?id=L36" class="category-badge"><img src="images/leaders/L36-dana.jpg" alt="단아" class="badge-avatar">문화·종교<span class="name">단아</span></a>
+                <a href="leader-profile.html?id=L37" class="category-badge"><img src="images/leaders/L37-yesol.jpg" alt="예솔" class="badge-avatar">소년법<span class="name">예솔</span></a>
                 <a href="leader-profile.html?id=L38" class="category-badge"><img src="images/leaders/L38-seulbi.jpg" alt="슬비" class="badge-avatar">소비자<span class="name">슬비</span></a>
+                <a href="leader-profile.html?id=L39" class="category-badge"><img src="images/leaders/L39-gaon.jpg" alt="가온" class="badge-avatar">정보통신<span class="name">가온</span></a>
+                <a href="leader-profile.html?id=L40" class="category-badge"><img src="images/leaders/L40-hangyeol.jpg" alt="한결" class="badge-avatar">인권<span class="name">한결</span></a>
+                <a href="leader-profile.html?id=L41" class="category-badge"><img src="images/leaders/L41-sandeul.jpg" alt="산들" class="badge-avatar">가족·이혼<span class="name">산들</span></a>
+                <a href="leader-profile.html?id=L42" class="category-badge"><img src="images/leaders/L42-haram.jpg" alt="하람" class="badge-avatar">저작권<span class="name">하람</span></a>
+                <a href="leader-profile.html?id=L43" class="category-badge"><img src="images/leaders/L43-haena.jpg" alt="해나" class="badge-avatar">산업재해<span class="name">해나</span></a>
+                <a href="leader-profile.html?id=L44" class="category-badge"><img src="images/leaders/L44-boram.jpg" alt="보람" class="badge-avatar">사회복지<span class="name">보람</span></a>
+                <a href="leader-profile.html?id=L45" class="category-badge"><img src="images/leaders/L45-ireum.jpg" alt="이룸" class="badge-avatar">교육·청소년<span class="name">이룸</span></a>
+                <a href="leader-profile.html?id=L46" class="category-badge"><img src="images/leaders/L46-daol.jpg" alt="다올" class="badge-avatar">보험·연금<span class="name">다올</span></a>
+                <a href="leader-profile.html?id=L47" class="category-badge"><img src="images/leaders/L47-saeron.jpg" alt="새론" class="badge-avatar">벤처·신산업<span class="name">새론</span></a>
+                <a href="leader-profile.html?id=L48" class="category-badge"><img src="images/leaders/L48-narae.jpg" alt="나래" class="badge-avatar">문화예술<span class="name">나래</span></a>
+                <a href="leader-profile.html?id=L49" class="category-badge"><img src="images/leaders/L49-garam.jpg" alt="가람" class="badge-avatar">식품·보건<span class="name">가람</span></a>
+                <a href="leader-profile.html?id=L50" class="category-badge"><img src="images/leaders/L50-bitna.jpg" alt="빛나" class="badge-avatar">다문화·이주<span class="name">빛나</span></a>
+                <a href="leader-profile.html?id=L51" class="category-badge"><img src="images/leaders/L51-soul.jpg" alt="소울" class="badge-avatar">종교·전통<span class="name">소울</span></a>
+                <a href="leader-profile.html?id=L52" class="category-badge"><img src="images/leaders/L52-miso.jpg" alt="미소" class="badge-avatar">광고·언론<span class="name">미소</span></a>
+                <a href="leader-profile.html?id=L53" class="category-badge"><img src="images/leaders/L53-neulsol.jpg" alt="늘솔" class="badge-avatar">농림·축산<span class="name">늘솔</span></a>
+                <a href="leader-profile.html?id=L54" class="category-badge"><img src="images/leaders/L54-iseo.jpg" alt="이서" class="badge-avatar">해양·수산<span class="name">이서</span></a>
+                <a href="leader-profile.html?id=L55" class="category-badge"><img src="images/leaders/L55-yunbit.jpg" alt="윤빛" class="badge-avatar">과학기술<span class="name">윤빛</span></a>
+                <a href="leader-profile.html?id=L56" class="category-badge"><img src="images/leaders/L56-dain.jpg" alt="다인" class="badge-avatar">장애인·복지<span class="name">다인</span></a>
                 <a href="leader-profile.html?id=L57" class="category-badge"><img src="images/leaders/L57-seum.jpg" alt="세움" class="badge-avatar">상속·신탁<span class="name">세움</span></a>
-                <a href="leader-profile.html?id=L33" class="category-badge"><img src="images/leaders/L33-byeoli.jpg" alt="별이" class="badge-avatar">우주항공 🆕<span class="name">별이</span></a>
-                <a href="leader-profile.html?id=L59" class="category-badge"><img src="images/leaders/L59-hanbit.jpg" alt="한빛" class="badge-avatar">데이터·AI윤리 🆕<span class="name">한빛</span></a>
-                <a href="leader-profile.html?id=L47" class="category-badge"><img src="images/leaders/L47-saeron.jpg" alt="새론" class="badge-avatar">벤처·신산업 🆕<span class="name">새론</span></a>
+                <a href="leader-profile.html?id=L58" class="category-badge"><img src="images/leaders/L58-yeon.jpg" alt="예온" class="badge-avatar">스포츠·레저<span class="name">예온</span></a>
+                <a href="leader-profile.html?id=L59" class="category-badge"><img src="images/leaders/L59-hanbit.jpg" alt="한빛" class="badge-avatar">데이터·AI윤리<span class="name">한빛</span></a>
+                <a href="leader-profile.html?id=L60" class="category-badge"><img src="images/leaders/L60-madi.jpg" alt="마디" class="badge-avatar">시스템 총괄<span class="name">마디</span></a>
             </div>
 
             <div class="clevel-row">
@@ -860,20 +892,20 @@
         <div class="section">
             <div class="stats-bar">
                 <div class="stat-box">
-                    <div class="stat-number">60명</div>
-                    <div class="stat-label">전문 리더</div>
+                    <div class="stat-number">0.1%</div>
+                    <div class="stat-label">Fail-Closed 임계값</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-number">3,043개</div>
-                    <div class="stat-label">SSOT 법령 캐시</div>
+                    <div class="stat-number">4단계</div>
+                    <div class="stat-label">검증 파이프라인</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-number">24/7</div>
-                    <div class="stat-label">상시 가동</div>
+                    <div class="stat-number">10종</div>
+                    <div class="stat-label">DRF SSOT 데이터</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-number">100%</div>
-                    <div class="stat-label">법령 기반 답변</div>
+                    <div class="stat-number">8레이어</div>
+                    <div class="stat-label">시스템 아키텍처</div>
                 </div>
             </div>
         </div>
