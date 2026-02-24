@@ -34,7 +34,6 @@ from core.classifier import (
 from core.pipeline import (
     _run_legal_pipeline,
     run_pipeline_stage1,
-    run_pipeline_stage2,
     run_pipeline_stage3,
     _apply_fail_closed,
     _drf_verify_law_refs,
@@ -877,20 +876,27 @@ async def ask_stream(request: Request):
                 # Stage 1: 이미 S0+S1 병렬 완료 (rag_context_pre 사용)
                 yield _sse("status", {"step": "searching_laws", "leader": leader_name})
 
-                # Stage 2: LawmadiLM 강화 답변 (5단계 프레임워크)
-                yield _sse("status", {"step": "analyzing", "leader": leader_name})
-                lawmadilm_answer = await run_pipeline_stage2(
-                    query, analysis, rag_context_pre,
-                    lang=lang, mode=stream_mode,
-                )
+                # Stage 2: Gemini Flash 답변 생성 (단독)
+                yield _sse("status", {"step": "composing", "leader": leader_name})
+                gemini_answer = ""
+                try:
+                    now_kst = _now_iso()
+                    ssot_available = _RUNTIME.get("drf_healthy", False)
+                    gemini_answer = await _gemini_fallback_compose(
+                        query, analysis, rag_context_pre, tools, gemini_history,
+                        now_kst, ssot_available, lang=lang, mode=stream_mode,
+                        lm_draft="",
+                    )
+                except Exception as gemini_err:
+                    logger.error(f"[Stream] Gemini 답변 생성 실패: {gemini_err}")
 
                 # Stage 3: DRF 전수 검증
                 drf_verification = VerificationResult()
-                if lawmadilm_answer:
+                if gemini_answer:
                     yield _sse("status", {"step": "verifying", "leader": leader_name})
                     loop = asyncio.get_event_loop()
                     drf_verification = await loop.run_in_executor(
-                        None, lambda: run_pipeline_stage3(lawmadilm_answer)
+                        None, lambda: run_pipeline_stage3(gemini_answer)
                     )
 
                 # FAIL_CLOSED 조기 차단: 30% 이상 미검증 시
@@ -909,31 +915,8 @@ async def ask_stream(request: Request):
                         })
                         return
 
-                # Fail-Closed 통과 → Gemini 완성 또는 LM 답변 스트리밍
-                yield _sse("status", {"step": "composing", "leader": leader_name})
-
-                # LM 실패 시 Gemini Fallback (비스트리밍 파이프라인과 동일)
-                if not lawmadilm_answer:
-                    try:
-                        now_kst = _now_iso()
-                        ssot_available = _RUNTIME.get("drf_healthy", False)
-                        gemini_text = await _gemini_fallback_compose(
-                            query, analysis, rag_context_pre, tools, gemini_history,
-                            now_kst, ssot_available, lang=lang, mode=stream_mode,
-                            lm_draft="",
-                        )
-                        lawmadilm_answer = gemini_text
-                        # Gemini 답변에도 DRF 검증 실행
-                        if lawmadilm_answer:
-                            loop = asyncio.get_event_loop()
-                            drf_verification = await loop.run_in_executor(
-                                None, lambda: run_pipeline_stage3(lawmadilm_answer)
-                            )
-                    except Exception as gemini_err:
-                        logger.error(f"[Stream] Gemini Fallback 실패: {gemini_err}")
-
                 # 미검증 조문 태깅 적용
-                final_text = _apply_fail_closed(lawmadilm_answer, drf_verification) if lawmadilm_answer else ""
+                final_text = _apply_fail_closed(gemini_answer, drf_verification) if gemini_answer else ""
 
                 # 청크 단위로 스트리밍 (문단 기준 분할)
                 if final_text:
