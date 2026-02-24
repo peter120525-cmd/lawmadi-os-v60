@@ -45,6 +45,17 @@ class SearchService:
             logger.warning(f"⚠️ search_law failed: {e}")
             return None
 
+    def get_law_articles(self, law_name: str) -> Optional[Any]:
+        """lawService.do로 조문 상세 조회 (조문번호 검증용)"""
+        if not self.ready or not self.drf:
+            logger.warning("⚠️ SearchService not ready (law_articles)")
+            return None
+        try:
+            return self.drf.get_law_articles(law_name)
+        except Exception as e:
+            logger.warning(f"⚠️ get_law_articles failed: {e}")
+            return None
+
     def search_precedent(self, query: str) -> Optional[Any]:
         if not self.ready or not self.drf:
             logger.warning("⚠️ SearchService not ready (precedent)")
