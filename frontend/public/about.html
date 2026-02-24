@@ -645,19 +645,29 @@
                 gap: 8px;
             }
 
-            .badge-avatar {
-                width: 44px;
-                height: 44px;
-                margin-right: 6px;
+            .category-badge {
+                display: grid;
+                grid-template-columns: auto 1fr;
+                grid-template-rows: auto auto;
+                gap: 0 8px;
+                align-items: center;
+                padding: 12px;
+                overflow: visible;
+                white-space: normal;
             }
 
-            .category-badge {
-                padding: 12px 10px;
-                font-size: 1rem;
+            .badge-avatar {
+                grid-row: 1 / 3;
+                width: 56px;
+                height: 56px;
+                margin-right: 0;
             }
 
             .category-badge .name {
+                grid-column: 2;
+                margin-left: 0;
                 font-size: 0.9rem;
+                display: block;
             }
 
             .clevel-row {
@@ -722,14 +732,13 @@
         /* Small devices (< 400px) */
         @media (max-width: 400px) {
             .badge-avatar {
-                width: 36px;
-                height: 36px;
+                width: 48px;
+                height: 48px;
             }
 
             .category-badge {
                 padding: 10px 8px;
                 font-size: 0.9rem;
-                gap: 4px;
             }
 
             .category-badge .name {
