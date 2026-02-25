@@ -966,7 +966,25 @@ async def _run_legal_pipeline(
                     logger.info("[FAIL_CLOSED 재시도] 재생성 + 재검증 통과")
                     return retry_result, retry_drf
                 else:
-                    logger.warning("[FAIL_CLOSED 재시도] 재검증도 실패 → FAIL_CLOSED 유지")
+                    # -- 최후 수단: 미검증 문장만 제거 후 남은 텍스트 반환 --
+                    stripped = _strip_unverified_sentences(retry_text, retry_drf)
+                    stripped = stripped.strip()
+                    if len(stripped) >= 300:
+                        disclaimer = (
+                            "\n\n---\n"
+                            "※ 이 답변의 일부 법률 조문은 실시간 검증에서 확인되지 않아 제거되었습니다. "
+                            "정확한 조문은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
+                        )
+                        logger.info(
+                            f"[FAIL_CLOSED 재시도] 미검증 문장 제거 후 반환 "
+                            f"({len(stripped)}자, 제거 {len(retry_drf.unverified_refs)}건)"
+                        )
+                        return stripped + disclaimer, retry_drf
+                    else:
+                        logger.warning(
+                            f"[FAIL_CLOSED 재시도] 미검증 제거 후 텍스트 부족 "
+                            f"({len(stripped)}자 < 300자) → FAIL_CLOSED 유지"
+                        )
             else:
                 logger.warning("[FAIL_CLOSED 재시도] 재생성 실패 (빈 응답)")
         except Exception as e:

@@ -56,7 +56,7 @@ gcloud run deploy ${SERVICE_NAME} \
   --concurrency 80 \
   --min-instances 1 \
   --max-instances 10 \
-  --set-env-vars "PORT=8080" \
+  --port 8080 \
   --set-secrets "GEMINI_API_KEY=GEMINI_API_KEY:latest,GEMINI_KEY=GEMINI_KEY:latest,LAWGO_DRF_OC=LAWGO_DRF_OC:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,DATABASE_URL=DATABASE_URL:latest,CLOUD_SQL_INSTANCE=CLOUD_SQL_INSTANCE:latest,DB_USER=DB_USER:latest,DB_PASS=DB_PASS:latest,DB_NAME=DB_NAME:latest"
 
 # 6. 배포 URL 확인

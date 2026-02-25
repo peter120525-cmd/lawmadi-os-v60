@@ -47,13 +47,16 @@ def validate_constitutional_compliance(response_text: str) -> bool:
     if has_legal_assertion and not has_legal_source:
         return False
 
-    # 5) 불법 행위 조장 차단
-    illegal_incitement = [
-        "증거를 인멸", "증거를 없애", "증거 인멸", "증거를 숨기",
-        "뇌물을 제공", "뇌물을 주", "허위 진술", "위증을 하",
-        "위조하", "문서를 조작", "탈세 방법", "세금을 탈루",
+    # 5) 불법 행위 조장 차단 (경고/금지 문맥은 허용)
+    illegal_incitement_patterns = [
+        r"증거를?\s*(?:인멸|없애|숨기)(?:세요|십시오|하세요|하는\s*것이\s*좋)",
+        r"뇌물을?\s*(?:제공|주)(?:세요|십시오|하세요|하는\s*것이\s*좋)",
+        r"위조하(?:세요|십시오|는\s*것이\s*좋)",
+        r"문서를?\s*조작(?:하세요|하십시오|하는\s*것이\s*좋)",
+        r"탈세\s*방법(?:을?\s*알려|을?\s*안내)",
+        r"세금을?\s*탈루(?:하세요|하십시오|하는\s*것이\s*좋)",
     ]
-    if any(phrase in t for phrase in illegal_incitement):
+    if any(re.search(p, t) for p in illegal_incitement_patterns):
         return False
 
     # 6) 결과 보장 차단
