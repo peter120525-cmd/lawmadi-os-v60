@@ -640,27 +640,44 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
                 continue
             prec_seen.add(case_no)
             try:
+                raw_prec = None
                 if drf_inst and hasattr(drf_inst, "search_precedents_async"):
                     raw_prec = await drf_inst.search_precedents_async(case_no)
-                    prec_exists = bool(raw_prec)
                 elif drf_inst and hasattr(drf_inst, "search_precedents"):
                     raw_prec = drf_inst.search_precedents(case_no)
-                    prec_exists = bool(raw_prec)
                 else:
-                    prec_exists = False
                     logger.debug(f"[Stage 4] 판례 DRF 미사용 (drf 인스턴스 없음)")
+
+                prec_exists = bool(raw_prec)
+
+                # ── 판례 내용 일치 검증: 판시사항/판결요지 추출 후 텍스트 비교 ──
+                content_match = False
+                drf_summary = ""
+                if prec_exists and raw_prec:
+                    drf_summary = _extract_precedent_summary(raw_prec)
+                    if drf_summary:
+                        # 응답에서 해당 판례 주변 문맥 추출 (판례번호 포함 줄 ± 2줄)
+                        cited_context = _extract_cited_context(text, case_no)
+                        content_match = _check_precedent_content_match(drf_summary, cited_context)
+
+                verified = prec_exists and (content_match or not drf_summary)
 
                 ref_entry = {
                     "ref": f"판례 {case_no}",
                     "type": "precedent",
                     "case_no": case_no,
-                    "verified": prec_exists,
+                    "verified": verified,
+                    "prec_exists": prec_exists,
+                    "content_match": content_match,
                 }
-                if prec_exists:
+                if verified:
                     result.verified_refs.append(ref_entry)
+                    logger.info(f"[Stage 4] ✅ 판례 {case_no}: 검증 통과 (존재={prec_exists}, 내용일치={content_match})")
                 else:
-                    ref_entry["reason"] = "판례 미존재"
+                    reason = "판례 미존재" if not prec_exists else "판시사항 내용 불일치"
+                    ref_entry["reason"] = reason
                     result.unverified_refs.append(ref_entry)
+                    logger.warning(f"[Stage 4] ❌ 판례 {case_no}: {reason}")
             except Exception as e:
                 logger.warning(f"[Stage 4] 판례 {case_no} 검증 실패: {e}")
                 result.unverified_refs.append({
@@ -687,6 +704,77 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
     )
 
     return result
+
+
+def _extract_precedent_summary(raw_prec: Any) -> str:
+    """DRF 판례 응답에서 판시사항/판결요지/결정요지 텍스트를 추출"""
+    summary_parts = []
+    try:
+        items = []
+        if isinstance(raw_prec, dict):
+            # PrecSearch 응답: {"PrecSearch": {"prec": [...]}} 또는 직접 리스트
+            prec_root = raw_prec.get("PrecSearch", raw_prec)
+            if isinstance(prec_root, dict):
+                prec_list = prec_root.get("prec", [])
+                if isinstance(prec_list, dict):
+                    prec_list = [prec_list]
+                items = prec_list if isinstance(prec_list, list) else []
+            # 직접 판례 데이터
+            for key in ["판시사항", "판결요지", "결정요지", "이유"]:
+                val = raw_prec.get(key, "")
+                if val and isinstance(val, str):
+                    summary_parts.append(val[:500])
+        elif isinstance(raw_prec, list):
+            items = raw_prec
+
+        for item in items[:1]:
+            if isinstance(item, dict):
+                for key in ["판시사항", "판결요지", "결정요지", "이유"]:
+                    val = item.get(key, "")
+                    if val and isinstance(val, str):
+                        summary_parts.append(val[:500])
+    except Exception as e:
+        logger.debug(f"[Prec Summary] 추출 실패: {e}")
+
+    return " ".join(summary_parts)[:1500]
+
+
+def _extract_cited_context(text: str, case_no: str, window: int = 3) -> str:
+    """응답 텍스트에서 판례번호 주변 문맥을 추출 (전후 window줄)"""
+    lines = text.split("\n")
+    context_lines = []
+    for i, line in enumerate(lines):
+        if case_no in line:
+            start = max(0, i - window)
+            end = min(len(lines), i + window + 1)
+            context_lines.extend(lines[start:end])
+    return " ".join(context_lines)[:2000]
+
+
+def _check_precedent_content_match(drf_summary: str, cited_context: str) -> bool:
+    """DRF 판시사항과 응답 내 인용 문맥의 내용 일치 여부를 확인.
+    핵심 법률 키워드 3개 이상 일치하면 통과."""
+    if not drf_summary or not cited_context:
+        return False
+
+    # DRF 판시사항에서 핵심 키워드 추출 (2글자 이상 한글 명사)
+    drf_keywords = set(re.findall(r'[가-힣]{2,6}', drf_summary))
+    # 너무 일반적인 단어 제외
+    stopwords = {"하였다", "있다", "없다", "한다", "이다", "경우", "것으로", "대하여",
+                 "아니라", "하여", "않는", "되는", "위한", "따라", "대한", "관한",
+                 "같은", "있는", "없는", "하는", "된다", "된다", "이에", "그리고"}
+    drf_keywords -= stopwords
+
+    if len(drf_keywords) < 3:
+        # 키워드가 너무 적으면 번호 존재만으로 통과
+        return True
+
+    # 인용 문맥에서 DRF 키워드 매칭
+    match_count = sum(1 for kw in drf_keywords if kw in cited_context)
+    match_ratio = match_count / len(drf_keywords) if drf_keywords else 0
+
+    # 키워드 3개 이상 또는 20% 이상 일치하면 통과
+    return match_count >= 3 or match_ratio >= 0.2
 
 
 def _match_article_num(article_dict: Dict, target_num: int) -> bool:
