@@ -846,7 +846,11 @@ async def _run_legal_pipeline(
     leader_id = analysis.get("leader_id", "")
     _leader_law_boost = _get_leader_law_boost(leader_id)
     if _leader_law_boost:
-        boost_text = f"\n\n[리더 핵심 참조 법률 - 반드시 우선 인용]\n{_leader_law_boost}"
+        boost_text = (
+            f"\n\n[리더 핵심 참조 법률 - 반드시 이 법률만 우선 인용하세요]\n"
+            f"⚠️ 아래 목록에 없는 법률 조문은 인용하지 마세요. DRF 검증에서 실패할 수 있습니다.\n"
+            f"{_leader_law_boost}"
+        )
         if rag_context.context_text:
             rag_context.context_text = boost_text + "\n" + rag_context.context_text
         elif rag_context.cache_context:
