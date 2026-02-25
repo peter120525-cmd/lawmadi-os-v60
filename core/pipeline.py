@@ -743,24 +743,38 @@ def _apply_fail_closed(final_text: str, drf_verification: VerificationResult) ->
     if drf_verification.total_refs == 0:
         return final_text
 
+    # 법조문과 판례를 분리하여 FAIL_CLOSED 판단
+    law_unverified = [r for r in drf_verification.unverified_refs if r.get("type") != "precedent"]
+    prec_unverified = [r for r in drf_verification.unverified_refs if r.get("type") == "precedent"]
+    law_total = sum(1 for r in drf_verification.verified_refs if r.get("type") != "precedent") + len(law_unverified)
     unverified_count = len(drf_verification.unverified_refs)
-    total_count = drf_verification.total_refs
-    ratio = unverified_count / max(total_count, 1)
 
-    # ── 안전장치 2: 미검증 비율 0.1% 초과 → 응답 차단 (fail-closed 0.1%) ──
-    if ratio > 0.001:
+    # ── 안전장치 2: 법조문 미검증 비율 0.1% 초과 → 응답 차단 ──
+    law_ratio = len(law_unverified) / max(law_total, 1) if law_total > 0 else 0
+    if law_ratio > 0.001:
         logger.warning(
-            f"[FAIL_CLOSED] 미검증 {unverified_count}/{total_count} "
-            f"({ratio*100:.1f}%) > 0.1% → 응답 차단"
+            f"[FAIL_CLOSED] 법조문 미검증 {len(law_unverified)}/{law_total} "
+            f"({law_ratio*100:.1f}%) > 0.1% → 응답 차단"
         )
         return FAIL_CLOSED_RESPONSE
 
-    # ── 안전장치 3: 미검증 → 해당 조문 완전 삭제 (태깅 아님) ──
-    if unverified_count > 0:
-        final_text = _strip_unverified_sentences(final_text, drf_verification)
+    # ── 안전장치 2-b: 미검증 판례 → 해당 문장만 삭제 (FAIL_CLOSED 아님) ──
+    if prec_unverified:
+        final_text = _strip_unverified_sentences(final_text, VerificationResult(
+            unverified_refs=prec_unverified,
+        ))
         logger.info(
-            f"[SAFE] 미검증 {unverified_count}건 조문 문장 삭제 "
-            f"({ratio*100:.1f}%)"
+            f"[SAFE] 미검증 판례 {len(prec_unverified)}건 문장 삭제"
+        )
+
+    # ── 안전장치 3: 미검증 법조문 → 해당 조문 완전 삭제 (태깅 아님) ──
+    if law_unverified:
+        final_text = _strip_unverified_sentences(final_text, VerificationResult(
+            unverified_refs=law_unverified,
+        ))
+        logger.info(
+            f"[SAFE] 미검증 법조문 {len(law_unverified)}건 문장 삭제 "
+            f"({law_ratio*100:.1f}%)"
         )
 
     return final_text
