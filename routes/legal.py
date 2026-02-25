@@ -84,6 +84,7 @@ _audit_fn: Optional[Callable] = None
 _get_client_ip_fn: Optional[Callable] = None
 _sha256_fn: Optional[Callable] = None
 _optional_import_fn: Optional[Callable] = None
+_check_expert_access_fn: Optional[Callable] = None
 
 
 def set_dependencies(
@@ -106,6 +107,7 @@ def set_dependencies(
     get_client_ip,
     sha256_fn,
     optional_import_fn,
+    check_expert_access=None,
 ):
     """Inject shared runtime objects and utility functions from main.py."""
     global _RUNTIME, _METRICS, _LEADER_REGISTRY, _limiter
@@ -113,6 +115,7 @@ def set_dependencies(
     global _match_ssot_sources_fn, _resolve_leader_from_ssot_fn, _ensure_genai_client_fn
     global _classify_gemini_error_fn, _remove_markdown_tables_fn, _remove_separator_lines_fn
     global _compute_quality_meta_fn, _audit_fn, _get_client_ip_fn, _sha256_fn, _optional_import_fn
+    global _check_expert_access_fn
 
     _RUNTIME = runtime
     _METRICS = metrics
@@ -132,6 +135,7 @@ def set_dependencies(
     _get_client_ip_fn = get_client_ip
     _sha256_fn = sha256_fn
     _optional_import_fn = optional_import_fn
+    _check_expert_access_fn = check_expert_access
 
 
 # ---------------------------------------------------------------------------
@@ -450,9 +454,11 @@ async def ask(request: Request):
             )
             resp = chat.send_message(f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}")
             final_text = _safe_extract_gemini_text(resp)
-            drf_result = VerificationResult()
             leader_name = clevel.executives.get(exec_id, {}).get("name", exec_id)
             leader_specialty = clevel.executives.get(exec_id, {}).get("role", exec_id)
+            # C-Level DRF 검증 추가
+            drf_result = await run_pipeline_stage3(final_text)
+            final_text = _apply_fail_closed(final_text, drf_result)
 
         # -------------------------------------------------
         # 5) 🎯 3-Stage Legal Pipeline (S0+S1 병렬화 적용)
@@ -846,7 +852,7 @@ async def ask_stream(request: Request):
                 _audit_fn("ask_stream", {"query": query, "leader": "유나", "status": "SUCCESS_NON_LEGAL", "latency_ms": latency_ms, "swarm_mode": False})
                 return
 
-            # ─── 경로 A: C-Level 직접 호출 (스트리밍) ───
+            # ─── 경로 A: C-Level 직접 호출 (검증 후 스트리밍) ───
             if clevel_decision and clevel_decision.get("mode") == "direct":
                 exec_id = clevel_decision.get("executive_id")
                 clevel_instruction = clevel.get_clevel_system_instruction(exec_id, _build_system_instruction(stream_mode))
@@ -868,6 +874,7 @@ async def ask_stream(request: Request):
                     history=gemini_history,
                 )
 
+                # 전체 응답 수집 (검증 전까지 스트리밍 보류)
                 accumulated = ""
                 async for text_part in _async_stream_chunks(
                     chat.send_message_stream(
@@ -875,52 +882,60 @@ async def ask_stream(request: Request):
                     )
                 ):
                     accumulated += text_part
+
+                # DRF 검증 + FAIL_CLOSED 적용
+                yield _sse("status", {"step": "verifying", "leader": leader_name})
+                drf_verification = await run_pipeline_stage3(accumulated)
+                accumulated = _apply_fail_closed(accumulated, drf_verification)
+
+                _is_fc = (FAIL_CLOSED_RESPONSE in accumulated) or (accumulated.strip() == FAIL_CLOSED_RESPONSE.strip())
+                if _is_fc:
+                    yield _sse("chunk", {"text": FAIL_CLOSED_RESPONSE})
+                    latency_ms = int((time.time() - start_time) * 1000)
+                    with _METRICS_LOCK:
+                        _METRICS["requests"] += 1
+                    yield _sse("done", {
+                        "leader": leader_name, "leader_specialty": leader_specialty,
+                        "latency_ms": latency_ms, "trace_id": trace,
+                        "swarm_mode": False, "response": FAIL_CLOSED_RESPONSE, "status": "FAIL_CLOSED",
+                    })
+                    return
+
+                # 헌법 적합성 검증
+                if not validate_constitutional_compliance(accumulated):
+                    yield _sse("error", {"message": "⚠️ 시스템 무결성 정책에 의해 답변이 제한되었습니다."})
+                    return
+
+                # 검증 통과 후 청크 스트리밍
+                chunks = accumulated.split("\n\n")
+                for i, chunk in enumerate(chunks):
+                    text_part = chunk if i == len(chunks) - 1 else chunk + "\n\n"
                     yield _sse("chunk", {"text": text_part})
 
                 final_text = accumulated
                 swarm_mode = False
 
-            # ─── 경로 B: 3-Stage Pipeline (스트리밍, Stage 4 제거) ───
+            # ─── 경로 B: _run_legal_pipeline 통합 (LAW_BOOST·재시도·strip 포함) ───
             else:
                 leader_name = analysis.get("leader_name", "마디")
                 leader_specialty = analysis.get("leader_specialty", "통합")
 
-                # Stage 1: 이미 S0+S1 병렬 완료 (rag_context_pre 사용)
                 yield _sse("status", {"step": "searching_laws", "leader": leader_name})
-
-                # Stage 2: LawmadiLM 초안 (5초 타임아웃)
                 yield _sse("status", {"step": "analyzing", "leader": leader_name})
-                lm_draft = await run_pipeline_stage2(
-                    query, analysis, rag_context_pre,
+
+                # _run_legal_pipeline 호출 (Stage 1.5 LAW_BOOST, 재시도, strip fallback 모두 포함)
+                final_text, drf_verification = await _run_legal_pipeline(
+                    query, analysis, tools, gemini_history,
+                    now_kst, ssot_available,
                     lang=lang, mode=stream_mode,
+                    rag_context=rag_context_pre,
                 )
 
-                # Stage 3: Gemini Flash 완성 답변
-                yield _sse("status", {"step": "composing", "leader": leader_name})
-                gemini_answer = ""
-                try:
-                    now_kst = _now_iso()
-                    ssot_available = _RUNTIME.get("drf_healthy", False)
-                    gemini_answer = await _gemini_fallback_compose(
-                        query, analysis, rag_context_pre, tools, gemini_history,
-                        now_kst, ssot_available, lang=lang, mode=stream_mode,
-                        lm_draft=lm_draft or "",
-                    )
-                except Exception as gemini_err:
-                    logger.error(f"[Stream] Gemini 답변 생성 실패: {gemini_err}")
-                    if lm_draft:
-                        gemini_answer = lm_draft
+                yield _sse("status", {"step": "verifying", "leader": leader_name})
 
-                # Stage 4: DRF 전수 검증 (async — run_in_executor 불필요)
-                drf_verification = VerificationResult()
-                if gemini_answer:
-                    yield _sse("status", {"step": "verifying", "leader": leader_name})
-                    drf_verification = await run_pipeline_stage3(gemini_answer)
-
-                # FAIL_CLOSED 적용 (5% 초과 미검증 또는 DRF 오류 시 차단)
-                final_text = _apply_fail_closed(gemini_answer, drf_verification) if gemini_answer else ""
-
-                if final_text == FAIL_CLOSED_RESPONSE:
+                # FAIL_CLOSED 체크
+                _is_fc = (FAIL_CLOSED_RESPONSE in final_text) or (final_text.strip() == FAIL_CLOSED_RESPONSE.strip())
+                if _is_fc:
                     logger.warning("[Stream FAIL_CLOSED] 응답 차단됨")
                     yield _sse("chunk", {"text": FAIL_CLOSED_RESPONSE})
                     latency_ms = int((time.time() - start_time) * 1000)
@@ -933,6 +948,11 @@ async def ask_stream(request: Request):
                     })
                     return
 
+                # 헌법 적합성 검증 (스트리밍 전)
+                if not validate_constitutional_compliance(final_text):
+                    yield _sse("error", {"message": "⚠️ 시스템 무결성 정책에 의해 답변이 제한되었습니다."})
+                    return
+
                 # 청크 단위로 스트리밍 (문단 기준 분할)
                 if final_text:
                     chunks = final_text.split("\n\n")
@@ -941,11 +961,6 @@ async def ask_stream(request: Request):
                         yield _sse("chunk", {"text": text_part})
 
                 swarm_mode = False
-
-            # Governance 검증
-            if not validate_constitutional_compliance(final_text):
-                yield _sse("error", {"message": "⚠️ 시스템 무결성 정책에 의해 답변이 제한되었습니다."})
-                return
 
             # 후처리
             final_text_clean = _remove_think_blocks(final_text)
@@ -1060,6 +1075,20 @@ async def ask_stream(request: Request):
 @router.post("/ask-expert")
 async def ask_expert(request: Request):
     """전문가용 답변: 4-Stage Legal Pipeline 통합 사용."""
+
+    # Rate limit 체크
+    rate_check = _check_rate_limit_fn(request)
+    if rate_check is not True:
+        return _rate_limit_response_fn(rate_check.get("retry_at_kst", ""))
+
+    # 전문가 모드 접근 권한 체크 (프리미엄 또는 관리자만)
+    if _check_expert_access_fn and not _check_expert_access_fn(request):
+        return {
+            "trace_id": "",
+            "status": "FORBIDDEN",
+            "response": "전문가 모드는 프리미엄 이용자만 사용할 수 있습니다. 업그레이드 후 이용해 주세요.",
+        }
+
     trace = str(uuid.uuid4())[:8]
     start = time.time()
 
@@ -1115,10 +1144,12 @@ async def ask_expert(request: Request):
         }
 
     except Exception as e:
-        logger.error(f"❌ [Expert] 전문가 답변 실패 (trace={trace}): {type(e).__name__}: {e}")
+        ref = datetime.datetime.now().strftime("%H%M%S")
+        logger.error(f"❌ [Expert] 전문가 답변 실패 (trace={trace}, ref={ref}): {type(e).__name__}: {e}")
         logger.error(traceback.format_exc())
         latency_ms = int((time.time() - start) * 1000)
-        return {"trace_id": trace, "status": "ERROR", "response": f"전문가 답변 생성 중 오류가 발생했습니다: {type(e).__name__}: {str(e)[:200]}", "latency_ms": latency_ms}
+        user_msg = _classify_gemini_error_fn(e, ref) if _classify_gemini_error_fn else f"전문가 답변 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요. (Ref: {ref})"
+        return {"trace_id": trace, "status": "ERROR", "response": user_msg, "latency_ms": latency_ms}
 
 
 # =============================================================

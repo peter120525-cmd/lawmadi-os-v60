@@ -370,11 +370,14 @@ if LAW_CACHE:
 # 📦 [RESPONSE_CACHE] 대표 질문 응답 캐시 (리더 매칭 보정용)
 # =============================================================
 RESPONSE_CACHE: Dict[str, Any] = {}
+_RESPONSE_CACHE_LOADED_AT: float = 0.0
+_RESPONSE_CACHE_TTL_HOURS: int = 24  # 24시간 후 캐시 무효화
 try:
     _rcache_path = os.path.join(os.path.dirname(__file__), "response_cache.json")
     if os.path.exists(_rcache_path):
         with open(_rcache_path, "r", encoding="utf-8") as f:
             RESPONSE_CACHE = json.load(f)
+        _RESPONSE_CACHE_LOADED_AT = time.time()
         logger.info(f"✅ RESPONSE_CACHE loaded: {len(RESPONSE_CACHE)} entries")
     else:
         logger.info("ℹ️ response_cache.json 미존재: 캐시 없이 동작")
@@ -384,13 +387,23 @@ except Exception as _e:
 
 def _check_response_cache(query: str) -> Optional[Dict]:
     """
-    정확 일치 캐시 확인.
+    정확 일치 캐시 확인 (TTL + 헌법 적합성 검증 포함).
     Returns cached response dict or None.
     """
     if not RESPONSE_CACHE:
         return None
+    # TTL 체크: 캐시 로드 후 24시간 초과 시 무효화
+    if _RESPONSE_CACHE_LOADED_AT and (time.time() - _RESPONSE_CACHE_LOADED_AT) > _RESPONSE_CACHE_TTL_HOURS * 3600:
+        logger.info("⏰ RESPONSE_CACHE TTL 만료 — 캐시 무시")
+        return None
+    from core.constitutional import validate_constitutional_compliance
     for leader_id, entry in RESPONSE_CACHE.items():
         if entry.get("query", "").strip() == query.strip():
+            # 헌법 적합성 재검증
+            resp_text = entry.get("response", "")
+            if resp_text and not validate_constitutional_compliance(resp_text):
+                logger.warning(f"⚠️ 캐시 응답 헌법 적합성 미통과: {leader_id}")
+                return None
             return entry
     return None
 
@@ -575,6 +588,17 @@ def _get_user_plan(request: Request) -> str:
     if key and _PREMIUM_KEYS and key in _PREMIUM_KEYS:
         return "premium"
     return "free"
+
+def _check_expert_access(request: Request) -> bool:
+    """전문가 모드 접근 권한 확인 (관리자 또는 프리미엄 사용자만 허용)"""
+    _admin_key = os.getenv("MCP_API_KEY", "").strip() or os.getenv("INTERNAL_API_KEY", "").strip()
+    if _admin_key and len(_admin_key) >= 8:
+        req_key = request.headers.get("X-Admin-Key", "").strip()
+        if req_key and req_key == _admin_key:
+            return True
+    plan = _get_user_plan(request)
+    plan_cfg = PLAN_CONFIG.get(plan, PLAN_CONFIG["free"])
+    return plan_cfg.get("expert_access", False)
 
 _WINDOW_HOURS = 4
 _rate_usage: Dict[str, List[float]] = {}  # {ip_hash: [timestamp1, timestamp2, ...]}
@@ -1336,6 +1360,7 @@ async def startup():
         get_client_ip=_get_client_ip,
         sha256_fn=_sha256,
         optional_import_fn=optional_import,
+        check_expert_access=_check_expert_access,
     )
     _set_files_deps(RUNTIME, limiter)
     _set_user_deps(RUNTIME, limiter, ask_fn=_legal_ask, search_fn=_legal_search)

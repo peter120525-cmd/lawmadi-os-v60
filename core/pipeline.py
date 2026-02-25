@@ -134,7 +134,11 @@ _LEADER_LAW_BOOST = {
         "• 상법 제403조 제1항: 발행주식의 총수의 100분의 1 이상에 해당하는 주식을 가진 주주는 회사에 대하여 이사의 책임을 추궁할 소의 제기를 청구할 수 있다.\n"
         "• 상법 제403조 제3항: 회사가 청구를 받은 날부터 30일 내에 소를 제기하지 아니한 때에는 주주는 즉시 회사를 위하여 소를 제기할 수 있다.\n"
         "• 상법 제522조의3 제1항: 합병에 반대하는 주주는 주주총회 전에 회사에 대하여 서면으로 합병에 반대하는 의사를 통지한 경우에는 자기가 소유하고 있는 주식의 매수를 청구할 수 있다.\n"
-        "• 상법 제176조의5 제1항: 상장회사의 합병에 반대하는 주주의 주식매수가격은 이사회 결의일 이전의 시장가격을 기초로 산정한다."
+        "• 상법 제176조의5 제1항: 상장회사의 합병에 반대하는 주주의 주식매수가격은 이사회 결의일 이전의 시장가격을 기초로 산정한다.\n"
+        "• 상법 제374조 제1항: 이사회는 회사의 업무집행에 관한 의사를 결정한다.\n"
+        "• 상법 제389조 제1항: 대표이사는 회사를 대표하고, 회사의 업무를 집행한다.\n"
+        "• 상법 제401조 제1항: 이사가 고의 또는 중대한 과실로 그 임무를 게을리한 때에는 그 이사는 제3자에 대하여 연대하여 손해를 배상할 책임이 있다.\n"
+        "• 상법 제530조의2 제1항: 회사의 영업 전부 또는 중요한 일부를 분할하여 새로운 회사를 설립하거나, 타 회사에 이전할 수 있다."
     ),
     "L30": (
         "• 근로기준법 제23조 제1항: 사용자는 근로자에게 정당한 이유 없이 해고, 휴직, 정직, 전직, 감봉, 그 밖의 징벌을 하지 못한다.\n"
@@ -145,7 +149,24 @@ _LEADER_LAW_BOOST = {
         "• 근로기준법 제34조 제1항: 사용자는 계속근로기간 1년에 대하여 30일분 이상의 평균임금을 퇴직금으로 퇴직하는 근로자에게 지급하여야 한다.\n"
         "• 근로기준법 제36조: 사용자는 근로자가 사망 또는 퇴직한 경우에는 그 지급 사유가 발생한 때부터 14일 이내에 임금, 보상금, 그 밖에 일체의 금품을 지급하여야 한다.\n"
         "• 근로기준법 제37조 제1항: 임금채권은 사용자의 총재산에 대하여 질권 또는 저당권에 의하여 담보된 채권 외에는 조세·공과금 및 다른 채권에 우선하여 변제되어야 한다.\n"
-        "• 근로기준법 제43조의2: 사용자는 임금 등의 지급을 지체한 경우 그 다음 날부터 지급하는 날까지의 지연 일수에 대하여 연 100분의 20 이내의 범위에서 대통령령으로 정하는 이율에 따른 지연이자를 지급하여야 한다."
+        "• 근로기준법 제43조의2: 사용자는 임금 등의 지급을 지체한 경우 그 다음 날부터 지급하는 날까지의 지연 일수에 대하여 연 100분의 20 이내의 범위에서 대통령령으로 정하는 이율에 따른 지연이자를 지급하여야 한다.\n"
+        "• 근로기준법 제17조 제1항: 사용자는 근로계약을 체결할 때에 근로자에게 임금, 소정근로시간, 휴일, 연차 유급휴가 등의 근로조건을 명시하여야 한다.\n"
+        "• 근로기준법 제50조 제1항: 1주 간의 근로시간은 휴게시간을 제외하고 40시간을 초과할 수 없다.\n"
+        "• 근로기준법 제56조 제1항: 사용자는 연장근로에 대하여는 통상임금의 100분의 50 이상을 가산하여 근로자에게 지급하여야 한다.\n"
+        "• 근로기준법 제60조 제1항: 사용자는 1년간 80퍼센트 이상 출근한 근로자에게 15일의 유급휴가를 주어야 한다.\n"
+        "• 근로기준법 제110조 제1항: 제36조, 제43조, 제44조, 제44조의2, 제46조를 위반한 자는 3년 이하의 징역 또는 3천만원 이하의 벌금에 처한다."
+    ),
+    "L35": (
+        "• 헌법 제10조: 모든 국민은 인간으로서의 존엄과 가치를 가지며, 행복을 추구할 권리를 가진다. 국가는 개인이 가지는 불가침의 기본적 인권을 확인하고 이를 보장할 의무를 진다.\n"
+        "• 헌법 제11조 제1항: 모든 국민은 법 앞에 평등하다. 누구든지 성별·종교 또는 사회적 신분에 의하여 정치적·경제적·사회적·문화적 생활의 모든 영역에 있어서 차별을 받지 아니한다.\n"
+        "• 헌법 제12조 제1항: 모든 국민은 신체의 자유를 가진다. 누구든지 법률에 의하지 아니하고는 체포·구속·압수·수색 또는 심문을 받지 아니하며, 법률과 적법한 절차에 의하지 아니하고는 처벌·보안처분 또는 강제노역을 받지 아니한다.\n"
+        "• 헌법 제23조 제1항: 모든 국민의 재산권은 보장된다. 그 내용과 한계는 법률로 정한다.\n"
+        "• 헌법 제23조 제3항: 공공필요에 의한 재산권의 수용·사용 또는 제한 및 그에 대한 보상은 법률로써 하되, 정당한 보상을 지급하여야 한다.\n"
+        "• 헌법 제27조 제1항: 모든 국민은 헌법과 법률이 정한 법관에 의하여 법률에 의한 재판을 받을 권리를 가진다.\n"
+        "• 헌법 제37조 제2항: 국민의 모든 자유와 권리는 국가안전보장·질서유지 또는 공공복리를 위하여 필요한 경우에 한하여 법률로써 제한할 수 있으며, 제한하는 경우에도 자유와 권리의 본질적인 내용을 침해할 수 없다.\n"
+        "• 헌법 제107조 제1항: 법률이 헌법에 위반되는 여부가 재판의 전제가 된 경우에는 법원은 헌법재판소에 제청하여 그 심판에 의하여 재판한다.\n"
+        "• 헌법 제111조 제1항: 헌법재판소는 법원의 제청에 의한 법률의 위헌여부 심판, 탄핵의 심판, 정당의 해산 심판, 국가기관 상호간의 권한쟁의에 관한 심판, 법률이 정하는 헌법소원에 관한 심판을 관장한다.\n"
+        "• 헌법재판소법 제68조 제1항: 공권력의 행사 또는 불행사로 인하여 헌법상 보장된 기본권을 침해받은 자는 법원의 재판을 제외하고는 헌법재판소에 헌법소원심판을 청구할 수 있다."
     ),
     "L41": (
         "• 민법 제834조: 부부는 협의에 의하여 이혼할 수 있다.\n"
@@ -548,23 +569,41 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
     # 법령별로 lawService.do 호출 캐시 (조문 상세 포함)
     law_articles_cache: Dict[str, Any] = {}
 
+    # 고유 법령 목록 추출 → 병렬 조회
+    unique_laws = set()
+    ref_items = []  # (law_name, article_num, key)
     for law_name, article_num_str, paragraph_str in refs:
         article_num = int(article_num_str)
         key = f"{law_name} 제{article_num}조"
         if key in seen:
             continue
         seen.add(key)
+        ref_items.append((law_name, article_num, key))
+        unique_laws.add(law_name)
 
+    # 법령별 조문 병렬 조회 (DRF 호출 병렬화)
+    async def _fetch_law(ln: str):
         try:
-            # lawService.do로 조문 상세 조회 (법령별 1회만 호출)
-            if law_name not in law_articles_cache:
-                if hasattr(svc, "get_law_articles_async"):
-                    raw = await svc.get_law_articles_async(law_name)
-                else:
-                    raw = svc.get_law_articles(law_name)
-                law_articles_cache[law_name] = raw
+            if hasattr(svc, "get_law_articles_async"):
+                return ln, await svc.get_law_articles_async(ln)
             else:
-                raw = law_articles_cache[law_name]
+                return ln, svc.get_law_articles(ln)
+        except Exception as e:
+            logger.warning(f"[Stage 3] {ln} 법령 조회 실패: {e}")
+            return ln, None
+
+    if unique_laws:
+        fetch_results = await asyncio.gather(
+            *[_fetch_law(ln) for ln in unique_laws],
+            return_exceptions=False,
+        )
+        for ln, raw in fetch_results:
+            law_articles_cache[ln] = raw
+
+    # 조문별 검증
+    for law_name, article_num, key in ref_items:
+        try:
+            raw = law_articles_cache.get(law_name)
 
             law_exists = bool(raw)
             article_exists = False
@@ -634,19 +673,39 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
     if prec_refs_simple:
         drf_inst = _RUNTIME.get("drf")
         prec_seen = set()
+        unique_cases = []
         for case_no in prec_refs_simple:
             case_no = case_no.strip()
             if case_no in prec_seen or len(case_no) < 5:
                 continue
             prec_seen.add(case_no)
+            unique_cases.append(case_no)
+
+        # 판례 병렬 조회
+        async def _fetch_prec(cn: str):
             try:
                 raw_prec = None
                 if drf_inst and hasattr(drf_inst, "search_precedents_async"):
-                    raw_prec = await drf_inst.search_precedents_async(case_no)
+                    raw_prec = await drf_inst.search_precedents_async(cn)
                 elif drf_inst and hasattr(drf_inst, "search_precedents"):
-                    raw_prec = drf_inst.search_precedents(case_no)
-                else:
-                    logger.debug(f"[Stage 4] 판례 DRF 미사용 (drf 인스턴스 없음)")
+                    raw_prec = drf_inst.search_precedents(cn)
+                return cn, raw_prec, None
+            except Exception as e:
+                return cn, None, e
+
+        if drf_inst:
+            prec_results = await asyncio.gather(
+                *[_fetch_prec(cn) for cn in unique_cases],
+                return_exceptions=False,
+            )
+        else:
+            logger.debug("[Stage 4] 판례 DRF 미사용 (drf 인스턴스 없음)")
+            prec_results = [(cn, None, None) for cn in unique_cases]
+
+        for case_no, raw_prec, fetch_err in prec_results:
+            try:
+                if fetch_err:
+                    raise fetch_err
 
                 prec_exists = bool(raw_prec)
 
@@ -656,7 +715,6 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
                 if prec_exists and raw_prec:
                     drf_summary = _extract_precedent_summary(raw_prec)
                     if drf_summary:
-                        # 응답에서 해당 판례 주변 문맥 추출 (판례번호 포함 줄 ± 2줄)
                         cited_context = _extract_cited_context(text, case_no)
                         content_match = _check_precedent_content_match(drf_summary, cited_context)
 
