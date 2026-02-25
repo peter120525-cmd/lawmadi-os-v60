@@ -1077,6 +1077,9 @@ async def ask_expert(request: Request):
         if not analysis:
             analysis = _fallback_tier_classification(query)
 
+        leader_name = analysis.get("leader_name", "마디")
+        leader_specialty = analysis.get("leader_specialty", "통합")
+
         # SSOT/DRF 도구 설정
         ssot_available = _RUNTIME.get("drf_healthy", False)
         tools = _get_drf_tools()
@@ -1092,18 +1095,30 @@ async def ask_expert(request: Request):
         final_text = _remove_think_blocks(final_text)
         final_text = _remove_markdown_tables_fn(final_text)
 
+        # FAIL_CLOSED 상태 확인
+        _is_fail_closed = (FAIL_CLOSED_RESPONSE in final_text) or (final_text.strip() == FAIL_CLOSED_RESPONSE.strip())
+        _response_status = "FAIL_CLOSED" if _is_fail_closed else "SUCCESS"
+
+        # 헌법 적합성 검증 (FAIL_CLOSED 아닌 경우만)
+        if not _is_fail_closed and not validate_constitutional_compliance(final_text):
+            logger.warning(f"[Expert] 헌법 적합성 검증 실패 (trace={trace})")
+            _response_status = "FAIL_CLOSED"
+
         latency_ms = int((time.time() - start) * 1000)
         return {
             "trace_id": trace,
             "response": final_text,
-            "status": "SUCCESS",
+            "leader": {"name": leader_name, "specialty": leader_specialty},
+            "leader_specialty": leader_specialty,
+            "status": _response_status,
             "latency_ms": latency_ms,
         }
 
     except Exception as e:
         logger.error(f"❌ [Expert] 전문가 답변 실패 (trace={trace}): {type(e).__name__}: {e}")
         logger.error(traceback.format_exc())
-        return {"trace_id": trace, "status": "ERROR", "response": f"전문가 답변 생성 중 오류가 발생했습니다: {type(e).__name__}: {str(e)[:200]}"}
+        latency_ms = int((time.time() - start) * 1000)
+        return {"trace_id": trace, "status": "ERROR", "response": f"전문가 답변 생성 중 오류가 발생했습니다: {type(e).__name__}: {str(e)[:200]}", "latency_ms": latency_ms}
 
 
 # =============================================================
