@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from google.genai import types as genai_types
 
 from core.constants import OS_VERSION, GEMINI_MODEL
+from core.model_fallback import get_model
 from utils.helpers import _now_iso
 
 router = APIRouter()
@@ -180,7 +181,7 @@ async def suggest_questions(request: Request):
         )
 
         resp = gc.models.generate_content(
-            model=GEMINI_MODEL,
+            model=get_model(),
             contents=prompt,
             config=genai_types.GenerateContentConfig(max_output_tokens=200, temperature=0.7),
         )

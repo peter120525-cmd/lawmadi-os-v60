@@ -22,7 +22,8 @@ logger = logging.getLogger("LawmadiOS.SwarmOrchestrator")
 
 # Gemini 모델 상수 — core.constants 단일 소스
 from core.constants import GEMINI_MODEL
-_DEFAULT_MODEL = GEMINI_MODEL
+from core.model_fallback import get_model, on_quota_error, is_quota_error
+_DEFAULT_MODEL = GEMINI_MODEL  # 정적 기본값 (하위호환)
 
 # =============================================================
 # 📦 법률명 → 리더 매핑 (law_cache.json 기반)
@@ -561,11 +562,21 @@ class SwarmOrchestrator:
             if gc is None:
                 logger.warning("⚠️ genai_client is None — 도메인 분류 스킵")
                 return None
-            resp = gc.models.generate_content(
-                model=self.config.get("gemini_model", _DEFAULT_MODEL),
-                contents=prompt,
-                config=genai_types.GenerateContentConfig(max_output_tokens=50, temperature=0.0),
-            )
+            # 429 시 자동 모델 전환
+            for _attempt in range(3):
+                model = get_model()
+                try:
+                    resp = gc.models.generate_content(
+                        model=model,
+                        contents=prompt,
+                        config=genai_types.GenerateContentConfig(max_output_tokens=50, temperature=0.0),
+                    )
+                    break
+                except Exception as e:
+                    if is_quota_error(e) and _attempt < 2:
+                        on_quota_error()
+                        continue
+                    raise
             text = (resp.text or "").strip().upper()
             _gemini_cb.record_success()
             # L01~L60 형식 추출

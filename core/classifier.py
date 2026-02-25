@@ -15,6 +15,7 @@ import asyncio
 from typing import Any, Dict, List, Optional
 
 from core.constants import GEMINI_MODEL
+from core.model_fallback import get_model, on_quota_error, is_quota_error
 from utils.helpers import _safe_extract_json
 
 logger = logging.getLogger("LawmadiOS.Classifier")
@@ -188,6 +189,18 @@ _NLU_INTENT_PATTERNS: Dict[str, List[str]] = {
     "L31": [
         r"(?:과태료|행정\s*처분|영업\s*정지|인허가).*(?:이의|억울|부당|어떻게|취소)",
     ],
+    # L42: 저작권 — 사진·글·영상 무단 사용
+    "L42": [
+        r"(?:사진|그림|글|영상|동영상|음악|노래|작품|콘텐츠).*(?:허락\s*없이|무단|도용|복제|베끼|훔쳐|가져다|갖다|쓰고|사용)",
+        r"(?:블로그|유튜브|인스타|SNS).*(?:사진|글|영상|콘텐츠).*(?:무단|허락\s*없이|도용|가져|사용)",
+        r"(?:워터마크|저작권|저작물|표절|원작).*(?:지우|삭제|침해|위반|도용|베끼|어떻게)",
+    ],
+    # L15: 스타트업·창업 — 동업·법인설립·소규모 사업
+    "L15": [
+        r"(?:동업|공동\s*운영|공동\s*창업|같이\s*하|함께\s*하).*(?:계약|계약서|법인|설립|주의|어떻게|해야)",
+        r"(?:카페|가게|음식점|식당|매장|가맹).*(?:창업|열|차리|하려|설립|운영|개업|어떻게)",
+        r"(?:투자\s*비율|지분|출자).*(?:나누|정하|어떻게|계약|해야)",
+    ],
 }
 
 # Pre-compile NLU patterns for performance
@@ -210,6 +223,8 @@ _NLU_PRIORITY: Dict[str, int] = {
     "L38": 2,   # 소비자법
     "L43": 2,   # 산업재해
     "L37": 2,   # 학교폭력
+    "L42": 1,   # 저작권 (블로그/사진 문맥 — L52 광고·언론보다 우선)
+    "L15": 2,   # 스타트업/창업 (동업/카페 문맥 — L14 회사법보다 우선)
     "L22": 5,   # 형사법 (포괄적 — 최하위 우선순위)
     # 기본값: 3
 }
@@ -320,7 +335,9 @@ def select_swarm_leader(query: str, leaders: Dict) -> Dict:
         "L14_CORP_MA":      (["회사법", "M&A", "인수합병", "주식양도", "법인", "이사회", "주주총회",
                               "이사", "대표이사", "합병", "충실의무", "경업금지",
                               "주주대표소송", "주식매수청구권", "배임", "회사기회유용"], "L14"),
-        "L15_STARTUP":      (["스타트업", "벤처", "투자계약", "스톡옵션", "엔젤", "시드"], "L15"),
+        "L15_STARTUP":      (["스타트업", "벤처", "투자계약", "스톡옵션", "엔젤", "시드",
+                              "동업", "공동 운영", "공동 창업", "카페 창업", "가게", "소규모",
+                              "투자 비율", "출자", "개인사업자", "공동사업"], "L15"),
         "L16_INSURANCE":    (["보험", "보험금", "보험계약", "피보험자", "보험사고", "면책"], "L16"),
         "L17_INTL_TRADE":   (["국제거래", "수출", "수입", "무역", "중재", "국제계약"], "L17"),
         "L18_ENERGY":       (["에너지", "자원", "전력", "가스", "석유", "신재생"], "L18"),
@@ -377,7 +394,9 @@ def select_swarm_leader(query: str, leaders: Dict) -> Dict:
                               "사실혼", "위자료", "혼인",
                               "남편", "아내", "배우자", "이혼하고", "이혼할", "갈라서",
                               "헤어지", "외도", "바람", "불륜", "가정폭력"], "L41"),
-        "L42_COPYRIGHT":    (["저작권", "저작물", "저작자", "복제", "공연", "전송"], "L42"),
+        "L42_COPYRIGHT":    (["저작권", "저작물", "저작자", "복제", "공연", "전송",
+                              "사진 무단", "무단 사용", "허락 없이", "워터마크", "표절", "도용",
+                              "원작", "2차 창작", "배포"], "L42"),
         "L43_INDUSTRIAL":   (["산업재해", "산재", "업무상재해", "요양급여", "장해급여",
                               "중대재해", "산업안전", "괴롭힘", "과로", "과로사",
                               "추락", "뇌출혈", "업무상질병"], "L43"),
@@ -483,7 +502,8 @@ TIER_ANALYSIS_PROMPT = """당신은 Lawmadi OS의 질문 분류 엔진입니다.
 **온라인/SNS 명예훼손·허위사실 유포 → 광고·언론(L52) 미소** (인터넷·SNS·게시글·댓글·블로그·유튜브 등 온라인 매체)
 **오프라인 대면 모욕·폭언·비방 → 형사법(L22) 무결** (직접 대면, 전화, 오프라인 상황)
 **부당해고·임금체불·직장 내 괴롭힘 → 노동법(L30)** (근로관계에서 발생하는 문제, 단 괴롭힘으로 산재 인정 → L43)
-**폭행·사기·절도·횡령·음주운전 도주·도주치상 → 형사법(L22)** (발생 장소와 무관, 형사 처벌·양형이 핵심인 경우)
+**폭행·사기·절도·횡령·음주운전 도주·도주치상 → 형사법(L22)** (발생 장소와 무관, 형사 처벌·양형이 핵심인 경우. 돈을 빌려줬는데 처음부터 갚을 생각이 없었던 경우 = 사기)
+**동업·공동사업·소규모 창업·카페/가게/음식점 → 스타트업(L15) 별하** (소규모 사업체 설립·동업계약·투자비율)
 **직장 괴롭힘으로 인한 산업재해·과로사·업무상질병 → 산업재해(L43)** (산재 인정·보상이 핵심인 경우)
 **이혼·양육권·가정폭력 → 가사법(L41)** (가족 관계 문제)
 **저작권 침해·무단 사용 → 저작권(L42)** (창작물 관련)
@@ -497,6 +517,9 @@ TIER_ANALYSIS_PROMPT = """당신은 Lawmadi OS의 질문 분류 엔진입니다.
 - "직장에서 해고당했다" → **노동법(L30)** (근로관계 종료)
 - "직장 상사가 때렸다" → **형사법(L22)** (폭행, 장소가 직장이라도 형사 문제)
 - "직장에서 월급을 안 준다" → **노동법(L30)** (임금 체불)
+- "돈 빌려줬는데 갚을 생각이 없었다" → **형사법(L22)** (차용 사기, 채권추심이 아닌 형사 사기)
+- "블로그 사진을 업체가 광고에 무단 사용" → **저작권(L42)** ('광고'가 포함되어도 핵심은 저작권 침해)
+- "친구와 카페 동업, 법인 설립" → **스타트업(L15)** (소규모 동업·창업은 스타트업)
 
 ## 분류 예시 (구어체 / 자연어 포함)
 질문: "친구한테 맞았어요"
@@ -516,6 +539,9 @@ TIER_ANALYSIS_PROMPT = """당신은 Lawmadi OS의 질문 분류 엔진입니다.
 
 질문: "인터넷에서 물건 샀는데 사기 같아요"
 → {{"tier":1,"complexity":"simple","is_document":false,"leader_id":"L22","leader_name":"무결","leader_specialty":"형사법","summary":"인터넷 사기 피해","is_legal":true}}
+
+질문: "지인에게 돈을 빌려줬는데 처음부터 갚을 생각이 없었던 것 같아요"
+→ {{"tier":2,"complexity":"complex","is_document":false,"leader_id":"L22","leader_name":"무결","leader_specialty":"형사법","summary":"차용 사기 의심","is_legal":true}}
 
 질문: "월급을 3달째 못 받고 있어요"
 → {{"tier":1,"complexity":"simple","is_document":false,"leader_id":"L30","leader_name":"담우","leader_specialty":"노동법","summary":"임금 체불","is_legal":true}}
@@ -539,7 +565,7 @@ TIER_ANALYSIS_PROMPT = """당신은 Lawmadi OS의 질문 분류 엔진입니다.
 → {{"tier":2,"complexity":"complex","is_document":false,"leader_id":"L05","leader_name":"연우","leader_specialty":"의료법","summary":"의료과실 손해배상","is_legal":true}}
 
 질문: "동업으로 카페를 하려는데 계약서 주의사항이요"
-→ {{"tier":2,"complexity":"complex","is_document":false,"leader_id":"L14","leader_name":"다솜","leader_specialty":"회사법·M&A","summary":"동업 법인설립 계약","is_legal":true}}
+→ {{"tier":2,"complexity":"complex","is_document":false,"leader_id":"L15","leader_name":"별하","leader_specialty":"스타트업","summary":"동업 카페 창업 계약","is_legal":true}}
 
 질문: "개인회생이랑 파산 중 뭐가 유리한가요"
 → {{"tier":2,"complexity":"complex","is_document":false,"leader_id":"L11","leader_name":"오름","leader_specialty":"채권추심","summary":"개인회생·파산 비교","is_legal":true}}
@@ -578,19 +604,27 @@ async def _gemini_analyze_query(query: str) -> Optional[Dict[str, Any]]:
         return None
 
     leader_summary = _build_leader_summary_for_gemini()
-    model_name = GEMINI_MODEL
 
     def _sync_call():
-        resp = genai_client.models.generate_content(
-            model=model_name,
-            contents=f"질문: {query}",
-            config={
-                "system_instruction": TIER_ANALYSIS_PROMPT.format(leader_summary=leader_summary),
-                "max_output_tokens": 800,
-                "temperature": 0.1,
-            },
-        )
-        return resp.text.strip() if resp.text else ""
+        """429 시 자동 모델 전환 포함"""
+        for _attempt in range(3):
+            model_name = get_model()
+            try:
+                resp = genai_client.models.generate_content(
+                    model=model_name,
+                    contents=f"질문: {query}",
+                    config={
+                        "system_instruction": TIER_ANALYSIS_PROMPT.format(leader_summary=leader_summary),
+                        "max_output_tokens": 800,
+                        "temperature": 0.1,
+                    },
+                )
+                return resp.text.strip() if resp.text else ""
+            except Exception as e:
+                if is_quota_error(e) and _attempt < 2:
+                    on_quota_error()
+                    continue
+                raise
 
     try:
         loop = asyncio.get_running_loop()

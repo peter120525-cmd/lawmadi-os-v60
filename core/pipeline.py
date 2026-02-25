@@ -30,6 +30,7 @@ from core.constants import (
     LAWMADILM_RAG_URL,
     FAIL_CLOSED_RESPONSE,
 )
+from core.model_fallback import get_model, on_quota_error, is_quota_error
 from utils.helpers import _remove_think_blocks, _safe_extract_gemini_text
 from prompts.system_instructions import build_lawmadilm_prompt, build_system_instruction
 
@@ -1070,7 +1071,7 @@ async def _gemini_fallback_compose(
     if not gc:
         raise RuntimeError("Gemini 클라이언트 미초기화")
 
-    model_name = GEMINI_MODEL
+    model_name = get_model()  # Pro→Flash→Lite 자동 전환
     leader_name = analysis.get("leader_name", "마디")
     leader_specialty = analysis.get("leader_specialty", "통합")
 
@@ -1148,17 +1149,25 @@ async def _gemini_fallback_compose(
         automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
     )
 
-    chat = gc.chats.create(
-        model=model_name,
-        config=gen_config,
-        history=gemini_history,
-    )
-    resp = chat.send_message(
-        f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
-    )
-    text = _safe_extract_gemini_text(resp)
-    logger.info(f"[Gemini Fallback] 답변 생성 완료 ({len(text)}자, mode={mode})")
-    return text
+    # 429/할당량 초과 시 자동 모델 전환 (Pro→Flash→Lite)
+    user_msg = f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
+    for _attempt in range(3):
+        try:
+            chat = gc.chats.create(
+                model=model_name,
+                config=gen_config,
+                history=gemini_history,
+            )
+            resp = chat.send_message(user_msg)
+            text = _safe_extract_gemini_text(resp)
+            logger.info(f"[Gemini] 답변 생성 완료 ({len(text)}자, model={model_name}, mode={mode})")
+            return text
+        except Exception as e:
+            if is_quota_error(e) and _attempt < 2:
+                model_name = on_quota_error()
+                logger.warning(f"[Gemini] 할당량 초과 → {model_name} 으로 재시도 (attempt {_attempt+2})")
+                continue
+            raise
 
 
 # =============================================================

@@ -17,6 +17,7 @@ from fastapi.responses import FileResponse
 from google.genai import types as genai_types
 
 from core.constants import OS_VERSION, GEMINI_MODEL
+from core.model_fallback import get_model
 
 router = APIRouter()
 logger = logging.getLogger("LawmadiOS.Files")
@@ -368,7 +369,7 @@ async def _analyze_image_document(file_path: Path, analysis_type: str) -> Dict[s
     # Gemini Vision call
     image_part = genai_types.Part.from_bytes(data=image_data, mime_type=f"image/{file_path.suffix[1:]}")
     response = gc.models.generate_content(
-        model=GEMINI_MODEL,
+        model=get_model(),
         contents=[prompt, image_part],
     )
 
@@ -444,7 +445,7 @@ async def _analyze_pdf_document(file_path: Path, analysis_type: str) -> Dict[str
 """
 
         response = gc.models.generate_content(
-            model=GEMINI_MODEL,
+            model=get_model(),
             contents=prompt,
         )
         result_text = response.text.strip()
