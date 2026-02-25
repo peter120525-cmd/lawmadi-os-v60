@@ -476,12 +476,12 @@ async def ask(request: Request):
             final_text = leader_header + final_text
 
         # -------------------------------------------------
-        # 6) 규칙 기반 헌법 준수 검증
+        # 6) 규칙 기반 헌법 준수 검증 (FAIL_CLOSED 응답은 스킵)
         # -------------------------------------------------
-        if not validate_constitutional_compliance(final_text):
+        if not _is_fail_closed and not validate_constitutional_compliance(final_text):
             gov_msg = "⚠️ Response restricted by system integrity policy." if lang == "en" else "⚠️ 시스템 무결성 정책에 의해 답변이 제한되었습니다."
             _audit_fn("ask_fail_closed", {"query": query, "status": "GOVERNANCE", "leader": leader_name})
-            return {"trace_id": trace, "response": gov_msg, "status": "FAIL_CLOSED"}
+            return {"trace_id": trace, "response": gov_msg, "leader": leader_name, "leader_specialty": leader_specialty, "status": "FAIL_CLOSED"}
 
         const_check = {"passed": True}  # Stage 3 DRF 검증에서 이미 처리됨
 
