@@ -464,8 +464,10 @@ async def ask(request: Request):
             )
 
         # -------------------------------------------------
-        # 5.5) 담당 리더 정보 헤더 삽입
+        # 5.5) FAIL_CLOSED 감지 + 담당 리더 정보 헤더 삽입
         # -------------------------------------------------
+        _is_fail_closed = (FAIL_CLOSED_RESPONSE in final_text) or (final_text.strip() == FAIL_CLOSED_RESPONSE.strip())
+
         if lang == "en":
             leader_header = f"**Assigned: {leader_name} ({leader_specialty} Expert)**\n\n"
         else:
@@ -501,13 +503,14 @@ async def ask(request: Request):
         # -------------------------------------------------
         # 8) Audit
         # -------------------------------------------------
+        _response_status = "FAIL_CLOSED" if _is_fail_closed else "SUCCESS"
         _audit_fn("ask", {
             "query": query,
             "leader": leader_name,
             "tier": tier,
             "complexity": analysis.get("complexity", ""),
             "is_document": is_document,
-            "status": "SUCCESS",
+            "status": _response_status,
             "latency_ms": latency_ms,
             "response_sha256": _sha256_fn(final_text),
             "swarm_mode": False,
@@ -594,7 +597,7 @@ async def ask(request: Request):
             "leader": leader_name,
             "leader_specialty": leader_specialty,
             "tier": tier,
-            "status": "SUCCESS",
+            "status": _response_status,
             "latency_ms": latency_ms,
             "swarm_mode": False,
             "constitutional_check": "PASS" if const_check.get("passed", True) else "WARNING",
