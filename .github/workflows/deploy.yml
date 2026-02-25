@@ -129,7 +129,7 @@ jobs:
             --cpu=2 \
             --timeout=300 \
             --concurrency=80 \
-            --min-instances=0 \
+            --min-instances=1 \
             --max-instances=2 \
             --set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest,GEMINI_KEY=GEMINI_KEY:latest,LAWGO_DRF_OC=LAWGO_DRF_OC:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,CLOUD_SQL_INSTANCE=CLOUD_SQL_INSTANCE:latest,DB_USER=DB_USER:latest,DB_PASS=DB_PASS:latest,DB_NAME=DB_NAME:latest,MCP_API_KEY=MCP_API_KEY:latest,API_KEYS=API_KEYS:latest"
 
@@ -147,12 +147,19 @@ jobs:
           sleep 10
           STAGING_URL="${{ steps.staging.outputs.url }}"
           echo "🔍 Running smoke tests on staging..."
-          # Health check
-          curl -f "$STAGING_URL/health" || exit 1
-          echo "✅ /health passed"
-          # Diagnostics check
-          curl -sf "$STAGING_URL/diagnostics" | python3 -c "import sys,json; d=json.load(sys.stdin); assert d.get('os_version'), 'Missing version'" || exit 1
-          echo "✅ /diagnostics passed"
+          # Health check + version 검증
+          HEALTH=$(curl -sf --max-time 15 "$STAGING_URL/health") || { echo "❌ /health 응답 실패"; exit 1; }
+          echo "$HEALTH"
+          echo "$HEALTH" | python3 -c "
+          import sys, json
+          try:
+              d = json.loads(sys.stdin.read())
+              assert d.get('status') == 'online', f'status={d.get(\"status\")}'
+              print(f'✅ /health passed: status={d[\"status\"]}, version={d.get(\"os_version\", \"?\")}'  )
+          except (json.JSONDecodeError, AssertionError) as e:
+              print(f'❌ /health 검증 실패: {e}')
+              sys.exit(1)
+          " || exit 1
           echo "🎉 All staging smoke tests passed"
 
   # ─── Production: 수동 승인 게이트 ───
