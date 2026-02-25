@@ -48,7 +48,7 @@ def search_precedents_drf(query: str) -> Dict[str, Any]:
         drf_inst = _RUNTIME.get("drf")
         if not drf_inst:
             return {"result": "ERROR", "message": "DRF 커넥터 미초기화."}
-        raw_result = drf_inst.law_search(query)
+        raw_result = drf_inst.search_precedents(query)
         items = _extract_best_dict_list(raw_result)
         if not items:
             return {"result": "NO_DATA", "message": "해당 키워드와 일치하는 판례가 없습니다."}
