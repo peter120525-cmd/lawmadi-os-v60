@@ -1,5 +1,5 @@
 {
-  "lawmadi_api": "https://lawmadi-os-v60-uzqkp6kadq-du.a.run.app",
+  "lawmadi_api": "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app",
   "interval_seconds": 300,
   "timeout_seconds": 10,
   "alert_threshold": {
