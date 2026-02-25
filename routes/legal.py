@@ -20,6 +20,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from google.genai import types as genai_types
 
 from core.constants import OS_VERSION, GEMINI_MODEL
+from core.model_fallback import get_model, on_quota_error, is_quota_error
 from utils.helpers import (
     _safe_extract_gemini_text,
     _remove_think_blocks,
@@ -441,7 +442,7 @@ async def ask(request: Request):
             logger.info(f"🎯 C-Level 직접 모드: {exec_id}")
             clevel_instruction = clevel.get_clevel_system_instruction(exec_id, _build_system_instruction("general"))
             gc = _ensure_genai_client_fn(_RUNTIME)
-            model_name = GEMINI_MODEL
+            model_name = get_model()
             chat = gc.chats.create(
                 model=model_name,
                 config=genai_types.GenerateContentConfig(
@@ -608,7 +609,7 @@ async def ask(request: Request):
             "swarm_mode": False,
             "constitutional_check": "PASS" if const_check.get("passed", True) else "WARNING",
             "ssot_sources": [f"{s['type']}:{s['law']}" for s in matched_sources[:3]] if matched_sources else [],
-            "meta": _compute_quality_meta_fn(final_text_clean, matched_sources),
+            "meta": {**_compute_quality_meta_fn(final_text_clean, matched_sources), "model": get_model()},
         }
 
     except Exception as e:
@@ -820,7 +821,7 @@ async def ask_stream(request: Request):
             tools = _get_drf_tools()
 
             now_kst = _now_iso()
-            model_name = GEMINI_MODEL
+            model_name = get_model()
             gc = _ensure_genai_client_fn(_RUNTIME)
 
             # 4) S0(분류) + S1(RAG) 병렬 실행

@@ -4,14 +4,16 @@ main.py에서 분리됨.
 
 사용법:
     from core.constants import OS_VERSION, GEMINI_MODEL, LAWMADILM_API_URL
+    from core.model_fallback import get_model  # 동적 모델 선택 (Pro→Flash→Lite 자동 전환)
 """
 import os
 
 # [감사 #3.6] 버전 단일 소스
 OS_VERSION = "v60.0.0"
 
-# Gemini 모델명 — 이 한 줄만 수정하면 전체 시스템에 적용
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite"
+# Gemini 모델 — 자동 전환 체인은 core/model_fallback.py 에서 관리
+# GEMINI_MODEL은 하위호환용 (정적 기본값). 동적 전환은 get_model() 사용 권장.
+DEFAULT_GEMINI_MODEL = "gemini-2.5-pro"
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
 
 # LawmadiLM API 설정 (주력 답변 생성기)

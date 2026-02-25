@@ -4,6 +4,7 @@ import logging
 from google import genai
 from google.genai import types as genai_types
 from core.constants import GEMINI_MODEL
+from core.model_fallback import generate_with_fallback, get_model
 
 # IT 기술: 고가용성 로깅 및 트레이싱 시스템 설정
 logger = logging.getLogger("LawmadiOS.LawSelector")
@@ -64,9 +65,9 @@ class LawSelector:
         """
 
         try:
-            # Gemini 3의 Structured Output 추론 실행
-            response = self.client.models.generate_content(
-                model=GEMINI_MODEL,
+            # Gemini Structured Output 추론 (429 시 자동 모델 전환)
+            response = generate_with_fallback(
+                self.client,
                 contents=prompt,
                 config=genai_types.GenerateContentConfig(
                     response_mime_type="application/json",

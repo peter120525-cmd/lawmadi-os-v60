@@ -10,6 +10,7 @@ from google.genai import types as genai_types
 from typing import Dict, Any, List, Optional
 import json
 from core.constants import GEMINI_MODEL
+from core.model_fallback import generate_with_fallback, get_model
 
 logger = logging.getLogger(__name__)
 
@@ -70,8 +71,8 @@ class ResponseVerifier:
                 user_query, gemini_response, tools_used, tool_results
             )
 
-            response = self.client.models.generate_content(
-                model=self.model_name,
+            response = generate_with_fallback(
+                self.client,
                 contents=verification_prompt,
                 config=genai_types.GenerateContentConfig(
                     response_mime_type="application/json",

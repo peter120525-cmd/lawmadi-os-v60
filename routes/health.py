@@ -6,6 +6,7 @@ import logging
 from typing import Any, Dict
 from fastapi import APIRouter, Header, HTTPException
 from core.constants import OS_VERSION, GEMINI_MODEL, LAWMADILM_API_URL
+from core.model_fallback import get_model, get_status as get_model_status
 from utils.helpers import _now_iso
 
 router = APIRouter()
@@ -46,7 +47,8 @@ def _diagnostic_snapshot() -> Dict[str, Any]:
         "python": sys.version,
         "pid": os.getpid(),
         "os_version": OS_VERSION,
-        "gemini_model": GEMINI_MODEL,
+        "gemini_model": get_model(),
+        "model_fallback": get_model_status(),
         "modules": {
             "drf": bool(_RUNTIME.get("drf")),
             "selector": bool(_RUNTIME.get("selector")),
