@@ -11,7 +11,7 @@ import os
 OS_VERSION = "v60.0.0"
 
 # Gemini 모델명 — 이 한 줄만 수정하면 전체 시스템에 적용
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite"
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
 
 # LawmadiLM API 설정 (주력 답변 생성기)
