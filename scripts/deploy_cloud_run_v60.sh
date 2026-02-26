@@ -73,7 +73,7 @@ echo "🏥 헬스 체크 중..."
 sleep 5
 HEALTH_RESPONSE=$(curl -s ${SERVICE_URL}/health || echo "FAIL")
 
-if [[ $HEALTH_RESPONSE == *"healthy"* ]]; then
+if [[ $HEALTH_RESPONSE == *"online"* ]]; then
     echo "✅ 헬스 체크 성공"
 else
     echo "⚠️  헬스 체크 실패: ${HEALTH_RESPONSE}"
