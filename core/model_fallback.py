@@ -17,8 +17,8 @@ logger = logging.getLogger("LawmadiOS.ModelFallback")
 
 # ─── 모델 체인 (우선순위 순) ───
 MODEL_CHAIN = [
-    os.getenv("GEMINI_MODEL_1", "gemini-2.5-pro"),
-    os.getenv("GEMINI_MODEL_2", "gemini-2.5-flash"),
+    os.getenv("GEMINI_MODEL_1", "gemini-2.5-flash"),
+    os.getenv("GEMINI_MODEL_2", "gemini-2.5-pro"),
     os.getenv("GEMINI_MODEL_3", "gemini-2.5-flash-lite"),
 ]
 
