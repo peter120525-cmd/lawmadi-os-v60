@@ -18,6 +18,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from google.genai import types as genai_types
+from core.metrics import record_request, record_event, record_error
 
 from core.constants import OS_VERSION, GEMINI_MODEL
 from core.model_fallback import get_model, on_quota_error, is_quota_error
@@ -295,6 +296,7 @@ async def ask(request: Request):
                     "상황을 자세히 알려주실수록 더 정확한 분석이 가능합니다."
                 )
             _audit_fn("ask_greeting", {"query": query, "status": "SYSTEM_INTRO", "latency_ms": 0})
+            record_event("greeting_requests")
             return {"trace_id": trace, "response": msg, "leader": "유나", "leader_specialty": "콘텐츠 설계", "status": "SUCCESS"}
 
         # -------------------------------------------------
@@ -305,6 +307,7 @@ async def ask(request: Request):
             latency = int((time.time() - start_time) * 1000)
             logger.info(f"⚡ [Cache HIT] leader={cached.get('leader', '?')} latency={latency}ms")
             _audit_fn("ask_cache_hit", {"query": query, "leader": cached.get("leader", "?"), "status": "CACHE_HIT", "latency_ms": latency})
+            record_request("/ask", latency, leader=cached.get("leader", "?"), is_cache_hit=True)
             return {
                 "trace_id": trace,
                 "response": cached.get("response", ""),
@@ -347,11 +350,13 @@ async def ask(request: Request):
                         lines.append(f"  📞 {label}: {number}")
                     lines.append("\n위 전문 기관으로 지금 바로 연락하세요.")
                 _audit_fn("ask_crisis", {"query": query, "status": "CRISIS", "leader": "SAFETY"})
+                record_event("crisis_requests")
                 return {"trace_id": trace, "response": "\n".join(lines), "leader": "SAFETY", "status": "CRISIS"}
 
             if check_result is False:
                 blocked_msg = "🚫 Blocked by security policy." if lang == "en" else "🚫 보안 정책에 의해 차단되었습니다."
                 _audit_fn("ask_blocked", {"query": query, "status": "BLOCKED", "leader": "GUARD"})
+                record_event("blocked_requests")
                 return {"trace_id": trace, "response": blocked_msg, "status": "BLOCKED"}
 
         # -------------------------------------------------
@@ -385,14 +390,21 @@ async def ask(request: Request):
             logger.info(f"📦 [Cache] 매칭: {', '.join(_src_strs)}")
 
         # S0(Gemini 분류) + S1(RAG 검색) 병렬 실행
+        _t_classify = time.time()
         analysis_result, rag_context = await asyncio.gather(
             _gemini_analyze_query(query),
             run_pipeline_stage1(query),
         )
+        _classify_ms = int((time.time() - _t_classify) * 1000)
+
         analysis = analysis_result
+        _routing_method = "gemini"
         if not analysis:
             analysis = _fallback_tier_classification(query)
+            _routing_method = analysis.get("routing_method", "keyword")
             logger.info(f"🔄 키워드 기반 fallback 분류: tier={analysis['tier']}")
+        else:
+            _routing_method = analysis.get("routing_method", "gemini")
 
         tier = analysis.get("tier", 1)
         leader_name = analysis.get("leader_name", "마디")
@@ -410,9 +422,11 @@ async def ask(request: Request):
                 leader_specialty = ssot_leader["specialty"]
                 analysis["leader_name"] = leader_name
                 analysis["leader_specialty"] = leader_specialty
+                _routing_method = "ssot_override"
 
         logger.info(f"🎯 [Tier {tier}] leader={leader_name}({leader_specialty}), "
-                    f"legal={is_legal}, document={is_document}")
+                    f"legal={is_legal}, document={is_document}, "
+                    f"routing={_routing_method}, classify_ms={_classify_ms}")
 
         # -------------------------------------------------
         # 4.1) 비법률 질문: 유나(CCO) Gemini 응답
@@ -423,6 +437,9 @@ async def ask(request: Request):
             with _METRICS_LOCK:
                 _METRICS["requests"] += 1
             _audit_fn("ask_non_legal", {"query": query, "status": "SUCCESS_NON_LEGAL", "leader": "유나", "latency_ms": latency})
+            record_request("/ask", latency, leader="유나", routing_method=_routing_method,
+                           stage_timings={"classify": _classify_ms, "total": latency})
+            record_event("non_legal_requests")
             return JSONResponse(content={
                 "trace_id": trace,
                 "response": instant_msg,
@@ -465,10 +482,13 @@ async def ask(request: Request):
         # 5) 🎯 3-Stage Legal Pipeline (S0+S1 병렬화 적용)
         # -------------------------------------------------
         else:
+            _t_pipeline = time.time()
             final_text, drf_result = await _run_legal_pipeline(
                 query, analysis, tools, gemini_history, now_kst, ssot_available,
                 lang=lang, mode="general", rag_context=rag_context,
             )
+            _pipeline_ms = int((time.time() - _t_pipeline) * 1000)
+            logger.info(f"⏱ [Pipeline] {_pipeline_ms}ms | leader={leader_name} | tier={tier}")
 
         # -------------------------------------------------
         # 5.5) FAIL_CLOSED 감지 + 담당 리더 정보 헤더 삽입
@@ -499,7 +519,7 @@ async def ask(request: Request):
             logger.warning(f"🐌 [SLOW_REQUEST] {latency_ms}ms | tier={tier} | query={query[:80]} | leader={leader_name}")
 
         # -------------------------------------------------
-        # 7) Metrics
+        # 7) Metrics (기존 + 신규 enhanced metrics)
         # -------------------------------------------------
         with _METRICS_LOCK:
             _METRICS["requests"] += 1
@@ -507,10 +527,27 @@ async def ask(request: Request):
             prev_avg = _METRICS["avg_latency_ms"]
             _METRICS["avg_latency_ms"] = int(((prev_avg * (req_count - 1)) + latency_ms) / max(req_count, 1))
 
+        _stage_timings = {"classify": _classify_ms, "total": latency_ms}
+        if locals().get("_pipeline_ms"):
+            _stage_timings["pipeline"] = _pipeline_ms
+
+        _response_status = "FAIL_CLOSED" if _is_fail_closed else "SUCCESS"
+        if _is_fail_closed:
+            record_event("fail_closed_requests")
+
+        record_request(
+            endpoint="/ask",
+            latency_ms=latency_ms,
+            leader=leader_name,
+            routing_method=_routing_method,
+            status=_response_status,
+            is_cache_hit=False,
+            stage_timings=_stage_timings,
+        )
+
         # -------------------------------------------------
         # 8) Audit
         # -------------------------------------------------
-        _response_status = "FAIL_CLOSED" if _is_fail_closed else "SUCCESS"
         _audit_fn("ask", {
             "query": query,
             "leader": leader_name,
@@ -519,6 +556,8 @@ async def ask(request: Request):
             "is_document": is_document,
             "status": _response_status,
             "latency_ms": latency_ms,
+            "routing_method": _routing_method,
+            "classify_ms": _classify_ms,
             "response_sha256": _sha256_fn(final_text),
             "swarm_mode": False,
             "cache_sources": [f"{s['type']}:{s['law']}" for s in matched_sources[:3]],
@@ -615,16 +654,38 @@ async def ask(request: Request):
     except Exception as e:
         with _METRICS_LOCK:
             _METRICS["errors"] += 1
+        _err_latency = int((time.time() - start_time) * 1000)
         ref = datetime.datetime.now().strftime("%H%M%S")
-        logger.error(f"💥 커널 에러 (trace={trace}, ref={ref}): {type(e).__name__}: {e}")
+        _err_cat = _classify_error_category(e)
+        logger.error(f"💥 커널 에러 (trace={trace}, ref={ref}): {type(e).__name__}: {e} | category={_err_cat} | latency={_err_latency}ms")
         logger.error(traceback.format_exc())
-        _audit_fn("ask_error", {"query": str(locals().get("query", "")), "status": "ERROR", "leader": "SYSTEM", "latency_ms": 0, "error_type": type(e).__name__})
+        _audit_fn("ask_error", {"query": str(locals().get("query", "")), "status": "ERROR", "leader": "SYSTEM", "latency_ms": _err_latency, "error_type": type(e).__name__, "error_category": _err_cat})
+        record_request("/ask", _err_latency, status="ERROR", error_category=_err_cat)
         _lang = locals().get("lang", "")
         if _lang == "en":
             user_msg = f"⚠️ A system error occurred. Please try again shortly. (Ref: {ref})"
         else:
             user_msg = _classify_gemini_error_fn(e, ref)
         return {"trace_id": trace, "response": user_msg, "status": "ERROR"}
+
+
+def _classify_error_category(e: Exception) -> str:
+    """예외를 운영 분석용 카테고리로 분류"""
+    err_msg = str(e).lower()
+    err_name = type(e).__name__
+    if "quota" in err_msg or "resource_exhausted" in err_msg or "429" in err_msg:
+        return "rate_limit"
+    if isinstance(e, (TimeoutError, asyncio.TimeoutError)) or "timeout" in err_msg:
+        return "timeout"
+    if "drf" in err_msg or "법제처" in err_msg:
+        return "drf_api"
+    if "gemini" in err_msg or "genai" in err_msg or "google" in err_name.lower():
+        return "gemini_api"
+    if "db" in err_msg or "database" in err_msg or "psycopg" in err_msg:
+        return "db"
+    if isinstance(e, (ConnectionError, OSError)) or "connection" in err_msg:
+        return "network"
+    return "internal"
 
 
 # =============================================================

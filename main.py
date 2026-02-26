@@ -1160,6 +1160,10 @@ async def startup():
                     db_client_v2.init_verification_table()
                     logger.info("✅ [Verification] 검증 시스템 활성화")
 
+                # 프론트엔드 로그 테이블 초기화
+                if db_client_v2 and hasattr(db_client_v2, "init_frontend_logs_table"):
+                    db_client_v2.init_frontend_logs_table()
+
             except Exception as e:
                 logger.warning(f"🟡 DB init failed: {e}")
                 if not soft_mode:
