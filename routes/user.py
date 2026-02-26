@@ -2,7 +2,6 @@
 import os
 import json
 import re
-import hmac
 import logging
 from typing import Any, Dict, List, Callable, Coroutine
 from fastapi import APIRouter, Request, Header, HTTPException
@@ -11,6 +10,7 @@ from google.genai import types as genai_types
 
 from core.constants import OS_VERSION, GEMINI_MODEL
 from core.model_fallback import get_model
+from core.auth import verify_api_keys as _verify_api_key
 from utils.helpers import _now_iso
 
 router = APIRouter()
@@ -28,27 +28,14 @@ FEEDBACK_STORE: List[Dict] = []
 _ask_fn: Callable[..., Coroutine] = None  # type: ignore[assignment]
 _search_fn: Callable[..., Coroutine] = None  # type: ignore[assignment]
 
-# Zapier / external API key auth
-_API_KEYS: set = set()
-
 
 def set_dependencies(runtime, limiter=None, ask_fn=None, search_fn=None):
     """Inject shared runtime objects from main.py at startup."""
-    global _RUNTIME, _limiter, _ask_fn, _search_fn, _API_KEYS
+    global _RUNTIME, _limiter, _ask_fn, _search_fn
     _RUNTIME = runtime
     _limiter = limiter
     _ask_fn = ask_fn
     _search_fn = search_fn
-    _API_KEYS = set(k.strip() for k in os.getenv("API_KEYS", "").split(",") if k.strip())
-
-
-def _verify_api_key(authorization: str = Header(default="")) -> None:
-    """Zapier / external API key verification (Bearer token) — FAIL_CLOSED."""
-    if not _API_KEYS:
-        raise HTTPException(status_code=403, detail="API_KEYS not configured")
-    token = authorization.removeprefix("Bearer ").strip()
-    if not any(hmac.compare_digest(token, k) for k in _API_KEYS):
-        raise HTTPException(status_code=401, detail="Invalid API key")
 
 
 # =============================================================

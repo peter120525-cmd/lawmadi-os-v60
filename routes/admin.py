@@ -3,24 +3,14 @@ Lawmadi OS v60 — Admin Dashboard API routes.
 비즈니스 메트릭 조회 엔드포인트.
 """
 import os
-import hmac
 import logging
 from typing import Any, Dict
 from fastapi import APIRouter, Header, HTTPException, Query
 from fastapi.responses import JSONResponse
+from core.auth import verify_mcp_key as _verify_admin_auth
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 logger = logging.getLogger("LawmadiOS.Admin")
-
-
-def _verify_admin_auth(authorization: str = Header(default="")) -> None:
-    """Admin API 인증 — MCP_API_KEY 사용"""
-    api_key = os.getenv("MCP_API_KEY", "").strip()
-    if not api_key:
-        raise HTTPException(status_code=403, detail="MCP_API_KEY not configured")
-    token = authorization.removeprefix("Bearer ").strip()
-    if not hmac.compare_digest(token, api_key):
-        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 def _optional_import(module_path, attr=None):

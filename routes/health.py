@@ -1,13 +1,13 @@
 """Health, metrics, diagnostics routes."""
 import os
 import sys
-import hmac
 import logging
 from typing import Any, Dict
 from fastapi import APIRouter, Header, HTTPException
 from core.constants import OS_VERSION, GEMINI_MODEL, LAWMADILM_API_URL
 from core.model_fallback import get_model, get_status as get_model_status
 from core.metrics import get_summary as get_enhanced_metrics
+from core.auth import verify_internal_key as _verify_internal_auth
 from utils.helpers import _now_iso
 
 router = APIRouter()
@@ -15,7 +15,6 @@ logger = logging.getLogger("LawmadiOS.Health")
 
 _RUNTIME: Dict[str, Any] = {}
 _METRICS: Dict[str, Any] = {}
-_INTERNAL_API_KEY = ""
 _LAW_CACHE: Dict[str, Any] = {}
 _KEYWORD_INDEX: Dict[str, list] = {}
 _db_client = None
@@ -23,22 +22,12 @@ _db_client = None
 
 def set_dependencies(runtime, metrics, law_cache=None, keyword_index=None, db_client=None):
     """Inject shared runtime objects from main.py at startup."""
-    global _RUNTIME, _METRICS, _LAW_CACHE, _KEYWORD_INDEX, _INTERNAL_API_KEY, _db_client
+    global _RUNTIME, _METRICS, _LAW_CACHE, _KEYWORD_INDEX, _db_client
     _RUNTIME = runtime
     _METRICS = metrics
     _LAW_CACHE = law_cache or {}
     _KEYWORD_INDEX = keyword_index or {}
-    _INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
     _db_client = db_client
-
-
-def _verify_internal_auth(authorization: str = Header(default="")) -> None:
-    """Bearer token verification for internal endpoints."""
-    if not _INTERNAL_API_KEY:
-        raise HTTPException(status_code=403, detail="INTERNAL_API_KEY not configured")
-    token = authorization.removeprefix("Bearer ").strip()
-    if not hmac.compare_digest(token, _INTERNAL_API_KEY):
-        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 def _diagnostic_snapshot() -> Dict[str, Any]:

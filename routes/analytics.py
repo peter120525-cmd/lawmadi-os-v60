@@ -1,6 +1,5 @@
 """Verification stats, visitor stats, admin leader/category stats, frontend error/perf logging routes."""
 import os
-import hmac
 import json
 import logging
 import hashlib
@@ -8,30 +7,20 @@ from typing import Any, Dict
 from fastapi import APIRouter, Request, Header, HTTPException
 from fastapi.responses import JSONResponse
 from core.metrics import get_summary, get_endpoint_metrics, get_leader_metrics
+from core.auth import verify_internal_key as _verify_internal_auth
 
 router = APIRouter()
 logger = logging.getLogger("LawmadiOS.Analytics")
 
-_INTERNAL_API_KEY = ""
 _limiter = None
 _get_client_ip_fn = None
 
 
 def set_dependencies(limiter, get_client_ip_fn):
     """Inject shared runtime objects from main.py at startup."""
-    global _limiter, _get_client_ip_fn, _INTERNAL_API_KEY
+    global _limiter, _get_client_ip_fn
     _limiter = limiter
     _get_client_ip_fn = get_client_ip_fn
-    _INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
-
-
-def _verify_internal_auth(authorization: str = Header(default="")) -> None:
-    """Bearer token verification for internal endpoints."""
-    if not _INTERNAL_API_KEY:
-        raise HTTPException(status_code=403, detail="INTERNAL_API_KEY not configured")
-    token = authorization.removeprefix("Bearer ").strip()
-    if not hmac.compare_digest(token, _INTERNAL_API_KEY):
-        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 def _optional_import(module_path, attr=None):

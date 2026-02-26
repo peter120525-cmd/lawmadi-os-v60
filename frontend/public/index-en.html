@@ -4848,6 +4848,11 @@
     </style>
 </head>
 <body>
+<script src="/purify.min.js"></script>
+<script>
+// XSS sanitizer helper — all API responses pass through this
+function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(html, {ADD_ATTR: ['target','data-tooltip'], ALLOW_DATA_ATTR: true}) : html; }
+</script>
 <script>
 // In-app browser detection & viewport fix
 (function() {
@@ -5996,7 +6001,7 @@
                                 }
                             }
                             accumulatedText += (payload.text || '');
-                            streamContent.innerHTML = this._renderStreamingText(accumulatedText);
+                            streamContent.innerHTML = _sanitize(this._renderStreamingText(accumulatedText));
                             this._smartScroll(false);
 
                         } else if (eventType === 'done') {
@@ -6091,9 +6096,9 @@
                 if (!res.ok) return;
                 const data = await res.json();
                 if (!data.suggestions || !data.suggestions.length) return;
-                container.innerHTML = data.suggestions.map(q =>
+                container.innerHTML = _sanitize(data.suggestions.map(q =>
                     `<button class="suggest-chip">${this.escapeHtml(q)}</button>`
-                ).join('');
+                ).join(''));
                 container.querySelectorAll('.suggest-chip').forEach(chip => {
                     chip.onclick = () => {
                         this.userInput.value = chip.textContent;
@@ -6420,7 +6425,7 @@
             const msgDiv = document.createElement('div');
             msgDiv.className = sender === 'user' ? 'user-msg' : 'ai-msg';
             if (id) msgDiv.id = id;
-            msgDiv.innerHTML = text;
+            msgDiv.innerHTML = _sanitize(text);
 
             if (sender === 'ai' && leaderName) {
                 const clevelTitles = { '서연': 'CSO', '지유': 'CTO', '유나': 'CCO' };
@@ -6460,7 +6465,7 @@
                     if (leaderSpecialtyFromServer) summaryHtml += `<span class="summary-badge"><span class="material-symbols-outlined">category</span>${this.escapeHtml(leaderSpecialtyFromServer.split(',')[0].trim())}</span>`;
                     if (topicText) summaryHtml += `<span class="summary-badge"><span class="material-symbols-outlined">topic</span>${this.escapeHtml(topicText)}</span>`;
                     if (elapsedTime) summaryHtml += `<span class="summary-badge"><span class="material-symbols-outlined">timer</span>${elapsedTime}s</span>`;
-                    summaryCard.innerHTML = summaryHtml;
+                    summaryCard.innerHTML = _sanitize(summaryHtml);
                     const headerEl = msgDiv.querySelector('.leader-response-header');
                     if (headerEl && headerEl.nextSibling) {
                         msgDiv.insertBefore(summaryCard, headerEl.nextSibling);
@@ -6610,7 +6615,7 @@
                             if (expertData.status === 'SUCCESS' && expertData.response) {
                                 const panel = document.createElement('div');
                                 panel.className = 'expert-response-panel';
-                                panel.innerHTML = this.formatReport(expertData.response);
+                                panel.innerHTML = _sanitize(this.formatReport(expertData.response));
                                 msgDiv.insertBefore(panel, ctaBar);
                                 const vScore = expertData.verification?.ssot_compliance_score || 0;
                                 if (vScore > 0) {
@@ -6717,7 +6722,7 @@
         updateMessage(id, html) {
             const msgDiv = document.getElementById(id);
             if (msgDiv) {
-                msgDiv.innerHTML = html;
+                msgDiv.innerHTML = _sanitize(html);
                 this.addCopyButton(msgDiv);
                 this._smartScroll();
             }
