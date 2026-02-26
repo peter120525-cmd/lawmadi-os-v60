@@ -576,7 +576,7 @@ def _now_iso() -> str:
 # 🕐 플랜별 요청 제한 (IP당, KST 기준)
 # =============================================================
 PLAN_CONFIG = {
-    "free":    {"window_limit": 500, "window_hours": 4, "max_tokens": 3000, "expert_access": False},
+    "free":    {"window_limit": 500, "window_hours": 4, "max_tokens": 3000, "expert_access": True},  # 무료 서비스 기간 전체 개방 (결제 시스템 도입 후 False로 복원)
     "premium": {"window_limit": 200, "window_hours": 4, "max_tokens": 5000, "expert_access": True},
 }
 
