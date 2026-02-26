@@ -60,6 +60,9 @@ jobs:
                   print(f"❌ {name}: {e}")
                   return False
 
+          INTERNAL_KEY = "${{ secrets.INTERNAL_API_KEY }}"
+          AUTH_HEADER = {"Authorization": f"Bearer {INTERNAL_KEY}"} if INTERNAL_KEY else {}
+
           # 1. /health 엔드포인트
           def check_health():
               s = time.time()
@@ -67,10 +70,8 @@ jobs:
               ms = (time.time() - s) * 1000
               data = r.json()
               status = data.get("status", "")
-              modules = data.get("diagnostics", {}).get("modules", {})
-              active = sum(1 for v in modules.values() if v)
-              total = len(modules)
-              return status == "online", f"status={status}, modules={active}/{total}", ms
+              version = data.get("os_version", "?")
+              return status == "online", f"status={status}, version={version}", ms
 
           check("Health Endpoint", check_health)
 
@@ -84,22 +85,34 @@ jobs:
 
           check("API Latency", check_latency)
 
-          # 3. 핵심 모듈 상태
+          # 3. 핵심 모듈 상태 (/diagnostics 인증 엔드포인트 사용)
           def check_modules():
-              r = requests.get(f"{API}/health", timeout=15)
-              modules = r.json().get("diagnostics", {}).get("modules", {})
+              if not INTERNAL_KEY:
+                  return False, "INTERNAL_API_KEY 시크릿 미설정", 0
+              s = time.time()
+              r = requests.get(f"{API}/diagnostics", headers=AUTH_HEADER, timeout=15)
+              ms = (time.time() - s) * 1000
+              if r.status_code != 200:
+                  return False, f"HTTP {r.status_code}", ms
+              modules = r.json().get("modules", {})
               critical = ["gemini_key", "swarm_orchestrator", "clevel_handler"]
               missing = [m for m in critical if not modules.get(m, False)]
               ok = len(missing) == 0
-              return ok, f"{'모두 활성' if ok else f'비활성: {missing}'}", 0
+              return ok, f"{'모두 활성' if ok else f'비활성: {missing}'}", ms
 
           check("Critical Modules", check_modules)
 
-          # 4. Gemini 모델 상태
+          # 4. Gemini 모델 상태 (/diagnostics 인증 엔드포인트 사용)
           def check_gemini():
-              r = requests.get(f"{API}/health", timeout=15)
-              model = r.json().get("diagnostics", {}).get("gemini_model", "unknown")
-              return "gemini" in model.lower(), f"model={model}", 0
+              if not INTERNAL_KEY:
+                  return False, "INTERNAL_API_KEY 시크릿 미설정", 0
+              s = time.time()
+              r = requests.get(f"{API}/diagnostics", headers=AUTH_HEADER, timeout=15)
+              ms = (time.time() - s) * 1000
+              if r.status_code != 200:
+                  return False, f"HTTP {r.status_code}", ms
+              model = r.json().get("gemini_model", "unknown")
+              return "gemini" in model.lower(), f"model={model}", ms
 
           check("Gemini Model", check_gemini)
 
