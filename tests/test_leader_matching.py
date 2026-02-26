@@ -579,7 +579,173 @@ class TestResponseStructure:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 8. 엣지 케이스 — 경계 상황 처리
+# 8. 교차 도메인 충돌 해결 — 7개 충돌 쌍 정밀 검증
+# ═══════════════════════════════════════════════════════════════════
+
+class TestCrossDomainConflictResolution:
+    """7개 교차 도메인 충돌 쌍에서 정확한 우선순위 적용 검증"""
+
+    # ── 1. L01(민사) vs L06(손해배상) ──
+    @pytest.mark.parametrize("query, expected", [
+        ("피해 배상 방법 알려주세요", "L06"),
+        ("불법행위로 다친 피해 보상", "L06"),
+        ("계약 위반으로 손해배상 소송", "L01"),
+    ])
+    def test_civil_vs_damages(self, query, expected):
+        result = _nlu_detect_intent(query)
+        assert result == expected, f"'{query}' → 기대: {expected}, 실제: {result}"
+
+    # ── 2. L08(임대차) vs L02(부동산) ──
+    @pytest.mark.parametrize("query, expected", [
+        ("아파트 전세 보증금 반환", "L08"),
+        ("아파트 매매 명의이전", "L02"),
+        ("건물 명의 이전 절차", "L02"),
+    ])
+    def test_lease_vs_property(self, query, expected, leaders, registry):
+        result = select_swarm_leader(query, leaders)
+        actual = _get_leader_id(registry, result)
+        assert actual == expected, f"'{query}' → 기대: {expected}, 실제: {actual}"
+
+    # ── 3. L22(형사) vs L11(채권추심) — 사기 vs 채무불이행 ──
+    @pytest.mark.parametrize("query, expected", [
+        ("돈 빌려줬는데 안 갚아요", "L22"),
+        ("돈 빌려줬는데 갚을 생각이 없었대요", "L22"),
+        ("빚이 많아서 못 갚겠다고 해요", "L11"),
+        ("사채업자가 독촉 전화를 매일 해요", "L11"),
+    ])
+    def test_fraud_vs_debt(self, query, expected, leaders, registry):
+        result = select_swarm_leader(query, leaders)
+        actual = _get_leader_id(registry, result)
+        assert actual == expected, f"'{query}' → 기대: {expected}, 실제: {actual}"
+
+    # ── 4. L30(노동) vs L43(산재) ──
+    @pytest.mark.parametrize("query, expected", [
+        ("직장 내 괴롭힘으로 우울증 산재 신청", "L43"),
+        ("직장에서 괴롭힘 당했어요", "L30"),
+        ("과로로 쓰러졌는데 산재 인정되나요", "L43"),
+        ("회사에서 부당해고 당했어요", "L30"),
+    ])
+    def test_labor_vs_industrial(self, query, expected, leaders, registry):
+        result = select_swarm_leader(query, leaders)
+        actual = _get_leader_id(registry, result)
+        assert actual == expected, f"'{query}' → 기대: {expected}, 실제: {actual}"
+
+    # ── 5. L20(세금) vs L57(상속) ──
+    @pytest.mark.parametrize("query, expected", [
+        ("상속세 신고 방법", "L20"),
+        ("부모님 유산 상속 절차", "L57"),
+        ("상속 포기하면 상속세 안 내도 되나요", "L57"),
+    ])
+    def test_tax_vs_inheritance(self, query, expected, leaders, registry):
+        result = select_swarm_leader(query, leaders)
+        actual = _get_leader_id(registry, result)
+        assert actual == expected, f"'{query}' → 기대: {expected}, 실제: {actual}"
+
+    # ── 6. L37(학교폭력) vs L22(형사) ──
+    @pytest.mark.parametrize("query, expected", [
+        ("학교에서 아이가 맞았어요", "L37"),
+        ("학폭 가해자 형사처벌 가능한가요", "L37"),
+        ("미성년자가 폭행당했어요", "L37"),
+        ("성인한테 폭행당했어요", "L22"),
+    ])
+    def test_school_violence_vs_criminal(self, query, expected, leaders, registry):
+        result = select_swarm_leader(query, leaders)
+        actual = _get_leader_id(registry, result)
+        assert actual == expected, f"'{query}' → 기대: {expected}, 실제: {actual}"
+
+    # ── 7. L42(저작권) vs L52(광고·언론) ──
+    @pytest.mark.parametrize("query, expected", [
+        ("블로그 사진을 업체가 광고에 무단 사용", "L42"),
+        ("SNS에 허위사실 유포", "L52"),
+        ("유튜브 영상을 무단 복제", "L42"),
+        ("인터넷 블로그에서 명예훼손", "L52"),
+    ])
+    def test_copyright_vs_media(self, query, expected, leaders, registry):
+        result = select_swarm_leader(query, leaders)
+        actual = _get_leader_id(registry, result)
+        assert actual == expected, f"'{query}' → 기대: {expected}, 실제: {actual}"
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 9. 새로 추가된 NLU 패턴 검증
+# ═══════════════════════════════════════════════════════════════════
+
+class TestNewNLUPatterns:
+    """L04(재개발), L14(회사법), L16(보험), L26(지식재산권) NLU 패턴 + L02/L22 보강"""
+
+    # ── L04: 재개발·재건축 ──
+    @pytest.mark.parametrize("query, expected", [
+        ("재개발 조합 분담금 문제", "L04"),
+        ("재건축 입주권 문제", "L04"),
+        ("정비사업 조합원 분쟁 어떻게", "L04"),
+    ])
+    def test_redevelopment(self, query, expected, leaders, registry):
+        result = select_swarm_leader(query, leaders)
+        actual = _get_leader_id(registry, result)
+        assert actual == expected, f"'{query}' → 기대: {expected}, 실제: {actual}"
+
+    # ── L14: 회사법 ──
+    @pytest.mark.parametrize("query, expected", [
+        ("이사 배임 책임 어떻게", "L14"),
+        ("소수주주 대표소송 방법 어떻게", "L14"),
+        ("회사 합병 절차 어떻게", "L14"),
+    ])
+    def test_corporate_law(self, query, expected, leaders, registry):
+        result = select_swarm_leader(query, leaders)
+        actual = _get_leader_id(registry, result)
+        assert actual == expected, f"'{query}' → 기대: {expected}, 실제: {actual}"
+
+    # ── L16: 보험 ──
+    @pytest.mark.parametrize("query, expected", [
+        ("보험금 거절당했어요 어떻게", "L16"),
+        ("보험사가 지급 거부해요 어떻게", "L16"),
+        ("보험 약관 불공정 분쟁", "L16"),
+    ])
+    def test_insurance(self, query, expected, leaders, registry):
+        result = select_swarm_leader(query, leaders)
+        actual = _get_leader_id(registry, result)
+        assert actual == expected, f"'{query}' → 기대: {expected}, 실제: {actual}"
+
+    # ── L26: 지식재산권 ──
+    @pytest.mark.parametrize("query, expected", [
+        ("특허 침해 소송 어떻게", "L26"),
+        ("상표 도용 침해 어떻게", "L26"),
+        ("영업 비밀 유출 어떻게", "L26"),
+    ])
+    def test_intellectual_property(self, query, expected, leaders, registry):
+        result = select_swarm_leader(query, leaders)
+        actual = _get_leader_id(registry, result)
+        assert actual == expected, f"'{query}' → 기대: {expected}, 실제: {actual}"
+
+    # ── L02: 부동산 보강 (분양권·재건축입주권) ──
+    @pytest.mark.parametrize("query, expected", [
+        ("분양권 전매 방법", "L02"),
+        ("아파트 분양권 전매", "L02"),
+    ])
+    def test_property_enhanced(self, query, expected, leaders, registry):
+        result = select_swarm_leader(query, leaders)
+        actual = _get_leader_id(registry, result)
+        assert actual == expected, f"'{query}' → 기대: {expected}, 실제: {actual}"
+
+    # ── L22: 형사법 보강 (음주운전·양형) ──
+    @pytest.mark.parametrize("query, expected", [
+        ("음주운전 적발됐어요 어떻게", "L22"),
+        ("자수하면 양형 어떻게 되나요", "L22"),
+    ])
+    def test_criminal_enhanced(self, query, expected, leaders, registry):
+        result = select_swarm_leader(query, leaders)
+        actual = _get_leader_id(registry, result)
+        assert actual == expected, f"'{query}' → 기대: {expected}, 실제: {actual}"
+
+    # ── L10: 민사집행 vs L01 키워드 충돌 해결 ──
+    def test_civil_execution_not_civil(self, leaders, registry):
+        result = select_swarm_leader("민사집행 강제집행 방법", leaders)
+        actual = _get_leader_id(registry, result)
+        assert actual == "L10", f"'민사집행 강제집행 방법' → 기대: L10, 실제: {actual}"
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 10. 엣지 케이스 — 경계 상황 처리
 # ═══════════════════════════════════════════════════════════════════
 
 class TestEdgeCases:

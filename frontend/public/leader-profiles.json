@@ -1,6 +1,9 @@
 {
   "CSO": {
-    "images": { "profile": "images/clevel/cso-seoyeon.jpg", "banner": "images/clevel/cso-seoyeon-banner.png" },
+    "images": {
+      "profile": "images/clevel/cso-seoyeon.jpg",
+      "banner": "images/clevel/cso-seoyeon-banner.png"
+    },
     "hero": "전략은 방향이 아니라 구조입니다. 흔들리지 않는 판을 설계합니다.",
     "identity": {
       "what": "Lawmadi OS의 장기 전략과 시장 포지셔닝을 설계합니다. 법률 AI 시장에서 흔들리지 않는 구조를 만듭니다.",
@@ -12,18 +15,41 @@
       "approach": "글로벌 전략 컨설팅 방법론을 법률 AI에 적용합니다. 시장·기술·사용자를 하나의 구조로 엮습니다."
     },
     "expertise": [
-      { "icon": "strategy", "label": "전략 설계", "desc": "장기 비전과 실행 로드맵 수립" },
-      { "icon": "analytics", "label": "시장 분석", "desc": "법률 AI 시장의 구조적 기회 포착" },
-      { "icon": "hub", "label": "파트너십 구축", "desc": "생태계 확장을 위한 전략적 제휴" },
-      { "icon": "monitoring", "label": "성과 관리", "desc": "핵심 지표 기반의 전략 실행 점검" },
-      { "icon": "public", "label": "글로벌 확장", "desc": "해외 시장 진출 전략 수립" }
+      {
+        "icon": "strategy",
+        "label": "전략 설계",
+        "desc": "장기 비전과 실행 로드맵 수립"
+      },
+      {
+        "icon": "analytics",
+        "label": "시장 분석",
+        "desc": "법률 AI 시장의 구조적 기회 포착"
+      },
+      {
+        "icon": "hub",
+        "label": "파트너십 구축",
+        "desc": "생태계 확장을 위한 전략적 제휴"
+      },
+      {
+        "icon": "monitoring",
+        "label": "성과 관리",
+        "desc": "핵심 지표 기반의 전략 실행 점검"
+      },
+      {
+        "icon": "public",
+        "label": "글로벌 확장",
+        "desc": "해외 시장 진출 전략 수립"
+      }
     ],
     "philosophy": "전략은 예측이 아니라 준비입니다. 어떤 변화가 와도 흔들리지 않는 구조를 만드는 것이 전략의 본질입니다. 시장의 변화를 두려워하지 않되, 방심하지도 않습니다.",
     "impact": "Lawmadi OS를 법률 AI 시장의 구조적 선두 주자로 포지셔닝했습니다. 60명 전문 리더 체계의 설계와 다중 에이전트 전략을 통해 경쟁사와 차별화된 시스템을 구축했습니다.",
     "vision": "법률 서비스의 패러다임을 바꾸는 것이 목표입니다. Lawmadi OS가 법률 AI의 글로벌 표준이 되는 날까지, 전략의 정밀도를 높여갑니다."
   },
   "CTO": {
-    "images": { "profile": "images/clevel/cto-jiyu.jpg", "banner": "images/clevel/cto-jiyu-banner.png" },
+    "images": {
+      "profile": "images/clevel/cto-jiyu.jpg",
+      "banner": "images/clevel/cto-jiyu-banner.png"
+    },
     "hero": "기술은 정확해야 합니다. 법을 다루는 AI라면 더욱 그렇습니다.",
     "identity": {
       "what": "Lawmadi OS의 전체 기술 아키텍처와 AI 시스템을 설계하고 관리합니다.",
@@ -35,18 +61,41 @@
       "approach": "다중 에이전트 아키텍처와 RAG 시스템으로 법률 정보의 정확성을 검증합니다."
     },
     "expertise": [
-      { "icon": "memory", "label": "AI 아키텍처", "desc": "다중 에이전트 시스템 설계 및 운영" },
-      { "icon": "verified", "label": "무결성 검증", "desc": "법률 AI 응답의 정확도 보장 체계" },
-      { "icon": "database", "label": "RAG 시스템", "desc": "법률 지식 기반 검색 증강 생성" },
-      { "icon": "security", "label": "시스템 보안", "desc": "데이터 보호와 접근 권한 관리" },
-      { "icon": "speed", "label": "성능 최적화", "desc": "대규모 동시 처리와 응답 속도 최적화" }
+      {
+        "icon": "memory",
+        "label": "AI 아키텍처",
+        "desc": "다중 에이전트 시스템 설계 및 운영"
+      },
+      {
+        "icon": "verified",
+        "label": "무결성 검증",
+        "desc": "법률 AI 응답의 정확도 보장 체계"
+      },
+      {
+        "icon": "database",
+        "label": "RAG 시스템",
+        "desc": "법률 지식 기반 검색 증강 생성"
+      },
+      {
+        "icon": "security",
+        "label": "시스템 보안",
+        "desc": "데이터 보호와 접근 권한 관리"
+      },
+      {
+        "icon": "speed",
+        "label": "성능 최적화",
+        "desc": "대규모 동시 처리와 응답 속도 최적화"
+      }
     ],
     "philosophy": "기술은 사용자가 느끼지 못할 때 가장 좋은 것입니다. 복잡한 시스템을 단순한 경험으로 전달하는 것이 기술의 역할입니다.",
     "impact": "60명 리더가 동시에 협업하는 다중 에이전트 시스템을 구축했습니다. 법률 정보 정확도 검증 체계를 확립하여 할루시네이션 발생을 구조적으로 차단합니다.",
     "vision": "법률 AI 기술의 새로운 기준을 만듭니다. 모든 사용자가 믿고 의지할 수 있는 기술, 그것이 Lawmadi OS의 약속입니다."
   },
   "CCO": {
-    "images": { "profile": "images/clevel/cco-yuna.jpg", "banner": "images/clevel/cco-yuna-banner.png" },
+    "images": {
+      "profile": "images/clevel/cco-yuna.jpg",
+      "banner": "images/clevel/cco-yuna-banner.png"
+    },
     "hero": "복잡한 법률을 누구나 이해할 수 있게. 경험이 곧 신뢰입니다.",
     "identity": {
       "what": "Lawmadi OS의 모든 사용자 경험과 콘텐츠 품질을 총괄합니다.",
@@ -58,18 +107,41 @@
       "approach": "인간 중심 디자인 원칙을 적용합니다. 복잡한 법률 정보를 직관적 경험으로 변환합니다."
     },
     "expertise": [
-      { "icon": "palette", "label": "UX/UI 설계", "desc": "법률 서비스에 최적화된 사용자 경험 설계" },
-      { "icon": "edit_note", "label": "콘텐츠 전략", "desc": "법률 정보의 가독성과 접근성 향상" },
-      { "icon": "psychology", "label": "사용자 리서치", "desc": "사용자 행동 분석 기반 서비스 개선" },
-      { "icon": "brand_awareness", "label": "브랜드 관리", "desc": "일관된 브랜드 경험과 톤 유지" },
-      { "icon": "accessibility_new", "label": "접근성", "desc": "모든 사용자를 위한 포용적 디자인" }
+      {
+        "icon": "palette",
+        "label": "UX/UI 설계",
+        "desc": "법률 서비스에 최적화된 사용자 경험 설계"
+      },
+      {
+        "icon": "edit_note",
+        "label": "콘텐츠 전략",
+        "desc": "법률 정보의 가독성과 접근성 향상"
+      },
+      {
+        "icon": "psychology",
+        "label": "사용자 리서치",
+        "desc": "사용자 행동 분석 기반 서비스 개선"
+      },
+      {
+        "icon": "brand_awareness",
+        "label": "브랜드 관리",
+        "desc": "일관된 브랜드 경험과 톤 유지"
+      },
+      {
+        "icon": "accessibility_new",
+        "label": "접근성",
+        "desc": "모든 사용자를 위한 포용적 디자인"
+      }
     ],
     "philosophy": "좋은 디자인은 보이지 않습니다. 사용자가 자연스럽게 원하는 정보에 도달할 때, 그것이 최고의 경험입니다.",
     "impact": "법률 AI 서비스의 사용자 경험 기준을 새로 정립했습니다. 비전문가도 3분 안에 원하는 법률 정보에 접근할 수 있는 구조를 만들었습니다.",
     "vision": "법률 서비스와 사용자 사이의 거리를 제로로 만듭니다. 누구나, 언제든, 쉽게 접근할 수 있는 법률 경험을 완성합니다."
   },
   "L01": {
-    "images": { "profile": "images/leaders/L01-hwiyul.jpg", "banner": "images/leaders/L01-hwiyul-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L01-hwiyul.jpg",
+      "banner": "images/leaders/L01-hwiyul-banner.jpg"
+    },
     "hero": "민사법의 모든 쟁점을 구조화합니다. 분쟁의 본질에 집중합니다.",
     "identity": {
       "what": "민사법 전반의 법률 분석과 전략 수립을 총괄합니다. 계약, 채무, 물권 등 민사 전 영역을 다룹니다.",
@@ -81,18 +153,61 @@
       "approach": "대법원 판례와 법리를 체계적으로 분석합니다. 쟁점을 구조화하여 최적의 전략을 도출합니다."
     },
     "expertise": [
-      { "icon": "gavel", "label": "민사소송 전략", "desc": "소송 절차 전반의 전략 수립과 실행" },
-      { "icon": "description", "label": "계약법 분석", "desc": "계약서 검토와 분쟁 예방 자문" },
-      { "icon": "account_balance", "label": "채권·채무", "desc": "채권 회수와 채무 조정 방안 설계" },
-      { "icon": "real_estate_agent", "label": "물권법", "desc": "소유권·점유권 등 물권 분쟁 해결" },
-      { "icon": "handshake", "label": "조정·화해", "desc": "소송 외 분쟁 해결 절차 안내" }
+      {
+        "icon": "gavel",
+        "label": "민사소송 전략",
+        "desc": "소송 절차 전반의 전략 수립과 실행"
+      },
+      {
+        "icon": "description",
+        "label": "계약법 분석",
+        "desc": "계약서 검토와 분쟁 예방 자문"
+      },
+      {
+        "icon": "account_balance",
+        "label": "채권·채무",
+        "desc": "채권 회수와 채무 조정 방안 설계"
+      },
+      {
+        "icon": "real_estate_agent",
+        "label": "물권법",
+        "desc": "소유권·점유권 등 물권 분쟁 해결"
+      },
+      {
+        "icon": "handshake",
+        "label": "조정·화해",
+        "desc": "소송 외 분쟁 해결 절차 안내"
+      }
     ],
     "philosophy": "법은 약자의 편에 서야 합니다. 복잡한 법리도 결국 사람의 권리를 지키기 위해 존재합니다. 구조화된 분석이 공정한 해결을 만듭니다.",
     "impact": "민사법 전 영역을 체계적으로 커버하는 분석 시스템을 구축했습니다. 사용자가 자신의 법적 위치를 정확히 파악하고 대응할 수 있도록 지원합니다.",
-    "vision": "모든 민사 분쟁에서 정확한 법리 분석이 가능한 시스템을 완성합니다. 법률 전문가 수준의 분석을 누구나 접근할 수 있게 합니다."
+    "vision": "모든 민사 분쟁에서 정확한 법리 분석이 가능한 시스템을 완성합니다. 법률 전문가 수준의 분석을 누구나 접근할 수 있게 합니다.",
+    "decision_framework": {
+      "steps": [
+        "1단계: 분쟁 유형 분류 (계약/불법행위/물권/채권)",
+        "2단계: 관련 법조문 및 판례 확인",
+        "3단계: 소멸시효·제척기간 확인",
+        "4단계: 청구권 기초 및 입증책임 분석",
+        "5단계: 구제수단 선택 (소송/지급명령/조정/화해)"
+      ],
+      "common_mistakes": [
+        "소멸시효 도과 전 권리행사하지 않는 실수",
+        "구두 합의를 서면 증거 없이 주장하는 실수",
+        "가압류 없이 소송만 진행하여 채권 회수 불능",
+        "관할법원을 잘못 선택하여 시간 낭비"
+      ],
+      "key_questions": [
+        "분쟁 발생 시점과 상대방의 마지막 연락 시점은?",
+        "계약서나 합의서 등 서면 증거가 있는지?",
+        "상대방의 재산 상태를 알고 있는지?"
+      ]
+    }
   },
   "L02": {
-    "images": { "profile": "images/leaders/L02-bonui.jpg", "banner": "images/leaders/L02-bonui-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L02-bonui.jpg",
+      "banner": "images/leaders/L02-bonui-banner.jpg"
+    },
     "hero": "부동산은 숫자가 아니라 권리입니다. 정확한 분석이 재산을 지킵니다.",
     "identity": {
       "what": "부동산 거래·등기·분쟁의 법률 분석을 전담합니다. 토지, 건물, 임대차 권리관계를 규명합니다.",
@@ -104,18 +219,62 @@
       "approach": "감정평가사급 분석과 법률 검토를 결합합니다. 권리관계를 시각화하여 위험을 사전에 차단합니다."
     },
     "expertise": [
-      { "icon": "home_work", "label": "부동산 거래", "desc": "매매·교환·증여 계약의 법률 검토" },
-      { "icon": "assignment", "label": "등기부 분석", "desc": "등기부등본의 권리관계 정밀 해석" },
-      { "icon": "calculate", "label": "감정평가", "desc": "부동산 가치 산정과 시세 분석" },
-      { "icon": "shield", "label": "권리 보전", "desc": "가등기·가처분 등 권리 보전 조치" },
-      { "icon": "apartment", "label": "집합건물", "desc": "아파트·오피스텔 구분소유 분쟁" }
+      {
+        "icon": "home_work",
+        "label": "부동산 거래",
+        "desc": "매매·교환·증여 계약의 법률 검토"
+      },
+      {
+        "icon": "assignment",
+        "label": "등기부 분석",
+        "desc": "등기부등본의 권리관계 정밀 해석"
+      },
+      {
+        "icon": "calculate",
+        "label": "감정평가",
+        "desc": "부동산 가치 산정과 시세 분석"
+      },
+      {
+        "icon": "shield",
+        "label": "권리 보전",
+        "desc": "가등기·가처분 등 권리 보전 조치"
+      },
+      {
+        "icon": "apartment",
+        "label": "집합건물",
+        "desc": "아파트·오피스텔 구분소유 분쟁"
+      }
     ],
     "philosophy": "부동산 법률은 사후 대응보다 사전 예방이 핵심입니다. 거래 전 정밀 분석이 분쟁을 원천 차단합니다.",
     "impact": "부동산 권리관계 분석의 정확도를 획기적으로 높였습니다. 복잡한 등기부 해석을 구조화하여 누구나 위험 요소를 파악할 수 있게 했습니다.",
-    "vision": "모든 부동산 거래에서 법률 리스크 제로를 목표합니다. 안전한 거래 환경을 만드는 것이 궁극적 목표입니다."
+    "vision": "모든 부동산 거래에서 법률 리스크 제로를 목표합니다. 안전한 거래 환경을 만드는 것이 궁극적 목표입니다.",
+    "decision_framework": {
+      "steps": [
+        "1단계: 부동산 유형 확인 (주택/상가/토지/분양권)",
+        "2단계: 등기부등본·권리분석",
+        "3단계: 계약서 검토 및 특약 확인",
+        "4단계: 관련 세금·비용 산정",
+        "5단계: 거래 안전 확보 방안 수립"
+      ],
+      "common_mistakes": [
+        "등기부등본 확인 없이 계약 체결",
+        "근저당·가압류 설정 사실 미확인",
+        "실거래가 신고 의무 미이행",
+        "중도금 지급 시 보전 조치 누락"
+      ],
+      "key_questions": [
+        "현재 등기부등본상 권리관계는?",
+        "매매/전세/임대 중 어떤 거래인지?",
+        "계약 단계(계약전/계약후/이행중/분쟁발생)?",
+        "특약 사항이나 특이 조건이 있는지?"
+      ]
+    }
   },
   "L03": {
-    "images": { "profile": "images/leaders/L03-damseul.jpg", "banner": "images/leaders/L03-damseul-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L03-damseul.jpg",
+      "banner": "images/leaders/L03-damseul-banner.jpg"
+    },
     "hero": "건설 현장의 분쟁을 법률로 해결합니다. 구조물처럼 단단한 법리를 세웁니다.",
     "identity": {
       "what": "건설 계약, 하자 분쟁, 공사대금 청구 등 건설법 전반을 분석합니다.",
@@ -127,18 +286,41 @@
       "approach": "건축기사급 기술 이해와 법률 분석을 결합합니다. 현장과 법정을 모두 아는 시각으로 접근합니다."
     },
     "expertise": [
-      { "icon": "engineering", "label": "건설 계약", "desc": "도급·하도급 계약의 법적 쟁점 분석" },
-      { "icon": "build", "label": "하자 분쟁", "desc": "건축물 하자 감정과 보수 책임 판단" },
-      { "icon": "payments", "label": "공사대금", "desc": "미지급 공사대금 청구 및 유치권 분석" },
-      { "icon": "schedule", "label": "공기 지연", "desc": "공사 지연에 따른 손해배상 산정" },
-      { "icon": "safety_check", "label": "안전 규제", "desc": "건설 안전 법규 준수 여부 검토" }
+      {
+        "icon": "engineering",
+        "label": "건설 계약",
+        "desc": "도급·하도급 계약의 법적 쟁점 분석"
+      },
+      {
+        "icon": "build",
+        "label": "하자 분쟁",
+        "desc": "건축물 하자 감정과 보수 책임 판단"
+      },
+      {
+        "icon": "payments",
+        "label": "공사대금",
+        "desc": "미지급 공사대금 청구 및 유치권 분석"
+      },
+      {
+        "icon": "schedule",
+        "label": "공기 지연",
+        "desc": "공사 지연에 따른 손해배상 산정"
+      },
+      {
+        "icon": "safety_check",
+        "label": "안전 규제",
+        "desc": "건설 안전 법규 준수 여부 검토"
+      }
     ],
     "philosophy": "건설 분쟁의 해답은 현장에 있습니다. 도면과 법조문을 함께 읽을 수 있어야 진짜 해결이 가능합니다.",
     "impact": "건설 분쟁의 기술적·법률적 분석을 통합하는 체계를 구축했습니다. 하자 감정부터 대금 청구까지 원스톱 분석이 가능합니다.",
     "vision": "건설 산업의 분쟁 예방 시스템을 완성합니다. 계약 단계부터 리스크를 관리하는 구조를 만듭니다."
   },
   "L04": {
-    "images": { "profile": "images/leaders/L04-aki.jpg", "banner": "images/leaders/L04-aki-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L04-aki.jpg",
+      "banner": "images/leaders/L04-aki-banner.jpg"
+    },
     "hero": "도시는 계속 변합니다. 재개발의 권리를 정확히 지켜냅니다.",
     "identity": {
       "what": "재개발·재건축 사업의 법률 전 과정을 분석합니다. 조합 설립부터 분양까지 권리를 보호합니다.",
@@ -150,18 +332,41 @@
       "approach": "도시계획 전문 지식과 법률 분석을 결합합니다. 각 단계별 권리와 의무를 명확히 안내합니다."
     },
     "expertise": [
-      { "icon": "location_city", "label": "정비사업 절차", "desc": "재개발·재건축 전 단계 법률 분석" },
-      { "icon": "groups", "label": "조합 운영", "desc": "조합 설립·총회·임원 관련 법률 자문" },
-      { "icon": "calculate", "label": "분담금 산정", "desc": "관리처분계획과 분담금 적정성 검토" },
-      { "icon": "balance", "label": "수용·보상", "desc": "토지수용 및 보상금 적정성 분석" },
-      { "icon": "gavel", "label": "행정소송", "desc": "사업시행인가 취소 등 행정쟁송 대응" }
+      {
+        "icon": "location_city",
+        "label": "정비사업 절차",
+        "desc": "재개발·재건축 전 단계 법률 분석"
+      },
+      {
+        "icon": "groups",
+        "label": "조합 운영",
+        "desc": "조합 설립·총회·임원 관련 법률 자문"
+      },
+      {
+        "icon": "calculate",
+        "label": "분담금 산정",
+        "desc": "관리처분계획과 분담금 적정성 검토"
+      },
+      {
+        "icon": "balance",
+        "label": "수용·보상",
+        "desc": "토지수용 및 보상금 적정성 분석"
+      },
+      {
+        "icon": "gavel",
+        "label": "행정소송",
+        "desc": "사업시행인가 취소 등 행정쟁송 대응"
+      }
     ],
     "philosophy": "재개발은 부동산이 아니라 삶의 문제입니다. 숫자 뒤에 있는 사람들의 권리를 놓치지 않습니다.",
     "impact": "재개발 사업 전 단계의 법률 리스크를 체계적으로 분석하는 프레임워크를 구축했습니다. 조합원이 자신의 권리를 정확히 이해할 수 있도록 지원합니다.",
     "vision": "모든 재개발 사업에서 투명한 정보와 공정한 절차가 보장되는 환경을 만듭니다."
   },
   "L05": {
-    "images": { "profile": "images/leaders/L05-yeonwoo.jpg", "banner": "images/leaders/L05-yeonwoo-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L05-yeonwoo.jpg",
+      "banner": "images/leaders/L05-yeonwoo-banner.jpg"
+    },
     "hero": "의료와 법률의 교차점에 섭니다. 환자의 권리를 과학적으로 증명합니다.",
     "identity": {
       "what": "의료사고, 의료과실, 의료 규제 등 의료법 전반을 분석합니다. 의학과 법학을 연결합니다.",
@@ -173,18 +378,62 @@
       "approach": "전문의급 의학 지식과 법률 분석을 결합합니다. 의료 기록을 법적 관점에서 체계적으로 분석합니다."
     },
     "expertise": [
-      { "icon": "medical_services", "label": "의료과실 분석", "desc": "진료 기록 기반 과실 여부 판단" },
-      { "icon": "biotech", "label": "인과관계 입증", "desc": "의학적 인과관계의 법적 증명 체계" },
-      { "icon": "local_hospital", "label": "병원 규제", "desc": "의료법·의료기관 관련 규제 분석" },
-      { "icon": "science", "label": "감정 분석", "desc": "의료 감정서의 적정성 검토" },
-      { "icon": "medication", "label": "약사법", "desc": "의약품 관련 법적 쟁점 분석" }
+      {
+        "icon": "medical_services",
+        "label": "의료과실 분석",
+        "desc": "진료 기록 기반 과실 여부 판단"
+      },
+      {
+        "icon": "biotech",
+        "label": "인과관계 입증",
+        "desc": "의학적 인과관계의 법적 증명 체계"
+      },
+      {
+        "icon": "local_hospital",
+        "label": "병원 규제",
+        "desc": "의료법·의료기관 관련 규제 분석"
+      },
+      {
+        "icon": "science",
+        "label": "감정 분석",
+        "desc": "의료 감정서의 적정성 검토"
+      },
+      {
+        "icon": "medication",
+        "label": "약사법",
+        "desc": "의약품 관련 법적 쟁점 분석"
+      }
     ],
     "philosophy": "의료 분쟁은 감정이 아니라 증거로 해결해야 합니다. 과학적 분석과 법적 논리가 환자의 권리를 지킵니다.",
     "impact": "의학과 법학의 융합 분석 체계를 구축했습니다. 의료 기록을 법적 쟁점으로 변환하는 구조화된 프로세스를 확립했습니다.",
-    "vision": "모든 의료 분쟁에서 공정한 판단이 가능한 환경을 만듭니다. 환자와 의료진 모두의 권리가 보호되는 시스템을 완성합니다."
+    "vision": "모든 의료 분쟁에서 공정한 판단이 가능한 환경을 만듭니다. 환자와 의료진 모두의 권리가 보호되는 시스템을 완성합니다.",
+    "decision_framework": {
+      "steps": [
+        "1단계: 의료행위 경위 파악 (진료기록 확인)",
+        "2단계: 설명의무 이행 여부 확인",
+        "3단계: 의료과실 유무 판단 (주의의무 위반)",
+        "4단계: 인과관계 입증 가능성 분석",
+        "5단계: 구제절차 선택 (의료분쟁조정/소송)"
+      ],
+      "common_mistakes": [
+        "진료기록 확보 없이 소송 제기",
+        "3년 소멸시효 경과 후 청구",
+        "의료과실과 결과 사이 인과관계 입증 부족",
+        "손해배상 항목(치료비/위자료/일실수입) 누락"
+      ],
+      "key_questions": [
+        "어떤 의료행위를 받았고 결과는?",
+        "수술 전 설명을 충분히 들었는지?",
+        "다른 병원에서 소견을 받아보았는지?",
+        "진료기록부 사본을 확보했는지?"
+      ]
+    }
   },
   "L06": {
-    "images": { "profile": "images/leaders/L06-byeori.jpg", "banner": "images/leaders/L06-byeori-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L06-byeori.jpg",
+      "banner": "images/leaders/L06-byeori-banner.jpg"
+    },
     "hero": "손해의 크기를 정확히 산정합니다. 감정이 아닌 논리로 배상을 설계합니다.",
     "identity": {
       "what": "각종 손해배상 사건의 손해액 산정과 배상 전략을 수립합니다.",
@@ -196,18 +445,62 @@
       "approach": "손해사정사급 산정 능력과 법률 분석을 결합합니다. 판례 기반의 정밀한 산정 체계를 운영합니다."
     },
     "expertise": [
-      { "icon": "calculate", "label": "손해액 산정", "desc": "일실수익·치료비·위자료 정밀 산정" },
-      { "icon": "receipt_long", "label": "보험금 분석", "desc": "보험약관 해석과 보상 적정성 검토" },
-      { "icon": "personal_injury", "label": "인체 손해", "desc": "상해·후유장해에 따른 배상 산정" },
-      { "icon": "store", "label": "재산 손해", "desc": "재물 손괴·영업 손실 배상 분석" },
-      { "icon": "balance", "label": "과실 상계", "desc": "과실 비율 산정과 배상액 조정" }
+      {
+        "icon": "calculate",
+        "label": "손해액 산정",
+        "desc": "일실수익·치료비·위자료 정밀 산정"
+      },
+      {
+        "icon": "receipt_long",
+        "label": "보험금 분석",
+        "desc": "보험약관 해석과 보상 적정성 검토"
+      },
+      {
+        "icon": "personal_injury",
+        "label": "인체 손해",
+        "desc": "상해·후유장해에 따른 배상 산정"
+      },
+      {
+        "icon": "store",
+        "label": "재산 손해",
+        "desc": "재물 손괴·영업 손실 배상 분석"
+      },
+      {
+        "icon": "balance",
+        "label": "과실 상계",
+        "desc": "과실 비율 산정과 배상액 조정"
+      }
     ],
     "philosophy": "손해배상은 감정적 보상이 아니라 합리적 복원입니다. 피해 이전의 상태로 되돌리는 것이 배상의 본질입니다.",
     "impact": "손해배상 산정의 정밀도를 높이는 체계적 분석 시스템을 구축했습니다. 판례 데이터 기반으로 적정 배상 범위를 산출합니다.",
-    "vision": "모든 피해자가 정당한 배상을 받을 수 있는 환경을 만듭니다. 정확한 산정이 공정한 사회의 기반입니다."
+    "vision": "모든 피해자가 정당한 배상을 받을 수 있는 환경을 만듭니다. 정확한 산정이 공정한 사회의 기반입니다.",
+    "decision_framework": {
+      "steps": [
+        "1단계: 손해 유형 파악 (재산적/정신적/신체적)",
+        "2단계: 가해행위와 인과관계 확인",
+        "3단계: 과실 비율 산정",
+        "4단계: 손해액 산정 (적극적/소극적/위자료)",
+        "5단계: 책임 주체 특정 (직접/사용자/감독자)"
+      ],
+      "common_mistakes": [
+        "손해 발생 증거 확보 없이 청구",
+        "과실상계 가능성 미고려",
+        "위자료만 청구하고 실손해 누락",
+        "청구 대상(가해자/사용자/보험사) 잘못 특정"
+      ],
+      "key_questions": [
+        "어떤 피해를 입었는지 구체적 내용은?",
+        "피해 발생 시점과 경위는?",
+        "피해를 입증할 증거(사진/영수증/진단서)는?",
+        "상대방 신원을 파악하고 있는지?"
+      ]
+    }
   },
   "L07": {
-    "images": { "profile": "images/leaders/L07-hanui.jpg", "banner": "images/leaders/L07-hanui-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L07-hanui.jpg",
+      "banner": "images/leaders/L07-hanui-banner.jpg"
+    },
     "hero": "교통사고의 법적 쟁점을 정밀 분석합니다. 현장의 진실을 법정에 전달합니다.",
     "identity": {
       "what": "교통사고 관련 과실 판단, 보험금 청구, 손해배상 등을 전문적으로 분석합니다.",
@@ -219,18 +512,62 @@
       "approach": "사고 상황 재구성과 판례 분석을 통해 정확한 과실 비율과 적정 보상을 산출합니다."
     },
     "expertise": [
-      { "icon": "directions_car", "label": "과실 분석", "desc": "사고 유형별 과실 비율 정밀 산정" },
-      { "icon": "local_police", "label": "형사 대응", "desc": "교통사고 형사 처분 분석 및 대응" },
-      { "icon": "payments", "label": "보상 산정", "desc": "치료비·일실수익·위자료 종합 산정" },
-      { "icon": "description", "label": "보험금 청구", "desc": "자동차보험 약관 해석과 청구 전략" },
-      { "icon": "handshake", "label": "합의 전략", "desc": "적정 합의금 산정과 협상 가이드" }
+      {
+        "icon": "directions_car",
+        "label": "과실 분석",
+        "desc": "사고 유형별 과실 비율 정밀 산정"
+      },
+      {
+        "icon": "local_police",
+        "label": "형사 대응",
+        "desc": "교통사고 형사 처분 분석 및 대응"
+      },
+      {
+        "icon": "payments",
+        "label": "보상 산정",
+        "desc": "치료비·일실수익·위자료 종합 산정"
+      },
+      {
+        "icon": "description",
+        "label": "보험금 청구",
+        "desc": "자동차보험 약관 해석과 청구 전략"
+      },
+      {
+        "icon": "handshake",
+        "label": "합의 전략",
+        "desc": "적정 합의금 산정과 협상 가이드"
+      }
     ],
     "philosophy": "교통사고 처리에서 가장 중요한 것은 속도입니다. 골든타임 안에 정확한 법적 판단을 내리는 것이 피해자를 지킵니다.",
     "impact": "교통사고 유형별 과실 비율 데이터베이스를 구축했습니다. 신속한 초기 대응 가이드를 통해 피해자의 권리를 보호합니다.",
-    "vision": "모든 교통사고 피해자가 정당한 보상을 받는 시스템을 만듭니다. 보험사와 대등한 협상이 가능한 환경을 구축합니다."
+    "vision": "모든 교통사고 피해자가 정당한 보상을 받는 시스템을 만듭니다. 보험사와 대등한 협상이 가능한 환경을 구축합니다.",
+    "decision_framework": {
+      "steps": [
+        "1단계: 사고 경위 및 과실 비율 파악",
+        "2단계: 보험 적용 범위 확인",
+        "3단계: 형사처벌 해당 여부 판단",
+        "4단계: 손해배상액 산정 (치료비/휴업손해/위자료)",
+        "5단계: 합의 vs 소송 전략 수립"
+      ],
+      "common_mistakes": [
+        "사고 현장 증거(블랙박스/CCTV) 미확보",
+        "합의 전 치료 완료 여부 미확인",
+        "12대 중과실 해당 여부 미검토",
+        "후유장해 가능성 미고려한 조기 합의"
+      ],
+      "key_questions": [
+        "사고 상황(시간/장소/차종/부상 정도)은?",
+        "음주/무면허/뺑소니 해당 여부는?",
+        "보험 가입 상태와 대인/대물 한도는?",
+        "현재 치료 진행 중인지, 후유증이 있는지?"
+      ]
+    }
   },
   "L08": {
-    "images": { "profile": "images/leaders/L08-onyu.jpg", "banner": "images/leaders/L08-onyu-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L08-onyu.jpg",
+      "banner": "images/leaders/L08-onyu-banner.jpg"
+    },
     "hero": "임대차는 주거 안정의 핵심입니다. 세입자와 임대인 모두의 권리를 지킵니다.",
     "identity": {
       "what": "주택·상가 임대차 관련 법률 분쟁과 권리 보호를 전담합니다.",
@@ -242,18 +579,62 @@
       "approach": "최신 판례와 특별법을 반영한 정밀 분석을 제공합니다. 계약 단계부터 분쟁 해결까지 지원합니다."
     },
     "expertise": [
-      { "icon": "home", "label": "주택임대차", "desc": "주택임대차보호법 적용과 대항력 분석" },
-      { "icon": "storefront", "label": "상가임대차", "desc": "상가건물임대차보호법 권리 분석" },
-      { "icon": "currency_exchange", "label": "보증금 보호", "desc": "보증금 반환 청구와 우선변제권 확보" },
-      { "icon": "autorenew", "label": "갱신 청구", "desc": "계약갱신요구권 행사 요건과 절차" },
-      { "icon": "description", "label": "계약서 검토", "desc": "임대차 계약서의 불공정 조항 점검" }
+      {
+        "icon": "home",
+        "label": "주택임대차",
+        "desc": "주택임대차보호법 적용과 대항력 분석"
+      },
+      {
+        "icon": "storefront",
+        "label": "상가임대차",
+        "desc": "상가건물임대차보호법 권리 분석"
+      },
+      {
+        "icon": "currency_exchange",
+        "label": "보증금 보호",
+        "desc": "보증금 반환 청구와 우선변제권 확보"
+      },
+      {
+        "icon": "autorenew",
+        "label": "갱신 청구",
+        "desc": "계약갱신요구권 행사 요건과 절차"
+      },
+      {
+        "icon": "description",
+        "label": "계약서 검토",
+        "desc": "임대차 계약서의 불공정 조항 점검"
+      }
     ],
     "philosophy": "주거는 기본권입니다. 임대차 법률의 복잡함 속에서 가장 중요한 것은 사람들의 안정된 생활 기반을 지키는 것입니다.",
     "impact": "임대차 분쟁의 유형별 대응 체계를 구축했습니다. 보증금 보호부터 갱신 청구까지 단계별 가이드를 확립했습니다.",
-    "vision": "모든 세입자가 자신의 권리를 정확히 알고 행사할 수 있는 환경을 만듭니다."
+    "vision": "모든 세입자가 자신의 권리를 정확히 알고 행사할 수 있는 환경을 만듭니다.",
+    "decision_framework": {
+      "steps": [
+        "1단계: 임대차 유형 분류 (주택/상가/오피스텔)",
+        "2단계: 대항력·우선변제권 취득 여부 확인",
+        "3단계: 계약 내용 및 특약 검토",
+        "4단계: 임대인·임차인 권리의무 분석",
+        "5단계: 분쟁 해결 방안 제시 (조정/소송)"
+      ],
+      "common_mistakes": [
+        "전입신고 지연으로 대항력 미취득",
+        "확정일자 미부여로 우선변제권 상실",
+        "계약갱신청구권 행사 기간 도과",
+        "임차권등기명령 미신청 상태로 이사"
+      ],
+      "key_questions": [
+        "주택인지 상가인지?",
+        "전입신고·확정일자 취득 여부와 시기는?",
+        "보증금 액수와 월세 조건은?",
+        "현재 계약 상태(갱신/만료/분쟁 중)는?"
+      ]
+    }
   },
   "L09": {
-    "images": { "profile": "images/leaders/L09-hanul.jpg", "banner": "images/leaders/L09-hanul-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L09-hanul.jpg",
+      "banner": "images/leaders/L09-hanul-banner.jpg"
+    },
     "hero": "국가 계약의 복잡한 절차를 해독합니다. 공정한 입찰 환경을 설계합니다.",
     "identity": {
       "what": "조달·입찰·국가계약 관련 법률 자문과 분쟁 해결을 전담합니다.",
@@ -265,18 +646,41 @@
       "approach": "조달 절차 전 과정의 법률 리스크를 분석합니다. 입찰 참가부터 계약 이행까지 지원합니다."
     },
     "expertise": [
-      { "icon": "account_balance", "label": "입찰 절차", "desc": "공공 입찰 참가 요건과 절차 분석" },
-      { "icon": "rule", "label": "규제 준수", "desc": "국가계약법·조달 규정 준수 검토" },
-      { "icon": "gavel", "label": "이의 신청", "desc": "부당한 낙찰 결과에 대한 불복 절차" },
-      { "icon": "receipt_long", "label": "대금 청구", "desc": "계약 대금 지급 지연 대응 전략" },
-      { "icon": "verified_user", "label": "적격 심사", "desc": "적격심사 기준 분석과 대비 전략" }
+      {
+        "icon": "account_balance",
+        "label": "입찰 절차",
+        "desc": "공공 입찰 참가 요건과 절차 분석"
+      },
+      {
+        "icon": "rule",
+        "label": "규제 준수",
+        "desc": "국가계약법·조달 규정 준수 검토"
+      },
+      {
+        "icon": "gavel",
+        "label": "이의 신청",
+        "desc": "부당한 낙찰 결과에 대한 불복 절차"
+      },
+      {
+        "icon": "receipt_long",
+        "label": "대금 청구",
+        "desc": "계약 대금 지급 지연 대응 전략"
+      },
+      {
+        "icon": "verified_user",
+        "label": "적격 심사",
+        "desc": "적격심사 기준 분석과 대비 전략"
+      }
     ],
     "philosophy": "국가 계약은 투명성이 핵심입니다. 복잡한 규제 속에서도 공정한 기회가 보장되어야 합니다.",
     "impact": "국가계약 분쟁의 유형별 대응 매뉴얼을 체계화했습니다. 중소기업의 공공조달 참여 장벽을 낮추는 분석 체계를 구축했습니다.",
     "vision": "모든 기업이 공정하게 공공 시장에 참여할 수 있는 법률 환경을 만듭니다."
   },
   "L10": {
-    "images": { "profile": "images/leaders/L10-gyeolhwi.jpg", "banner": "images/leaders/L10-gyeolhwi-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L10-gyeolhwi.jpg",
+      "banner": "images/leaders/L10-gyeolhwi-banner.jpg"
+    },
     "hero": "판결은 시작일 뿐입니다. 실제 집행까지 완결하는 것이 진짜 해결입니다.",
     "identity": {
       "what": "민사 판결의 강제집행, 가압류·가처분 등 보전처분을 전담합니다.",
@@ -288,18 +692,41 @@
       "approach": "재산 조회·압류·매각 등 집행 전 과정을 체계적으로 분석하고 전략을 수립합니다."
     },
     "expertise": [
-      { "icon": "lock", "label": "가압류·가처분", "desc": "소송 전 권리 보전 조치 분석" },
-      { "icon": "account_balance_wallet", "label": "재산 압류", "desc": "부동산·채권·동산 압류 절차" },
-      { "icon": "search", "label": "재산 조회", "desc": "채무자 재산의 체계적 탐색 방법" },
-      { "icon": "sell", "label": "강제 매각", "desc": "압류 재산의 환가·배당 절차" },
-      { "icon": "shield", "label": "집행 방어", "desc": "부당한 강제집행에 대한 이의 신청" }
+      {
+        "icon": "lock",
+        "label": "가압류·가처분",
+        "desc": "소송 전 권리 보전 조치 분석"
+      },
+      {
+        "icon": "account_balance_wallet",
+        "label": "재산 압류",
+        "desc": "부동산·채권·동산 압류 절차"
+      },
+      {
+        "icon": "search",
+        "label": "재산 조회",
+        "desc": "채무자 재산의 체계적 탐색 방법"
+      },
+      {
+        "icon": "sell",
+        "label": "강제 매각",
+        "desc": "압류 재산의 환가·배당 절차"
+      },
+      {
+        "icon": "shield",
+        "label": "집행 방어",
+        "desc": "부당한 강제집행에 대한 이의 신청"
+      }
     ],
     "philosophy": "권리는 실현될 때 비로소 의미가 있습니다. 판결문을 현실의 결과로 바꾸는 것이 법의 완성입니다.",
     "impact": "민사집행 전 과정을 단계별로 분석하는 체계를 구축했습니다. 채무자 재산 추적부터 배당까지 원스톱 지원이 가능합니다.",
     "vision": "모든 승소 판결이 실제로 이행되는 환경을 만듭니다. 법의 실효성을 높이는 것이 목표입니다."
   },
   "L11": {
-    "images": { "profile": "images/leaders/L11-oreum.jpg", "banner": "images/leaders/L11-oreum-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L11-oreum.jpg",
+      "banner": "images/leaders/L11-oreum-banner.jpg"
+    },
     "hero": "채권의 흐름을 추적합니다. 체계적 관리가 회수율을 결정합니다.",
     "identity": {
       "what": "채권 추심, 회수 전략 수립, 신용관리 관련 법률을 분석합니다.",
@@ -311,18 +738,62 @@
       "approach": "채권의 종류와 상태에 따른 최적의 추심 전략을 수립합니다. 적법한 범위 내에서 최대 회수를 추구합니다."
     },
     "expertise": [
-      { "icon": "trending_up", "label": "채권 회수", "desc": "채권 유형별 최적 회수 전략 수립" },
-      { "icon": "credit_score", "label": "신용 관리", "desc": "채무자 신용 상태 분석과 활용" },
-      { "icon": "gavel", "label": "적법 추심", "desc": "채권추심법 준수 범위 내 추심 방법" },
-      { "icon": "schedule", "label": "시효 관리", "desc": "소멸시효 관리와 중단 조치" },
-      { "icon": "handshake", "label": "채무 조정", "desc": "현실적 상환 계획 수립과 협상" }
+      {
+        "icon": "trending_up",
+        "label": "채권 회수",
+        "desc": "채권 유형별 최적 회수 전략 수립"
+      },
+      {
+        "icon": "credit_score",
+        "label": "신용 관리",
+        "desc": "채무자 신용 상태 분석과 활용"
+      },
+      {
+        "icon": "gavel",
+        "label": "적법 추심",
+        "desc": "채권추심법 준수 범위 내 추심 방법"
+      },
+      {
+        "icon": "schedule",
+        "label": "시효 관리",
+        "desc": "소멸시효 관리와 중단 조치"
+      },
+      {
+        "icon": "handshake",
+        "label": "채무 조정",
+        "desc": "현실적 상환 계획 수립과 협상"
+      }
     ],
     "philosophy": "채권 추심은 강압이 아니라 전략입니다. 적법한 절차 안에서 최선의 결과를 만드는 것이 전문성입니다.",
     "impact": "채권 유형별·금액별 최적 추심 전략 체계를 구축했습니다. 적법성을 유지하면서 회수율을 극대화하는 프로세스를 확립했습니다.",
-    "vision": "채권 관리의 전 과정을 체계화하여 기업의 재무 안정성을 지원합니다."
+    "vision": "채권 관리의 전 과정을 체계화하여 기업의 재무 안정성을 지원합니다.",
+    "decision_framework": {
+      "steps": [
+        "1단계: 채무 현황 파악 (금액/채권자/연체기간)",
+        "2단계: 불법추심 여부 확인",
+        "3단계: 소멸시효 완성 여부 검토",
+        "4단계: 채무조정 가능성 분석 (개인회생/파산/워크아웃)",
+        "5단계: 최적 채무해결 방안 수립"
+      ],
+      "common_mistakes": [
+        "소멸시효 완성 후 채무 승인하여 시효 부활",
+        "불법추심에 대응하지 않고 방치",
+        "개인회생 신청 시기를 놓침",
+        "여러 채무를 개별 대응하여 비효율"
+      ],
+      "key_questions": [
+        "총 채무 금액과 채권자 수는?",
+        "마지막 상환 시점과 연체 기간은?",
+        "현재 소득과 필수 생활비는?",
+        "추심 연락을 받고 있는지, 방법은?"
+      ]
+    }
   },
   "L12": {
-    "images": { "profile": "images/leaders/L12-aseul.jpg", "banner": "images/leaders/L12-aseul-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L12-aseul.jpg",
+      "banner": "images/leaders/L12-aseul-banner.jpg"
+    },
     "hero": "등기부의 진실을 해독합니다. 경매의 기회와 위험을 정밀 분석합니다.",
     "identity": {
       "what": "부동산 등기 절차와 법원 경매의 법률 분석을 전담합니다.",
@@ -334,18 +805,41 @@
       "approach": "법무사급 등기 전문성과 경매 실무 경험을 결합합니다. 권리 분석부터 명도까지 지원합니다."
     },
     "expertise": [
-      { "icon": "description", "label": "등기 절차", "desc": "소유권·근저당·전세권 등 등기 분석" },
-      { "icon": "real_estate_agent", "label": "경매 분석", "desc": "법원 경매 물건의 권리관계 정밀 분석" },
-      { "icon": "priority_high", "label": "배당 순위", "desc": "채권자 배당 순위와 회수 가능성 분석" },
-      { "icon": "meeting_room", "label": "명도 절차", "desc": "낙찰 후 점유자 명도 전략 수립" },
-      { "icon": "warning", "label": "위험 진단", "desc": "경매 물건의 법적 하자 사전 진단" }
+      {
+        "icon": "description",
+        "label": "등기 절차",
+        "desc": "소유권·근저당·전세권 등 등기 분석"
+      },
+      {
+        "icon": "real_estate_agent",
+        "label": "경매 분석",
+        "desc": "법원 경매 물건의 권리관계 정밀 분석"
+      },
+      {
+        "icon": "priority_high",
+        "label": "배당 순위",
+        "desc": "채권자 배당 순위와 회수 가능성 분석"
+      },
+      {
+        "icon": "meeting_room",
+        "label": "명도 절차",
+        "desc": "낙찰 후 점유자 명도 전략 수립"
+      },
+      {
+        "icon": "warning",
+        "label": "위험 진단",
+        "desc": "경매 물건의 법적 하자 사전 진단"
+      }
     ],
     "philosophy": "등기부는 거짓말을 하지 않습니다. 다만 읽는 사람의 역량에 따라 보이는 것이 다릅니다. 정밀한 해독이 재산을 지킵니다.",
     "impact": "경매 물건의 권리관계 분석 체계를 구축했습니다. 등기부 해석부터 배당 분석까지 통합 분석이 가능합니다.",
     "vision": "경매 참여자 모두가 법적 리스크를 정확히 이해하고 안전하게 투자할 수 있는 환경을 만듭니다."
   },
   "L13": {
-    "images": { "profile": "images/leaders/L13-nuri.jpg", "banner": "images/leaders/L13-nuri-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L13-nuri.jpg",
+      "banner": "images/leaders/L13-nuri-banner.jpg"
+    },
     "hero": "기업의 상거래를 법률로 설계합니다. 비즈니스의 안전장치를 만듭니다.",
     "identity": {
       "what": "상법 전반, 어음·수표, 상거래 분쟁 등 상사법 영역을 분석합니다.",
@@ -357,17 +851,36 @@
       "approach": "공인회계사급 재무 분석과 법률 검토를 결합하여 상거래 리스크를 종합 관리합니다."
     },
     "expertise": [
-      { "icon": "business_center", "label": "상거래 분쟁", "desc": "매매·운송·보관 등 상행위 분쟁 분석" },
-      { "icon": "receipt", "label": "어음·수표", "desc": "유가증권 관련 법적 쟁점 분석" },
-      { "icon": "account_balance", "label": "회계·감사", "desc": "재무제표 분석과 회계 부정 검토" },
-      { "icon": "inventory_2", "label": "물류·운송", "desc": "상사 운송·보관 계약의 법적 분석" }
+      {
+        "icon": "business_center",
+        "label": "상거래 분쟁",
+        "desc": "매매·운송·보관 등 상행위 분쟁 분석"
+      },
+      {
+        "icon": "receipt",
+        "label": "어음·수표",
+        "desc": "유가증권 관련 법적 쟁점 분석"
+      },
+      {
+        "icon": "account_balance",
+        "label": "회계·감사",
+        "desc": "재무제표 분석과 회계 부정 검토"
+      },
+      {
+        "icon": "inventory_2",
+        "label": "물류·운송",
+        "desc": "상사 운송·보관 계약의 법적 분석"
+      }
     ],
     "philosophy": "상거래의 안전은 계약서에서 시작됩니다. 법적 리스크를 사전에 설계하는 것이 최선의 보험입니다.",
     "impact": "상거래 계약의 법적 리스크 진단 체계를 구축했습니다. 회계와 법률을 통합한 분석으로 기업의 거래 안전성을 높였습니다.",
     "vision": "모든 기업 거래에서 법적 리스크가 사전에 관리되는 환경을 만듭니다."
   },
   "L14": {
-    "images": { "profile": "images/leaders/L14-dasom.jpg", "banner": "images/leaders/L14-dasom-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L14-dasom.jpg",
+      "banner": "images/leaders/L14-dasom-banner.jpg"
+    },
     "hero": "기업의 결합과 분리를 설계합니다. M&A의 법적 구조를 완성합니다.",
     "identity": {
       "what": "회사 설립·운영·M&A·구조조정의 법률 전 과정을 분석합니다.",
@@ -379,18 +892,41 @@
       "approach": "5대 로펌급 M&A 분석 방법론을 체계화하여 제공합니다."
     },
     "expertise": [
-      { "icon": "corporate_fare", "label": "회사법", "desc": "법인 설립·정관·이사회 관련 법률" },
-      { "icon": "merge", "label": "M&A 구조", "desc": "합병·분할·영업양도 법률 설계" },
-      { "icon": "fact_check", "label": "실사(DD)", "desc": "법률 실사와 리스크 진단" },
-      { "icon": "people", "label": "주주 분쟁", "desc": "소수주주권·경영권 분쟁 대응" },
-      { "icon": "sync_alt", "label": "구조조정", "desc": "기업 회생·워크아웃 법률 분석" }
+      {
+        "icon": "corporate_fare",
+        "label": "회사법",
+        "desc": "법인 설립·정관·이사회 관련 법률"
+      },
+      {
+        "icon": "merge",
+        "label": "M&A 구조",
+        "desc": "합병·분할·영업양도 법률 설계"
+      },
+      {
+        "icon": "fact_check",
+        "label": "실사(DD)",
+        "desc": "법률 실사와 리스크 진단"
+      },
+      {
+        "icon": "people",
+        "label": "주주 분쟁",
+        "desc": "소수주주권·경영권 분쟁 대응"
+      },
+      {
+        "icon": "sync_alt",
+        "label": "구조조정",
+        "desc": "기업 회생·워크아웃 법률 분석"
+      }
     ],
     "philosophy": "M&A는 단순한 거래가 아니라 두 조직의 미래를 결합하는 일입니다. 법적 정밀성이 성공의 기반입니다.",
     "impact": "M&A 법률 실사의 표준 프레임워크를 구축했습니다. 중소기업도 체계적인 법률 분석을 받을 수 있는 구조를 만들었습니다.",
     "vision": "모든 기업이 규모에 관계없이 전문적인 M&A 법률 서비스를 이용할 수 있게 합니다."
   },
   "L15": {
-    "images": { "profile": "images/leaders/L15-byeolha.jpg", "banner": "images/leaders/L15-byeolha-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L15-byeolha.jpg",
+      "banner": "images/leaders/L15-byeolha-banner.jpg"
+    },
     "hero": "스타트업의 성장을 법률로 지원합니다. 빠른 성장에도 흔들리지 않는 구조를 만듭니다.",
     "identity": {
       "what": "스타트업 설립·투자유치·스톡옵션·EXIT 관련 법률을 분석합니다.",
@@ -402,18 +938,41 @@
       "approach": "유니콘 스타트업 CLO급 경험을 바탕으로 성장 단계별 맞춤 법률 가이드를 제공합니다."
     },
     "expertise": [
-      { "icon": "rocket_launch", "label": "법인 설립", "desc": "스타트업 최적 법인 형태와 정관 설계" },
-      { "icon": "savings", "label": "투자 유치", "desc": "투자 계약(SAFE·전환사채) 법률 검토" },
-      { "icon": "card_giftcard", "label": "스톡옵션", "desc": "주식매수선택권 설계와 세무 분석" },
-      { "icon": "handshake", "label": "공동창업", "desc": "창업자 간 지분·역할 계약 설계" },
-      { "icon": "trending_up", "label": "EXIT 전략", "desc": "IPO·M&A 법률 구조와 절차 분석" }
+      {
+        "icon": "rocket_launch",
+        "label": "법인 설립",
+        "desc": "스타트업 최적 법인 형태와 정관 설계"
+      },
+      {
+        "icon": "savings",
+        "label": "투자 유치",
+        "desc": "투자 계약(SAFE·전환사채) 법률 검토"
+      },
+      {
+        "icon": "card_giftcard",
+        "label": "스톡옵션",
+        "desc": "주식매수선택권 설계와 세무 분석"
+      },
+      {
+        "icon": "handshake",
+        "label": "공동창업",
+        "desc": "창업자 간 지분·역할 계약 설계"
+      },
+      {
+        "icon": "trending_up",
+        "label": "EXIT 전략",
+        "desc": "IPO·M&A 법률 구조와 절차 분석"
+      }
     ],
     "philosophy": "스타트업에게 법률은 브레이크가 아니라 안전벨트입니다. 빠르게 달리되 안전하게 달리는 것이 핵심입니다.",
     "impact": "스타트업 성장 단계별 법률 체크리스트를 구축했습니다. 투자 계약·스톡옵션·지분 구조의 표준 분석 틀을 확립했습니다.",
     "vision": "모든 스타트업이 법률 리스크 없이 성장에 집중할 수 있는 환경을 만듭니다."
   },
   "L16": {
-    "images": { "profile": "images/leaders/L16-seula.jpg", "banner": "images/leaders/L16-seula-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L16-seula.jpg",
+      "banner": "images/leaders/L16-seula-banner.jpg"
+    },
     "hero": "보험의 약관을 해독합니다. 정당한 보상을 받을 권리를 지킵니다.",
     "identity": {
       "what": "보험 계약 분쟁, 보험금 청구, 약관 해석 등 보험법 전반을 분석합니다.",
@@ -425,18 +984,41 @@
       "approach": "보험계리사급 분석과 법률 해석을 결합합니다. 약관의 불리한 조항을 정밀 분석합니다."
     },
     "expertise": [
-      { "icon": "shield", "label": "보험금 분쟁", "desc": "보험금 지급 거절 사유 분석과 대응" },
-      { "icon": "article", "label": "약관 해석", "desc": "보험 약관의 법적 해석과 유리한 논점 도출" },
-      { "icon": "calculate", "label": "보험계리", "desc": "적정 보험금 산정과 보험료 분석" },
-      { "icon": "health_and_safety", "label": "생명·손해", "desc": "생명보험·손해보험 분쟁 유형별 대응" },
-      { "icon": "balance", "label": "분쟁 조정", "desc": "금융감독원 분쟁조정 절차 안내" }
+      {
+        "icon": "shield",
+        "label": "보험금 분쟁",
+        "desc": "보험금 지급 거절 사유 분석과 대응"
+      },
+      {
+        "icon": "article",
+        "label": "약관 해석",
+        "desc": "보험 약관의 법적 해석과 유리한 논점 도출"
+      },
+      {
+        "icon": "calculate",
+        "label": "보험계리",
+        "desc": "적정 보험금 산정과 보험료 분석"
+      },
+      {
+        "icon": "health_and_safety",
+        "label": "생명·손해",
+        "desc": "생명보험·손해보험 분쟁 유형별 대응"
+      },
+      {
+        "icon": "balance",
+        "label": "분쟁 조정",
+        "desc": "금융감독원 분쟁조정 절차 안내"
+      }
     ],
     "philosophy": "보험은 신뢰의 계약입니다. 위험이 발생했을 때 약속대로 보상하는 것이 보험의 본질입니다.",
     "impact": "보험 약관 분석의 체계적 프레임워크를 구축했습니다. 보험금 거절 사유별 대응 전략을 확립했습니다.",
     "vision": "모든 보험 가입자가 정당한 보상을 받을 수 있는 투명한 환경을 만듭니다."
   },
   "L17": {
-    "images": { "profile": "images/leaders/L17-mir.jpg", "banner": "images/leaders/L17-mir-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L17-mir.jpg",
+      "banner": "images/leaders/L17-mir-banner.jpg"
+    },
     "hero": "국경을 넘는 거래를 법률로 연결합니다. 글로벌 비즈니스의 법적 다리를 놓습니다.",
     "identity": {
       "what": "국제 계약, 국제 중재, 해외 투자 등 국제거래법 전반을 분석합니다.",
@@ -448,18 +1030,41 @@
       "approach": "미국 뉴욕주 변호사 자격과 ICC 국제중재 경험을 바탕으로 크로스보더 분쟁에 대응합니다."
     },
     "expertise": [
-      { "icon": "public", "label": "국제 계약", "desc": "크로스보더 계약의 준거법·관할 설계" },
-      { "icon": "balance", "label": "국제 중재", "desc": "ICC·SIAC 등 국제 중재 절차 분석" },
-      { "icon": "flight", "label": "해외 투자", "desc": "해외 직접투자(FDI) 법률 구조 설계" },
-      { "icon": "translate", "label": "비교법 분석", "desc": "한국법·영미법·대륙법 비교 분석" },
-      { "icon": "workspace_premium", "label": "통상 규제", "desc": "WTO·FTA 등 국제 통상 법규 분석" }
+      {
+        "icon": "public",
+        "label": "국제 계약",
+        "desc": "크로스보더 계약의 준거법·관할 설계"
+      },
+      {
+        "icon": "balance",
+        "label": "국제 중재",
+        "desc": "ICC·SIAC 등 국제 중재 절차 분석"
+      },
+      {
+        "icon": "flight",
+        "label": "해외 투자",
+        "desc": "해외 직접투자(FDI) 법률 구조 설계"
+      },
+      {
+        "icon": "translate",
+        "label": "비교법 분석",
+        "desc": "한국법·영미법·대륙법 비교 분석"
+      },
+      {
+        "icon": "workspace_premium",
+        "label": "통상 규제",
+        "desc": "WTO·FTA 등 국제 통상 법규 분석"
+      }
     ],
     "philosophy": "국제 거래에서 법률은 공통 언어입니다. 서로 다른 법체계를 연결하는 것이 국제 변호사의 역할입니다.",
     "impact": "국제 거래 계약의 표준 분석 프레임워크를 구축했습니다. 준거법·관할·집행 3단계 검토 체계를 확립했습니다.",
     "vision": "한국 기업의 글로벌 진출을 법률적으로 완벽하게 지원하는 시스템을 완성합니다."
   },
   "L18": {
-    "images": { "profile": "images/leaders/L18-daon.jpg", "banner": "images/leaders/L18-daon-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L18-daon.jpg",
+      "banner": "images/leaders/L18-daon-banner.jpg"
+    },
     "hero": "에너지는 미래의 기반입니다. 자원과 규제의 교차점을 분석합니다.",
     "identity": {
       "what": "에너지·자원 개발·규제 관련 법률 분석과 프로젝트 자문을 수행합니다.",
@@ -471,17 +1076,36 @@
       "approach": "에너지 공기업 법무 경험을 바탕으로 인허가부터 운영까지 법률 리스크를 종합 분석합니다."
     },
     "expertise": [
-      { "icon": "bolt", "label": "전력 사업", "desc": "발전·송배전 인허가 및 규제 분석" },
-      { "icon": "oil_barrel", "label": "자원 개발", "desc": "광업권·채굴권 관련 법률 분석" },
-      { "icon": "solar_power", "label": "신재생에너지", "desc": "태양광·풍력 사업 인허가 절차" },
-      { "icon": "description", "label": "PPA 계약", "desc": "전력구매계약(PPA) 법률 구조 분석" }
+      {
+        "icon": "bolt",
+        "label": "전력 사업",
+        "desc": "발전·송배전 인허가 및 규제 분석"
+      },
+      {
+        "icon": "oil_barrel",
+        "label": "자원 개발",
+        "desc": "광업권·채굴권 관련 법률 분석"
+      },
+      {
+        "icon": "solar_power",
+        "label": "신재생에너지",
+        "desc": "태양광·풍력 사업 인허가 절차"
+      },
+      {
+        "icon": "description",
+        "label": "PPA 계약",
+        "desc": "전력구매계약(PPA) 법률 구조 분석"
+      }
     ],
     "philosophy": "에너지 전환 시대에 법률은 새로운 기회의 문을 여는 열쇠입니다. 규제를 이해하는 것이 시장을 이해하는 것입니다.",
     "impact": "에너지 프로젝트의 법률 리스크 진단 체계를 구축했습니다. 인허가 단계별 체크리스트를 확립했습니다.",
     "vision": "에너지 전환을 법률적으로 뒷받침하는 전문 시스템을 완성합니다."
   },
   "L19": {
-    "images": { "profile": "images/leaders/L19-selong.jpg", "banner": "images/leaders/L19-selong-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L19-selong.jpg",
+      "banner": "images/leaders/L19-selong-banner.jpg"
+    },
     "hero": "바다와 하늘의 법률을 다룹니다. 물류의 법적 안전 항로를 설계합니다.",
     "identity": {
       "what": "해상법, 항공법, 물류 운송 관련 법률 분석과 분쟁 해결을 전담합니다.",
@@ -493,17 +1117,36 @@
       "approach": "해사법원 실무 경험을 바탕으로 운송 분쟁의 법적 쟁점을 정밀 분석합니다."
     },
     "expertise": [
-      { "icon": "sailing", "label": "해상 운송", "desc": "선하증권·용선계약 법률 분석" },
-      { "icon": "flight", "label": "항공 운송", "desc": "항공 화물·여객 관련 법적 쟁점" },
-      { "icon": "local_shipping", "label": "복합 운송", "desc": "다중 운송수단 결합 계약 분석" },
-      { "icon": "water_damage", "label": "해상 사고", "desc": "선박 충돌·좌초·오염 분쟁 대응" }
+      {
+        "icon": "sailing",
+        "label": "해상 운송",
+        "desc": "선하증권·용선계약 법률 분석"
+      },
+      {
+        "icon": "flight",
+        "label": "항공 운송",
+        "desc": "항공 화물·여객 관련 법적 쟁점"
+      },
+      {
+        "icon": "local_shipping",
+        "label": "복합 운송",
+        "desc": "다중 운송수단 결합 계약 분석"
+      },
+      {
+        "icon": "water_damage",
+        "label": "해상 사고",
+        "desc": "선박 충돌·좌초·오염 분쟁 대응"
+      }
     ],
     "philosophy": "물류는 세계 경제의 혈관입니다. 법적 안전 장치가 없는 물류는 언제든 멈출 수 있습니다.",
     "impact": "해상·항공 운송 분쟁의 유형별 분석 체계를 구축했습니다. 운송 계약서의 리스크 진단 프레임워크를 확립했습니다.",
     "vision": "한국 물류 산업의 법적 안전성을 세계 최고 수준으로 높이는 것이 목표입니다."
   },
   "L20": {
-    "images": { "profile": "images/leaders/L20-chansol.jpg", "banner": "images/leaders/L20-chansol-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L20-chansol.jpg",
+      "banner": "images/leaders/L20-chansol-banner.jpg"
+    },
     "hero": "세금은 구조입니다. 적법한 절세와 정확한 신고가 재산을 지킵니다.",
     "identity": {
       "what": "조세법·금융법 전반의 법률 분석, 세무 전략 수립, 금융 규제 자문을 수행합니다.",
@@ -515,18 +1158,41 @@
       "approach": "세무사급 실무 능력과 국세청 출신급 경험을 결합하여 정밀한 세무 분석을 제공합니다."
     },
     "expertise": [
-      { "icon": "savings", "label": "절세 전략", "desc": "적법한 세금 최적화 방안 설계" },
-      { "icon": "account_balance", "label": "금융 규제", "desc": "금융법·자본시장법 규제 분석" },
-      { "icon": "receipt_long", "label": "세무 신고", "desc": "법인세·소득세·부가세 신고 검토" },
-      { "icon": "gavel", "label": "세무 조사", "desc": "국세청 세무조사 대응 전략" },
-      { "icon": "real_estate_agent", "label": "양도·상속", "desc": "양도소득세·상속세 절세 분석" }
+      {
+        "icon": "savings",
+        "label": "절세 전략",
+        "desc": "적법한 세금 최적화 방안 설계"
+      },
+      {
+        "icon": "account_balance",
+        "label": "금융 규제",
+        "desc": "금융법·자본시장법 규제 분석"
+      },
+      {
+        "icon": "receipt_long",
+        "label": "세무 신고",
+        "desc": "법인세·소득세·부가세 신고 검토"
+      },
+      {
+        "icon": "gavel",
+        "label": "세무 조사",
+        "desc": "국세청 세무조사 대응 전략"
+      },
+      {
+        "icon": "real_estate_agent",
+        "label": "양도·상속",
+        "desc": "양도소득세·상속세 절세 분석"
+      }
     ],
     "philosophy": "세금은 의무이지만, 불필요한 세금을 내는 것은 권리의 포기입니다. 적법한 절세가 건전한 경제활동의 기반입니다.",
     "impact": "조세·금융 분야의 통합 분석 체계를 구축했습니다. 최신 세법 개정을 즉시 반영하는 시스템을 운영합니다.",
     "vision": "모든 납세자가 적법하면서도 최적의 세무 전략을 수립할 수 있는 환경을 만듭니다."
   },
   "L21": {
-    "images": { "profile": "images/leaders/L21-sebin.jpg", "banner": "images/leaders/L21-sebin-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L21-sebin.jpg",
+      "banner": "images/leaders/L21-sebin-banner.jpg"
+    },
     "hero": "디지털 시대의 법적 방패입니다. IT와 보안의 규제를 정밀 분석합니다.",
     "identity": {
       "what": "IT 서비스·정보보안·사이버 범죄 관련 법률 분석과 규제 자문을 수행합니다.",
@@ -538,18 +1204,41 @@
       "approach": "정보보안기사급 기술 이해와 법률 분석을 결합합니다. 기술적 사실과 법적 쟁점을 연결합니다."
     },
     "expertise": [
-      { "icon": "security", "label": "정보보안법", "desc": "정보통신망법·사이버보안 규제 분석" },
-      { "icon": "bug_report", "label": "사이버 범죄", "desc": "해킹·디도스·피싱 법적 대응" },
-      { "icon": "cloud", "label": "클라우드 규제", "desc": "클라우드 서비스 법적 요건 분석" },
-      { "icon": "shopping_cart", "label": "전자상거래", "desc": "전자상거래법·전자서명법 분석" },
-      { "icon": "vpn_key", "label": "인증·보안", "desc": "전자인증·암호화 규제 준수 검토" }
+      {
+        "icon": "security",
+        "label": "정보보안법",
+        "desc": "정보통신망법·사이버보안 규제 분석"
+      },
+      {
+        "icon": "bug_report",
+        "label": "사이버 범죄",
+        "desc": "해킹·디도스·피싱 법적 대응"
+      },
+      {
+        "icon": "cloud",
+        "label": "클라우드 규제",
+        "desc": "클라우드 서비스 법적 요건 분석"
+      },
+      {
+        "icon": "shopping_cart",
+        "label": "전자상거래",
+        "desc": "전자상거래법·전자서명법 분석"
+      },
+      {
+        "icon": "vpn_key",
+        "label": "인증·보안",
+        "desc": "전자인증·암호화 규제 준수 검토"
+      }
     ],
     "philosophy": "보안은 기술만으로 완성되지 않습니다. 법적 컴플라이언스가 함께해야 진정한 보안이 됩니다.",
     "impact": "IT 기업을 위한 보안 법규 준수 체크리스트를 구축했습니다. 사이버 침해 사고 대응의 법적 프로세스를 확립했습니다.",
     "vision": "디지털 시대의 법적 안전망을 완성합니다. 기술 혁신과 법률 준수가 양립하는 환경을 만듭니다."
   },
   "L22": {
-    "images": { "profile": "images/leaders/L22-gaon.jpg", "banner": "images/leaders/L22-gaon-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L22-gaon.jpg",
+      "banner": "images/leaders/L22-gaon-banner.jpg"
+    },
     "hero": "형사법의 정밀함으로 권리를 지킵니다. 무죄 추정의 원칙을 실현합니다.",
     "identity": {
       "what": "형사 사건 전반의 법률 분석, 수사 대응, 공판 전략을 수립합니다.",
@@ -561,18 +1250,62 @@
       "approach": "특수부 부장검사 출신급 경험을 바탕으로 수사·공판 전 과정의 전략을 수립합니다."
     },
     "expertise": [
-      { "icon": "gavel", "label": "형사 변론", "desc": "수사 단계부터 공판까지 방어 전략" },
-      { "icon": "policy", "label": "수사 대응", "desc": "검찰·경찰 수사 대응 절차 안내" },
-      { "icon": "article", "label": "고소·고발", "desc": "형사 고소장 작성과 절차 분석" },
-      { "icon": "lock_open", "label": "보석·구속", "desc": "구속적부심·보석 청구 전략" },
-      { "icon": "workspace_premium", "label": "특수 범죄", "desc": "경제·금융·화이트칼라 범죄 대응" }
+      {
+        "icon": "gavel",
+        "label": "형사 변론",
+        "desc": "수사 단계부터 공판까지 방어 전략"
+      },
+      {
+        "icon": "policy",
+        "label": "수사 대응",
+        "desc": "검찰·경찰 수사 대응 절차 안내"
+      },
+      {
+        "icon": "article",
+        "label": "고소·고발",
+        "desc": "형사 고소장 작성과 절차 분석"
+      },
+      {
+        "icon": "lock_open",
+        "label": "보석·구속",
+        "desc": "구속적부심·보석 청구 전략"
+      },
+      {
+        "icon": "workspace_premium",
+        "label": "특수 범죄",
+        "desc": "경제·금융·화이트칼라 범죄 대응"
+      }
     ],
     "philosophy": "형사법의 핵심은 무죄 추정입니다. 유죄가 확정되기 전까지 모든 사람은 무죄입니다. 이 원칙을 지키는 것이 법치의 시작입니다.",
     "impact": "형사 사건 유형별 대응 매뉴얼을 체계화했습니다. 수사 단계 방어권 행사 가이드를 확립했습니다.",
-    "vision": "모든 시민이 형사 절차에서 정당한 방어권을 행사할 수 있는 환경을 만듭니다."
+    "vision": "모든 시민이 형사 절차에서 정당한 방어권을 행사할 수 있는 환경을 만듭니다.",
+    "decision_framework": {
+      "steps": [
+        "1단계: 혐의 내용 및 형법 조항 확인",
+        "2단계: 수사 단계 파악 (고소/수사/기소/재판)",
+        "3단계: 증거 관계 분석",
+        "4단계: 유리한 양형 요소 도출",
+        "5단계: 방어 전략 수립 (부인/감형/합의)"
+      ],
+      "common_mistakes": [
+        "경찰 조사에서 불리한 진술을 하는 실수",
+        "피의자 권리(변호인조력권/묵비권) 미행사",
+        "합의 시기를 놓쳐 양형에 반영 안 됨",
+        "고소 취소 가능 여부 미확인"
+      ],
+      "key_questions": [
+        "어떤 혐의(사기/폭행/횡령 등)인지?",
+        "피해자인지 피의자인지?",
+        "현재 수사/재판 진행 단계는?",
+        "물적 증거나 목격자가 있는지?"
+      ]
+    }
   },
   "L23": {
-    "images": { "profile": "images/leaders/L23-seoun.jpg", "banner": "images/leaders/L23-seoun-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L23-seoun.jpg",
+      "banner": "images/leaders/L23-seoun-banner.jpg"
+    },
     "hero": "엔터테인먼트 산업의 권리를 보호합니다. 창작자의 가치를 법으로 지킵니다.",
     "identity": {
       "what": "연예·미디어·엔터테인먼트 분야의 계약, 분쟁, 권리 보호를 전담합니다.",
@@ -584,17 +1317,36 @@
       "approach": "대형 기획사 법무 경험을 바탕으로 업계 관행과 법률을 동시에 분석합니다."
     },
     "expertise": [
-      { "icon": "mic", "label": "전속계약", "desc": "연예인·아티스트 전속계약 법률 검토" },
-      { "icon": "movie", "label": "콘텐츠 계약", "desc": "영화·드라마·음악 제작 계약 분석" },
-      { "icon": "face", "label": "초상권", "desc": "퍼블리시티권·초상권 침해 대응" },
-      { "icon": "monetization_on", "label": "수익 배분", "desc": "저작권료·출연료 배분 구조 분석" }
+      {
+        "icon": "mic",
+        "label": "전속계약",
+        "desc": "연예인·아티스트 전속계약 법률 검토"
+      },
+      {
+        "icon": "movie",
+        "label": "콘텐츠 계약",
+        "desc": "영화·드라마·음악 제작 계약 분석"
+      },
+      {
+        "icon": "face",
+        "label": "초상권",
+        "desc": "퍼블리시티권·초상권 침해 대응"
+      },
+      {
+        "icon": "monetization_on",
+        "label": "수익 배분",
+        "desc": "저작권료·출연료 배분 구조 분석"
+      }
     ],
     "philosophy": "창작자의 권리가 보호될 때 좋은 콘텐츠가 탄생합니다. 공정한 계약이 건강한 산업의 기초입니다.",
     "impact": "엔터테인먼트 계약의 공정성 분석 체계를 구축했습니다. 아티스트 권리 보호를 위한 표준 계약 가이드를 확립했습니다.",
     "vision": "모든 창작자가 공정한 대우를 받는 엔터테인먼트 생태계를 만듭니다."
   },
   "L24": {
-    "images": { "profile": "images/leaders/L24-doul.jpg", "banner": "images/leaders/L24-doul-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L24-doul.jpg",
+      "banner": "images/leaders/L24-doul-banner.jpg"
+    },
     "hero": "부당한 세금에 맞섭니다. 납세자의 권리를 조세 절차로 지킵니다.",
     "identity": {
       "what": "세무조사 대응, 과세처분 불복, 조세심판 등 조세 쟁송을 전담합니다.",
@@ -606,18 +1358,41 @@
       "approach": "조세심판원 실무 경험을 바탕으로 불복 절차의 전략을 수립합니다."
     },
     "expertise": [
-      { "icon": "gavel", "label": "조세 불복", "desc": "이의신청·심사청구·심판청구 전략" },
-      { "icon": "search", "label": "세무조사 대응", "desc": "조사 단계별 대응 전략 수립" },
-      { "icon": "balance", "label": "조세 소송", "desc": "행정소송을 통한 과세 취소 청구" },
-      { "icon": "calculate", "label": "과세 분석", "desc": "과세 근거의 적법성 정밀 검토" },
-      { "icon": "shield", "label": "납세자 권리", "desc": "납세자보호관 제도 활용 안내" }
+      {
+        "icon": "gavel",
+        "label": "조세 불복",
+        "desc": "이의신청·심사청구·심판청구 전략"
+      },
+      {
+        "icon": "search",
+        "label": "세무조사 대응",
+        "desc": "조사 단계별 대응 전략 수립"
+      },
+      {
+        "icon": "balance",
+        "label": "조세 소송",
+        "desc": "행정소송을 통한 과세 취소 청구"
+      },
+      {
+        "icon": "calculate",
+        "label": "과세 분석",
+        "desc": "과세 근거의 적법성 정밀 검토"
+      },
+      {
+        "icon": "shield",
+        "label": "납세자 권리",
+        "desc": "납세자보호관 제도 활용 안내"
+      }
     ],
     "philosophy": "납세는 의무이지만, 부당한 과세에 불복하는 것은 권리입니다. 절차적 정의가 실체적 정의를 만듭니다.",
     "impact": "조세 불복 절차의 단계별 전략 체계를 구축했습니다. 유형별 성공 사례 데이터베이스를 확립했습니다.",
     "vision": "모든 납세자가 부당한 과세에 효과적으로 대응할 수 있는 환경을 만듭니다."
   },
   "L25": {
-    "images": { "profile": "images/leaders/L25-damwoo.jpg", "banner": "images/leaders/L25-damwoo-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L25-damwoo.jpg",
+      "banner": "images/leaders/L25-damwoo-banner.jpg"
+    },
     "hero": "군형법의 특수성을 정밀 분석합니다. 군인의 법적 권리를 지킵니다.",
     "identity": {
       "what": "군형법, 군사법원, 군내 인권 관련 법률 분석과 분쟁 해결을 전담합니다.",
@@ -629,17 +1404,36 @@
       "approach": "고등군사법원 군판사 경험을 바탕으로 군형법 특유의 쟁점을 정밀 분석합니다."
     },
     "expertise": [
-      { "icon": "military_tech", "label": "군형법", "desc": "항명·탈영·군무이탈 등 군 범죄 분석" },
-      { "icon": "gavel", "label": "군사재판", "desc": "군사법원 절차와 변론 전략" },
-      { "icon": "shield", "label": "군내 인권", "desc": "가혹행위·성범죄 피해자 보호" },
-      { "icon": "badge", "label": "징계 대응", "desc": "군 징계처분 불복 절차 안내" }
+      {
+        "icon": "military_tech",
+        "label": "군형법",
+        "desc": "항명·탈영·군무이탈 등 군 범죄 분석"
+      },
+      {
+        "icon": "gavel",
+        "label": "군사재판",
+        "desc": "군사법원 절차와 변론 전략"
+      },
+      {
+        "icon": "shield",
+        "label": "군내 인권",
+        "desc": "가혹행위·성범죄 피해자 보호"
+      },
+      {
+        "icon": "badge",
+        "label": "징계 대응",
+        "desc": "군 징계처분 불복 절차 안내"
+      }
     ],
     "philosophy": "군복을 입었다고 기본권이 사라지지 않습니다. 군인도 헌법이 보장하는 권리의 주체입니다.",
     "impact": "군형법 분쟁의 유형별 대응 체계를 구축했습니다. 장병 권리 보호를 위한 법률 가이드를 확립했습니다.",
     "vision": "군 내에서도 법치주의가 완전히 실현되는 환경을 만듭니다."
   },
   "L26": {
-    "images": { "profile": "images/leaders/L26-jinu.jpg", "banner": "images/leaders/L26-jinu-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L26-jinu.jpg",
+      "banner": "images/leaders/L26-jinu-banner.jpg"
+    },
     "hero": "아이디어를 법적 자산으로 만듭니다. 지식재산의 가치를 보호합니다.",
     "identity": {
       "what": "특허·상표·디자인·영업비밀 등 지식재산권 전반의 출원·등록·분쟁을 전담합니다.",
@@ -651,18 +1445,41 @@
       "approach": "변리사급 기술 이해와 특허법원급 법률 분석을 결합합니다."
     },
     "expertise": [
-      { "icon": "lightbulb", "label": "특허", "desc": "특허 출원·등록·침해 분석" },
-      { "icon": "branding_watermark", "label": "상표", "desc": "상표 등록·유사성 판단·분쟁 대응" },
-      { "icon": "design_services", "label": "디자인", "desc": "디자인 보호법 적용과 침해 판단" },
-      { "icon": "lock", "label": "영업비밀", "desc": "영업비밀 유출 방지와 구제 절차" },
-      { "icon": "balance", "label": "IP 소송", "desc": "지재권 침해 소송 전략 수립" }
+      {
+        "icon": "lightbulb",
+        "label": "특허",
+        "desc": "특허 출원·등록·침해 분석"
+      },
+      {
+        "icon": "branding_watermark",
+        "label": "상표",
+        "desc": "상표 등록·유사성 판단·분쟁 대응"
+      },
+      {
+        "icon": "design_services",
+        "label": "디자인",
+        "desc": "디자인 보호법 적용과 침해 판단"
+      },
+      {
+        "icon": "lock",
+        "label": "영업비밀",
+        "desc": "영업비밀 유출 방지와 구제 절차"
+      },
+      {
+        "icon": "balance",
+        "label": "IP 소송",
+        "desc": "지재권 침해 소송 전략 수립"
+      }
     ],
     "philosophy": "지식재산은 21세기 가장 중요한 자산입니다. 창조적 가치를 보호하는 것이 혁신 생태계의 기반입니다.",
     "impact": "지식재산 출원부터 분쟁 해결까지 통합 분석 체계를 구축했습니다. IP 포트폴리오 전략 수립을 지원합니다.",
     "vision": "모든 혁신 기업의 지식재산이 완벽하게 보호되는 환경을 만듭니다."
   },
   "L27": {
-    "images": { "profile": "images/leaders/L27-ruda.jpg", "banner": "images/leaders/L27-ruda-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L27-ruda.jpg",
+      "banner": "images/leaders/L27-ruda-banner.jpg"
+    },
     "hero": "환경과 법률의 균형을 찾습니다. 지속 가능한 미래를 법적으로 설계합니다.",
     "identity": {
       "what": "환경영향평가, 오염 책임, 환경 규제 관련 법률 분석을 전담합니다.",
@@ -674,17 +1491,36 @@
       "approach": "환경부 분쟁조정 경험을 바탕으로 과학적 근거와 법률 분석을 통합합니다."
     },
     "expertise": [
-      { "icon": "eco", "label": "환경영향평가", "desc": "개발사업 환경영향평가 법률 분석" },
-      { "icon": "water_drop", "label": "오염 책임", "desc": "토양·수질·대기 오염 배상 책임" },
-      { "icon": "recycling", "label": "폐기물 규제", "desc": "폐기물관리법 준수와 분쟁 대응" },
-      { "icon": "forest", "label": "자연 보전", "desc": "자연공원·생태계 보전 법률 분석" }
+      {
+        "icon": "eco",
+        "label": "환경영향평가",
+        "desc": "개발사업 환경영향평가 법률 분석"
+      },
+      {
+        "icon": "water_drop",
+        "label": "오염 책임",
+        "desc": "토양·수질·대기 오염 배상 책임"
+      },
+      {
+        "icon": "recycling",
+        "label": "폐기물 규제",
+        "desc": "폐기물관리법 준수와 분쟁 대응"
+      },
+      {
+        "icon": "forest",
+        "label": "자연 보전",
+        "desc": "자연공원·생태계 보전 법률 분석"
+      }
     ],
     "philosophy": "환경 보호와 경제 발전은 대립하지 않습니다. 법률적 균형이 지속 가능한 발전의 열쇠입니다.",
     "impact": "환경 규제 준수 체크리스트와 리스크 진단 체계를 구축했습니다. 환경 분쟁 조정의 효율적 절차를 확립했습니다.",
     "vision": "환경과 개발이 조화롭게 공존하는 법적 프레임워크를 완성합니다."
   },
   "L28": {
-    "images": { "profile": "images/leaders/L28-haeseul.jpg", "banner": "images/leaders/L28-haeseul-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L28-haeseul.jpg",
+      "banner": "images/leaders/L28-haeseul-banner.jpg"
+    },
     "hero": "국경을 넘는 물건의 법률을 다룹니다. 무역과 관세의 최적 경로를 설계합니다.",
     "identity": {
       "what": "수출입 규제, 관세 분쟁, FTA 활용, 원산지 판정 등 무역·관세법을 분석합니다.",
@@ -696,17 +1532,36 @@
       "approach": "관세사급 실무와 관세청 출신급 경험을 결합하여 통관·관세 리스크를 분석합니다."
     },
     "expertise": [
-      { "icon": "local_shipping", "label": "통관 절차", "desc": "수출입 통관 법적 요건 분석" },
-      { "icon": "calculate", "label": "관세 분류", "desc": "HS 코드 분류와 세율 적용 분석" },
-      { "icon": "flag", "label": "원산지 판정", "desc": "FTA 원산지 규정 활용 전략" },
-      { "icon": "gavel", "label": "관세 불복", "desc": "과세처분 불복과 심판 청구" }
+      {
+        "icon": "local_shipping",
+        "label": "통관 절차",
+        "desc": "수출입 통관 법적 요건 분석"
+      },
+      {
+        "icon": "calculate",
+        "label": "관세 분류",
+        "desc": "HS 코드 분류와 세율 적용 분석"
+      },
+      {
+        "icon": "flag",
+        "label": "원산지 판정",
+        "desc": "FTA 원산지 규정 활용 전략"
+      },
+      {
+        "icon": "gavel",
+        "label": "관세 불복",
+        "desc": "과세처분 불복과 심판 청구"
+      }
     ],
     "philosophy": "무역에서 관세는 비용이 아니라 전략입니다. FTA를 제대로 활용하면 관세가 경쟁력이 됩니다.",
     "impact": "FTA 활용 전략과 관세 최적화 분석 체계를 구축했습니다. 통관 리스크 사전 진단 프로세스를 확립했습니다.",
     "vision": "한국 무역 기업의 관세 경쟁력을 세계 최고 수준으로 높이는 것이 목표입니다."
   },
   "L29": {
-    "images": { "profile": "images/leaders/L29-raon.jpg", "banner": "images/leaders/L29-raon-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L29-raon.jpg",
+      "banner": "images/leaders/L29-raon-banner.jpg"
+    },
     "hero": "게임과 콘텐츠의 법적 구조를 설계합니다. 가상 세계의 권리를 현실에서 보호합니다.",
     "identity": {
       "what": "게임·디지털 콘텐츠·가상자산 관련 법률 분석과 규제 자문을 수행합니다.",
@@ -718,17 +1573,36 @@
       "approach": "게임물관리위원회 자문 경험을 바탕으로 규제와 산업의 접점을 분석합니다."
     },
     "expertise": [
-      { "icon": "sports_esports", "label": "게임 규제", "desc": "게임산업법·등급분류 규제 분석" },
-      { "icon": "casino", "label": "확률형 아이템", "desc": "확률 공개·환불 의무 법적 분석" },
-      { "icon": "token", "label": "가상자산", "desc": "NFT·가상화폐 법적 지위 분석" },
-      { "icon": "live_tv", "label": "스트리밍", "desc": "OTT·MCN 콘텐츠 계약 법률 검토" }
+      {
+        "icon": "sports_esports",
+        "label": "게임 규제",
+        "desc": "게임산업법·등급분류 규제 분석"
+      },
+      {
+        "icon": "casino",
+        "label": "확률형 아이템",
+        "desc": "확률 공개·환불 의무 법적 분석"
+      },
+      {
+        "icon": "token",
+        "label": "가상자산",
+        "desc": "NFT·가상화폐 법적 지위 분석"
+      },
+      {
+        "icon": "live_tv",
+        "label": "스트리밍",
+        "desc": "OTT·MCN 콘텐츠 계약 법률 검토"
+      }
     ],
     "philosophy": "가상 세계의 권리도 현실의 법률로 보호받아야 합니다. 새로운 기술에 맞는 새로운 법적 사고가 필요합니다.",
     "impact": "게임·디지털 콘텐츠 분야의 규제 분석 프레임워크를 구축했습니다. 신규 법적 쟁점의 분석 속도를 높였습니다.",
     "vision": "디지털 콘텐츠 산업이 법적 불확실성 없이 성장할 수 있는 환경을 만듭니다."
   },
   "L30": {
-    "images": { "profile": "images/leaders/L30-damwoo.jpg", "banner": "images/leaders/L30-damwoo-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L30-damwoo.jpg",
+      "banner": "images/leaders/L30-damwoo-banner.jpg"
+    },
     "hero": "노동자의 권리와 기업의 의무를 연결합니다. 균형 잡힌 노동 관계를 설계합니다.",
     "identity": {
       "what": "근로계약, 해고·징계, 임금, 노조 관련 노동법 전반을 분석합니다.",
@@ -740,18 +1614,62 @@
       "approach": "공인노무사급 실무와 노동위원회 경험을 결합하여 노동 분쟁을 분석합니다."
     },
     "expertise": [
-      { "icon": "work", "label": "근로 관계", "desc": "근로계약·취업규칙 법률 분석" },
-      { "icon": "block", "label": "해고·징계", "desc": "부당해고·징계 구제 절차" },
-      { "icon": "payments", "label": "임금·퇴직금", "desc": "체불임금·퇴직금 청구 전략" },
-      { "icon": "groups", "label": "노사 관계", "desc": "단체교섭·노조 설립 법률 분석" },
-      { "icon": "report", "label": "직장 내 괴롭힘", "desc": "괴롭힘 신고·보호 절차 안내" }
+      {
+        "icon": "work",
+        "label": "근로 관계",
+        "desc": "근로계약·취업규칙 법률 분석"
+      },
+      {
+        "icon": "block",
+        "label": "해고·징계",
+        "desc": "부당해고·징계 구제 절차"
+      },
+      {
+        "icon": "payments",
+        "label": "임금·퇴직금",
+        "desc": "체불임금·퇴직금 청구 전략"
+      },
+      {
+        "icon": "groups",
+        "label": "노사 관계",
+        "desc": "단체교섭·노조 설립 법률 분석"
+      },
+      {
+        "icon": "report",
+        "label": "직장 내 괴롭힘",
+        "desc": "괴롭힘 신고·보호 절차 안내"
+      }
     ],
     "philosophy": "건강한 노동 관계는 사회의 기반입니다. 노동자의 권리와 기업의 지속 가능성을 동시에 지키는 것이 목표입니다.",
     "impact": "노동 분쟁 유형별 대응 체계를 구축했습니다. 부당해고 구제부터 임금 청구까지 단계별 가이드를 확립했습니다.",
-    "vision": "모든 근로자가 법적 보호를 받고, 기업은 예측 가능한 노동 환경에서 운영할 수 있게 합니다."
+    "vision": "모든 근로자가 법적 보호를 받고, 기업은 예측 가능한 노동 환경에서 운영할 수 있게 합니다.",
+    "decision_framework": {
+      "steps": [
+        "1단계: 근로관계 성립 여부 확인",
+        "2단계: 문제 유형 분류 (해고/임금/산재/차별)",
+        "3단계: 근로기준법 위반 여부 판단",
+        "4단계: 구제절차 선택 (노동위원회/법원/근로감독관)",
+        "5단계: 증거 확보 및 전략 수립"
+      ],
+      "common_mistakes": [
+        "부당해고 구제신청 3개월 기한 도과",
+        "퇴직금 계산 시 평균임금 산정 오류",
+        "근로계약서 미작성 상태에서 대응 곤란",
+        "임금체불 시 고용노동부 신고 전 증거 미확보"
+      ],
+      "key_questions": [
+        "정규직/계약직/일용직 중 어느 유형인지?",
+        "근로계약서를 작성했는지?",
+        "문제 발생 시점과 경위는?",
+        "급여명세서·출퇴근 기록 등 증거는?"
+      ]
+    }
   },
   "L31": {
-    "images": { "profile": "images/leaders/L31-roun.jpg", "banner": "images/leaders/L31-roun-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L31-roun.jpg",
+      "banner": "images/leaders/L31-roun-banner.jpg"
+    },
     "hero": "행정의 오류를 바로잡습니다. 국가와 시민 사이의 법적 균형을 지킵니다.",
     "identity": {
       "what": "행정처분 불복, 인허가 분쟁, 국가배상 등 행정법 전반을 분석합니다.",
@@ -763,18 +1681,41 @@
       "approach": "행정법원 수석부장판사급 경험을 바탕으로 행정 쟁송의 전략을 수립합니다."
     },
     "expertise": [
-      { "icon": "account_balance", "label": "행정소송", "desc": "처분 취소·무효 확인 소송 전략" },
-      { "icon": "article", "label": "행정심판", "desc": "행정심판 청구와 절차 분석" },
-      { "icon": "approval", "label": "인허가", "desc": "인허가 취소·거부 처분 대응" },
-      { "icon": "shield", "label": "국가배상", "desc": "공무원 위법행위로 인한 손해배상" },
-      { "icon": "rule", "label": "규제 분석", "desc": "행정 규제의 적법성 검토" }
+      {
+        "icon": "account_balance",
+        "label": "행정소송",
+        "desc": "처분 취소·무효 확인 소송 전략"
+      },
+      {
+        "icon": "article",
+        "label": "행정심판",
+        "desc": "행정심판 청구와 절차 분석"
+      },
+      {
+        "icon": "approval",
+        "label": "인허가",
+        "desc": "인허가 취소·거부 처분 대응"
+      },
+      {
+        "icon": "shield",
+        "label": "국가배상",
+        "desc": "공무원 위법행위로 인한 손해배상"
+      },
+      {
+        "icon": "rule",
+        "label": "규제 분석",
+        "desc": "행정 규제의 적법성 검토"
+      }
     ],
     "philosophy": "행정법은 권력의 남용을 견제하는 법입니다. 시민이 국가를 상대로 권리를 주장할 수 있어야 진정한 법치입니다.",
     "impact": "행정 처분 유형별 불복 전략 체계를 구축했습니다. 행정심판·행정소송의 단계별 가이드를 확립했습니다.",
     "vision": "모든 시민이 위법한 행정에 효과적으로 대응할 수 있는 환경을 만듭니다."
   },
   "L32": {
-    "images": { "profile": "images/leaders/L32-bareum.jpg", "banner": "images/leaders/L32-bareum-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L32-bareum.jpg",
+      "banner": "images/leaders/L32-bareum-banner.jpg"
+    },
     "hero": "시장의 공정한 질서를 지킵니다. 독과점과 불공정 행위를 분석합니다.",
     "identity": {
       "what": "공정거래법, 하도급법, 대리점법 등 경쟁법 전반을 분석합니다.",
@@ -786,17 +1727,36 @@
       "approach": "공정거래위원회 실무 경험을 바탕으로 경쟁법 쟁점을 정밀 분석합니다."
     },
     "expertise": [
-      { "icon": "balance", "label": "시장지배력", "desc": "시장지배적 지위 남용 행위 분석" },
-      { "icon": "group_work", "label": "담합·카르텔", "desc": "부당 공동행위 적발과 대응" },
-      { "icon": "storefront", "label": "불공정거래", "desc": "불공정 거래 행위 유형별 분석" },
-      { "icon": "receipt_long", "label": "하도급", "desc": "하도급법 위반 유형과 구제 방법" }
+      {
+        "icon": "balance",
+        "label": "시장지배력",
+        "desc": "시장지배적 지위 남용 행위 분석"
+      },
+      {
+        "icon": "group_work",
+        "label": "담합·카르텔",
+        "desc": "부당 공동행위 적발과 대응"
+      },
+      {
+        "icon": "storefront",
+        "label": "불공정거래",
+        "desc": "불공정 거래 행위 유형별 분석"
+      },
+      {
+        "icon": "receipt_long",
+        "label": "하도급",
+        "desc": "하도급법 위반 유형과 구제 방법"
+      }
     ],
     "philosophy": "공정한 시장은 저절로 만들어지지 않습니다. 법적 감시와 견제가 건전한 경쟁의 기반입니다.",
     "impact": "공정거래 위반 유형별 분석 체계를 구축했습니다. 하도급·대리점 분쟁의 구제 절차를 체계화했습니다.",
     "vision": "모든 기업이 공정한 환경에서 경쟁할 수 있는 시장 질서를 만듭니다."
   },
   "L33": {
-    "images": { "profile": "images/leaders/L33-byeoli.jpg", "banner": "images/leaders/L33-byeoli-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L33-byeoli.jpg",
+      "banner": "images/leaders/L33-byeoli-banner.jpg"
+    },
     "hero": "우주와 항공의 새로운 법적 프론티어를 개척합니다.",
     "identity": {
       "what": "우주개발, 항공 규제, 위성·드론 관련 법률을 분석합니다.",
@@ -808,17 +1768,36 @@
       "approach": "항공우주연구원 법무 경험을 바탕으로 우주·항공 규제를 체계적으로 분석합니다."
     },
     "expertise": [
-      { "icon": "rocket", "label": "우주 개발법", "desc": "우주개발진흥법·우주활동 책임 분석" },
-      { "icon": "flight", "label": "항공 규제", "desc": "항공안전법·항공사업법 분석" },
-      { "icon": "satellite_alt", "label": "위성·주파수", "desc": "위성 발사·주파수 배분 법률 분석" },
-      { "icon": "flight_takeoff", "label": "드론 규제", "desc": "무인항공기 운영 규제와 인허가" }
+      {
+        "icon": "rocket",
+        "label": "우주 개발법",
+        "desc": "우주개발진흥법·우주활동 책임 분석"
+      },
+      {
+        "icon": "flight",
+        "label": "항공 규제",
+        "desc": "항공안전법·항공사업법 분석"
+      },
+      {
+        "icon": "satellite_alt",
+        "label": "위성·주파수",
+        "desc": "위성 발사·주파수 배분 법률 분석"
+      },
+      {
+        "icon": "flight_takeoff",
+        "label": "드론 규제",
+        "desc": "무인항공기 운영 규제와 인허가"
+      }
     ],
     "philosophy": "우주는 인류 공동의 유산입니다. 새로운 영역에도 법치주의의 원칙이 적용되어야 합니다.",
     "impact": "우주항공 법률의 체계적 분석 프레임워크를 구축했습니다. 드론·위성 규제 가이드를 확립했습니다.",
     "vision": "한국 우주항공 산업의 법적 기반을 세계 수준으로 끌어올리는 것이 목표입니다."
   },
   "L34": {
-    "images": { "profile": "images/leaders/L34-jinu.jpg", "banner": "images/leaders/L34-jinu-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L34-jinu.jpg",
+      "banner": "images/leaders/L34-jinu-banner.jpg"
+    },
     "hero": "개인정보는 디지털 시대의 인격권입니다. 정보 주체의 권리를 지킵니다.",
     "identity": {
       "what": "개인정보 보호법, GDPR, 정보 유출 사고 대응 등을 전담합니다.",
@@ -830,18 +1809,62 @@
       "approach": "개인정보보호위원회 실무 경험을 바탕으로 규제 준수 전략을 수립합니다."
     },
     "expertise": [
-      { "icon": "privacy_tip", "label": "개인정보보호", "desc": "개인정보보호법 준수 체계 구축" },
-      { "icon": "public", "label": "GDPR 대응", "desc": "EU 일반개인정보보호규정 분석" },
-      { "icon": "warning", "label": "유출 사고", "desc": "정보 유출 시 법적 대응 절차" },
-      { "icon": "verified_user", "label": "동의 관리", "desc": "적법한 수집·활용 동의 구조 설계" },
-      { "icon": "cloud_sync", "label": "해외 이전", "desc": "개인정보 국외 이전 적법성 분석" }
+      {
+        "icon": "privacy_tip",
+        "label": "개인정보보호",
+        "desc": "개인정보보호법 준수 체계 구축"
+      },
+      {
+        "icon": "public",
+        "label": "GDPR 대응",
+        "desc": "EU 일반개인정보보호규정 분석"
+      },
+      {
+        "icon": "warning",
+        "label": "유출 사고",
+        "desc": "정보 유출 시 법적 대응 절차"
+      },
+      {
+        "icon": "verified_user",
+        "label": "동의 관리",
+        "desc": "적법한 수집·활용 동의 구조 설계"
+      },
+      {
+        "icon": "cloud_sync",
+        "label": "해외 이전",
+        "desc": "개인정보 국외 이전 적법성 분석"
+      }
     ],
     "philosophy": "개인정보는 기술이 아니라 인격의 문제입니다. 데이터 활용과 보호의 균형이 디지털 신뢰의 기반입니다.",
     "impact": "기업용 개인정보 컴플라이언스 체크리스트를 구축했습니다. 유출 사고 대응 프로세스를 확립했습니다.",
-    "vision": "데이터 활용과 개인정보 보호가 양립하는 건전한 데이터 생태계를 만듭니다."
+    "vision": "데이터 활용과 개인정보 보호가 양립하는 건전한 데이터 생태계를 만듭니다.",
+    "decision_framework": {
+      "steps": [
+        "1단계: 개인정보 유형 확인 (일반/민감/고유식별)",
+        "2단계: 수집·이용 적법성 검토",
+        "3단계: 유출·침해 발생 시 피해 범위 파악",
+        "4단계: 구제수단 선택 (시정명령/손해배상/형사고발)",
+        "5단계: 재발 방지 대책 수립"
+      ],
+      "common_mistakes": [
+        "정보주체 동의 없이 제3자 제공",
+        "개인정보 유출 통지 의무 미이행",
+        "파기 의무 기간 경과 후에도 보유",
+        "해외 이전 시 적정성 평가 누락"
+      ],
+      "key_questions": [
+        "어떤 개인정보가 관련되는지?",
+        "유출/오남용/무단수집 중 어떤 상황인지?",
+        "피해 규모(영향받는 정보주체 수)는?",
+        "현재까지 취한 조치는?"
+      ]
+    }
   },
   "L35": {
-    "images": { "profile": "images/leaders/L35-maru.jpg", "banner": "images/leaders/L35-maru-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L35-maru.jpg",
+      "banner": "images/leaders/L35-maru-banner.jpg"
+    },
     "hero": "헌법은 모든 법의 근본입니다. 기본권의 최후 보루를 지킵니다.",
     "identity": {
       "what": "헌법소원, 위헌법률심판, 기본권 침해 등 헌법 쟁점을 분석합니다.",
@@ -853,17 +1876,36 @@
       "approach": "헌법재판소 연구관 경험을 바탕으로 헌법 쟁점을 정밀 분석합니다."
     },
     "expertise": [
-      { "icon": "menu_book", "label": "헌법소원", "desc": "기본권 침해 헌법소원 심판 분석" },
-      { "icon": "gavel", "label": "위헌심판", "desc": "위헌법률심판 제청 요건과 절차" },
-      { "icon": "shield", "label": "기본권", "desc": "자유권·평등권·사회권 침해 분석" },
-      { "icon": "balance", "label": "권한쟁의", "desc": "국가기관 간 권한 분쟁 분석" }
+      {
+        "icon": "menu_book",
+        "label": "헌법소원",
+        "desc": "기본권 침해 헌법소원 심판 분석"
+      },
+      {
+        "icon": "gavel",
+        "label": "위헌심판",
+        "desc": "위헌법률심판 제청 요건과 절차"
+      },
+      {
+        "icon": "shield",
+        "label": "기본권",
+        "desc": "자유권·평등권·사회권 침해 분석"
+      },
+      {
+        "icon": "balance",
+        "label": "권한쟁의",
+        "desc": "국가기관 간 권한 분쟁 분석"
+      }
     ],
     "philosophy": "헌법은 살아있는 문서입니다. 시대와 사회의 변화에 맞게 기본권의 범위를 확장해나가는 것이 헌법의 사명입니다.",
     "impact": "헌법 쟁점의 유형별 분석 체계를 구축했습니다. 기본권 침해 구제를 위한 절차 가이드를 확립했습니다.",
     "vision": "모든 국민이 헌법이 보장하는 기본권을 실질적으로 누릴 수 있는 사회를 만듭니다."
   },
   "L36": {
-    "images": { "profile": "images/leaders/L36-dana.jpg", "banner": "images/leaders/L36-dana-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L36-dana.jpg",
+      "banner": "images/leaders/L36-dana-banner.jpg"
+    },
     "hero": "문화유산과 종교의 가치를 법으로 보호합니다.",
     "identity": {
       "what": "문화재 보호, 종교 법인, 전통문화 관련 법률 분석을 수행합니다.",
@@ -875,17 +1917,36 @@
       "approach": "문화재청 자문 경험을 바탕으로 문화·종교 분야의 법적 쟁점을 분석합니다."
     },
     "expertise": [
-      { "icon": "temple_buddhist", "label": "문화재 보호", "desc": "문화재보호법 적용과 규제 분석" },
-      { "icon": "church", "label": "종교 법인", "desc": "종교단체 법인 설립·운영 법률" },
-      { "icon": "museum", "label": "문화유산", "desc": "무형문화재·전통지식 보호 체계" },
-      { "icon": "landscape", "label": "역사 환경", "desc": "역사문화환경 보전 규제 분석" }
+      {
+        "icon": "temple_buddhist",
+        "label": "문화재 보호",
+        "desc": "문화재보호법 적용과 규제 분석"
+      },
+      {
+        "icon": "church",
+        "label": "종교 법인",
+        "desc": "종교단체 법인 설립·운영 법률"
+      },
+      {
+        "icon": "museum",
+        "label": "문화유산",
+        "desc": "무형문화재·전통지식 보호 체계"
+      },
+      {
+        "icon": "landscape",
+        "label": "역사 환경",
+        "desc": "역사문화환경 보전 규제 분석"
+      }
     ],
     "philosophy": "문화는 공동체의 정체성입니다. 법적 보호가 문화의 지속 가능성을 보장합니다.",
     "impact": "문화재·종교 법률의 체계적 분석 프레임워크를 구축했습니다.",
     "vision": "한국의 문화유산이 완벽한 법적 보호 아래 다음 세대로 전승되는 환경을 만듭니다."
   },
   "L37": {
-    "images": { "profile": "images/leaders/L37-yesol.jpg", "banner": "images/leaders/L37-yesol-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L37-yesol.jpg",
+      "banner": "images/leaders/L37-yesol-banner.jpg"
+    },
     "hero": "소년의 미래를 보호합니다. 처벌이 아닌 성장을 위한 법적 지원을 합니다.",
     "identity": {
       "what": "소년법, 소년보호 처분, 학교폭력 관련 법률을 분석합니다.",
@@ -897,17 +1958,57 @@
       "approach": "가정법원 소년부 실무 경험을 바탕으로 소년 사건의 법적 쟁점을 분석합니다."
     },
     "expertise": [
-      { "icon": "child_care", "label": "소년 보호", "desc": "소년법 적용 범위와 보호 처분 분석" },
-      { "icon": "school", "label": "학교폭력", "desc": "학교폭력예방법 절차와 구제 방법" },
-      { "icon": "family_restroom", "label": "아동 보호", "desc": "아동학대 신고·보호 법적 절차" },
-      { "icon": "psychology", "label": "교정 처우", "desc": "소년원·보호관찰 관련 법률 분석" }
+      {
+        "icon": "child_care",
+        "label": "소년 보호",
+        "desc": "소년법 적용 범위와 보호 처분 분석"
+      },
+      {
+        "icon": "school",
+        "label": "학교폭력",
+        "desc": "학교폭력예방법 절차와 구제 방법"
+      },
+      {
+        "icon": "family_restroom",
+        "label": "아동 보호",
+        "desc": "아동학대 신고·보호 법적 절차"
+      },
+      {
+        "icon": "psychology",
+        "label": "교정 처우",
+        "desc": "소년원·보호관찰 관련 법률 분석"
+      }
     ],
     "philosophy": "소년 사건에서 법률의 역할은 처벌이 아니라 기회를 주는 것입니다. 한 번의 실수가 평생을 결정하지 않도록 합니다.",
     "impact": "소년 사건의 유형별 대응 체계를 구축했습니다. 피해자와 가해자 모두를 위한 보호 절차를 확립했습니다.",
-    "vision": "모든 아이가 실수를 만회할 기회를 가질 수 있는 법적 환경을 만듭니다."
+    "vision": "모든 아이가 실수를 만회할 기회를 가질 수 있는 법적 환경을 만듭니다.",
+    "decision_framework": {
+      "steps": [
+        "1단계: 학교폭력 유형 확인 (물리적/언어적/사이버/따돌림)",
+        "2단계: 피해 경위 및 증거 확보",
+        "3단계: 학폭위 심의 절차 안내",
+        "4단계: 가해자 조치·피해자 보호조치 검토",
+        "5단계: 형사고소/민사소송 가능성 분석"
+      ],
+      "common_mistakes": [
+        "증거(녹음/캡처/진단서) 없이 신고",
+        "학폭위 결정에 대한 재심청구 기한 도과",
+        "가해학생 부모와의 합의를 서면 없이 진행",
+        "학교 측 은폐 시도에 적절히 대응하지 못함"
+      ],
+      "key_questions": [
+        "피해자 나이와 학년은?",
+        "어떤 유형의 폭력인지?",
+        "학교에 신고했는지, 학폭위가 열렸는지?",
+        "진단서·증거자료를 확보했는지?"
+      ]
+    }
   },
   "L38": {
-    "images": { "profile": "images/leaders/L38-seulbi.jpg", "banner": "images/leaders/L38-seulbi-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L38-seulbi.jpg",
+      "banner": "images/leaders/L38-seulbi-banner.jpg"
+    },
     "hero": "소비자의 권리를 지킵니다. 기업과 소비자 사이의 공정한 균형을 만듭니다.",
     "identity": {
       "what": "소비자 보호, 제조물 책임, 전자상거래 분쟁 등 소비자법을 분석합니다.",
@@ -919,17 +2020,36 @@
       "approach": "한국소비자원 분쟁조정 경험을 바탕으로 소비자 구제 절차를 안내합니다."
     },
     "expertise": [
-      { "icon": "shopping_cart", "label": "소비자 보호", "desc": "소비자기본법 적용과 권리 분석" },
-      { "icon": "report_problem", "label": "제조물 책임", "desc": "결함 상품 피해 배상 청구 분석" },
-      { "icon": "computer", "label": "전자상거래", "desc": "온라인 거래 분쟁과 환불 규정" },
-      { "icon": "handshake", "label": "분쟁 조정", "desc": "소비자분쟁조정 절차 안내" }
+      {
+        "icon": "shopping_cart",
+        "label": "소비자 보호",
+        "desc": "소비자기본법 적용과 권리 분석"
+      },
+      {
+        "icon": "report_problem",
+        "label": "제조물 책임",
+        "desc": "결함 상품 피해 배상 청구 분석"
+      },
+      {
+        "icon": "computer",
+        "label": "전자상거래",
+        "desc": "온라인 거래 분쟁과 환불 규정"
+      },
+      {
+        "icon": "handshake",
+        "label": "분쟁 조정",
+        "desc": "소비자분쟁조정 절차 안내"
+      }
     ],
     "philosophy": "소비자 보호는 시장 경제의 기본 전제입니다. 소비자가 안심할 수 있어야 시장이 건강합니다.",
     "impact": "소비자 분쟁 유형별 구제 체계를 구축했습니다. 온라인·오프라인 거래 피해 대응 가이드를 확립했습니다.",
     "vision": "모든 소비자가 안전하게 거래하고, 피해 시 신속하게 구제받는 환경을 만듭니다."
   },
   "L39": {
-    "images": { "profile": "images/leaders/L39-gaon.jpg", "banner": "images/leaders/L39-gaon-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L39-gaon.jpg",
+      "banner": "images/leaders/L39-gaon-banner.jpg"
+    },
     "hero": "정보통신의 법적 인프라를 설계합니다. 연결의 시대에 규제의 균형을 찾습니다.",
     "identity": {
       "what": "통신 규제, 방송법, 인터넷 서비스 관련 법률을 분석합니다.",
@@ -941,17 +2061,36 @@
       "approach": "방통위 자문 경험을 바탕으로 ICT 규제의 현황과 방향을 분석합니다."
     },
     "expertise": [
-      { "icon": "cell_tower", "label": "통신 규제", "desc": "전기통신사업법 규제 분석" },
-      { "icon": "tv", "label": "방송법", "desc": "방송법·IPTV법 규제 분석" },
-      { "icon": "wifi", "label": "인터넷 규제", "desc": "정보통신망법 적용과 쟁점 분석" },
-      { "icon": "speed", "label": "망 중립성", "desc": "망 중립성 원칙과 규제 분석" }
+      {
+        "icon": "cell_tower",
+        "label": "통신 규제",
+        "desc": "전기통신사업법 규제 분석"
+      },
+      {
+        "icon": "tv",
+        "label": "방송법",
+        "desc": "방송법·IPTV법 규제 분석"
+      },
+      {
+        "icon": "wifi",
+        "label": "인터넷 규제",
+        "desc": "정보통신망법 적용과 쟁점 분석"
+      },
+      {
+        "icon": "speed",
+        "label": "망 중립성",
+        "desc": "망 중립성 원칙과 규제 분석"
+      }
     ],
     "philosophy": "규제는 혁신의 적이 아닙니다. 합리적 규제가 건전한 ICT 생태계의 토대입니다.",
     "impact": "ICT 규제 환경의 체계적 분석 프레임워크를 구축했습니다.",
     "vision": "기술 혁신과 합리적 규제가 조화로운 정보통신 환경을 만듭니다."
   },
   "L40": {
-    "images": { "profile": "images/leaders/L40-hangyeol.jpg", "banner": "images/leaders/L40-hangyeol-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L40-hangyeol.jpg",
+      "banner": "images/leaders/L40-hangyeol-banner.jpg"
+    },
     "hero": "인권은 모든 법의 출발점입니다. 차별 없는 사회를 법으로 실현합니다.",
     "identity": {
       "what": "차별 금지, 인권 침해, 소수자 권리 보호 등 인권법을 분석합니다.",
@@ -963,17 +2102,36 @@
       "approach": "국가인권위원회 실무 경험을 바탕으로 인권 침해 구제 절차를 안내합니다."
     },
     "expertise": [
-      { "icon": "diversity_3", "label": "차별 금지", "desc": "고용·교육·서비스 차별 구제 분석" },
-      { "icon": "shield", "label": "인권 구제", "desc": "국가인권위원회 진정·조사 절차" },
-      { "icon": "accessibility_new", "label": "소수자 권리", "desc": "이주민·성소수자·장애인 권리 보호" },
-      { "icon": "record_voice_over", "label": "표현의 자유", "desc": "표현의 자유와 혐오 표현 경계 분석" }
+      {
+        "icon": "diversity_3",
+        "label": "차별 금지",
+        "desc": "고용·교육·서비스 차별 구제 분석"
+      },
+      {
+        "icon": "shield",
+        "label": "인권 구제",
+        "desc": "국가인권위원회 진정·조사 절차"
+      },
+      {
+        "icon": "accessibility_new",
+        "label": "소수자 권리",
+        "desc": "이주민·성소수자·장애인 권리 보호"
+      },
+      {
+        "icon": "record_voice_over",
+        "label": "표현의 자유",
+        "desc": "표현의 자유와 혐오 표현 경계 분석"
+      }
     ],
     "philosophy": "인권은 보편적 가치입니다. 다수의 편의를 위해 소수의 권리가 희생되어서는 안 됩니다.",
     "impact": "인권 침해 유형별 구제 체계를 구축했습니다. 차별 시정을 위한 법적 절차 가이드를 확립했습니다.",
     "vision": "모든 사람이 존엄하게 대우받는 사회를 법률적으로 뒷받침합니다."
   },
   "L41": {
-    "images": { "profile": "images/leaders/L41-sandeul.jpg", "banner": "images/leaders/L41-sandeul-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L41-sandeul.jpg",
+      "banner": "images/leaders/L41-sandeul-banner.jpg"
+    },
     "hero": "가족 사이의 갈등을 법으로 풀어냅니다. 관계의 상처를 최소화합니다.",
     "identity": {
       "what": "이혼, 양육권, 재산 분할, 가족 관계 등 가사 사건을 전담합니다.",
@@ -985,18 +2143,62 @@
       "approach": "가정법원 가사 전문법관급 경험을 바탕으로 감정과 법리를 분리하여 분석합니다."
     },
     "expertise": [
-      { "icon": "family_restroom", "label": "이혼 절차", "desc": "협의·재판 이혼 절차와 요건 분석" },
-      { "icon": "child_care", "label": "양육권", "desc": "친권·양육권 결정 기준 분석" },
-      { "icon": "account_balance_wallet", "label": "재산 분할", "desc": "혼인 재산 분할 비율 산정" },
-      { "icon": "payments", "label": "위자료", "desc": "위자료·양육비 산정 기준 분석" },
-      { "icon": "shield", "label": "보호 명령", "desc": "가정폭력 보호 처분 절차 안내" }
+      {
+        "icon": "family_restroom",
+        "label": "이혼 절차",
+        "desc": "협의·재판 이혼 절차와 요건 분석"
+      },
+      {
+        "icon": "child_care",
+        "label": "양육권",
+        "desc": "친권·양육권 결정 기준 분석"
+      },
+      {
+        "icon": "account_balance_wallet",
+        "label": "재산 분할",
+        "desc": "혼인 재산 분할 비율 산정"
+      },
+      {
+        "icon": "payments",
+        "label": "위자료",
+        "desc": "위자료·양육비 산정 기준 분석"
+      },
+      {
+        "icon": "shield",
+        "label": "보호 명령",
+        "desc": "가정폭력 보호 처분 절차 안내"
+      }
     ],
     "philosophy": "가사 사건에서 가장 중요한 것은 아이입니다. 부모의 갈등이 아이의 미래를 해치지 않도록 합니다.",
     "impact": "가사 사건의 유형별 분석 체계를 구축했습니다. 양육비 산정표 기반의 정밀 분석을 지원합니다.",
-    "vision": "모든 가족 분쟁에서 합리적이고 공정한 해결이 가능한 환경을 만듭니다."
+    "vision": "모든 가족 분쟁에서 합리적이고 공정한 해결이 가능한 환경을 만듭니다.",
+    "decision_framework": {
+      "steps": [
+        "1단계: 이혼 유형 결정 (협의/재판)",
+        "2단계: 재산분할 대상 확인",
+        "3단계: 양육권·친권 관련 사항 검토",
+        "4단계: 위자료 청구 가능성 분석",
+        "5단계: 면접교섭권 등 사후관계 정리"
+      ],
+      "common_mistakes": [
+        "혼인 중 재산 증거 확보 없이 이혼 진행",
+        "양육비 산정 기준 미파악으로 불리한 합의",
+        "재산분할 청구 2년 제척기간 도과",
+        "감정적 대응으로 재판에서 불리해짐"
+      ],
+      "key_questions": [
+        "이혼 사유(부정행위/폭행/성격차이 등)는?",
+        "자녀가 있는지, 나이와 현재 양육 상황은?",
+        "혼인 기간과 부부 공동 재산 내역은?",
+        "배우자의 이혼 의사는?"
+      ]
+    }
   },
   "L42": {
-    "images": { "profile": "images/leaders/L42-haram.jpg", "banner": "images/leaders/L42-haram-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L42-haram.jpg",
+      "banner": "images/leaders/L42-haram-banner.jpg"
+    },
     "hero": "창작물의 가치를 지킵니다. 저작권의 경계를 정밀하게 분석합니다.",
     "identity": {
       "what": "저작권 등록·침해·라이선스 관련 법률 분석을 전담합니다.",
@@ -1008,17 +2210,36 @@
       "approach": "저작권위원회 심의 경험을 바탕으로 저작권 쟁점을 정밀 분석합니다."
     },
     "expertise": [
-      { "icon": "copyright", "label": "저작권 등록", "desc": "저작물 등록과 보호 범위 분석" },
-      { "icon": "report", "label": "침해 대응", "desc": "저작권 침해 증거 확보와 구제" },
-      { "icon": "handshake", "label": "라이선스", "desc": "저작권 이용 허락 계약 설계" },
-      { "icon": "balance", "label": "공정이용", "desc": "공정이용 항변 요건 분석" }
+      {
+        "icon": "copyright",
+        "label": "저작권 등록",
+        "desc": "저작물 등록과 보호 범위 분석"
+      },
+      {
+        "icon": "report",
+        "label": "침해 대응",
+        "desc": "저작권 침해 증거 확보와 구제"
+      },
+      {
+        "icon": "handshake",
+        "label": "라이선스",
+        "desc": "저작권 이용 허락 계약 설계"
+      },
+      {
+        "icon": "balance",
+        "label": "공정이용",
+        "desc": "공정이용 항변 요건 분석"
+      }
     ],
     "philosophy": "저작권은 창작 생태계의 기반입니다. 보호와 활용의 균형이 문화 발전을 이끕니다.",
     "impact": "저작권 침해 유형별 대응 체계를 구축했습니다. 라이선스 계약의 표준 분석 틀을 확립했습니다.",
     "vision": "창작자의 권리가 완벽하게 보호되면서도 문화가 자유롭게 발전하는 환경을 만듭니다."
   },
   "L43": {
-    "images": { "profile": "images/leaders/L43-haena.jpg", "banner": "images/leaders/L43-haena-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L43-haena.jpg",
+      "banner": "images/leaders/L43-haena-banner.jpg"
+    },
     "hero": "산업 현장의 안전을 법으로 지킵니다. 재해 피해자의 권리를 보호합니다.",
     "identity": {
       "what": "산업재해 인정, 보상 청구, 안전 규제 위반 관련 법률을 분석합니다.",
@@ -1030,18 +2251,62 @@
       "approach": "노무사급 실무와 질병판정위원회 경험을 결합하여 산재 쟁점을 분석합니다."
     },
     "expertise": [
-      { "icon": "health_and_safety", "label": "산재 인정", "desc": "업무상 재해·질병 인정 요건 분석" },
-      { "icon": "payments", "label": "보상 청구", "desc": "산재 보험급여 청구와 산정" },
-      { "icon": "engineering", "label": "안전 규제", "desc": "산업안전보건법 위반 분석" },
-      { "icon": "gavel", "label": "사업주 책임", "desc": "안전배려의무 위반 손해배상 청구" },
-      { "icon": "medical_services", "label": "직업병", "desc": "업무상 질병 판정 기준 분석" }
+      {
+        "icon": "health_and_safety",
+        "label": "산재 인정",
+        "desc": "업무상 재해·질병 인정 요건 분석"
+      },
+      {
+        "icon": "payments",
+        "label": "보상 청구",
+        "desc": "산재 보험급여 청구와 산정"
+      },
+      {
+        "icon": "engineering",
+        "label": "안전 규제",
+        "desc": "산업안전보건법 위반 분석"
+      },
+      {
+        "icon": "gavel",
+        "label": "사업주 책임",
+        "desc": "안전배려의무 위반 손해배상 청구"
+      },
+      {
+        "icon": "medical_services",
+        "label": "직업병",
+        "desc": "업무상 질병 판정 기준 분석"
+      }
     ],
     "philosophy": "모든 노동자는 안전하게 일할 권리가 있습니다. 산재 보상은 시혜가 아니라 법적 권리입니다.",
     "impact": "산업재해 유형별 인정 기준 분석 체계를 구축했습니다. 산재 보상 청구의 단계별 가이드를 확립했습니다.",
-    "vision": "산업 현장의 안전이 확보되고, 재해 발생 시 정당한 보상이 보장되는 환경을 만듭니다."
+    "vision": "산업 현장의 안전이 확보되고, 재해 발생 시 정당한 보상이 보장되는 환경을 만듭니다.",
+    "decision_framework": {
+      "steps": [
+        "1단계: 재해 유형 확인 (업무상 사고/질병/출퇴근)",
+        "2단계: 업무와 재해 간 인과관계 분석",
+        "3단계: 산재보험 급여 종류 확인",
+        "4단계: 산재 신청 절차 안내",
+        "5단계: 불승인 시 불복 절차 안내"
+      ],
+      "common_mistakes": [
+        "산재 신청 전 자비 치료로 증거 약화",
+        "업무 기인성 입증 자료 미확보",
+        "직장 내 괴롭힘의 산재 인정 기준 미파악",
+        "산재 불승인 결정에 대한 심사청구 기한 도과"
+      ],
+      "key_questions": [
+        "어떤 상해/질병이 발생했는지?",
+        "재해 발생 시 업무 상황과 경위는?",
+        "사업장에서 산재 신청에 협조하는지?",
+        "현재 치료 상태와 진단서를 확보했는지?"
+      ]
+    }
   },
   "L44": {
-    "images": { "profile": "images/leaders/L44-boram.jpg", "banner": "images/leaders/L44-boram-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L44-boram.jpg",
+      "banner": "images/leaders/L44-boram-banner.jpg"
+    },
     "hero": "복지의 사각지대를 법률로 채웁니다. 사회적 약자의 권리를 보호합니다.",
     "identity": {
       "what": "국민기초생활보장, 사회보험, 복지 급여 관련 법률을 분석합니다.",
@@ -1053,17 +2318,36 @@
       "approach": "보건복지부 자문 경험을 바탕으로 복지 급여의 법적 권리를 체계적으로 분석합니다."
     },
     "expertise": [
-      { "icon": "volunteer_activism", "label": "기초생활보장", "desc": "수급자 자격 요건과 급여 분석" },
-      { "icon": "elderly", "label": "노인 복지", "desc": "장기요양·기초연금 법률 분석" },
-      { "icon": "child_care", "label": "아동 복지", "desc": "아동수당·보육 지원 법률 분석" },
-      { "icon": "shield", "label": "권리 구제", "desc": "복지 급여 거부·중단 불복 절차" }
+      {
+        "icon": "volunteer_activism",
+        "label": "기초생활보장",
+        "desc": "수급자 자격 요건과 급여 분석"
+      },
+      {
+        "icon": "elderly",
+        "label": "노인 복지",
+        "desc": "장기요양·기초연금 법률 분석"
+      },
+      {
+        "icon": "child_care",
+        "label": "아동 복지",
+        "desc": "아동수당·보육 지원 법률 분석"
+      },
+      {
+        "icon": "shield",
+        "label": "권리 구제",
+        "desc": "복지 급여 거부·중단 불복 절차"
+      }
     ],
     "philosophy": "복지는 시혜가 아니라 권리입니다. 법적 권리를 정확히 알아야 제대로 보호받을 수 있습니다.",
     "impact": "복지 급여 유형별 자격 요건 분석 체계를 구축했습니다. 수급 거부 시 불복 절차 가이드를 확립했습니다.",
     "vision": "사회적 약자 누구도 법률 지식 부족으로 복지 사각지대에 놓이지 않는 환경을 만듭니다."
   },
   "L45": {
-    "images": { "profile": "images/leaders/L45-ireum.jpg", "banner": "images/leaders/L45-ireum-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L45-ireum.jpg",
+      "banner": "images/leaders/L45-ireum-banner.jpg"
+    },
     "hero": "교육 현장의 법적 쟁점을 해결합니다. 학생의 권리와 안전을 보호합니다.",
     "identity": {
       "what": "학교폭력, 교육 규제, 학생 징계, 교원 권리 등 교육법을 분석합니다.",
@@ -1075,17 +2359,36 @@
       "approach": "학교폭력대책심의위원장급 경험을 바탕으로 교육 분쟁의 법적 쟁점을 분석합니다."
     },
     "expertise": [
-      { "icon": "school", "label": "학교폭력", "desc": "학교폭력 심의·처분·불복 절차 분석" },
-      { "icon": "person", "label": "학생 권리", "desc": "징계 처분·학생 인권 보호 분석" },
-      { "icon": "supervisor_account", "label": "교권 보호", "desc": "교원 지위·교권 침해 구제 절차" },
-      { "icon": "menu_book", "label": "교육 규제", "desc": "사교육·학원법 규제 분석" }
+      {
+        "icon": "school",
+        "label": "학교폭력",
+        "desc": "학교폭력 심의·처분·불복 절차 분석"
+      },
+      {
+        "icon": "person",
+        "label": "학생 권리",
+        "desc": "징계 처분·학생 인권 보호 분석"
+      },
+      {
+        "icon": "supervisor_account",
+        "label": "교권 보호",
+        "desc": "교원 지위·교권 침해 구제 절차"
+      },
+      {
+        "icon": "menu_book",
+        "label": "교육 규제",
+        "desc": "사교육·학원법 규제 분석"
+      }
     ],
     "philosophy": "교육은 미래에 대한 투자입니다. 교육 현장에서 법치주의가 실현되어야 건강한 교육이 가능합니다.",
     "impact": "학교폭력 대응의 단계별 법적 가이드를 구축했습니다. 학생·교원 권리 보호 체계를 확립했습니다.",
     "vision": "교육 현장의 모든 구성원이 안전하고 공정하게 보호받는 환경을 만듭니다."
   },
   "L46": {
-    "images": { "profile": "images/leaders/L46-daol.jpg", "banner": "images/leaders/L46-daol-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L46-daol.jpg",
+      "banner": "images/leaders/L46-daol-banner.jpg"
+    },
     "hero": "미래의 안전망을 법률로 설계합니다. 보험과 연금의 권리를 지킵니다.",
     "identity": {
       "what": "국민연금, 건강보험, 퇴직연금, 사보험 관련 법률을 분석합니다.",
@@ -1097,17 +2400,36 @@
       "approach": "국민연금공단 준법감시 경험을 바탕으로 사회보험 쟁점을 분석합니다."
     },
     "expertise": [
-      { "icon": "savings", "label": "국민연금", "desc": "가입·납부·수급 요건 법률 분석" },
-      { "icon": "health_and_safety", "label": "건강보험", "desc": "보험료 부과·급여 적정성 분석" },
-      { "icon": "account_balance", "label": "퇴직연금", "desc": "DB·DC·IRP 법적 구조 분석" },
-      { "icon": "gavel", "label": "급여 불복", "desc": "급여 거부·감액 처분 불복 절차" }
+      {
+        "icon": "savings",
+        "label": "국민연금",
+        "desc": "가입·납부·수급 요건 법률 분석"
+      },
+      {
+        "icon": "health_and_safety",
+        "label": "건강보험",
+        "desc": "보험료 부과·급여 적정성 분석"
+      },
+      {
+        "icon": "account_balance",
+        "label": "퇴직연금",
+        "desc": "DB·DC·IRP 법적 구조 분석"
+      },
+      {
+        "icon": "gavel",
+        "label": "급여 불복",
+        "desc": "급여 거부·감액 처분 불복 절차"
+      }
     ],
     "philosophy": "사회보험은 세대 간 약속입니다. 지금의 납부가 미래의 보호로 돌아오는 구조를 법적으로 보장해야 합니다.",
     "impact": "사회보험 급여 산정과 불복 절차의 분석 체계를 구축했습니다.",
     "vision": "모든 국민이 사회보험의 혜택을 정확히 이해하고 누릴 수 있는 환경을 만듭니다."
   },
   "L47": {
-    "images": { "profile": "images/leaders/L47-saeron.jpg", "banner": "images/leaders/L47-saeron-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L47-saeron.jpg",
+      "banner": "images/leaders/L47-saeron-banner.jpg"
+    },
     "hero": "새로운 산업의 법적 토대를 놓습니다. 규제와 혁신의 균형을 설계합니다.",
     "identity": {
       "what": "벤처·핀테크·바이오 등 신산업 분야의 규제와 법률을 분석합니다.",
@@ -1119,17 +2441,36 @@
       "approach": "규제 샌드박스 심의 경험을 바탕으로 신산업 규제 우회·완화 전략을 분석합니다."
     },
     "expertise": [
-      { "icon": "science", "label": "규제 샌드박스", "desc": "규제 특례 신청 요건과 절차 분석" },
-      { "icon": "account_balance", "label": "핀테크 규제", "desc": "전자금융·가상자산 규제 분석" },
-      { "icon": "biotech", "label": "바이오 규제", "desc": "의약품·의료기기 인허가 분석" },
-      { "icon": "smart_toy", "label": "AI 규제", "desc": "인공지능 관련 법적 프레임워크" }
+      {
+        "icon": "science",
+        "label": "규제 샌드박스",
+        "desc": "규제 특례 신청 요건과 절차 분석"
+      },
+      {
+        "icon": "account_balance",
+        "label": "핀테크 규제",
+        "desc": "전자금융·가상자산 규제 분석"
+      },
+      {
+        "icon": "biotech",
+        "label": "바이오 규제",
+        "desc": "의약품·의료기기 인허가 분석"
+      },
+      {
+        "icon": "smart_toy",
+        "label": "AI 규제",
+        "desc": "인공지능 관련 법적 프레임워크"
+      }
     ],
     "philosophy": "규제는 혁신을 막는 것이 아니라 안전하게 허용하는 것입니다. 새로운 산업에는 새로운 법적 사고가 필요합니다.",
     "impact": "신산업 규제 대응 전략 체계를 구축했습니다. 규제 샌드박스 활용 가이드를 확립했습니다.",
     "vision": "혁신 기업이 규제로 좌절하지 않고 안전하게 성장할 수 있는 법적 환경을 만듭니다."
   },
   "L48": {
-    "images": { "profile": "images/leaders/L48-narae.jpg", "banner": "images/leaders/L48-narae-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L48-narae.jpg",
+      "banner": "images/leaders/L48-narae-banner.jpg"
+    },
     "hero": "예술인의 권리를 법으로 지킵니다. 창작의 자유와 보호를 동시에 실현합니다.",
     "identity": {
       "what": "예술인 복지, 문화예술 지원, 공연·전시 계약 관련 법률을 분석합니다.",
@@ -1141,17 +2482,36 @@
       "approach": "예술인복지재단 법률지원 경험을 바탕으로 예술인 특유의 법적 쟁점을 분석합니다."
     },
     "expertise": [
-      { "icon": "palette", "label": "예술인 복지", "desc": "예술인복지법 적용과 지원 제도 분석" },
-      { "icon": "theater_comedy", "label": "공연 계약", "desc": "공연·전시 계약의 법적 쟁점" },
-      { "icon": "brush", "label": "미술 거래", "desc": "미술품 거래·위작 분쟁 법률 분석" },
-      { "icon": "music_note", "label": "음악 저작권", "desc": "음원·공연권·저작인접권 분석" }
+      {
+        "icon": "palette",
+        "label": "예술인 복지",
+        "desc": "예술인복지법 적용과 지원 제도 분석"
+      },
+      {
+        "icon": "theater_comedy",
+        "label": "공연 계약",
+        "desc": "공연·전시 계약의 법적 쟁점"
+      },
+      {
+        "icon": "brush",
+        "label": "미술 거래",
+        "desc": "미술품 거래·위작 분쟁 법률 분석"
+      },
+      {
+        "icon": "music_note",
+        "label": "음악 저작권",
+        "desc": "음원·공연권·저작인접권 분석"
+      }
     ],
     "philosophy": "예술은 사회의 영혼입니다. 예술인이 안전하게 창작할 수 있는 법적 환경이 문화 발전의 기반입니다.",
     "impact": "예술인 권리 보호를 위한 법률 분석 체계를 구축했습니다. 불공정 계약 진단 가이드를 확립했습니다.",
     "vision": "모든 예술인이 법적 보호 아래 자유롭게 창작할 수 있는 환경을 만듭니다."
   },
   "L49": {
-    "images": { "profile": "images/leaders/L49-garam.jpg", "banner": "images/leaders/L49-garam-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L49-garam.jpg",
+      "banner": "images/leaders/L49-garam-banner.jpg"
+    },
     "hero": "식품과 보건의 안전을 법률로 지킵니다. 국민 건강의 법적 파수꾼입니다.",
     "identity": {
       "what": "식품안전법, 의약품 규제, 보건 관련 법률 분석과 규제 자문을 수행합니다.",
@@ -1163,17 +2523,36 @@
       "approach": "식약처 규제심사 경험을 바탕으로 식품·보건 분야 법률 쟁점을 분석합니다."
     },
     "expertise": [
-      { "icon": "restaurant", "label": "식품 안전", "desc": "식품위생법·표시기준 규제 분석" },
-      { "icon": "medication", "label": "의약품 규제", "desc": "의약품 허가·GMP 규제 분석" },
-      { "icon": "science", "label": "건강기능식품", "desc": "건기식 인정·광고 규제 분석" },
-      { "icon": "vaccines", "label": "의료기기", "desc": "의료기기 인허가 절차 분석" }
+      {
+        "icon": "restaurant",
+        "label": "식품 안전",
+        "desc": "식품위생법·표시기준 규제 분석"
+      },
+      {
+        "icon": "medication",
+        "label": "의약품 규제",
+        "desc": "의약품 허가·GMP 규제 분석"
+      },
+      {
+        "icon": "science",
+        "label": "건강기능식품",
+        "desc": "건기식 인정·광고 규제 분석"
+      },
+      {
+        "icon": "vaccines",
+        "label": "의료기기",
+        "desc": "의료기기 인허가 절차 분석"
+      }
     ],
     "philosophy": "식품·의약품 안전은 타협할 수 없는 가치입니다. 규제를 지키는 것이 소비자의 신뢰를 지키는 것입니다.",
     "impact": "식품·보건 분야 규제 준수 체크리스트를 구축했습니다. 인허가 절차 가이드를 확립했습니다.",
     "vision": "식품·의약품 산업이 안전하게 성장하고, 국민 건강이 법적으로 보호되는 환경을 만듭니다."
   },
   "L50": {
-    "images": { "profile": "images/leaders/L50-bitna.jpg", "banner": "images/leaders/L50-bitna-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L50-bitna.jpg",
+      "banner": "images/leaders/L50-bitna-banner.jpg"
+    },
     "hero": "다문화 사회의 법적 가교를 놓습니다. 이주민의 권리를 보호합니다.",
     "identity": {
       "what": "이민법, 외국인 체류, 귀화, 난민, 다문화 가정 법률을 분석합니다.",
@@ -1185,17 +2564,36 @@
       "approach": "출입국외국인정책본부 자문 경험을 바탕으로 이민법 쟁점을 분석합니다."
     },
     "expertise": [
-      { "icon": "flight_land", "label": "체류·비자", "desc": "체류 자격 변경·연장 법률 분석" },
-      { "icon": "public", "label": "귀화", "desc": "국적 취득·귀화 요건과 절차" },
-      { "icon": "shield", "label": "난민 보호", "desc": "난민 인정 요건과 심사 절차 분석" },
-      { "icon": "family_restroom", "label": "다문화 가정", "desc": "결혼이민자·다문화 가족 법률 지원" }
+      {
+        "icon": "flight_land",
+        "label": "체류·비자",
+        "desc": "체류 자격 변경·연장 법률 분석"
+      },
+      {
+        "icon": "public",
+        "label": "귀화",
+        "desc": "국적 취득·귀화 요건과 절차"
+      },
+      {
+        "icon": "shield",
+        "label": "난민 보호",
+        "desc": "난민 인정 요건과 심사 절차 분석"
+      },
+      {
+        "icon": "family_restroom",
+        "label": "다문화 가정",
+        "desc": "결혼이민자·다문화 가족 법률 지원"
+      }
     ],
     "philosophy": "법 앞에 국적은 없습니다. 이주민도 대한민국 법의 보호를 받을 권리가 있습니다.",
     "impact": "이민법 쟁점의 유형별 분석 체계를 구축했습니다. 이주민 권리 보호 가이드를 확립했습니다.",
     "vision": "모든 이주민이 법적 보호를 받으며 한국 사회에 안정적으로 정착할 수 있는 환경을 만듭니다."
   },
   "L51": {
-    "images": { "profile": "images/leaders/L51-soul.jpg", "banner": "images/leaders/L51-soul-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L51-soul.jpg",
+      "banner": "images/leaders/L51-soul-banner.jpg"
+    },
     "hero": "종교와 전통의 가치를 법률로 보호합니다. 신앙의 자유를 지킵니다.",
     "identity": {
       "what": "종교 법인 운영, 종교 재산 분쟁, 전통 문화 보호 법률을 분석합니다.",
@@ -1207,17 +2605,36 @@
       "approach": "종무실 종교법인 심사 경험을 바탕으로 종교 법률의 특수성을 분석합니다."
     },
     "expertise": [
-      { "icon": "church", "label": "종교 법인", "desc": "종교단체 법인 설립·운영 법률" },
-      { "icon": "real_estate_agent", "label": "종교 재산", "desc": "사찰·교회 재산 귀속 분쟁 분석" },
-      { "icon": "balance", "label": "신앙의 자유", "desc": "종교의 자유와 한계에 대한 법적 분석" },
-      { "icon": "temple_buddhist", "label": "전통 보전", "desc": "전통사찰 보존·관리 법률 분석" }
+      {
+        "icon": "church",
+        "label": "종교 법인",
+        "desc": "종교단체 법인 설립·운영 법률"
+      },
+      {
+        "icon": "real_estate_agent",
+        "label": "종교 재산",
+        "desc": "사찰·교회 재산 귀속 분쟁 분석"
+      },
+      {
+        "icon": "balance",
+        "label": "신앙의 자유",
+        "desc": "종교의 자유와 한계에 대한 법적 분석"
+      },
+      {
+        "icon": "temple_buddhist",
+        "label": "전통 보전",
+        "desc": "전통사찰 보존·관리 법률 분석"
+      }
     ],
     "philosophy": "종교의 자유는 헌법이 보장하는 기본권입니다. 신앙의 가치와 법적 질서가 조화롭게 공존해야 합니다.",
     "impact": "종교 법인 분쟁의 유형별 분석 체계를 구축했습니다.",
     "vision": "종교의 자유가 보장되면서도 법적 질서가 유지되는 균형 잡힌 환경을 만듭니다."
   },
   "L52": {
-    "images": { "profile": "images/leaders/L52-miso.jpg", "banner": "images/leaders/L52-miso-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L52-miso.jpg",
+      "banner": "images/leaders/L52-miso-banner.jpg"
+    },
     "hero": "광고와 언론의 법적 경계를 분석합니다. 표현의 자유와 책임의 균형을 찾습니다.",
     "identity": {
       "what": "광고 규제, 언론 분쟁, 명예훼손, 정정보도 등 미디어법을 분석합니다.",
@@ -1229,17 +2646,57 @@
       "approach": "언론중재위원회 중재 경험을 바탕으로 미디어 분쟁의 법적 쟁점을 분석합니다."
     },
     "expertise": [
-      { "icon": "campaign", "label": "광고 규제", "desc": "허위·과장 광고 규제와 제재 분석" },
-      { "icon": "newspaper", "label": "언론 분쟁", "desc": "보도 피해 구제와 정정보도 청구" },
-      { "icon": "person_off", "label": "명예훼손", "desc": "온라인·오프라인 명예훼손 대응" },
-      { "icon": "privacy_tip", "label": "사생활 보호", "desc": "사생활·초상권 침해 법적 분석" }
+      {
+        "icon": "campaign",
+        "label": "광고 규제",
+        "desc": "허위·과장 광고 규제와 제재 분석"
+      },
+      {
+        "icon": "newspaper",
+        "label": "언론 분쟁",
+        "desc": "보도 피해 구제와 정정보도 청구"
+      },
+      {
+        "icon": "person_off",
+        "label": "명예훼손",
+        "desc": "온라인·오프라인 명예훼손 대응"
+      },
+      {
+        "icon": "privacy_tip",
+        "label": "사생활 보호",
+        "desc": "사생활·초상권 침해 법적 분석"
+      }
     ],
     "philosophy": "표현의 자유는 민주주의의 기둥입니다. 그러나 타인의 인격권을 침해하는 표현은 보호받지 못합니다.",
     "impact": "미디어 분쟁 유형별 대응 체계를 구축했습니다. 광고 규제 준수 가이드를 확립했습니다.",
-    "vision": "표현의 자유와 인격권 보호가 균형 잡힌 건전한 미디어 환경을 만듭니다."
+    "vision": "표현의 자유와 인격권 보호가 균형 잡힌 건전한 미디어 환경을 만듭니다.",
+    "decision_framework": {
+      "steps": [
+        "1단계: 명예훼손 유형 확인 (사실적시/허위사실/모욕)",
+        "2단계: 적시된 사실의 공연성 판단",
+        "3단계: 위법성 조각사유 검토 (공익/진실)",
+        "4단계: 형사고소 vs 민사소송 전략 결정",
+        "5단계: 삭제/차단 등 긴급조치 검토"
+      ],
+      "common_mistakes": [
+        "친고죄 고소기간(6개월) 도과",
+        "공연성 요건 미충족 상태에서 고소",
+        "반의사불벌죄에서 처벌불원 의사 철회 불가 미인지",
+        "온라인 게시물 증거 보전 누락"
+      ],
+      "key_questions": [
+        "어떤 내용이 유포되었는지?",
+        "온라인(SNS/커뮤니티)인지 오프라인인지?",
+        "적시된 내용이 사실인지 허위인지?",
+        "가해자 신원을 파악하고 있는지?"
+      ]
+    }
   },
   "L53": {
-    "images": { "profile": "images/leaders/L53-neulsol.jpg", "banner": "images/leaders/L53-neulsol-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L53-neulsol.jpg",
+      "banner": "images/leaders/L53-neulsol-banner.jpg"
+    },
     "hero": "농림·축산업의 법적 기반을 다집니다. 1차 산업의 권리를 보호합니다.",
     "identity": {
       "what": "농지법, 축산법, 농업 보조금, 가축 질병 관련 법률을 분석합니다.",
@@ -1251,17 +2708,36 @@
       "approach": "농림축산식품부 자문 경험을 바탕으로 농업 법률의 특수성을 분석합니다."
     },
     "expertise": [
-      { "icon": "grass", "label": "농지법", "desc": "농지 취득·전용·임대 법률 분석" },
-      { "icon": "pets", "label": "축산법", "desc": "축산업 허가·방역 규제 분석" },
-      { "icon": "savings", "label": "농업 보조금", "desc": "보조금 신청·반환 법적 쟁점" },
-      { "icon": "eco", "label": "친환경 인증", "desc": "유기농·친환경 인증 규제 분석" }
+      {
+        "icon": "grass",
+        "label": "농지법",
+        "desc": "농지 취득·전용·임대 법률 분석"
+      },
+      {
+        "icon": "pets",
+        "label": "축산법",
+        "desc": "축산업 허가·방역 규제 분석"
+      },
+      {
+        "icon": "savings",
+        "label": "농업 보조금",
+        "desc": "보조금 신청·반환 법적 쟁점"
+      },
+      {
+        "icon": "eco",
+        "label": "친환경 인증",
+        "desc": "유기농·친환경 인증 규제 분석"
+      }
     ],
     "philosophy": "농업은 국가의 기초입니다. 농업인이 법적으로 보호받아야 식량 안보가 유지됩니다.",
     "impact": "농림축산 분야 법률 분석 체계를 구축했습니다. 농업인 지원 제도 활용 가이드를 확립했습니다.",
     "vision": "농림축산업 종사자가 법적 불안 없이 생업에 집중할 수 있는 환경을 만듭니다."
   },
   "L54": {
-    "images": { "profile": "images/leaders/L54-iseo.jpg", "banner": "images/leaders/L54-iseo-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L54-iseo.jpg",
+      "banner": "images/leaders/L54-iseo-banner.jpg"
+    },
     "hero": "바다의 법률을 다룹니다. 해양 자원과 수산업의 권리를 보호합니다.",
     "identity": {
       "what": "해양법, 수산업법, 어업권, 해양 사고 관련 법률을 분석합니다.",
@@ -1273,17 +2749,36 @@
       "approach": "해양안전심판원 실무 경험을 바탕으로 해양·수산 법률을 분석합니다."
     },
     "expertise": [
-      { "icon": "waves", "label": "해양법", "desc": "영해·EEZ·해양 관할권 법률 분석" },
-      { "icon": "phishing", "label": "어업권", "desc": "어업 면허·허가·신고 법률 분석" },
-      { "icon": "water", "label": "해양 환경", "desc": "해양 오염 방지와 피해 배상" },
-      { "icon": "sailing", "label": "해양 사고", "desc": "선박 사고 조사와 책임 분석" }
+      {
+        "icon": "waves",
+        "label": "해양법",
+        "desc": "영해·EEZ·해양 관할권 법률 분석"
+      },
+      {
+        "icon": "phishing",
+        "label": "어업권",
+        "desc": "어업 면허·허가·신고 법률 분석"
+      },
+      {
+        "icon": "water",
+        "label": "해양 환경",
+        "desc": "해양 오염 방지와 피해 배상"
+      },
+      {
+        "icon": "sailing",
+        "label": "해양 사고",
+        "desc": "선박 사고 조사와 책임 분석"
+      }
     ],
     "philosophy": "바다는 미래의 자원입니다. 해양 자원의 지속 가능한 이용을 법적으로 보장해야 합니다.",
     "impact": "해양·수산 분야 법률 분석 체계를 구축했습니다. 어업인 권리 보호 가이드를 확립했습니다.",
     "vision": "해양 자원이 법적으로 보호되면서도 수산업이 건강하게 발전하는 환경을 만듭니다."
   },
   "L55": {
-    "images": { "profile": "images/leaders/L55-yunbit.jpg", "banner": "images/leaders/L55-yunbit-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L55-yunbit.jpg",
+      "banner": "images/leaders/L55-yunbit-banner.jpg"
+    },
     "hero": "과학기술의 법적 프레임워크를 설계합니다. 연구 혁신을 법으로 뒷받침합니다.",
     "identity": {
       "what": "과학기술 정책, R&D 법률, 기술 이전, 연구 윤리 관련 법률을 분석합니다.",
@@ -1295,17 +2790,36 @@
       "approach": "국가과학기술자문회의 자문 경험을 바탕으로 R&D 법률을 분석합니다."
     },
     "expertise": [
-      { "icon": "science", "label": "R&D 법률", "desc": "국가연구개발사업 법적 요건 분석" },
-      { "icon": "swap_horiz", "label": "기술 이전", "desc": "기술이전·사업화 계약 법률 검토" },
-      { "icon": "school", "label": "연구 윤리", "desc": "연구 부정·윤리 위반 조사 절차" },
-      { "icon": "lightbulb", "label": "직무 발명", "desc": "직무발명 보상 제도 법적 분석" }
+      {
+        "icon": "science",
+        "label": "R&D 법률",
+        "desc": "국가연구개발사업 법적 요건 분석"
+      },
+      {
+        "icon": "swap_horiz",
+        "label": "기술 이전",
+        "desc": "기술이전·사업화 계약 법률 검토"
+      },
+      {
+        "icon": "school",
+        "label": "연구 윤리",
+        "desc": "연구 부정·윤리 위반 조사 절차"
+      },
+      {
+        "icon": "lightbulb",
+        "label": "직무 발명",
+        "desc": "직무발명 보상 제도 법적 분석"
+      }
     ],
     "philosophy": "과학기술은 미래를 여는 열쇠입니다. 연구자의 권리가 보호되어야 혁신이 지속됩니다.",
     "impact": "R&D 법률 분석 체계를 구축했습니다. 기술 이전·직무 발명 보상 가이드를 확립했습니다.",
     "vision": "과학기술 혁신이 법적 제약 없이 자유롭게 이루어지는 연구 환경을 만듭니다."
   },
   "L56": {
-    "images": { "profile": "images/leaders/L56-dain.jpg", "banner": "images/leaders/L56-dain-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L56-dain.jpg",
+      "banner": "images/leaders/L56-dain-banner.jpg"
+    },
     "hero": "장애인의 법적 권리를 완전하게 실현합니다. 접근성은 선택이 아닌 의무입니다.",
     "identity": {
       "what": "장애인 차별 금지, 편의 제공, 복지 급여, 활동 지원 관련 법률을 분석합니다.",
@@ -1317,17 +2831,36 @@
       "approach": "장애인권익옹호기관 경험을 바탕으로 장애인 권리 보호를 위한 법률을 분석합니다."
     },
     "expertise": [
-      { "icon": "accessible", "label": "차별 금지", "desc": "장애인차별금지법 적용과 구제 절차" },
-      { "icon": "apartment", "label": "편의 제공", "desc": "장애인 편의시설·편의 제공 의무 분석" },
-      { "icon": "volunteer_activism", "label": "복지 급여", "desc": "장애인연금·활동 지원 법률 분석" },
-      { "icon": "work", "label": "고용 의무", "desc": "장애인 의무고용제도 법적 분석" }
+      {
+        "icon": "accessible",
+        "label": "차별 금지",
+        "desc": "장애인차별금지법 적용과 구제 절차"
+      },
+      {
+        "icon": "apartment",
+        "label": "편의 제공",
+        "desc": "장애인 편의시설·편의 제공 의무 분석"
+      },
+      {
+        "icon": "volunteer_activism",
+        "label": "복지 급여",
+        "desc": "장애인연금·활동 지원 법률 분석"
+      },
+      {
+        "icon": "work",
+        "label": "고용 의무",
+        "desc": "장애인 의무고용제도 법적 분석"
+      }
     ],
     "philosophy": "장애는 개인의 문제가 아니라 사회의 문제입니다. 접근성은 배려가 아니라 권리입니다.",
     "impact": "장애인 권리 구제 절차의 체계적 분석 프레임워크를 구축했습니다.",
     "vision": "모든 장애인이 실질적으로 평등한 대우를 받는 사회를 법률적으로 실현합니다."
   },
   "L57": {
-    "images": { "profile": "images/leaders/L57-seum.jpg", "banner": "images/leaders/L57-seum-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L57-seum.jpg",
+      "banner": "images/leaders/L57-seum-banner.jpg"
+    },
     "hero": "세대를 넘는 자산 이전을 설계합니다. 상속과 신탁의 법적 구조를 완성합니다.",
     "identity": {
       "what": "상속·유언·신탁·증여 관련 법률 분석과 자산 이전 전략을 수립합니다.",
@@ -1339,18 +2872,62 @@
       "approach": "대형 은행 신탁 본부 경험을 바탕으로 상속·신탁 구조를 종합 분석합니다."
     },
     "expertise": [
-      { "icon": "family_restroom", "label": "상속", "desc": "법정상속·유류분·기여분 분석" },
-      { "icon": "description", "label": "유언", "desc": "유언장 작성 요건과 효력 분석" },
-      { "icon": "account_balance", "label": "신탁", "desc": "가족신탁·유언대용신탁 구조 설계" },
-      { "icon": "calculate", "label": "상속세", "desc": "상속세·증여세 절세 전략 분석" },
-      { "icon": "shield", "label": "분쟁 예방", "desc": "사전 자산 이전 계획 수립" }
+      {
+        "icon": "family_restroom",
+        "label": "상속",
+        "desc": "법정상속·유류분·기여분 분석"
+      },
+      {
+        "icon": "description",
+        "label": "유언",
+        "desc": "유언장 작성 요건과 효력 분석"
+      },
+      {
+        "icon": "account_balance",
+        "label": "신탁",
+        "desc": "가족신탁·유언대용신탁 구조 설계"
+      },
+      {
+        "icon": "calculate",
+        "label": "상속세",
+        "desc": "상속세·증여세 절세 전략 분석"
+      },
+      {
+        "icon": "shield",
+        "label": "분쟁 예방",
+        "desc": "사전 자산 이전 계획 수립"
+      }
     ],
     "philosophy": "좋은 상속은 미리 설계하는 것입니다. 사후 분쟁이 아니라 사전 합의가 가족을 지킵니다.",
     "impact": "상속·신탁 구조의 통합 분석 체계를 구축했습니다. 자산 이전 전략의 표준 프레임워크를 확립했습니다.",
-    "vision": "모든 가정이 상속 분쟁 없이 평화롭게 자산을 이전할 수 있는 환경을 만듭니다."
+    "vision": "모든 가정이 상속 분쟁 없이 평화롭게 자산을 이전할 수 있는 환경을 만듭니다.",
+    "decision_framework": {
+      "steps": [
+        "1단계: 상속인 범위 및 순위 확인",
+        "2단계: 상속재산·채무 파악",
+        "3단계: 유언장/유증 유무 확인",
+        "4단계: 상속 방식 결정 (단순승인/한정승인/포기)",
+        "5단계: 상속세 신고 및 분할 협의"
+      ],
+      "common_mistakes": [
+        "3개월 내 한정승인/포기 하지 않아 단순승인 간주",
+        "상속재산 처분으로 법정단순승인 되는 실수",
+        "상속세 신고기한(6개월) 도과로 가산세",
+        "유류분 반환청구 1년 행사기간 도과"
+      ],
+      "key_questions": [
+        "피상속인과의 관계는?",
+        "상속재산과 채무의 대략적 규모는?",
+        "유언장이 있는지?",
+        "다른 상속인들과 협의가 가능한 상황인지?"
+      ]
+    }
   },
   "L58": {
-    "images": { "profile": "images/leaders/L58-yeon.jpg", "banner": "images/leaders/L58-yeon-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L58-yeon.jpg",
+      "banner": "images/leaders/L58-yeon-banner.jpg"
+    },
     "hero": "스포츠의 공정한 룰을 법으로 지킵니다. 선수의 권리를 보호합니다.",
     "identity": {
       "what": "스포츠 계약, 도핑 분쟁, 선수 권리, 체육 시설 관련 법률을 분석합니다.",
@@ -1362,17 +2939,36 @@
       "approach": "대한체육회 스포츠공정위원 경험을 바탕으로 스포츠 법률을 분석합니다."
     },
     "expertise": [
-      { "icon": "sports", "label": "선수 계약", "desc": "프로 선수 계약 법적 쟁점 분석" },
-      { "icon": "science", "label": "도핑 규제", "desc": "반도핑 규정과 제재 절차 분석" },
-      { "icon": "stadium", "label": "체육 시설", "desc": "체육시설법 규제와 안전 기준" },
-      { "icon": "shield", "label": "선수 보호", "desc": "선수 인권·폭력 예방 법률 분석" }
+      {
+        "icon": "sports",
+        "label": "선수 계약",
+        "desc": "프로 선수 계약 법적 쟁점 분석"
+      },
+      {
+        "icon": "science",
+        "label": "도핑 규제",
+        "desc": "반도핑 규정과 제재 절차 분석"
+      },
+      {
+        "icon": "stadium",
+        "label": "체육 시설",
+        "desc": "체육시설법 규제와 안전 기준"
+      },
+      {
+        "icon": "shield",
+        "label": "선수 보호",
+        "desc": "선수 인권·폭력 예방 법률 분석"
+      }
     ],
     "philosophy": "스포츠의 가치는 공정한 경쟁에 있습니다. 법적 룰이 경기의 공정성을 보장합니다.",
     "impact": "스포츠 분쟁의 유형별 대응 체계를 구축했습니다. 선수 권리 보호 가이드를 확립했습니다.",
     "vision": "모든 선수가 공정하게 경쟁하고, 법적으로 보호받는 스포츠 환경을 만듭니다."
   },
   "L59": {
-    "images": { "profile": "images/leaders/L59-hanbit.jpg", "banner": "images/leaders/L59-hanbit-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L59-hanbit.jpg",
+      "banner": "images/leaders/L59-hanbit-banner.jpg"
+    },
     "hero": "AI 시대의 윤리적 기준을 법률로 세웁니다. 알고리즘의 공정성을 검증합니다.",
     "identity": {
       "what": "데이터 거버넌스, AI 윤리, 알고리즘 편향, 자동화 결정 관련 법률을 분석합니다.",
@@ -1384,18 +2980,41 @@
       "approach": "IT 대기업 CPO 경험을 바탕으로 AI 거버넌스의 법적 프레임워크를 분석합니다."
     },
     "expertise": [
-      { "icon": "smart_toy", "label": "AI 규제", "desc": "AI 기본법·EU AI Act 분석" },
-      { "icon": "balance", "label": "알고리즘 공정성", "desc": "알고리즘 편향·차별 법적 분석" },
-      { "icon": "database", "label": "데이터 거버넌스", "desc": "데이터 수집·활용의 법적 체계" },
-      { "icon": "visibility", "label": "투명성 의무", "desc": "AI 의사결정의 설명 가능성 요건" },
-      { "icon": "gavel", "label": "AI 책임", "desc": "AI 오류·사고의 법적 책임 귀속" }
+      {
+        "icon": "smart_toy",
+        "label": "AI 규제",
+        "desc": "AI 기본법·EU AI Act 분석"
+      },
+      {
+        "icon": "balance",
+        "label": "알고리즘 공정성",
+        "desc": "알고리즘 편향·차별 법적 분석"
+      },
+      {
+        "icon": "database",
+        "label": "데이터 거버넌스",
+        "desc": "데이터 수집·활용의 법적 체계"
+      },
+      {
+        "icon": "visibility",
+        "label": "투명성 의무",
+        "desc": "AI 의사결정의 설명 가능성 요건"
+      },
+      {
+        "icon": "gavel",
+        "label": "AI 책임",
+        "desc": "AI 오류·사고의 법적 책임 귀속"
+      }
     ],
     "philosophy": "AI는 도구이지만, 그 영향은 사회적입니다. 기술이 인간의 권리를 침해하지 않도록 법적 가드레일이 필요합니다.",
     "impact": "AI 윤리·거버넌스 법률 분석 체계를 구축했습니다. 기업용 AI 컴플라이언스 가이드를 확립했습니다.",
     "vision": "AI가 인간의 권리를 존중하면서 발전하는 법적 환경을 만듭니다."
   },
   "L60": {
-    "images": { "profile": "images/leaders/L60-madi.jpg", "banner": "images/leaders/L60-madi-banner.jpg" },
+    "images": {
+      "profile": "images/leaders/L60-madi.jpg",
+      "banner": "images/leaders/L60-madi-banner.jpg"
+    },
     "hero": "60명 리더의 역량을 하나로 엮습니다. 시스템의 완결성을 총괄합니다.",
     "identity": {
       "what": "Lawmadi OS 전체 리더 시스템의 운영·조율·품질 관리를 총괄합니다.",
@@ -1407,11 +3026,31 @@
       "approach": "60명 리더의 전문성을 연결하는 다중 에이전트 시스템을 운영합니다. 복합 문제를 분해·배분·통합합니다."
     },
     "expertise": [
-      { "icon": "hub", "label": "시스템 총괄", "desc": "60명 리더 시스템의 통합 운영 관리" },
-      { "icon": "sync", "label": "리더 조율", "desc": "복합 쟁점의 다중 리더 협업 조율" },
-      { "icon": "verified", "label": "품질 관리", "desc": "법률 분석 결과의 정확성 최종 검증" },
-      { "icon": "route", "label": "문제 라우팅", "desc": "사용자 질문의 최적 리더 배분" },
-      { "icon": "assessment", "label": "성과 분석", "desc": "시스템 전체 성과 모니터링" }
+      {
+        "icon": "hub",
+        "label": "시스템 총괄",
+        "desc": "60명 리더 시스템의 통합 운영 관리"
+      },
+      {
+        "icon": "sync",
+        "label": "리더 조율",
+        "desc": "복합 쟁점의 다중 리더 협업 조율"
+      },
+      {
+        "icon": "verified",
+        "label": "품질 관리",
+        "desc": "법률 분석 결과의 정확성 최종 검증"
+      },
+      {
+        "icon": "route",
+        "label": "문제 라우팅",
+        "desc": "사용자 질문의 최적 리더 배분"
+      },
+      {
+        "icon": "assessment",
+        "label": "성과 분석",
+        "desc": "시스템 전체 성과 모니터링"
+      }
     ],
     "philosophy": "시스템은 부분의 합보다 커야 합니다. 개별 전문성을 연결하여 어떤 법률 문제든 해결할 수 있는 구조를 만드는 것이 목표입니다.",
     "impact": "60명 리더가 유기적으로 협업하는 다중 에이전트 시스템을 완성했습니다. 복합 법률 문제의 분석 품질을 체계적으로 관리합니다.",
