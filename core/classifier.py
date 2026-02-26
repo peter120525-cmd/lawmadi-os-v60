@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional
 
 from core.constants import GEMINI_MODEL
 from core.model_fallback import get_model, on_quota_error, is_quota_error
-from utils.helpers import _safe_extract_json
+from utils.helpers import _safe_extract_json, _safe_extract_gemini_text
 
 logger = logging.getLogger("LawmadiOS.Classifier")
 
@@ -619,7 +619,7 @@ async def _gemini_analyze_query(query: str) -> Optional[Dict[str, Any]]:
                         "temperature": 0.1,
                     },
                 )
-                return resp.text.strip() if resp.text else ""
+                return _safe_extract_gemini_text(resp)
             except Exception as e:
                 if is_quota_error(e) and _attempt < 2:
                     on_quota_error()
@@ -632,10 +632,11 @@ async def _gemini_analyze_query(query: str) -> Optional[Dict[str, Any]]:
             loop.run_in_executor(None, _sync_call),
             timeout=_GEMINI_CLASSIFY_TIMEOUT,
         )
-        # JSON 추출 (중첩 JSON 및 코드블록 지원)
+        # JSON 추출 (중첩 JSON, 코드블록, 잘린 JSON 복구 지원)
         result = _safe_extract_json(text)
-        if result:
-            logger.info(f"[Tier Router] Gemini 분석: tier={result.get('tier')}, "
+        if result and result.get("tier") and result.get("leader_id"):
+            recovered = "(복구)" if "}" not in text[text.find("{"):] else ""
+            logger.info(f"[Tier Router] Gemini 분석{recovered}: tier={result.get('tier')}, "
                        f"leader={result.get('leader_name')}({result.get('leader_id')}), "
                        f"complexity={result.get('complexity')}, is_document={result.get('is_document')}")
             return result
