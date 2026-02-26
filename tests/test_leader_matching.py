@@ -781,3 +781,114 @@ class TestEdgeCases:
         assert validate_constitutional_compliance("") is False
         assert validate_constitutional_compliance("짧음") is False
         assert validate_constitutional_compliance(None) is False
+
+
+class TestSystemCheckFixes:
+    """시스템 점검에서 발견된 11건 수정 회귀 테스트"""
+
+    # --- WRONG 5건 수정 ---
+    @pytest.mark.parametrize("query,expected", [
+        ("재개발 조합 분쟁 어떻게", "L04"),
+        ("재개발 조합원 분담금 문제", "L04"),
+        ("재건축 정비사업 조합 분쟁", "L04"),
+    ])
+    def test_redevelopment_not_property(self, query, expected):
+        """L04(재개발) vs L02(부동산) — 재개발/재건축 조합 문맥은 L04"""
+        assert _nlu_detect_intent(query) == expected
+
+    @pytest.mark.parametrize("query,expected", [
+        ("국제거래 계약 분쟁", "L17"),
+        ("국제 거래 대금 중재 어떻게", "L17"),
+        ("해외 거래 클레임 분쟁 방법", "L17"),
+    ])
+    def test_international_trade(self, query, expected):
+        """L17(국제거래) — 국제거래 패턴 매칭"""
+        assert _nlu_detect_intent(query) == expected
+
+    @pytest.mark.parametrize("query,expected", [
+        ("군대에서 폭행당했어요", "L25"),
+        ("군인이 가혹행위 당했어요", "L25"),
+        ("군 내 폭력 사건", "L25"),
+    ])
+    def test_military_violence_not_criminal(self, query, expected):
+        """L25(군형법) vs L22(형사) — 군대 문맥 폭행은 L25"""
+        assert _nlu_detect_intent(query) == expected
+
+    @pytest.mark.parametrize("query,expected", [
+        ("게임 아이템 사기 피해", "L29"),
+        ("게임 아이템 환불 어떻게", "L29"),
+        ("게임 머니 불법 환전 문제", "L29"),
+    ])
+    def test_game_item_not_school_violence(self, query, expected):
+        """L29(게임콘텐츠) vs L37(학폭) — 아이템의 아이 오매칭 방지"""
+        assert _nlu_detect_intent(query) == expected
+
+    @pytest.mark.parametrize("query,expected", [
+        ("국민연금 건강보험 분쟁", "L46"),
+        ("국민연금 수령 문제", "L46"),
+        ("건강보험 피부양자 자격 문제", "L46"),
+    ])
+    def test_public_insurance_not_private(self, query, expected):
+        """L46(보험연금) vs L16(보험) — 국민연금/건강보험은 L46"""
+        assert _nlu_detect_intent(query) == expected
+
+    # --- MISS 6건 수정 ---
+    @pytest.mark.parametrize("query,expected", [
+        ("국가계약 입찰 문제", "L09"),
+        ("입찰 자격 문제 어떻게", "L09"),
+        ("조달청 입찰 절차 어떻게", "L09"),
+    ])
+    def test_government_contract(self, query, expected):
+        """L09(국가계약) — 입찰/조달 매칭"""
+        assert _nlu_detect_intent(query) == expected
+
+    @pytest.mark.parametrize("query,expected", [
+        ("수출입 통관 관세 문제", "L28"),
+        ("관세 부과 이의 어떻게", "L28"),
+        ("FTA 원산지 증명 발급 절차", "L28"),
+    ])
+    def test_trade_customs(self, query, expected):
+        """L28(무역관세) — 통관/관세 매칭"""
+        assert _nlu_detect_intent(query) == expected
+
+    @pytest.mark.parametrize("query,expected", [
+        ("행정처분 불복 행정소송", "L31"),
+        ("과태료 이의 어떻게", "L31"),
+        ("행정심판 청구 절차 어떻게", "L31"),
+    ])
+    def test_administrative_law(self, query, expected):
+        """L31(행정법) — 행정처분/행정소송 매칭"""
+        assert _nlu_detect_intent(query) == expected
+
+    @pytest.mark.parametrize("query,expected", [
+        ("담합 공정거래 위반", "L32"),
+        ("카르텔 과징금 제재 어떻게", "L32"),
+        ("가맹 사업 부당 해지 피해", "L32"),
+    ])
+    def test_fair_trade(self, query, expected):
+        """L32(공정거래) — 담합/카르텔/가맹 매칭"""
+        assert _nlu_detect_intent(query) == expected
+
+    @pytest.mark.parametrize("query,expected", [
+        ("통신비 분쟁 어떻게", "L39"),
+        ("방송 규제 위반 어떻게", "L39"),
+        ("인터넷 서비스 해지 위약금 어떻게", "L39"),
+    ])
+    def test_telecom_broadcast(self, query, expected):
+        """L39(정보통신) — 통신비/방송규제 매칭"""
+        assert _nlu_detect_intent(query) == expected
+
+    @pytest.mark.parametrize("query,expected", [
+        ("여러 법률 분야가 복합된 복잡한 사건", "L60"),
+        ("어떤 법률 상담 받아야 하나", "L60"),
+    ])
+    def test_cco_fallback(self, query, expected):
+        """L60(법률총괄) — 복합쟁점 매칭"""
+        assert _nlu_detect_intent(query) == expected
+
+    # --- Priority 누락 수정 검증 ---
+    def test_priority_all_leaders_have_priority(self):
+        """60개 리더 모두 NLU Priority 설정 확인"""
+        from core.classifier import _NLU_INTENT_PATTERNS, _NLU_PRIORITY
+        for lid in _NLU_INTENT_PATTERNS:
+            assert lid in _NLU_PRIORITY, f"{lid}에 Priority 누락"
