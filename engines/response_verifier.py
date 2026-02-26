@@ -4,6 +4,7 @@ Response Verification Engine
 Gemini API를 사용하여 응답의 SSOT 준수 여부를 검증
 """
 import os
+import re
 import logging
 from google import genai
 from google.genai import types as genai_types
@@ -197,42 +198,155 @@ JSON만 응답하십시오."""
         return prompt
 
     def _parse_verification_result(self, text: str) -> Dict[str, Any]:
-        """Gemini의 검증 응답 파싱"""
+        """Gemini의 검증 응답 파싱 (다단계 복구)"""
+        json_text = self._extract_json_block(text)
+
+        # 1차: 직접 파싱
+        parsed = self._try_parse(json_text)
+        if parsed is not None:
+            return self._fill_defaults(parsed)
+
+        # 2차: 문자열 내 이스케이프되지 않은 줄바꿈/따옴표 수정
+        repaired = self._repair_json(json_text)
+        parsed = self._try_parse(repaired)
+        if parsed is not None:
+            logger.info("[Verifier] JSON 복구 파싱 성공")
+            return self._fill_defaults(parsed)
+
+        # 3차: 정규식으로 핵심 필드 추출
+        extracted = self._extract_fields_regex(text)
+        if extracted:
+            logger.info("[Verifier] 정규식 필드 추출 성공")
+            return extracted
+
+        # 최종 fallback: WARNING 반환 (ERROR 아님 — 실제 응답은 정상 전달됨)
+        logger.warning(f"⚠️ [Verifier] 응답 파싱 실패, WARNING 처리: {text[:200]}")
+        return {
+            "result": "WARNING",
+            "issues": ["검증 응답 파싱 실패 — 검증 불확실"],
+            "feedback": text[:500],
+            "ssot_compliance_score": 50
+        }
+
+    @staticmethod
+    def _extract_json_block(text: str) -> str:
+        """마크다운 코드블록에서 JSON 추출"""
+        if "```json" in text:
+            start = text.find("```json") + 7
+            end = text.find("```", start)
+            return text[start:end].strip() if end > start else text[start:].strip()
+        if "```" in text:
+            start = text.find("```") + 3
+            end = text.find("```", start)
+            return text[start:end].strip() if end > start else text[start:].strip()
+        return text.strip()
+
+    @staticmethod
+    def _try_parse(text: str) -> Optional[Dict]:
+        """json.loads 시도, 실패 시 None"""
         try:
-            # JSON 추출 (```json ``` 마크다운 제거)
-            if "```json" in text:
-                json_start = text.find("```json") + 7
-                json_end = text.find("```", json_start)
-                json_text = text[json_start:json_end].strip()
-            elif "```" in text:
-                json_start = text.find("```") + 3
-                json_end = text.find("```", json_start)
-                json_text = text[json_start:json_end].strip()
+            result = json.loads(text)
+            return result if isinstance(result, dict) else None
+        except (json.JSONDecodeError, TypeError):
+            return None
+
+    @staticmethod
+    def _repair_json(text: str) -> str:
+        """흔한 JSON 오류 복구: 문자열 내 줄바꿈, 미종료 문자열 등
+
+        문자 단위로 파싱하여 JSON 문자열 내부의 줄바꿈만 이스케이프하고,
+        미종료 문자열/배열/객체를 닫음.
+        """
+        chars = list(text)
+        result = []
+        in_string = False
+        i = 0
+
+        while i < len(chars):
+            ch = chars[i]
+
+            if in_string:
+                if ch == '\\' and i + 1 < len(chars):
+                    # 이스케이프 시퀀스 — 그대로 유지
+                    result.append(ch)
+                    result.append(chars[i + 1])
+                    i += 2
+                    continue
+                elif ch == '"':
+                    # 문자열 종료
+                    in_string = False
+                    result.append(ch)
+                elif ch == '\n':
+                    result.append('\\n')
+                elif ch == '\r':
+                    result.append('\\r')
+                elif ch == '\t':
+                    result.append('\\t')
+                else:
+                    result.append(ch)
             else:
-                json_text = text.strip()
+                if ch == '"':
+                    in_string = True
+                result.append(ch)
 
-            result = json.loads(json_text)
+            i += 1
 
-            # 기본값 설정
-            if "result" not in result:
-                result["result"] = "WARNING"
-            if "ssot_compliance_score" not in result:
-                result["ssot_compliance_score"] = 50
-            if "issues" not in result:
-                result["issues"] = []
-            if "feedback" not in result:
-                result["feedback"] = "검증 완료"
+        repaired = "".join(result)
 
-            return result
+        # 미종료 문자열 닫기
+        if in_string:
+            repaired += '"'
 
-        except Exception as e:
-            logger.error(f"⚠️ [Verifier] 응답 파싱 실패: {e}")
-            return {
-                "result": "ERROR",
-                "issues": [f"파싱 오류: {str(e)}"],
-                "feedback": text[:500],  # 원본 텍스트 일부 저장
-                "ssot_compliance_score": 0
-            }
+        # 미종료 배열/객체 닫기
+        open_brackets = repaired.count("[") - repaired.count("]")
+        open_braces = repaired.count("{") - repaired.count("}")
+
+        # 후행 콤마 제거
+        repaired = repaired.rstrip()
+        if repaired.endswith(","):
+            repaired = repaired[:-1]
+
+        repaired += "]" * open_brackets
+        repaired += "}" * open_braces
+
+        return repaired
+
+    @staticmethod
+    def _extract_fields_regex(text: str) -> Optional[Dict[str, Any]]:
+        """정규식으로 핵심 필드 추출 (최후 수단)"""
+        result_m = re.search(r'"result"\s*:\s*"(PASS|WARNING|FAIL)"', text)
+        score_m = re.search(r'"ssot_compliance_score"\s*:\s*(\d+)', text)
+
+        if not result_m and not score_m:
+            return None
+
+        result_val = result_m.group(1) if result_m else "WARNING"
+        score_val = int(score_m.group(1)) if score_m else 50
+
+        feedback_m = re.search(r'"feedback"\s*:\s*"([^"]{1,500})', text)
+        feedback_val = feedback_m.group(1) if feedback_m else "검증 완료 (파싱 복구)"
+
+        # issues 배열에서 개별 문자열 추출
+        issues = re.findall(r'"issues"\s*:\s*\[(.*?)\]', text, re.DOTALL)
+        issue_list = []
+        if issues:
+            issue_list = re.findall(r'"([^"]+)"', issues[0])
+
+        return {
+            "result": result_val,
+            "ssot_compliance_score": score_val,
+            "issues": issue_list,
+            "feedback": feedback_val
+        }
+
+    @staticmethod
+    def _fill_defaults(result: Dict[str, Any]) -> Dict[str, Any]:
+        """필수 필드 기본값 설정"""
+        result.setdefault("result", "WARNING")
+        result.setdefault("ssot_compliance_score", 50)
+        result.setdefault("issues", [])
+        result.setdefault("feedback", "검증 완료")
+        return result
 
 
 # 싱글톤 인스턴스
