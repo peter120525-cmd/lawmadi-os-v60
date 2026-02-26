@@ -57,7 +57,11 @@ def _safe_extract_json(text: str) -> Optional[Dict[str, Any]]:
     기존 ``re.search(r'\\{[^{}]+\\}', ...)`` 는 중첩 중괄호가 있으면 실패한다.
     여기서는 첫 번째 ``{`` 를 찾은 뒤 depth 카운팅으로 매칭되는 ``}`` 를 찾아
     올바른 JSON 조각을 추출한다.
+    잘린 JSON도 필수 필드(tier, leader_id 등)가 있으면 복구를 시도한다.
     """
+    if not text or not text.strip():
+        return None
+
     stripped = text.strip()
     if "```" in stripped:
         m = re.search(r'```(?:json)?\s*\n?([\s\S]*?)```', stripped)
@@ -94,6 +98,47 @@ def _safe_extract_json(text: str) -> Optional[Dict[str, Any]]:
                     return json.loads(candidate)
                 except json.JSONDecodeError:
                     return None
+
+    # 잘린 JSON 복구 시도: 닫히지 않은 문자열/중괄호를 강제로 닫아 필수 필드 추출
+    partial = stripped[start:]
+    result = _try_recover_truncated_json(partial)
+    if result:
+        return result
+
+    return None
+
+
+def _try_recover_truncated_json(partial: str) -> Optional[Dict[str, Any]]:
+    """잘린 JSON에서 필수 필드(tier, leader_id, leader_name)를 복구."""
+    required_keys = {"tier", "leader_id"}
+    # 정규식으로 핵심 필드 직접 추출
+    extracted = {}
+    for key in ["tier", "complexity", "is_document", "leader_id", "leader_name",
+                 "leader_specialty", "summary", "is_legal"]:
+        # 숫자 값
+        m = re.search(rf'"{key}"\s*:\s*(\d+)', partial)
+        if m:
+            extracted[key] = int(m.group(1))
+            continue
+        # boolean
+        m = re.search(rf'"{key}"\s*:\s*(true|false)', partial, re.IGNORECASE)
+        if m:
+            extracted[key] = m.group(1).lower() == "true"
+            continue
+        # 문자열 값
+        m = re.search(rf'"{key}"\s*:\s*"([^"]*)"', partial)
+        if m:
+            extracted[key] = m.group(1)
+
+    if required_keys.issubset(extracted.keys()):
+        # 기본값 채우기
+        extracted.setdefault("complexity", "simple")
+        extracted.setdefault("is_document", False)
+        extracted.setdefault("leader_name", "")
+        extracted.setdefault("leader_specialty", "")
+        extracted.setdefault("summary", "")
+        extracted.setdefault("is_legal", True)
+        return extracted
     return None
 
 

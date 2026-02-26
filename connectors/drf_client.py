@@ -35,6 +35,16 @@ def _init_cache():
 _DEFAULT_DRF_URL = "https://www.law.go.kr/DRF/lawSearch.do"
 _LAW_SERVICE_URL = "https://www.law.go.kr/DRF/lawService.do"
 
+# Target별 캐시 TTL (초) — 법률 데이터는 자주 변경되지 않으므로 긴 TTL 적용
+_CACHE_TTL = {
+    "law": 21600,    # 6시간
+    "prec": 14400,   # 4시간
+    "lstrm": 7200,   # 2시간
+    "decc": 7200,    # 2시간
+    "trty": 21600,   # 6시간
+    "default": 3600, # 1시간
+}
+
 
 class DRFConnector:
 
@@ -175,13 +185,14 @@ class DRFConnector:
                 result = fn(query)
                 if result is not None:
                     logger.info(f"[DualSSOT] SUCCESS via {label} (target={target})")
+                    ttl = _CACHE_TTL.get(target, _CACHE_TTL["default"])
                     try:
                         _cache_set(
                             cache_key,
                             {"data": result, "query": query[:200], "target": target},
-                            ttl_seconds=3600
+                            ttl_seconds=ttl
                         )
-                        logger.info(f"💾 [Cache SET] {cache_key[:24]}... (TTL: 1h)")
+                        logger.info(f"💾 [Cache SET] {cache_key[:24]}... (TTL: {ttl//3600}h)")
                     except Exception as e:
                         logger.warning(f"⚠️ [Cache] 저장 실패: {e}")
                     return result
@@ -393,13 +404,14 @@ class DRFConnector:
             result = self._call_law_service(query, target="lstrm")
             if result is not None:
                 logger.info(f"[lawService] SUCCESS (target=lstrm)")
+                ttl = _CACHE_TTL.get("lstrm", _CACHE_TTL["default"])
                 try:
                     _cache_set(
                         cache_key,
                         {"data": result, "query": query[:200], "target": "lstrm"},
-                        ttl_seconds=3600
+                        ttl_seconds=ttl
                     )
-                    logger.info(f"💾 [Cache SET] {cache_key[:24]}... (TTL: 1h)")
+                    logger.info(f"💾 [Cache SET] {cache_key[:24]}... (TTL: {ttl//3600}h)")
                 except Exception as e:
                     logger.warning(f"⚠️ [Cache] 저장 실패: {e}")
                 return result
@@ -445,13 +457,14 @@ class DRFConnector:
             result = self._call_law_service_by_id(target="decc", doc_id=doc_id)
             if result is not None:
                 logger.info(f"[lawService] SUCCESS (target=decc, ID={doc_id})")
+                ttl = _CACHE_TTL.get("decc", _CACHE_TTL["default"])
                 try:
                     _cache_set(
                         cache_key,
                         {"data": result, "doc_id": doc_id, "target": "decc"},
-                        ttl_seconds=3600
+                        ttl_seconds=ttl
                     )
-                    logger.info(f"💾 [Cache SET] {cache_key[:24]}... (TTL: 1h)")
+                    logger.info(f"💾 [Cache SET] {cache_key[:24]}... (TTL: {ttl//3600}h)")
                 except Exception as e:
                     logger.warning(f"⚠️ [Cache] 저장 실패: {e}")
                 return result
@@ -497,13 +510,14 @@ class DRFConnector:
             result = self._call_law_service_by_id(target="trty", doc_id=doc_id)
             if result is not None:
                 logger.info(f"[lawService] SUCCESS (target=trty, ID={doc_id})")
+                ttl = _CACHE_TTL.get("trty", _CACHE_TTL["default"])
                 try:
                     _cache_set(
                         cache_key,
                         {"data": result, "doc_id": doc_id, "target": "trty"},
-                        ttl_seconds=3600
+                        ttl_seconds=ttl
                     )
-                    logger.info(f"💾 [Cache SET] {cache_key[:24]}... (TTL: 1h)")
+                    logger.info(f"💾 [Cache SET] {cache_key[:24]}... (TTL: {ttl//3600}h)")
                 except Exception as e:
                     logger.warning(f"⚠️ [Cache] 저장 실패: {e}")
                 return result
@@ -574,8 +588,9 @@ class DRFConnector:
             result = await self._call_drf_async(query, target=target)
             if result is not None:
                 logger.info(f"[DualSSOT async] SUCCESS (target={target})")
+                ttl = _CACHE_TTL.get(target, _CACHE_TTL["default"])
                 try:
-                    _cache_set(cache_key, {"data": result, "query": query[:200], "target": target}, ttl_seconds=3600)
+                    _cache_set(cache_key, {"data": result, "query": query[:200], "target": target}, ttl_seconds=ttl)
                 except Exception:
                     pass
                 return result
