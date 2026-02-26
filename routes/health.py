@@ -7,6 +7,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, Header, HTTPException
 from core.constants import OS_VERSION, GEMINI_MODEL, LAWMADILM_API_URL
 from core.model_fallback import get_model, get_status as get_model_status
+from core.metrics import get_summary as get_enhanced_metrics
 from utils.helpers import _now_iso
 
 router = APIRouter()
@@ -64,6 +65,7 @@ def _diagnostic_snapshot() -> Dict[str, Any]:
             "gemini_key": bool(os.getenv("GEMINI_KEY")),
         },
         "metrics": _METRICS,
+        "enhanced_metrics": get_enhanced_metrics(),
     }
 
 

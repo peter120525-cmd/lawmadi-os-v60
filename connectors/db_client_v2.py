@@ -1195,3 +1195,161 @@ def save_feedback(trace_id: str, rating: str, query: str, leader: str, comment: 
         return result
     except Exception as e:
         return {"ok": False, "error": str(e)}
+
+
+# =============================================================
+# Frontend Error & Performance Logging (신규)
+# =============================================================
+
+def init_frontend_logs_table():
+    """프론트엔드 에러/성능 로그 테이블 생성"""
+    try:
+        execute("""
+            CREATE TABLE IF NOT EXISTS frontend_errors (
+                id SERIAL PRIMARY KEY,
+                visitor_id VARCHAR(64),
+                message TEXT,
+                source VARCHAR(200),
+                lineno INTEGER DEFAULT 0,
+                colno INTEGER DEFAULT 0,
+                stack TEXT,
+                url VARCHAR(500),
+                user_agent VARCHAR(300),
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                env_version VARCHAR(50) DEFAULT %s
+            )
+        """, (_ENV_VERSION,), fetch="none")
+
+        execute("""
+            CREATE TABLE IF NOT EXISTS frontend_perf (
+                id SERIAL PRIMARY KEY,
+                visitor_id VARCHAR(64),
+                lcp_ms REAL,
+                fid_ms REAL,
+                cls_score REAL,
+                ttfb_ms REAL,
+                dom_load_ms REAL,
+                full_load_ms REAL,
+                url VARCHAR(500),
+                user_agent VARCHAR(300),
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                env_version VARCHAR(50) DEFAULT %s
+            )
+        """, (_ENV_VERSION,), fetch="none")
+
+        # 인덱스
+        execute("CREATE INDEX IF NOT EXISTS idx_fe_errors_created ON frontend_errors(created_at)", fetch="none")
+        execute("CREATE INDEX IF NOT EXISTS idx_fe_perf_created ON frontend_perf(created_at)", fetch="none")
+
+        logger.info("✅ [DB] frontend_errors + frontend_perf 테이블 초기화 완료")
+    except Exception as e:
+        logger.warning(f"⚠️ [DB] frontend logs 테이블 생성 실패 (무시): {e}")
+
+
+def save_frontend_error(
+    visitor_id: str, message: str, source: str,
+    lineno: int, colno: int, stack: str, url: str, user_agent: str
+) -> dict:
+    """프론트엔드 JS 에러 저장"""
+    try:
+        return execute(
+            """INSERT INTO frontend_errors
+               (visitor_id, message, source, lineno, colno, stack, url, user_agent)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+               RETURNING id""",
+            (visitor_id, message, source, lineno, colno, stack, url, user_agent),
+            fetch="one"
+        )
+    except Exception as e:
+        logger.warning(f"⚠️ [DB] frontend error 저장 실패: {e}")
+        return {"ok": False, "error": str(e)}
+
+
+def save_frontend_perf(
+    visitor_id: str, lcp_ms=None, fid_ms=None, cls_score=None,
+    ttfb_ms=None, dom_load_ms=None, full_load_ms=None,
+    url: str = "", user_agent: str = ""
+) -> dict:
+    """프론트엔드 성능 메트릭 저장"""
+    try:
+        return execute(
+            """INSERT INTO frontend_perf
+               (visitor_id, lcp_ms, fid_ms, cls_score, ttfb_ms, dom_load_ms, full_load_ms, url, user_agent)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+               RETURNING id""",
+            (visitor_id, lcp_ms, fid_ms, cls_score, ttfb_ms, dom_load_ms, full_load_ms, url, user_agent),
+            fetch="one"
+        )
+    except Exception as e:
+        logger.warning(f"⚠️ [DB] frontend perf 저장 실패: {e}")
+        return {"ok": False, "error": str(e)}
+
+
+def get_frontend_errors(limit: int = 50) -> dict:
+    """최근 프론트엔드 에러 조회"""
+    try:
+        result = execute(
+            """SELECT id, visitor_id, message, source, lineno, colno, url, created_at
+               FROM frontend_errors
+               ORDER BY created_at DESC
+               LIMIT %s""",
+            (limit,), fetch="all"
+        )
+        if isinstance(result, dict) and not result.get("ok", True):
+            return result
+        rows = result if isinstance(result, list) else []
+        return {
+            "ok": True,
+            "count": len(rows),
+            "errors": [
+                {
+                    "id": r[0], "visitor_id": r[1], "message": r[2],
+                    "source": r[3], "lineno": r[4], "colno": r[5],
+                    "url": r[6], "created_at": str(r[7])
+                }
+                for r in rows
+            ]
+        }
+    except Exception as e:
+        logger.error(f"[DB] frontend errors 조회 실패: {e}")
+        return {"ok": False, "error": str(e)}
+
+
+def get_frontend_perf_stats(limit: int = 100) -> dict:
+    """프론트엔드 성능 통계 (최근 N건 평균 + 개별)"""
+    try:
+        # 평균값
+        avg_result = execute(
+            """SELECT
+                 AVG(lcp_ms) as avg_lcp,
+                 AVG(fid_ms) as avg_fid,
+                 AVG(cls_score) as avg_cls,
+                 AVG(ttfb_ms) as avg_ttfb,
+                 AVG(dom_load_ms) as avg_dom_load,
+                 AVG(full_load_ms) as avg_full_load,
+                 COUNT(*) as total
+               FROM frontend_perf
+               WHERE created_at > NOW() - INTERVAL '7 days'""",
+            fetch="one"
+        )
+        if isinstance(avg_result, dict) and not avg_result.get("ok", True):
+            return avg_result
+
+        # 직접 tuple인 경우
+        if isinstance(avg_result, (tuple, list)):
+            averages = {
+                "avg_lcp_ms": round(avg_result[0] or 0, 1),
+                "avg_fid_ms": round(avg_result[1] or 0, 1),
+                "avg_cls": round(avg_result[2] or 0, 3),
+                "avg_ttfb_ms": round(avg_result[3] or 0, 1),
+                "avg_dom_load_ms": round(avg_result[4] or 0, 1),
+                "avg_full_load_ms": round(avg_result[5] or 0, 1),
+                "total_samples": avg_result[6] or 0,
+            }
+        else:
+            averages = {}
+
+        return {"ok": True, "averages": averages}
+    except Exception as e:
+        logger.error(f"[DB] frontend perf 통계 조회 실패: {e}")
+        return {"ok": False, "error": str(e)}

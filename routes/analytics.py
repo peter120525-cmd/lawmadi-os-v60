@@ -1,10 +1,13 @@
-"""Verification stats, visitor stats, admin leader/category stats routes."""
+"""Verification stats, visitor stats, admin leader/category stats, frontend error/perf logging routes."""
 import os
 import hmac
+import json
 import logging
+import hashlib
 from typing import Any, Dict
 from fastapi import APIRouter, Request, Header, HTTPException
 from fastapi.responses import JSONResponse
+from core.metrics import get_summary, get_endpoint_metrics, get_leader_metrics
 
 router = APIRouter()
 logger = logging.getLogger("LawmadiOS.Analytics")
@@ -221,4 +224,181 @@ async def get_leader_queries_api(
         return JSONResponse(
             status_code=500,
             content={"ok": False, "error": "리더 질문 조회 중 오류가 발생했습니다."}
+        )
+
+
+# =============================================================
+# Frontend Error Tracking API (신규)
+# =============================================================
+
+@router.post("/api/errors")
+async def report_frontend_error(request: Request):
+    """
+    프론트엔드 JS 에러 수집.
+    Body: { message, source, lineno, colno, stack, url, userAgent }
+    """
+    try:
+        body = await request.body()
+        if len(body) > 16 * 1024:  # 16KB 제한
+            return JSONResponse(status_code=413, content={"ok": False})
+
+        data = json.loads(body)
+        visitor_ip = _get_client_ip_fn(request) if _get_client_ip_fn else "unknown"
+        visitor_hash = hashlib.sha256(visitor_ip.encode()).hexdigest()[:12]
+
+        logger.warning(
+            f"🌐 [Frontend Error] visitor={visitor_hash} | "
+            f"msg={str(data.get('message', ''))[:200]} | "
+            f"source={data.get('source', '')[:100]} | "
+            f"line={data.get('lineno', '')}:{data.get('colno', '')} | "
+            f"url={data.get('url', '')[:200]}"
+        )
+
+        # DB 저장 (fail-soft)
+        db_client = _optional_import("connectors.db_client_v2")
+        if db_client and hasattr(db_client, "save_frontend_error"):
+            db_client.save_frontend_error(
+                visitor_id=visitor_hash,
+                message=str(data.get("message", ""))[:500],
+                source=str(data.get("source", ""))[:200],
+                lineno=data.get("lineno", 0),
+                colno=data.get("colno", 0),
+                stack=str(data.get("stack", ""))[:2000],
+                url=str(data.get("url", ""))[:500],
+                user_agent=str(data.get("userAgent", ""))[:300],
+            )
+
+        return {"ok": True}
+
+    except Exception as e:
+        logger.error(f"[API] /api/errors failed: {e}")
+        return JSONResponse(status_code=500, content={"ok": False})
+
+
+# =============================================================
+# Frontend Performance Tracking API (신규)
+# =============================================================
+
+@router.post("/api/perf")
+async def report_frontend_perf(request: Request):
+    """
+    프론트엔드 성능 메트릭 수집 (Core Web Vitals + 페이지 로드 시간).
+    Body: { lcp, fid, cls, ttfb, domLoad, fullLoad, url, userAgent }
+    """
+    try:
+        body = await request.body()
+        if len(body) > 8 * 1024:
+            return JSONResponse(status_code=413, content={"ok": False})
+
+        data = json.loads(body)
+        visitor_ip = _get_client_ip_fn(request) if _get_client_ip_fn else "unknown"
+        visitor_hash = hashlib.sha256(visitor_ip.encode()).hexdigest()[:12]
+
+        logger.info(
+            f"📊 [Frontend Perf] visitor={visitor_hash} | "
+            f"LCP={data.get('lcp', '-')}ms | "
+            f"FID={data.get('fid', '-')}ms | "
+            f"CLS={data.get('cls', '-')} | "
+            f"TTFB={data.get('ttfb', '-')}ms | "
+            f"domLoad={data.get('domLoad', '-')}ms | "
+            f"fullLoad={data.get('fullLoad', '-')}ms | "
+            f"url={data.get('url', '')[:200]}"
+        )
+
+        # DB 저장 (fail-soft)
+        db_client = _optional_import("connectors.db_client_v2")
+        if db_client and hasattr(db_client, "save_frontend_perf"):
+            db_client.save_frontend_perf(
+                visitor_id=visitor_hash,
+                lcp_ms=data.get("lcp"),
+                fid_ms=data.get("fid"),
+                cls_score=data.get("cls"),
+                ttfb_ms=data.get("ttfb"),
+                dom_load_ms=data.get("domLoad"),
+                full_load_ms=data.get("fullLoad"),
+                url=str(data.get("url", ""))[:500],
+                user_agent=str(data.get("userAgent", ""))[:300],
+            )
+
+        return {"ok": True}
+
+    except Exception as e:
+        logger.error(f"[API] /api/perf failed: {e}")
+        return JSONResponse(status_code=500, content={"ok": False})
+
+
+# =============================================================
+# Admin System Logs API (신규)
+# =============================================================
+
+@router.get("/api/admin/system-metrics")
+async def get_system_metrics_api(authorization: str = Header(default="")):
+    """
+    Admin API: 실시간 시스템 메트릭.
+    - 응답 시간 백분위 (p50/p95/p99)
+    - 캐시 적중률
+    - 에러 분류
+    - 리더별/엔드포인트별 메트릭
+    - 라우팅 방식 분포
+    - 파이프라인 스테이지별 지연
+    """
+    _verify_internal_auth(authorization)
+
+    try:
+        return {
+            "ok": True,
+            "summary": get_summary(),
+            "endpoints": get_endpoint_metrics(),
+            "leaders": get_leader_metrics(),
+        }
+
+    except Exception as e:
+        logger.error(f"[API] /api/admin/system-metrics failed: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "error": "시스템 메트릭 조회 실패"}
+        )
+
+
+@router.get("/api/admin/frontend-errors")
+async def get_frontend_errors_api(
+    limit: int = 50,
+    authorization: str = Header(default="")
+):
+    """Admin API: 최근 프론트엔드 에러 목록."""
+    _verify_internal_auth(authorization)
+
+    try:
+        db_client = _optional_import("connectors.db_client_v2")
+        if db_client and hasattr(db_client, "get_frontend_errors"):
+            return db_client.get_frontend_errors(limit)
+        return {"ok": False, "error": "DB module not available"}
+
+    except Exception as e:
+        logger.error(f"[API] /api/admin/frontend-errors failed: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "error": "프론트엔드 에러 조회 실패"}
+        )
+
+
+@router.get("/api/admin/frontend-perf")
+async def get_frontend_perf_api(
+    limit: int = 100,
+    authorization: str = Header(default="")
+):
+    """Admin API: 프론트엔드 성능 메트릭 (Core Web Vitals)."""
+    _verify_internal_auth(authorization)
+
+    try:
+        db_client = _optional_import("connectors.db_client_v2")
+        if db_client and hasattr(db_client, "get_frontend_perf_stats"):
+            return db_client.get_frontend_perf_stats(limit)
+        return {"ok": False, "error": "DB module not available"}
+
+    except Exception as e:
+        logger.error(f"[API] /api/admin/frontend-perf failed: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "error": "프론트엔드 성능 조회 실패"}
         )
