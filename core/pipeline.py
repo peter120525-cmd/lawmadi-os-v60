@@ -752,7 +752,7 @@ async def _call_lawmadilm(
     lang: str = "",
     mode: str = "general",
 ) -> str:
-    """Stage 2: LawmadiLM 핵심 법률 초안 (5-6초 내 완료, 150토큰)"""
+    """Stage 2: LawmadiLM 300자 법률 초안 (3초 타임아웃)"""
     leader_name = analysis.get("leader_name", "마디")
     leader_specialty = analysis.get("leader_specialty", "통합")
     leader_id = analysis.get("leader_id", "")
@@ -778,7 +778,8 @@ async def _call_lawmadilm(
         leader_persona=persona_text,
     )
 
-    max_tokens = 100 if mode == "expert" else 60  # 5초 내 완성 목표 (네트워크 지연 포함)
+    # 300자 초안 목표: 150토큰 (한국어 ~2자/토큰), expert는 200토큰
+    max_tokens = 200 if mode == "expert" else 150
 
     payload = {
         "messages": [{"role": "user", "content": query}],
@@ -787,7 +788,8 @@ async def _call_lawmadilm(
         "temperature": 0.3,
     }
 
-    async with httpx.AsyncClient(timeout=5.0) as client:
+    _lm_timeout = float(os.getenv("LAWMADILM_TIMEOUT", "3"))
+    async with httpx.AsyncClient(timeout=_lm_timeout) as client:
         resp = await client.post(f"{LAWMADILM_API_URL}/chat", json=payload)
         resp.raise_for_status()
         data = resp.json()
@@ -1456,7 +1458,7 @@ async def _run_legal_pipeline(
 
     # -- Stage 2: LawmadiLM 초안 (비활성화 가능) --
     lm_draft = ""
-    _enable_lm = os.getenv("ENABLE_LAWMADILM", "false").lower() == "true"
+    _enable_lm = os.getenv("ENABLE_LAWMADILM", "true").lower() == "true"
     if _enable_lm:
         try:
             logger.info("[Stage 2/4] LawmadiLM 초안 생성 (5초)")
@@ -1685,7 +1687,7 @@ async def run_pipeline_stage2(
     mode: str = "general",
 ) -> str:
     """스트리밍용: Stage 2만 실행 (강화 프롬프트)"""
-    if os.getenv("ENABLE_LAWMADILM", "false").lower() != "true":
+    if os.getenv("ENABLE_LAWMADILM", "true").lower() != "true":
         logger.info("[Stream Stage 2] LawmadiLM 스킵 (ENABLE_LAWMADILM=false)")
         return ""
     try:
