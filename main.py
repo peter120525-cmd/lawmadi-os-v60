@@ -36,6 +36,7 @@ import logging
 import datetime
 import re
 import hashlib
+import hmac
 import traceback
 import threading
 from typing import Any, List, Dict, Optional, Union
@@ -252,6 +253,25 @@ METRICS: Dict[str, Any] = {
 _METRICS_LOCK = threading.Lock()
 
 @app.middleware("http")
+async def body_size_limit_middleware(request: Request, call_next):
+    """요청 본문 크기 제한 — 메모리에 읽기 전 Content-Length 검증."""
+    _MAX_BODY_SIZE = 2 * 1024 * 1024  # 2MB 기본
+    _UPLOAD_MAX = 10 * 1024 * 1024  # 10MB (파일 업로드)
+    path = request.url.path
+    if path.startswith("/upload"):
+        max_size = _UPLOAD_MAX
+    else:
+        max_size = _MAX_BODY_SIZE
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > max_size:
+        return JSONResponse(
+            status_code=413,
+            content={"error": f"Request body too large (max {max_size // (1024*1024)}MB)"}
+        )
+    return await call_next(request)
+
+
+@app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
     """보안 헤더 주입 + MCP 모니터링"""
     if request.url.path.startswith("/mcp"):
@@ -274,11 +294,13 @@ async def security_headers_middleware(request: Request, call_next):
         f"connect-src 'self' {LAWMADI_OS_API_URL} https://www.google-analytics.com https://region1.google-analytics.com; "
         "frame-ancestors 'none'; "
         "object-src 'none'; "
-        "base-uri 'self'"
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "upgrade-insecure-requests"
     )
     # API 응답 캐시 방지 — 법률 분석 내용이 프록시/브라우저에 캐시되지 않도록
     req_path = request.url.path
-    if req_path.startswith("/ask") or req_path.startswith("/api/") or req_path.startswith("/upload") or req_path.startswith("/export"):
+    if req_path.startswith("/ask") or req_path.startswith("/api/") or req_path.startswith("/upload") or req_path.startswith("/export") or req_path.startswith("/search"):
         response.headers["Cache-Control"] = "no-store, no-cache, private, max-age=0"
         response.headers["Pragma"] = "no-cache"
     if request.url.scheme == "https":
@@ -594,7 +616,7 @@ def _check_expert_access(request: Request) -> bool:
     _admin_key = os.getenv("MCP_API_KEY", "").strip() or os.getenv("INTERNAL_API_KEY", "").strip()
     if _admin_key and len(_admin_key) >= 8:
         req_key = request.headers.get("X-Admin-Key", "").strip()
-        if req_key and req_key == _admin_key:
+        if req_key and hmac.compare_digest(req_key, _admin_key):
             return True
     plan = _get_user_plan(request)
     plan_cfg = PLAN_CONFIG.get(plan, PLAN_CONFIG["free"])
@@ -611,16 +633,21 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
     관리자 키(X-Admin-Key 헤더)가 유효하면 제한 우회.
     플랜에 따라 window_limit 동적 적용.
     """
-    # 관리자 키 우회 (테스트/모니터링용)
+    # 관리자 키: 완전 우회 대신 높은 제한 적용 (1000회/4시간)
+    _ADMIN_WINDOW_LIMIT = 1000
     _admin_key = os.getenv("MCP_API_KEY", "").strip() or os.getenv("INTERNAL_API_KEY", "").strip()
+    is_admin = False
     if _admin_key and len(_admin_key) >= 8:
         req_key = request.headers.get("X-Admin-Key", "").strip()
-        if req_key and req_key == _admin_key:
-            return True
+        if req_key and hmac.compare_digest(req_key, _admin_key):
+            is_admin = True
 
-    plan = _get_user_plan(request)
-    plan_cfg = PLAN_CONFIG.get(plan, PLAN_CONFIG["free"])
-    window_limit = plan_cfg["window_limit"]
+    if is_admin:
+        window_limit = _ADMIN_WINDOW_LIMIT
+    else:
+        plan = _get_user_plan(request)
+        plan_cfg = PLAN_CONFIG.get(plan, PLAN_CONFIG["free"])
+        window_limit = plan_cfg["window_limit"]
 
     ip = _get_client_ip(request)
     ip_hash = _sha256(ip)
@@ -1429,15 +1456,7 @@ async def shutdown():
 # =============================================================
 from fastapi_mcp import FastApiMCP, AuthConfig
 
-_MCP_API_KEY = os.getenv("MCP_API_KEY", "")
-
-def _verify_mcp_auth(authorization: str = Header(default="")) -> None:
-    """MCP 엔드포인트 인증 — FAIL_CLOSED"""
-    if not _MCP_API_KEY:
-        raise HTTPException(status_code=403, detail="MCP_API_KEY not configured")
-    token = authorization.removeprefix("Bearer ").strip()
-    if token != _MCP_API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid MCP API key")
+from core.auth import verify_mcp_key as _verify_mcp_auth
 
 mcp = FastApiMCP(
     app,
