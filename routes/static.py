@@ -105,6 +105,15 @@ async def serve_leaders_en():
     return {"message": "Leaders page not found", "version": OS_VERSION}
 
 
+@router.get("/clevel")
+async def serve_clevel():
+    """C-Level page (Korean)"""
+    frontend_path = os.path.join(_PROJECT_ROOT, "frontend", "public", "clevel.html")
+    if os.path.exists(frontend_path):
+        return FileResponse(frontend_path)
+    return {"message": "C-Level page not found", "version": OS_VERSION}
+
+
 @router.get("/clevel-en")
 async def serve_clevel_en():
     """C-Level page (English)"""
@@ -112,6 +121,24 @@ async def serve_clevel_en():
     if os.path.exists(frontend_path):
         return FileResponse(frontend_path)
     return {"message": "C-Level page not found", "version": OS_VERSION}
+
+
+@router.get("/leader-profile.html")
+async def serve_leader_profile():
+    """Leader profile detail page (Korean)"""
+    frontend_path = os.path.join(_PROJECT_ROOT, "frontend", "public", "leader-profile.html")
+    if os.path.exists(frontend_path):
+        return FileResponse(frontend_path)
+    return {"message": "Leader profile page not found", "version": OS_VERSION}
+
+
+@router.get("/leader-profile-en.html")
+async def serve_leader_profile_en():
+    """Leader profile detail page (English)"""
+    frontend_path = os.path.join(_PROJECT_ROOT, "frontend", "public", "leader-profile-en.html")
+    if os.path.exists(frontend_path):
+        return FileResponse(frontend_path)
+    return {"message": "Leader profile page not found", "version": OS_VERSION}
 
 
 @router.get("/terms")
@@ -123,10 +150,28 @@ async def serve_terms():
     return {"message": "Terms page not found", "version": OS_VERSION}
 
 
+@router.get("/terms-en")
+async def serve_terms_en():
+    """Terms of service page (English)"""
+    frontend_path = os.path.join(_PROJECT_ROOT, "frontend", "public", "terms-en.html")
+    if os.path.exists(frontend_path):
+        return FileResponse(frontend_path)
+    return {"message": "Terms page not found", "version": OS_VERSION}
+
+
 @router.get("/privacy")
 async def serve_privacy():
     """Privacy policy page"""
     frontend_path = os.path.join(_PROJECT_ROOT, "frontend", "public", "privacy.html")
+    if os.path.exists(frontend_path):
+        return FileResponse(frontend_path)
+    return {"message": "Privacy page not found", "version": OS_VERSION}
+
+
+@router.get("/privacy-en")
+async def serve_privacy_en():
+    """Privacy policy page (English)"""
+    frontend_path = os.path.join(_PROJECT_ROOT, "frontend", "public", "privacy-en.html")
     if os.path.exists(frontend_path):
         return FileResponse(frontend_path)
     return {"message": "Privacy page not found", "version": OS_VERSION}
@@ -144,7 +189,10 @@ _HTML_REDIRECTS = {
     "/about-en.html": "/about-en",
     "/leaders.html": "/leaders",
     "/leaders-en.html": "/leaders-en",
+    "/clevel.html": "/clevel",
     "/clevel-en.html": "/clevel-en",
+    "/terms-en.html": "/terms-en",
+    "/privacy-en.html": "/privacy-en",
     "/index-en.html": "/en",
 }
 

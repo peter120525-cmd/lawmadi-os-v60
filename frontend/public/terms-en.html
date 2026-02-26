@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Terms of Service - Lawmadi OS</title>
+    <meta name="description" content="Lawmadi OS Terms of Service. Terms and conditions for using the legal information service.">
+    <link rel="canonical" href="https://lawmadi-db.web.app/terms-en.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Terms of Service - Lawmadi OS" />
+    <meta property="og:description" content="Lawmadi OS Terms of Service. Terms and conditions for using the legal information service." />
+    <meta property="og:url" content="https://lawmadi-db.web.app/terms-en.html" />
+    <meta property="og:locale" content="en_US" />
+    <meta name="theme-color" content="#0f172a">
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --gold: #f59e0b;
+            --purple: #8b5cf6;
+            --green: #10b981;
+            --red: #ef4444;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* Animated Background */
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .grid-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .floating-shape {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.04;
+            animation: float 25s infinite ease-in-out;
+        }
+
+        .shape1 { width: 400px; height: 400px; background: #3b82f6; top: 5%; left: 5%; animation-delay: 0s; }
+        .shape2 { width: 300px; height: 300px; background: #f59e0b; top: 50%; right: 5%; animation-delay: 8s; }
+        .shape3 { width: 350px; height: 350px; background: #8b5cf6; bottom: 5%; left: 40%; animation-delay: 16s; }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(40px, -40px) rotate(90deg); }
+            50% { transform: translate(-30px, 30px) rotate(180deg); }
+            75% { transform: translate(30px, 40px) rotate(270deg); }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px 80px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 40px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(-5px);
+        }
+
+        .header-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* Article Card */
+        .article-card {
+            background: rgba(30, 41, 59, 0.7);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 36px 32px;
+            margin-bottom: 24px;
+            transition: all 0.3s;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .article-card:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .article-number {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .article-number .num {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            font-weight: 900;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .article-number h2 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: white;
+        }
+
+        .article-card p {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        .article-card p:last-child {
+            margin-bottom: 0;
+        }
+
+        .article-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 12px 0;
+        }
+
+        .article-card ul li {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .article-card ul li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 11px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--primary);
+        }
+
+        .highlight-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-top: 12px;
+        }
+
+        .highlight-box p {
+            color: #fca5a5;
+            font-weight: 600;
+            margin-bottom: 0;
+        }
+
+        .highlight-box .material-symbols-outlined {
+            font-size: 1.1rem;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        .info-box {
+            background: rgba(37, 99, 235, 0.1);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-top: 12px;
+        }
+
+        .info-box p {
+            color: #93c5fd;
+            font-weight: 600;
+            margin-bottom: 0;
+        }
+
+        .info-box .material-symbols-outlined {
+            font-size: 1.1rem;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        /* Effective Date */
+        .effective-date {
+            text-align: center;
+            padding: 40px 20px;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .effective-date p {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .effective-date .date {
+            font-size: 1.4rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-top: 8px;
+        }
+
+        /* Footer Nav */
+        .footer-nav {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            padding: 40px 20px 0;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .footer-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            background: rgba(255, 255, 255, 0.08);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 14px;
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+
+        .footer-link:hover {
+            background: rgba(37, 99, 235, 0.2);
+            border-color: var(--primary);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .article-card:nth-child(2) { animation-delay: 0.05s; }
+        .article-card:nth-child(3) { animation-delay: 0.1s; }
+        .article-card:nth-child(4) { animation-delay: 0.15s; }
+        .article-card:nth-child(5) { animation-delay: 0.2s; }
+        .article-card:nth-child(6) { animation-delay: 0.25s; }
+        .article-card:nth-child(7) { animation-delay: 0.3s; }
+        .article-card:nth-child(8) { animation-delay: 0.35s; }
+        .article-card:nth-child(9) { animation-delay: 0.4s; }
+        .article-card:nth-child(10) { animation-delay: 0.45s; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 16px 60px;
+            }
+
+            .back-button {
+                top: 12px;
+                left: 12px;
+                padding: 8px 14px;
+                font-size: 0.85rem;
+                min-height: 44px;
+            }
+
+            .header {
+                margin-top: 40px;
+                margin-bottom: 40px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .header p {
+                font-size: 1rem;
+            }
+
+            .article-card {
+                padding: 24px 20px;
+            }
+
+            .article-number h2 {
+                font-size: 1.1rem;
+            }
+
+            .footer-nav {
+                flex-direction: column;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .footer-link {
+                width: 100%;
+                max-width: 300px;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="animated-bg">
+        <div class="grid-pattern"></div>
+        <div class="floating-shape shape1"></div>
+        <div class="floating-shape shape2"></div>
+        <div class="floating-shape shape3"></div>
+    </div>
+
+    <a href="index-en.html" class="back-button">
+        <span class="material-symbols-outlined">arrow_back</span>
+        Home
+    </a>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-badge">TERMS OF SERVICE</div>
+            <h1>Terms of Service</h1>
+            <p>Terms and conditions for using Lawmadi OS services</p>
+        </header>
+
+        <!-- Article 1: Purpose -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">1</div>
+                <h2>Purpose</h2>
+            </div>
+            <p>These Terms of Service set forth the basic terms and conditions governing the use of the legal information services provided by Lawmadi OS (hereinafter referred to as the "Service").</p>
+            <p>Lawmadi OS is a legal information service that searches, analyzes, and organizes legal information through 60 expert leaders and real-time verification with the Korea National Law Information Center (SSOT). The Service operates based on official data from the Korea National Law Information Center (Ministry of Government Legislation).</p>
+        </div>
+
+        <!-- Article 2: Definitions -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">2</div>
+                <h2>Definitions</h2>
+            </div>
+            <p>The terms used in these Terms of Service are defined as follows:</p>
+            <ul>
+                <li><strong>"Service"</strong> refers to all functions provided by Lawmadi OS, including legal information search, analysis, and document drafting assistance.</li>
+                <li><strong>"User"</strong> refers to any person who uses the Service in accordance with these Terms.</li>
+                <li><strong>"Legal Information"</strong> refers to law-related information provided through the Service, including statutes, case law, legal interpretations, and analysis results. This is distinct from legal advice.</li>
+            </ul>
+        </div>
+
+        <!-- Article 3: Service Description -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">3</div>
+                <h2>Service Description</h2>
+            </div>
+            <p>Lawmadi OS provides the following services:</p>
+            <ul>
+                <li>Legal Q&A and legal information analysis</li>
+                <li>Statute search and verification through real-time integration with the Korea National Law Information Center</li>
+                <li>Domain-specific legal analysis through 60 expert leaders</li>
+                <li>Analysis results through a 4-stage verification process</li>
+                <li>Legal document drafting assistance</li>
+            </ul>
+            <div class="highlight-box">
+                <p><span class="material-symbols-outlined">warning</span>This Service provides legal information and is NOT legal advice from an attorney. Information provided by the Service should be used for reference purposes only.</p>
+            </div>
+        </div>
+
+        <!-- Article 4: Legal Disclaimer -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">4</div>
+                <h2>Legal Disclaimer</h2>
+            </div>
+            <p>This Service does not constitute legal practice under the Attorney-at-Law Act and does not guarantee legal effect.</p>
+            <ul>
+                <li>Lawmadi OS is not a law firm or attorney, and does not establish an attorney-client relationship.</li>
+                <li>All responses provided by the Service are system-generated legal information and cannot substitute for professional legal advice.</li>
+                <li>For important legal matters such as disputes, litigation, or contracts, you must consult a qualified attorney.</li>
+            </ul>
+            <div class="highlight-box">
+                <p><span class="material-symbols-outlined">gavel</span>This Service does not constitute legal practice and does not guarantee legal effect.</p>
+            </div>
+        </div>
+
+        <!-- Article 5: User Obligations -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">5</div>
+                <h2>User Obligations</h2>
+            </div>
+            <p>Users must comply with the following when using the Service:</p>
+            <ul>
+                <li>Users must provide accurate information when using the Service.</li>
+                <li>The Service must not be used for illegal purposes or to infringe upon the rights of others.</li>
+                <li>The Service must not be misused to create false legal documents or for fraud, threats, or similar activities.</li>
+                <li>Users must not interfere with the normal operation of the Service.</li>
+                <li>Users must not collect or use other users' personal information without authorization.</li>
+            </ul>
+        </div>
+
+        <!-- Article 6: Intellectual Property -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">6</div>
+                <h2>Intellectual Property</h2>
+            </div>
+            <p>All intellectual property rights for Lawmadi OS content are protected.</p>
+            <ul>
+                <li>All copyrights and intellectual property rights for the Service's design, logos, text, software, and system configurations belong to Lawmadi OS.</li>
+                <li>Users may only use information obtained through the Service for personal, non-commercial purposes.</li>
+                <li>Reproduction, distribution, transmission, or modification of Service content without prior consent is prohibited.</li>
+            </ul>
+        </div>
+
+        <!-- Article 7: Limitation of Liability -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">7</div>
+                <h2>Limitation of Liability</h2>
+            </div>
+            <p>Lawmadi OS shall not be liable for the following:</p>
+            <ul>
+                <li>Guarantees regarding the accuracy, completeness, or timeliness of system-generated responses</li>
+                <li>Decisions made by users based on information provided by the Service and their consequences</li>
+                <li>Service interruptions due to force majeure such as natural disasters or system failures</li>
+                <li>Service usage disruptions caused by the user's own fault</li>
+            </ul>
+            <div class="info-box">
+                <p><span class="material-symbols-outlined">info</span>System responses are for reference purposes only. For final judgments, please consult a qualified legal professional.</p>
+            </div>
+        </div>
+
+        <!-- Article 8: Service Changes and Suspension -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">8</div>
+                <h2>Service Changes and Suspension</h2>
+            </div>
+            <p>Lawmadi OS may change or suspend all or part of the Service to improve stability and quality.</p>
+            <ul>
+                <li>Users will be notified in advance through in-service notices when the Service is changed or suspended.</li>
+                <li>In unavoidable cases such as emergency system maintenance or security issues, notification may be provided after the fact.</li>
+                <li>No separate compensation will be provided for changes or suspension of free services.</li>
+            </ul>
+        </div>
+
+        <!-- Article 9: Governing Law and Jurisdiction -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">9</div>
+                <h2>Governing Law and Jurisdiction</h2>
+            </div>
+            <p>The interpretation and application of these Terms shall be as follows:</p>
+            <ul>
+                <li>These Terms shall be interpreted and applied in accordance with the laws of the Republic of Korea.</li>
+                <li>In the event of a dispute arising from Service use, the court having jurisdiction over the developer's address shall be the court of first instance.</li>
+                <li>Matters not stipulated in these Terms shall be governed by relevant laws and established customs.</li>
+            </ul>
+        </div>
+
+        <!-- Article 10: Privacy Officer -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">10</div>
+                <h2>Privacy Officer</h2>
+            </div>
+            <p>A Privacy Officer has been designated to oversee personal information processing and to handle user complaints and remedies.</p>
+            <ul>
+                <li>Name: Jaenam Choe</li>
+                <li>Email: <a href="mailto:choepeter@outlook.kr">choepeter@outlook.kr</a></li>
+                <li>Inquiries, access/correction/deletion requests, and complaint handling regarding personal information</li>
+            </ul>
+        </div>
+
+        <!-- Article 11: Effective Date -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">11</div>
+                <h2>Effective Date</h2>
+            </div>
+            <p>These Terms shall take effect from the effective date below.</p>
+        </div>
+
+        <!-- Effective Date -->
+        <div class="effective-date">
+            <p>Effective Date</p>
+            <div class="date">February 22, 2026</div>
+        </div>
+
+        <!-- Footer Navigation -->
+        <div class="footer-nav">
+            <a href="index-en.html" class="footer-link">
+                <span class="material-symbols-outlined">home</span>
+                Home
+            </a>
+            <a href="privacy-en.html" class="footer-link">
+                <span class="material-symbols-outlined">shield</span>
+                Privacy Policy
+            </a>
+            <a href="about-en.html" class="footer-link">
+                <span class="material-symbols-outlined">info</span>
+                About
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Page load animation
+        window.addEventListener('load', () => {
+            document.body.style.opacity = '0';
+            setTimeout(() => {
+                document.body.style.transition = 'opacity 0.5s';
+                document.body.style.opacity = '1';
+            }, 100);
+        });
+    </script>
+    <script>
+    document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    </script>
+</body>
+</html>
