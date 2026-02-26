@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Privacy Policy - Lawmadi OS</title>
+    <meta name="description" content="Lawmadi OS Privacy Policy. Information on personal data processing and protection in compliance with Korean privacy law.">
+    <link rel="canonical" href="https://lawmadi-db.web.app/privacy-en.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Privacy Policy - Lawmadi OS" />
+    <meta property="og:description" content="Lawmadi OS Privacy Policy. Information on personal data processing and protection in compliance with Korean privacy law." />
+    <meta property="og:url" content="https://lawmadi-db.web.app/privacy-en.html" />
+    <meta property="og:locale" content="en_US" />
+    <meta name="theme-color" content="#0f172a">
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --gold: #f59e0b;
+            --purple: #8b5cf6;
+            --green: #10b981;
+            --red: #ef4444;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* Animated Background */
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .grid-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .floating-shape {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.04;
+            animation: float 25s infinite ease-in-out;
+        }
+
+        .shape1 { width: 400px; height: 400px; background: #3b82f6; top: 5%; left: 5%; animation-delay: 0s; }
+        .shape2 { width: 300px; height: 300px; background: #f59e0b; top: 50%; right: 5%; animation-delay: 8s; }
+        .shape3 { width: 350px; height: 350px; background: #8b5cf6; bottom: 5%; left: 40%; animation-delay: 16s; }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(40px, -40px) rotate(90deg); }
+            50% { transform: translate(-30px, 30px) rotate(180deg); }
+            75% { transform: translate(30px, 40px) rotate(270deg); }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px 80px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .back-button {
+            position: absolute;
+            top: 40px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(-5px);
+        }
+
+        .header-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .header .law-ref {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 6px 16px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Article Card */
+        .article-card {
+            background: rgba(30, 41, 59, 0.7);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 36px 32px;
+            margin-bottom: 24px;
+            transition: all 0.3s;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .article-card:hover {
+            border-color: rgba(16, 185, 129, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .article-number {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .article-number .icon-wrap {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--green) 0%, #06b6d4 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .article-number .icon-wrap .material-symbols-outlined {
+            font-size: 1.2rem;
+            color: white;
+        }
+
+        .article-number h2 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: white;
+        }
+
+        .article-number .law-tag {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--green);
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 2px 10px;
+            border-radius: 6px;
+            margin-left: 4px;
+        }
+
+        .article-card p {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        .article-card p:last-child {
+            margin-bottom: 0;
+        }
+
+        .article-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 12px 0;
+        }
+
+        .article-card ul li {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .article-card ul li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 11px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--green);
+        }
+
+        /* Data Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .data-table thead th {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--green);
+            font-weight: 700;
+            font-size: 0.85rem;
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .data-table tbody td {
+            padding: 12px 16px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .data-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .data-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Third-party card */
+        .third-party-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .third-party-item {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .third-party-item:hover {
+            border-color: rgba(16, 185, 129, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .third-party-item .service-name {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 6px;
+        }
+
+        .third-party-item .service-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        /* Rights Grid */
+        .rights-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .right-item {
+            background: rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: all 0.3s;
+        }
+
+        .right-item:hover {
+            border-color: rgba(139, 92, 246, 0.3);
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        .right-item .material-symbols-outlined {
+            font-size: 1.6rem;
+            color: var(--purple);
+            flex-shrink: 0;
+        }
+
+        .right-item .right-text h4 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 2px;
+        }
+
+        .right-item .right-text p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+        }
+
+        /* Security Grid */
+        .security-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .security-item {
+            background: rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .security-item:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .security-item .material-symbols-outlined {
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .security-item h4 {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 4px;
+        }
+
+        .security-item p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0;
+        }
+
+        /* Contact Box */
+        .contact-box {
+            background: rgba(37, 99, 235, 0.1);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .contact-box .material-symbols-outlined {
+            font-size: 2rem;
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .contact-box .contact-info h4 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 4px;
+        }
+
+        .contact-box .contact-info p {
+            margin-bottom: 0;
+        }
+
+        .contact-box .contact-info a {
+            color: #93c5fd;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .contact-box .contact-info a:hover {
+            color: #60a5fa;
+        }
+
+        /* Effective Date */
+        .effective-date {
+            text-align: center;
+            padding: 40px 20px;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .effective-date p {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .effective-date .date {
+            font-size: 1.4rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-top: 8px;
+        }
+
+        /* Footer Nav */
+        .footer-nav {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            padding: 40px 20px 0;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .footer-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 28px;
+            background: rgba(255, 255, 255, 0.08);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 14px;
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+        }
+
+        .footer-link:hover {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: var(--green);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .article-card:nth-child(2) { animation-delay: 0.05s; }
+        .article-card:nth-child(3) { animation-delay: 0.1s; }
+        .article-card:nth-child(4) { animation-delay: 0.15s; }
+        .article-card:nth-child(5) { animation-delay: 0.2s; }
+        .article-card:nth-child(6) { animation-delay: 0.25s; }
+        .article-card:nth-child(7) { animation-delay: 0.3s; }
+        .article-card:nth-child(8) { animation-delay: 0.35s; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 16px 60px;
+            }
+
+            .back-button {
+                top: 12px;
+                left: 12px;
+                padding: 8px 14px;
+                font-size: 0.85rem;
+                min-height: 44px;
+            }
+
+            .header {
+                margin-top: 40px;
+                margin-bottom: 40px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .header p {
+                font-size: 1rem;
+            }
+
+            .article-card {
+                padding: 24px 20px;
+            }
+
+            .article-number h2 {
+                font-size: 1.1rem;
+            }
+
+            .third-party-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .rights-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .security-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .data-table {
+                font-size: 0.85rem;
+            }
+
+            .data-table thead th,
+            .data-table tbody td {
+                padding: 10px 12px;
+            }
+
+            .contact-box {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .footer-nav {
+                flex-direction: column;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .footer-link {
+                width: 100%;
+                max-width: 300px;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="animated-bg">
+        <div class="grid-pattern"></div>
+        <div class="floating-shape shape1"></div>
+        <div class="floating-shape shape2"></div>
+        <div class="floating-shape shape3"></div>
+    </div>
+
+    <a href="index-en.html" class="back-button">
+        <span class="material-symbols-outlined">arrow_back</span>
+        Home
+    </a>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-badge">PRIVACY POLICY</div>
+            <h1>Privacy Policy</h1>
+            <p>Personal data processing and protection at Lawmadi OS</p>
+            <div class="law-ref">Based on Korean Personal Information Protection Act</div>
+        </header>
+
+        <!-- Article 1: Purpose of Processing -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="icon-wrap">
+                    <span class="material-symbols-outlined">target</span>
+                </div>
+                <h2>Purpose of Processing</h2>
+                <span class="law-tag">Art. 15</span>
+            </div>
+            <p>Lawmadi OS (hereinafter referred to as the "Service") processes personal information for the following purposes. Personal information collected will not be used for purposes other than those stated below. Prior consent will be obtained if the purpose of processing changes.</p>
+            <ul>
+                <li><strong>Providing legal analysis services</strong> — To analyze user queries and provide legal information</li>
+                <li><strong>Service security and stability</strong> — Detecting abnormal access, preventing service abuse, and maintaining system stability</li>
+                <li><strong>Service improvement and statistical analysis</strong> — Improving service quality and features through usage pattern analysis</li>
+            </ul>
+        </div>
+
+        <!-- Article 2: Data Collected -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="icon-wrap">
+                    <span class="material-symbols-outlined">database</span>
+                </div>
+                <h2>Data Collected</h2>
+            </div>
+            <p>The Service collects the following personal information:</p>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Data Collected</th>
+                        <th>Collection Method</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Required</td>
+                        <td>Query text, IP address, visit time</td>
+                        <td>Automatically collected during use</td>
+                    </tr>
+                    <tr>
+                        <td>Service usage</td>
+                        <td>Conversation history, uploaded documents</td>
+                        <td>Automatically collected during use</td>
+                    </tr>
+                    <tr>
+                        <td>Attorney inquiry</td>
+                        <td>Name, phone number</td>
+                        <td>Directly entered by user</td>
+                    </tr>
+                    <tr>
+                        <td>Auto-collected</td>
+                        <td>Browser information, access logs</td>
+                        <td>Automatically generated by system</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Article 3: Retention Period -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="icon-wrap">
+                    <span class="material-symbols-outlined">schedule</span>
+                </div>
+                <h2>Retention Period</h2>
+                <span class="law-tag">Art. 21</span>
+            </div>
+            <p>The Service will destroy personal information without delay once the purpose of collection and use has been fulfilled. The retention period for each item is as follows:</p>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Retention Period</th>
+                        <th>Basis</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Conversation history</td>
+                        <td>1 year</td>
+                        <td>Service quality improvement</td>
+                    </tr>
+                    <tr>
+                        <td>Uploaded documents</td>
+                        <td>7 days</td>
+                        <td>Auto-deleted after analysis</td>
+                    </tr>
+                    <tr>
+                        <td>Visit statistics</td>
+                        <td>1 year</td>
+                        <td>Service operation and statistics</td>
+                    </tr>
+                    <tr>
+                        <td>Attorney inquiry info</td>
+                        <td>Deleted immediately after connection</td>
+                        <td>Deleted upon purpose fulfillment</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Article 4: Third-Party Sharing -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="icon-wrap">
+                    <span class="material-symbols-outlined">share</span>
+                </div>
+                <h2>Third-Party Sharing</h2>
+            </div>
+            <p>The Service integrates with the following external services for legal information analysis. Personal information is processed only to the minimum extent necessary for service provision.</p>
+            <div class="third-party-grid">
+                <div class="third-party-item">
+                    <div class="service-name">Google Gemini API</div>
+                    <div class="service-desc">Legal query analysis and response generation</div>
+                </div>
+                <div class="third-party-item">
+                    <div class="service-name">Korea National Law Info Center DRF API</div>
+                    <div class="service-desc">Real-time statute, case law, and constitutional court decision verification</div>
+                </div>
+                <div class="third-party-item">
+                    <div class="service-name">Ministry of Government Legislation DRF API</div>
+                    <div class="service-desc">Real-time national law search and verification</div>
+                </div>
+            </div>
+            <p>Each external service provider processes data according to their own privacy policy. Data transmitted is limited to query text only.</p>
+        </div>
+
+        <!-- Article 5: Data Subject Rights -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="icon-wrap">
+                    <span class="material-symbols-outlined">verified_user</span>
+                </div>
+                <h2>Data Subject Rights</h2>
+                <span class="law-tag">Art. 35-37</span>
+            </div>
+            <p>Users (data subjects) may exercise the following rights under the Personal Information Protection Act:</p>
+            <div class="rights-grid">
+                <div class="right-item">
+                    <span class="material-symbols-outlined">visibility</span>
+                    <div class="right-text">
+                        <h4>Right of Access</h4>
+                        <p>Request to view personal data processing status</p>
+                    </div>
+                </div>
+                <div class="right-item">
+                    <span class="material-symbols-outlined">edit</span>
+                    <div class="right-text">
+                        <h4>Right to Rectification</h4>
+                        <p>Request correction of inaccurate personal data</p>
+                    </div>
+                </div>
+                <div class="right-item">
+                    <span class="material-symbols-outlined">delete</span>
+                    <div class="right-text">
+                        <h4>Right to Erasure</h4>
+                        <p>Request deletion of personal data</p>
+                    </div>
+                </div>
+                <div class="right-item">
+                    <span class="material-symbols-outlined">pause_circle</span>
+                    <div class="right-text">
+                        <h4>Right to Suspend Processing</h4>
+                        <p>Request suspension of personal data processing</p>
+                    </div>
+                </div>
+            </div>
+            <p>These rights may be exercised by sending an email to the Privacy Officer. Processing results will be notified within 10 days of receipt.</p>
+        </div>
+
+        <!-- Article 6: Security Measures -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="icon-wrap">
+                    <span class="material-symbols-outlined">security</span>
+                </div>
+                <h2>Security Measures</h2>
+            </div>
+            <p>The Service implements the following technical and administrative measures to ensure the security of personal information:</p>
+            <div class="security-grid">
+                <div class="security-item">
+                    <span class="material-symbols-outlined">language</span>
+                    <h4>CORS Restrictions</h4>
+                    <p>API access limited to authorized domains only</p>
+                </div>
+                <div class="security-item">
+                    <span class="material-symbols-outlined">key</span>
+                    <h4>API Key Authentication</h4>
+                    <p>All external API requests are authenticated</p>
+                </div>
+                <div class="security-item">
+                    <span class="material-symbols-outlined">shield</span>
+                    <h4>Security Headers</h4>
+                    <p>XSS, CSRF and other attack defense headers applied</p>
+                </div>
+            </div>
+            <ul>
+                <li>Encrypted communication via HTTPS</li>
+                <li>Server access log recording and monitoring</li>
+                <li>Regular security vulnerability assessments</li>
+            </ul>
+        </div>
+
+        <!-- Article 7: Privacy Officer -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="icon-wrap">
+                    <span class="material-symbols-outlined">person</span>
+                </div>
+                <h2>Privacy Officer</h2>
+            </div>
+            <p>A Privacy Officer has been designated to oversee personal information processing and to handle data subject complaints and remedies.</p>
+            <div class="contact-box">
+                <span class="material-symbols-outlined">mail</span>
+                <div class="contact-info">
+                    <h4>Privacy Officer: Jaenam Choe</h4>
+                    <p>Inquiries, access/correction/deletion requests, and complaint handling regarding personal information</p>
+                    <p>Contact: <a href="mailto:choepeter@outlook.kr">choepeter@outlook.kr</a></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Effective Date -->
+        <div class="effective-date">
+            <p>Effective Date</p>
+            <div class="date">February 21, 2026</div>
+        </div>
+
+        <!-- Footer Navigation -->
+        <div class="footer-nav">
+            <a href="index-en.html" class="footer-link">
+                <span class="material-symbols-outlined">home</span>
+                Home
+            </a>
+            <a href="terms-en.html" class="footer-link">
+                <span class="material-symbols-outlined">description</span>
+                Terms of Service
+            </a>
+            <a href="about-en.html" class="footer-link">
+                <span class="material-symbols-outlined">info</span>
+                About
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Page load animation
+        window.addEventListener('load', () => {
+            document.body.style.opacity = '0';
+            setTimeout(() => {
+                document.body.style.transition = 'opacity 0.5s';
+                document.body.style.opacity = '1';
+            }, 100);
+        });
+    </script>
+    <script>
+    document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    </script>
+</body>
+</html>

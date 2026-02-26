@@ -692,7 +692,7 @@
                     ? `<div class="leader-banner"><img src="${esc(img.banner)}" alt="${safeName}" loading="lazy"></div>`
                     : '';
                 return `
-                <div class="leader-card" data-name="${safeName}" style="animation-delay: ${index * 0.02}s">
+                <div class="leader-card" data-name="${safeName}" data-code="${esc(leader.code)}" style="animation-delay: ${index * 0.02}s">
                     <div class="leader-header">
                         <div class="leader-avatar">${avatarContent}</div>
                         <div class="leader-name-group">
@@ -723,16 +723,23 @@
 
         loadLeaders();
 
+        // C-Level card click → profile page
+        const clevelCodeMap = { '서연': 'CSO', '지유': 'CTO', '유나': 'CCO' };
         document.querySelectorAll('.clevel-card').forEach(card => {
             card.addEventListener('click', () => {
-                window.location.href = `index-en.html?leader=${encodeURIComponent(card.dataset.name)}`;
+                const code = clevelCodeMap[card.dataset.name] || card.dataset.name;
+                window.location.href = `leader-profile-en.html?id=${code}`;
             });
         });
 
+        // Leader card click → profile page (event delegation)
         document.getElementById('leadersGrid').addEventListener('click', (e) => {
             const card = e.target.closest('.leader-card');
-            if (card && card.dataset.name) {
-                window.location.href = `index-en.html?leader=${encodeURIComponent(card.dataset.name)}`;
+            if (card) {
+                const code = card.dataset.code;
+                if (code) {
+                    window.location.href = `leader-profile-en.html?id=${code}`;
+                }
             }
         });
 
