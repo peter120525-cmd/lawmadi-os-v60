@@ -1454,22 +1454,26 @@ async def _run_legal_pipeline(
             rag_context.context_text = boost_text
         logger.info(f"[Stage 1.5] 리더 {leader_id} 핵심 법률 RAG 주입")
 
-    # -- Stage 2: LawmadiLM 초안 (5초 타임아웃) --
+    # -- Stage 2: LawmadiLM 초안 (비활성화 가능) --
     lm_draft = ""
-    try:
-        logger.info("[Stage 2/4] LawmadiLM 초안 생성 (5초)")
-        raw_answer = await _call_lawmadilm(
-            query, analysis, rag_context, lang=lang, mode=mode,
-        )
-        lm_draft = _postprocess_lawmadilm(raw_answer, query)
-        if lm_draft:
-            logger.info(f"[Stage 2] LM 초안 완료 ({len(lm_draft)}자)")
-        else:
-            logger.warning("[Stage 2] 후처리 -> None (품질 미달)")
+    _enable_lm = os.getenv("ENABLE_LAWMADILM", "false").lower() == "true"
+    if _enable_lm:
+        try:
+            logger.info("[Stage 2/4] LawmadiLM 초안 생성 (5초)")
+            raw_answer = await _call_lawmadilm(
+                query, analysis, rag_context, lang=lang, mode=mode,
+            )
+            lm_draft = _postprocess_lawmadilm(raw_answer, query)
+            if lm_draft:
+                logger.info(f"[Stage 2] LM 초안 완료 ({len(lm_draft)}자)")
+            else:
+                logger.warning("[Stage 2] 후처리 -> None (품질 미달)")
+                lm_draft = ""
+        except Exception as e:
+            logger.warning(f"[Stage 2] LawmadiLM 실패/타임아웃: {e} -> Gemini 단독")
             lm_draft = ""
-    except Exception as e:
-        logger.warning(f"[Stage 2] LawmadiLM 실패/타임아웃: {e} -> Gemini 단독")
-        lm_draft = ""
+    else:
+        logger.info("[Stage 2/4] LawmadiLM 스킵 (ENABLE_LAWMADILM=false)")
 
     # -- Stage 3: Gemini Flash 완성 답변 (LM 초안 기반 또는 단독) --
     logger.info(f"[Stage 3/4] Gemini Flash 답변 (LM초안={'있음' if lm_draft else '없음'})")
@@ -1681,6 +1685,9 @@ async def run_pipeline_stage2(
     mode: str = "general",
 ) -> str:
     """스트리밍용: Stage 2만 실행 (강화 프롬프트)"""
+    if os.getenv("ENABLE_LAWMADILM", "false").lower() != "true":
+        logger.info("[Stream Stage 2] LawmadiLM 스킵 (ENABLE_LAWMADILM=false)")
+        return ""
     try:
         raw = await _call_lawmadilm(
             query, analysis, rag_context,

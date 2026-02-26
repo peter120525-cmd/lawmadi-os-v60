@@ -125,12 +125,13 @@ jobs:
             --platform=managed \
             --region=${{ env.REGION }} \
             --allow-unauthenticated \
-            --memory=2Gi \
+            --memory=4Gi \
             --cpu=2 \
             --timeout=300 \
-            --concurrency=80 \
+            --concurrency=15 \
             --min-instances=1 \
             --max-instances=2 \
+            --set-env-vars="ENABLE_LAWMADILM=false" \
             --set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest,GEMINI_KEY=GEMINI_KEY:latest,LAWGO_DRF_OC=LAWGO_DRF_OC:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,CLOUD_SQL_INSTANCE=CLOUD_SQL_INSTANCE:latest,DB_USER=DB_USER:latest,DB_PASS=DB_PASS:latest,DB_NAME=DB_NAME:latest,MCP_API_KEY=MCP_API_KEY:latest,API_KEYS=API_KEYS:latest"
 
       - name: Get Staging URL
@@ -206,12 +207,13 @@ jobs:
             --platform=managed \
             --region=${{ env.REGION }} \
             --allow-unauthenticated \
-            --memory=2Gi \
+            --memory=4Gi \
             --cpu=2 \
             --timeout=300 \
-            --concurrency=80 \
+            --concurrency=15 \
             --min-instances=1 \
             --max-instances=10 \
+            --set-env-vars="ENABLE_LAWMADILM=false" \
             --set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest,GEMINI_KEY=GEMINI_KEY:latest,LAWGO_DRF_OC=LAWGO_DRF_OC:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,CLOUD_SQL_INSTANCE=CLOUD_SQL_INSTANCE:latest,DB_USER=DB_USER:latest,DB_PASS=DB_PASS:latest,DB_NAME=DB_NAME:latest,MCP_API_KEY=MCP_API_KEY:latest,API_KEYS=API_KEYS:latest"
 
       - name: Get Cloud Run URL
