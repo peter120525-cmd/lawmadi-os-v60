@@ -84,7 +84,7 @@ def verify_api_keys(authorization: str = Header(default="")) -> None:
 
     token = extract_bearer_token(authorization)
 
-    if not any(hmac.compare_digest(token, k) for k in valid_keys):
+    if not any([hmac.compare_digest(token, k) for k in valid_keys]):
         token_hash = hashlib.sha256(token.encode()).hexdigest()[:8]
         logger.warning(f"[Auth] Failed API key auth (token_hash={token_hash})")
         raise HTTPException(status_code=401, detail="Invalid API key")

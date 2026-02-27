@@ -15,6 +15,7 @@ import aiofiles
 from fastapi import APIRouter, Request, HTTPException, File, UploadFile
 from fastapi.responses import FileResponse
 from google.genai import types as genai_types
+from slowapi import Limiter
 
 from core.constants import OS_VERSION, GEMINI_MODEL
 from core.model_fallback import get_model
@@ -26,14 +27,15 @@ logger = logging.getLogger("LawmadiOS.Files")
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 
 _RUNTIME: Dict[str, Any] = {}
-_limiter = None
+limiter: Limiter = None  # type: ignore[assignment]
 
 
-def set_dependencies(runtime, limiter=None):
+def set_dependencies(runtime, rate_limiter=None):
     """Inject shared runtime objects from main.py at startup."""
-    global _RUNTIME, _limiter
+    global _RUNTIME, limiter
     _RUNTIME = runtime
-    _limiter = limiter
+    if rate_limiter:
+        limiter = rate_limiter
 
 
 def _optional_import(module_path, attr=None):
@@ -51,7 +53,8 @@ def _optional_import(module_path, attr=None):
 # =============================================================
 
 @router.post("/upload")
-async def upload_document(file: UploadFile = File(...), request: Request = None):
+@limiter.limit("10/hour")
+async def upload_document(request: Request, file: UploadFile = File(...)):
     """
     Upload user document/image for legal analysis.
 
@@ -185,7 +188,8 @@ async def upload_document(file: UploadFile = File(...), request: Request = None)
 # =============================================================
 
 @router.post("/analyze-document/{file_id}")
-async def analyze_document(file_id: str, analysis_type: str = "general", request: Request = None):
+@limiter.limit("10/hour")
+async def analyze_document(request: Request, file_id: str, analysis_type: str = "general"):
     """
     Analyze uploaded document (legal analysis).
 
@@ -485,6 +489,7 @@ async def _analyze_pdf_document(file_path: Path, analysis_type: str) -> Dict[str
 # =============================================================
 
 @router.post("/export-pdf")
+@limiter.limit("20/hour")
 async def export_pdf(request: Request):
     """
     Convert legal document text to downloadable PDF.

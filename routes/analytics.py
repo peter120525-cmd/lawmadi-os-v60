@@ -6,20 +6,22 @@ import hashlib
 from typing import Any, Dict
 from fastapi import APIRouter, Request, Header, HTTPException
 from fastapi.responses import JSONResponse
+from slowapi import Limiter
 from core.metrics import get_summary, get_endpoint_metrics, get_leader_metrics
 from core.auth import verify_internal_key as _verify_internal_auth
 
 router = APIRouter()
 logger = logging.getLogger("LawmadiOS.Analytics")
 
-_limiter = None
+limiter: Limiter = None  # type: ignore[assignment]
 _get_client_ip_fn = None
 
 
-def set_dependencies(limiter, get_client_ip_fn):
+def set_dependencies(rate_limiter, get_client_ip_fn):
     """Inject shared runtime objects from main.py at startup."""
-    global _limiter, _get_client_ip_fn
-    _limiter = limiter
+    global limiter, _get_client_ip_fn
+    if rate_limiter:
+        limiter = rate_limiter
     _get_client_ip_fn = get_client_ip_fn
 
 
@@ -70,6 +72,7 @@ async def get_verification_stats(days: int = 7, authorization: str = Header(defa
 # =============================================================
 
 @router.post("/api/visit")
+@limiter.limit("60/hour")
 async def record_visitor(request: Request):
     """
     Record visitor — IP auto-extracted as visitor_id.
@@ -221,6 +224,7 @@ async def get_leader_queries_api(
 # =============================================================
 
 @router.post("/api/errors")
+@limiter.limit("30/hour")
 async def report_frontend_error(request: Request):
     """
     프론트엔드 JS 에러 수집.
@@ -269,6 +273,7 @@ async def report_frontend_error(request: Request):
 # =============================================================
 
 @router.post("/api/perf")
+@limiter.limit("30/hour")
 async def report_frontend_perf(request: Request):
     """
     프론트엔드 성능 메트릭 수집 (Core Web Vitals + 페이지 로드 시간).
