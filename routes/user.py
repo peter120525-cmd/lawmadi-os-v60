@@ -173,8 +173,11 @@ async def suggest_questions(request: Request):
             f"JSON 배열 형식으로만 답하세요: [\"질문1\", \"질문2\", \"질문3\"]"
         )
 
-        resp = gc.models.generate_content(
-            model=get_model(),
+        import asyncio
+        _model = get_model()
+        resp = await asyncio.to_thread(
+            gc.models.generate_content,
+            model=_model,
             contents=prompt,
             config=genai_types.GenerateContentConfig(max_output_tokens=200, temperature=0.7),
         )

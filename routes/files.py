@@ -371,10 +371,13 @@ async def _analyze_image_document(file_path: Path, analysis_type: str) -> Dict[s
 }
 """
 
-    # Gemini Vision call
+    # Gemini Vision call (이벤트 루프 블로킹 방지)
     image_part = genai_types.Part.from_bytes(data=image_data, mime_type=f"image/{file_path.suffix[1:]}")
-    response = gc.models.generate_content(
-        model=get_model(),
+    import asyncio
+    _model = get_model()
+    response = await asyncio.to_thread(
+        gc.models.generate_content,
+        model=_model,
         contents=[prompt, image_part],
     )
 
@@ -449,8 +452,11 @@ async def _analyze_pdf_document(file_path: Path, analysis_type: str) -> Dict[str
 }}
 """
 
-        response = gc.models.generate_content(
-            model=get_model(),
+        import asyncio
+        _model = get_model()
+        response = await asyncio.to_thread(
+            gc.models.generate_content,
+            model=_model,
             contents=prompt,
         )
         result_text = response.text.strip()

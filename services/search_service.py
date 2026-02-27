@@ -173,7 +173,8 @@ class SearchService:
         try:
             if hasattr(self.drf, "get_law_articles_async"):
                 return await self.drf.get_law_articles_async(law_name)
-            return self.drf.get_law_articles(law_name)
+            import asyncio
+            return await asyncio.to_thread(self.drf.get_law_articles, law_name)
         except Exception as e:
             logger.warning(f"⚠️ get_law_articles_async failed: {e}")
             return None
@@ -185,7 +186,8 @@ class SearchService:
         try:
             if hasattr(self.drf, "search_precedents_async"):
                 return await self.drf.search_precedents_async(query)
-            return self.drf.search_precedents(query)
+            import asyncio
+            return await asyncio.to_thread(self.drf.search_precedents, query)
         except Exception as e:
             logger.warning(f"⚠️ search_precedents_async failed: {e}")
             return None
