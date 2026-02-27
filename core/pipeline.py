@@ -1017,30 +1017,22 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
         unique_cases.append(case_no)
 
     # ── 3) 법률 fetch + 판례 fetch 동시 실행 (asyncio.gather) ──
+    # ⚠️ async DRF 코드에 이벤트 루프 블로킹 요소가 있어
+    #    sync 버전 전체를 asyncio.to_thread로 실행 (스레드 내부에서 requests.get timeout 정상 작동)
     async def _fetch_law(ln: str):
-        for attempt in range(2):
-            try:
-                if hasattr(svc, "get_law_articles_async"):
-                    return ln, await svc.get_law_articles_async(ln)
-                else:
-                    return ln, await asyncio.to_thread(svc.get_law_articles, ln)
-            except Exception as e:
-                if attempt == 0:
-                    logger.warning(f"[Stage 4] {ln} 법령 조회 실패 (재시도 1/1): {e}")
-                    await asyncio.sleep(0.5)
-                else:
-                    logger.warning(f"[Stage 4] {ln} 법령 조회 최종 실패: {e}")
-                    return ln, None
-        return ln, None
+        try:
+            raw = await asyncio.to_thread(svc.get_law_articles, ln)
+            return ln, raw
+        except Exception as e:
+            logger.warning(f"[Stage 4] {ln} 법령 조회 실패: {e}")
+            return ln, None
 
     drf_inst = _RUNTIME.get("drf")
 
     async def _fetch_prec(cn: str):
         try:
             raw_prec = None
-            if drf_inst and hasattr(drf_inst, "search_precedents_async"):
-                raw_prec = await drf_inst.search_precedents_async(cn)
-            elif drf_inst and hasattr(drf_inst, "search_precedents"):
+            if drf_inst and hasattr(drf_inst, "search_precedents"):
                 raw_prec = await asyncio.to_thread(drf_inst.search_precedents, cn)
             return cn, raw_prec, None
         except Exception as e:
