@@ -47,6 +47,7 @@ from core.pipeline import (
     RAGContext,
 )
 from core.constants import FAIL_CLOSED_RESPONSE
+from core.deliberation import should_deliberate, generate_deliberation, generate_handoff
 from prompts.system_instructions import build_system_instruction as _build_system_instruction
 from tools.drf_tools import (
     search_law_drf,
@@ -229,6 +230,10 @@ async def ask(request: Request):
         query = (data.get("query", "") or "").strip()
         raw_history = data.get("history", [])
         lang = (data.get("lang", "") or "").strip().lower()
+
+        # 리더 협의/인수인계 상태
+        ask_current_leader = data.get("current_leader")  # {"name": ..., "specialty": ...} or None
+        ask_is_first_question = bool(data.get("is_first_question", True))
 
         # 입력 길이 제한 (DoS 방지)
         MAX_QUERY_LEN = 2000
@@ -447,6 +452,57 @@ async def ask(request: Request):
                     f"routing={_routing_method}, classify_ms={_classify_ms}")
 
         # -------------------------------------------------
+        # 4.05) 리더 협의(Deliberation) / 인수인계(Handoff) 생성
+        # -------------------------------------------------
+        _ask_deliberation = None
+        _ask_handoff = None
+        _ask_is_name_call = bool(
+            _RUNTIME.get("swarm_orchestrator")
+            and _RUNTIME["swarm_orchestrator"].detect_name_call(query)
+        )
+        _ask_prev_leader_name = ask_current_leader.get("name") if isinstance(ask_current_leader, dict) else None
+        _ask_delib_mode = should_deliberate(
+            query=query,
+            is_legal=is_legal,
+            is_first_question=ask_is_first_question,
+            current_leader=_ask_prev_leader_name,
+            new_leader_name=leader_name,
+            is_name_call=_ask_is_name_call,
+        )
+
+        if _ask_delib_mode == "full" and is_legal:
+            try:
+                gc = _ensure_genai_client_fn(_RUNTIME)
+                _ask_candidates = []
+                so = _RUNTIME.get("swarm_orchestrator")
+                if so:
+                    _d = so.detect_domains(query)
+                    _s = so.select_leaders(query, _d)
+                    for sl in _s[:3]:
+                        _ask_candidates.append({"name": sl.get("name", "?"), "specialty": sl.get("specialty", "")})
+                if not any(c["name"] == leader_name for c in _ask_candidates):
+                    _ask_candidates.insert(0, {"name": leader_name, "specialty": leader_specialty})
+                _ask_candidates = _ask_candidates[:3]
+                _ask_deliberation = await asyncio.wait_for(
+                    generate_deliberation(gc, query, _ask_candidates, lang),
+                    timeout=5,
+                )
+            except Exception as e:
+                logger.warning(f"[Deliberation/ask] 스킵: {type(e).__name__}: {e}")
+
+        elif _ask_delib_mode == "handoff" and is_legal:
+            try:
+                gc = _ensure_genai_client_fn(_RUNTIME)
+                _cur = ask_current_leader if isinstance(ask_current_leader, dict) else {"name": "마디", "specialty": "통합"}
+                _new = {"name": leader_name, "specialty": leader_specialty}
+                _ask_handoff = await asyncio.wait_for(
+                    generate_handoff(gc, query, _cur, _new, lang),
+                    timeout=5,
+                )
+            except Exception as e:
+                logger.warning(f"[Handoff/ask] 스킵: {type(e).__name__}: {e}")
+
+        # -------------------------------------------------
         # 4.1) 비법률 질문: 유나(CCO) Gemini 응답
         # -------------------------------------------------
         if not is_legal:
@@ -655,7 +711,7 @@ async def ask(request: Request):
         final_text_clean = _remove_markdown_tables_fn(final_text_clean)
         final_text_clean = _remove_separator_lines_fn(final_text_clean)
 
-        return {
+        _ask_result = {
             "trace_id": trace,
             "response": final_text_clean,
             "leader": leader_name,
@@ -667,7 +723,13 @@ async def ask(request: Request):
             "constitutional_check": "PASS" if const_check.get("passed", True) else "WARNING",
             "ssot_sources": [f"{s['type']}:{s['law']}" for s in matched_sources[:3]] if matched_sources else [],
             "meta": {**_compute_quality_meta_fn(final_text_clean, matched_sources), "model": get_model()},
+            "current_leader": {"name": leader_name, "specialty": leader_specialty},
         }
+        if _ask_deliberation:
+            _ask_result["deliberation"] = _ask_deliberation
+        if _ask_handoff:
+            _ask_result["handoff"] = _ask_handoff
+        return _ask_result
 
     except Exception as e:
         with _METRICS_LOCK:
@@ -736,6 +798,10 @@ async def ask_stream(request: Request):
         lang = (data.get("lang", "") or "").strip().lower()
         stream_mode = (data.get("mode", "") or "").strip().lower() or "general"
 
+        # 리더 협의/인수인계 상태
+        req_current_leader = data.get("current_leader")  # {"name": ..., "specialty": ...} or None
+        req_is_first_question = bool(data.get("is_first_question", True))
+
         MAX_QUERY_LEN = 2000
         if len(query) > MAX_QUERY_LEN:
             query = query[:MAX_QUERY_LEN]
@@ -764,7 +830,7 @@ async def ask_stream(request: Request):
 
     # --- SSE generator ---
     async def _sse_generator():
-        nonlocal query, raw_history, gemini_history, visitor_id, config, trace, start_time, lang, stream_mode
+        nonlocal query, raw_history, gemini_history, visitor_id, config, trace, start_time, lang, stream_mode, req_current_leader, req_is_first_question
 
         final_text = ""
         leader_name = "유나"
@@ -946,6 +1012,78 @@ async def ask_stream(request: Request):
                 _audit_fn("ask_stream", {"query": query, "leader": "유나", "status": "SUCCESS_NON_LEGAL", "latency_ms": latency_ms, "swarm_mode": False})
                 return
 
+            # ─── 리더 협의(Deliberation) / 인수인계(Handoff) ───
+            _is_name_call = bool(
+                _RUNTIME.get("swarm_orchestrator")
+                and _RUNTIME["swarm_orchestrator"].detect_name_call(query)
+            )
+            _prev_leader_name = req_current_leader.get("name") if isinstance(req_current_leader, dict) else None
+            _new_leader_name = analysis.get("leader_name", "마디")
+            _delib_mode = should_deliberate(
+                query=query,
+                is_legal=is_legal,
+                is_first_question=req_is_first_question,
+                current_leader=_prev_leader_name,
+                new_leader_name=_new_leader_name,
+                is_name_call=_is_name_call,
+            )
+
+            if _delib_mode == "full":
+                try:
+                    # 후보 리더 선정 (swarm_orchestrator 활용)
+                    _candidate_leaders = []
+                    so = _RUNTIME.get("swarm_orchestrator")
+                    if so:
+                        _domains = so.detect_domains(query)
+                        _selected = so.select_leaders(query, _domains)
+                        for sl in _selected[:3]:
+                            _candidate_leaders.append({
+                                "name": sl.get("name", "?"),
+                                "specialty": sl.get("specialty", ""),
+                            })
+                    # 최소한 분류된 리더는 포함
+                    if not any(c["name"] == _new_leader_name for c in _candidate_leaders):
+                        _candidate_leaders.insert(0, {
+                            "name": _new_leader_name,
+                            "specialty": analysis.get("leader_specialty", "통합"),
+                        })
+                    _candidate_leaders = _candidate_leaders[:3]
+
+                    yield _sse("deliberation_start", {
+                        "leaders": _candidate_leaders,
+                        "moderator": "서연",
+                    })
+
+                    delib_turns = await asyncio.wait_for(
+                        generate_deliberation(gc, query, _candidate_leaders, lang),
+                        timeout=5,
+                    )
+                    if delib_turns:
+                        for turn in delib_turns:
+                            yield _sse("deliberation_turn", turn)
+
+                    yield _sse("deliberation_end", {
+                        "selected_leader": _new_leader_name,
+                        "selected_leader_specialty": analysis.get("leader_specialty", "통합"),
+                    })
+                except Exception as delib_err:
+                    logger.warning(f"[Deliberation] 스킵: {type(delib_err).__name__}: {delib_err}")
+
+            elif _delib_mode == "handoff":
+                try:
+                    _cur = req_current_leader if isinstance(req_current_leader, dict) else {"name": "마디", "specialty": "통합"}
+                    _new = {"name": _new_leader_name, "specialty": analysis.get("leader_specialty", "통합")}
+
+                    handoff_turns = await asyncio.wait_for(
+                        generate_handoff(gc, query, _cur, _new, lang),
+                        timeout=5,
+                    )
+                    if handoff_turns:
+                        for turn in handoff_turns:
+                            yield _sse("handoff", turn)
+                except Exception as handoff_err:
+                    logger.warning(f"[Handoff] 스킵: {type(handoff_err).__name__}: {handoff_err}")
+
             # ─── 경로 A: C-Level 직접 호출 (검증 후 스트리밍) ───
             if clevel_decision and clevel_decision.get("mode") == "direct":
                 exec_id = clevel_decision.get("executive_id")
@@ -1090,6 +1228,7 @@ async def ask_stream(request: Request):
                 "swarm_mode": swarm_mode,
                 "response": final_text_clean,
                 "status": "SUCCESS",
+                "current_leader": {"name": leader_name, "specialty": leader_specialty},
             })
 
             # 백그라운드 검증/저장
