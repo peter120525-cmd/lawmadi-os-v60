@@ -7,13 +7,14 @@ from typing import Any, Dict
 from fastapi import APIRouter, Request, Header, HTTPException
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
+from slowapi.util import get_remote_address
 from core.metrics import get_summary, get_endpoint_metrics, get_leader_metrics
 from core.auth import verify_internal_key as _verify_internal_auth
 
 router = APIRouter()
 logger = logging.getLogger("LawmadiOS.Analytics")
 
-limiter: Limiter = None  # type: ignore[assignment]
+limiter = Limiter(key_func=get_remote_address)
 _get_client_ip_fn = None
 
 
