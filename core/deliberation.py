@@ -404,6 +404,7 @@ async def generate_deliberation_stream(
     Turn 3: CSO 서연 → 담당 리더 지명 (is_final=True)
     """
     if not gc or not leaders:
+        logger.warning("[Deliberation:Stream] gc 또는 leaders 없음 — 스킵")
         return
 
     selected = leaders[0]
@@ -411,10 +412,16 @@ async def generate_deliberation_stream(
     selected_specialty = selected.get("specialty", "")
     selected_id = selected.get("leader_id", "") or _name_to_id(selected_name)
 
-    cso_persona = _build_cso_persona()
-    leader_persona = _build_leader_persona(selected_id) if selected_id else ""
-    if not leader_persona:
-        leader_persona = f"{selected_name}: {selected_specialty} 전문 리더"
+    logger.info(f"[Deliberation:Stream] 시작 — leader={selected_name}({selected_id})")
+
+    try:
+        cso_persona = _build_cso_persona()
+        leader_persona = _build_leader_persona(selected_id) if selected_id else ""
+        if not leader_persona:
+            leader_persona = f"{selected_name}: {selected_specialty} 전문 리더"
+    except Exception as e:
+        logger.error(f"[Deliberation:Stream] 페르소나 빌드 실패: {type(e).__name__}: {e}")
+        return
 
     # ── Turn 1: CSO 서연 ──
     t1_prompt = (
@@ -427,13 +434,18 @@ async def generate_deliberation_stream(
         f"존댓말, 따뜻하고 전문적인 톤으로 자연스럽게 말하세요. "
         f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
     )
+    logger.info("[Deliberation:Stream] Turn1 Gemini 호출 시작")
     try:
         t1_text = await asyncio.wait_for(
             _single_leader_call(gc, cso_persona, t1_prompt), timeout=_TURN_TIMEOUT
         )
-    except Exception as e:
-        logger.warning(f"[Deliberation:Stream] Turn1 실패: {e}")
+        logger.info(f"[Deliberation:Stream] Turn1 성공 ({len(t1_text)}자)")
+    except BaseException as e:
+        logger.warning(f"[Deliberation:Stream] Turn1 실패: {type(e).__name__}: {e}")
         t1_text = ""
+        # CancelledError는 재발생시켜야 함
+        if isinstance(e, asyncio.CancelledError):
+            raise
     if not t1_text:
         t1_text = f"이 질문은 {selected_specialty} 분야입니다. {selected_name}님, 의견 부탁드립니다."
     yield {
@@ -442,6 +454,7 @@ async def generate_deliberation_stream(
         "text": t1_text,
         "is_final": False,
     }
+    logger.info("[Deliberation:Stream] Turn1 yield 완료")
 
     # ── Turn 2: 담당 리더 ──
     t2_prompt = (
@@ -454,13 +467,17 @@ async def generate_deliberation_stream(
         f"존댓말, 전문적이고 따뜻한 톤으로 자연스럽게 말하세요. "
         f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
     )
+    logger.info("[Deliberation:Stream] Turn2 Gemini 호출 시작")
     try:
         t2_text = await asyncio.wait_for(
             _single_leader_call(gc, leader_persona, t2_prompt), timeout=_TURN_TIMEOUT
         )
-    except Exception as e:
-        logger.warning(f"[Deliberation:Stream] Turn2 실패: {e}")
+        logger.info(f"[Deliberation:Stream] Turn2 성공 ({len(t2_text)}자)")
+    except BaseException as e:
+        logger.warning(f"[Deliberation:Stream] Turn2 실패: {type(e).__name__}: {e}")
         t2_text = ""
+        if isinstance(e, asyncio.CancelledError):
+            raise
     if not t2_text:
         t2_text = f"네, {selected_specialty} 관점에서 바로 도와드리겠습니다."
     yield {
@@ -469,6 +486,7 @@ async def generate_deliberation_stream(
         "text": t2_text,
         "is_final": False,
     }
+    logger.info("[Deliberation:Stream] Turn2 yield 완료")
 
     # ── Turn 3: CSO 서연 — 담당 리더 지명 ──
     t3_prompt = (
@@ -480,13 +498,17 @@ async def generate_deliberation_stream(
         f"존댓말, 따뜻하고 신뢰감 있는 톤으로 자연스럽게 말하세요. "
         f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
     )
+    logger.info("[Deliberation:Stream] Turn3 Gemini 호출 시작")
     try:
         t3_text = await asyncio.wait_for(
             _single_leader_call(gc, cso_persona, t3_prompt), timeout=_TURN_TIMEOUT
         )
-    except Exception as e:
-        logger.warning(f"[Deliberation:Stream] Turn3 실패: {e}")
+        logger.info(f"[Deliberation:Stream] Turn3 성공 ({len(t3_text)}자)")
+    except BaseException as e:
+        logger.warning(f"[Deliberation:Stream] Turn3 실패: {type(e).__name__}: {e}")
         t3_text = ""
+        if isinstance(e, asyncio.CancelledError):
+            raise
     if not t3_text:
         t3_text = f"{selected_name}님이 담당하시겠습니다."
     yield {
@@ -512,6 +534,7 @@ async def generate_handoff_stream(
     Turn 2: 새 리더   → 인사
     """
     if not gc or not current_leader or not new_leader:
+        logger.warning("[Handoff:Stream] gc/leaders 없음 — 스킵")
         return
 
     cur_name = current_leader.get("name", "?")
@@ -521,6 +544,8 @@ async def generate_handoff_stream(
     new_name = new_leader.get("name", "?")
     new_specialty = new_leader.get("specialty", "")
     new_id = new_leader.get("leader_id", "") or _name_to_id(new_name)
+
+    logger.info(f"[Handoff:Stream] 시작 — {cur_name} → {new_name}")
 
     cur_persona = _build_leader_persona(cur_id) if cur_id else ""
     if not cur_persona:
@@ -547,9 +572,11 @@ async def generate_handoff_stream(
         t1_text = await asyncio.wait_for(
             _single_leader_call(gc, cur_persona, t1_prompt), timeout=_TURN_TIMEOUT
         )
-    except Exception as e:
-        logger.warning(f"[Handoff:Stream] Turn1 실패: {e}")
+    except BaseException as e:
+        logger.warning(f"[Handoff:Stream] Turn1 실패: {type(e).__name__}: {e}")
         t1_text = ""
+        if isinstance(e, asyncio.CancelledError):
+            raise
     if not t1_text:
         t1_text = t1_fallback
     yield {
@@ -575,9 +602,11 @@ async def generate_handoff_stream(
         t2_text = await asyncio.wait_for(
             _single_leader_call(gc, new_persona, t2_prompt), timeout=_TURN_TIMEOUT
         )
-    except Exception as e:
-        logger.warning(f"[Handoff:Stream] Turn2 실패: {e}")
+    except BaseException as e:
+        logger.warning(f"[Handoff:Stream] Turn2 실패: {type(e).__name__}: {e}")
         t2_text = ""
+        if isinstance(e, asyncio.CancelledError):
+            raise
     if not t2_text:
         t2_text = t2_fallback
     yield {
