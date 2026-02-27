@@ -100,22 +100,25 @@ async def _single_leader_call(
     full_prompt = f"[페르소나]\n{persona}\n\n[지시]\n{prompt}"
     model_name = get_model()
 
-    for _attempt in range(2):
-        try:
-            resp = gc.models.generate_content(
-                model=model_name,
-                contents=full_prompt,
-                config=genai_types.GenerateContentConfig(
-                    max_output_tokens=max_tokens,
-                    temperature=temp,
-                ),
-            )
-            break
-        except Exception as e:
-            if is_quota_error(e) and _attempt < 1:
-                on_quota_error()
-                continue
-            raise
+    def _sync_call():
+        for _attempt in range(2):
+            try:
+                return gc.models.generate_content(
+                    model=model_name,
+                    contents=full_prompt,
+                    config=genai_types.GenerateContentConfig(
+                        max_output_tokens=max_tokens,
+                        temperature=temp,
+                    ),
+                )
+            except Exception as e:
+                if is_quota_error(e) and _attempt < 1:
+                    on_quota_error()
+                    continue
+                raise
+
+    loop = asyncio.get_running_loop()
+    resp = await loop.run_in_executor(None, _sync_call)
 
     text = _safe_extract_gemini_text(resp).strip()
     text = _remove_think_blocks(text).strip()

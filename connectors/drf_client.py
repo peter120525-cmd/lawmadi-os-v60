@@ -597,8 +597,9 @@ class DRFConnector:
         except Exception as e:
             logger.warning(f"[DualSSOT async] failed: {e}")
 
-        # Fallback to sync if async fails
-        return self.search_by_target(query, target=target)
+        # Fallback: sync 호출을 thread에서 실행 (이벤트 루프 블로킹 방지)
+        import asyncio
+        return await asyncio.to_thread(self.search_by_target, query, target)
 
     async def law_search_async(self, query: str) -> Optional[Any]:
         """비동기 법률 검색"""
@@ -611,7 +612,8 @@ class DRFConnector:
     async def get_law_articles_async(self, law_name: str) -> Optional[Any]:
         """비동기 법령 조문 상세 조회 (lawSearch → MST → lawService)"""
         if not _HTTPX_AVAILABLE:
-            return self.get_law_articles(law_name)
+            import asyncio
+            return await asyncio.to_thread(self.get_law_articles, law_name)
 
         _init_cache()
 

@@ -1023,7 +1023,7 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
                 if hasattr(svc, "get_law_articles_async"):
                     return ln, await svc.get_law_articles_async(ln)
                 else:
-                    return ln, svc.get_law_articles(ln)
+                    return ln, await asyncio.to_thread(svc.get_law_articles, ln)
             except Exception as e:
                 if attempt == 0:
                     logger.warning(f"[Stage 4] {ln} 법령 조회 실패 (재시도 1/1): {e}")
@@ -1041,7 +1041,7 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
             if drf_inst and hasattr(drf_inst, "search_precedents_async"):
                 raw_prec = await drf_inst.search_precedents_async(cn)
             elif drf_inst and hasattr(drf_inst, "search_precedents"):
-                raw_prec = drf_inst.search_precedents(cn)
+                raw_prec = await asyncio.to_thread(drf_inst.search_precedents, cn)
             return cn, raw_prec, None
         except Exception as e:
             return cn, None, e
@@ -1468,14 +1468,18 @@ async def _gemini_fallback_compose(
         "4. [SSOT 캐시]에 없는 조문번호 인용 금지\n\n"
         f"사용자 질문: {query}"
     )
+    def _sync_gemini_call(_model):
+        chat = gc.chats.create(
+            model=_model,
+            config=gen_config,
+            history=gemini_history,
+        )
+        return chat.send_message(user_msg)
+
+    loop = asyncio.get_running_loop()
     for _attempt in range(3):
         try:
-            chat = gc.chats.create(
-                model=model_name,
-                config=gen_config,
-                history=gemini_history,
-            )
-            resp = chat.send_message(user_msg)
+            resp = await loop.run_in_executor(None, _sync_gemini_call, model_name)
             text = _safe_extract_gemini_text(resp)
             logger.info(f"[Gemini] 답변 생성 완료 ({len(text)}자, model={model_name}, mode={mode})")
             return text

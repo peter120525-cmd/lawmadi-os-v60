@@ -1442,7 +1442,8 @@ async def search(q: str, limit: int = 10, request: Request = None):
     if len(q) < 2:
         return {"status": "ERROR", "message": "검색어는 2자 이상 입력해주세요."}
     try:
-        return svc.search_law(q)
+        import asyncio
+        return await asyncio.to_thread(svc.search_law, q)
     except Exception as e:
         logger.error(f"❌ /search 오류: {e}")
         return {"status": "ERROR", "message": "검색 처리 중 오류가 발생했습니다."}
@@ -1454,7 +1455,8 @@ async def trending(limit: int = 10, request: Request = None):
     if not svc:
         return {"status": "ERROR", "message": "SearchService not ready"}
     try:
-        return svc.search_precedents(limit)
+        import asyncio
+        return await asyncio.to_thread(svc.search_precedents, limit)
     except Exception as e:
         logger.error(f"❌ /trending 오류: {e}")
         return {"status": "ERROR", "message": "트렌딩 조회 중 오류가 발생했습니다."}
