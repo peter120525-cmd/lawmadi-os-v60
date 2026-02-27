@@ -4906,6 +4906,425 @@
             padding-bottom: 8px;
         }
 
+        /* ═══ 리더 협의(Deliberation) 컨테이너 — Premium Glass Morphism ═══ */
+        .deliberation-container {
+            position: relative;
+            background: rgba(255,255,255,0.65);
+            backdrop-filter: blur(24px) saturate(1.6);
+            -webkit-backdrop-filter: blur(24px) saturate(1.6);
+            border: 1px solid rgba(99,102,241,0.18);
+            border-radius: 20px;
+            padding: 20px;
+            margin: 10px 0 14px 0;
+            max-width: 620px;
+            box-shadow: 0 8px 32px rgba(99,102,241,0.12), 0 2px 8px rgba(0,0,0,0.04);
+            overflow: hidden;
+        }
+        .deliberation-container::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #6366f1, #818cf8, #a5b4fc, #818cf8, #6366f1);
+            background-size: 200% 100%;
+            animation: shimmerBar 3s linear infinite;
+        }
+        @keyframes shimmerBar {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .deliberation-container .delib-header {
+            font-size: 13px;
+            font-weight: 700;
+            color: #4338ca;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .delib-header-dot {
+            width: 8px; height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: livePulse 2s ease-in-out infinite;
+            flex-shrink: 0;
+        }
+        @keyframes livePulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+            50% { box-shadow: 0 0 0 5px rgba(34,197,94,0); }
+        }
+        .delib-header-count {
+            background: rgba(99,102,241,0.12);
+            color: #4338ca;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: auto;
+        }
+
+        /* 말풍선 공통 애니메이션 */
+        @keyframes bubbleSlideIn {
+            from { opacity: 0; transform: translateX(-12px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .deliberation-bubble {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+            opacity: 0;
+            animation: bubbleSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* 아바타 래퍼 (online dot용) */
+        .delib-avatar-wrap {
+            position: relative;
+            flex-shrink: 0;
+        }
+        .delib-avatar-wrap::after {
+            content: '';
+            position: absolute;
+            bottom: 1px; right: 1px;
+            width: 10px; height: 10px;
+            background: #22c55e;
+            border: 2px solid #fff;
+            border-radius: 50%;
+        }
+        .deliberation-bubble .delib-avatar {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2.5px solid rgba(99,102,241,0.5);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .deliberation-bubble .delib-avatar:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(99,102,241,0.25);
+        }
+        .deliberation-bubble.moderator .delib-avatar {
+            border-color: #d97706;
+            box-shadow: 0 0 0 2px rgba(217,119,6,0.2);
+        }
+        .deliberation-bubble .delib-body {
+            flex: 1;
+            min-width: 0;
+        }
+        .delib-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .deliberation-bubble .delib-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #312e81;
+        }
+        .deliberation-bubble.moderator .delib-name {
+            color: #92400e;
+        }
+        .deliberation-bubble .delib-role {
+            display: inline-block;
+            font-size: 10.5px;
+            font-weight: 600;
+            color: #fff;
+            background: linear-gradient(135deg, #6366f1, #818cf8);
+            padding: 1px 8px;
+            border-radius: 10px;
+            line-height: 1.6;
+        }
+        .deliberation-bubble.moderator .delib-role {
+            background: linear-gradient(135deg, #d97706, #f59e0b);
+        }
+        .delib-time {
+            font-size: 10.5px;
+            color: #94a3b8;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+        .deliberation-bubble .delib-text {
+            font-size: 13.5px;
+            color: #1e1b4b;
+            margin-top: 5px;
+            line-height: 1.55;
+            background: rgba(255,255,255,0.8);
+            border: 1px solid rgba(99,102,241,0.08);
+            border-radius: 12px;
+            padding: 10px 14px;
+            transition: box-shadow 0.2s ease;
+        }
+        .deliberation-bubble .delib-text:hover {
+            box-shadow: 0 2px 12px rgba(99,102,241,0.1);
+        }
+
+        /* 최종 결정 하이라이트 */
+        .deliberation-bubble.final-selection .delib-text {
+            border: 1.5px solid #059669;
+            background: rgba(16, 185, 129, 0.06);
+            font-weight: 600;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+            animation: delibDecisionGlow 2s ease-out 1;
+            position: relative;
+            padding-left: 34px;
+        }
+        .deliberation-bubble.final-selection .delib-text::before {
+            content: '✓';
+            position: absolute;
+            left: 10px; top: 50%;
+            transform: translateY(-50%);
+            width: 18px; height: 18px;
+            background: #059669;
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1;
+        }
+        @keyframes delibDecisionGlow {
+            0% { box-shadow: 0 0 0 3px rgba(16,185,129,0.3), 0 0 20px rgba(16,185,129,0.15); }
+            100% { box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
+        }
+
+        /* 결론 요약 카드 */
+        .delib-conclusion {
+            text-align: center;
+            margin-top: 12px;
+            padding: 10px 16px;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #059669;
+            background: rgba(16, 185, 129, 0.06);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 12px;
+            position: relative;
+            padding-left: 36px;
+        }
+        .delib-conclusion::before {
+            content: '✓';
+            position: absolute;
+            left: 12px; top: 50%;
+            transform: translateY(-50%);
+            width: 18px; height: 18px;
+            background: #059669;
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        /* ═══ 인수인계(Handoff) UI — Premium Glass ═══ */
+        .handoff-container {
+            position: relative;
+            background: rgba(255,251,235,0.7);
+            backdrop-filter: blur(24px) saturate(1.6);
+            -webkit-backdrop-filter: blur(24px) saturate(1.6);
+            border: 1px solid rgba(251,191,36,0.25);
+            border-radius: 20px;
+            padding: 20px;
+            margin: 10px 0 14px 0;
+            max-width: 620px;
+            box-shadow: 0 8px 32px rgba(217,119,6,0.1), 0 2px 8px rgba(0,0,0,0.04);
+            overflow: hidden;
+        }
+        .handoff-container::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #d97706, #f59e0b, #fbbf24, #f59e0b, #d97706);
+            background-size: 200% 100%;
+            animation: shimmerBar 3s linear infinite;
+        }
+        .handoff-container .handoff-header {
+            font-size: 13px;
+            font-weight: 700;
+            color: #92400e;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .handoff-bubble {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+            opacity: 0;
+            animation: bubbleSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .handoff-bubble .delib-avatar {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2.5px solid rgba(251,191,36,0.6);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .handoff-bubble .delib-avatar:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(217,119,6,0.25);
+        }
+        .handoff-bubble .delib-body { flex: 1; min-width: 0; }
+        .handoff-bubble .delib-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #92400e;
+        }
+        .handoff-bubble .delib-role {
+            display: inline-block;
+            font-size: 10.5px;
+            font-weight: 600;
+            color: #fff;
+            background: linear-gradient(135deg, #d97706, #f59e0b);
+            padding: 1px 8px;
+            border-radius: 10px;
+            line-height: 1.6;
+        }
+        .handoff-bubble .delib-text {
+            font-size: 13.5px;
+            color: #78350f;
+            margin-top: 5px;
+            line-height: 1.55;
+            background: rgba(255,255,255,0.75);
+            border: 1px solid rgba(251,191,36,0.12);
+            border-radius: 12px;
+            padding: 10px 14px;
+            transition: box-shadow 0.2s ease;
+        }
+        .handoff-bubble .delib-text:hover {
+            box-shadow: 0 2px 12px rgba(217,119,6,0.1);
+        }
+
+        /* 인수인계 화살표 커넥터 */
+        .handoff-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            margin: 4px 0 8px 0;
+            height: 24px;
+        }
+        .handoff-arrow-line {
+            flex: 1;
+            height: 0;
+            border-top: 2px dashed rgba(217,119,6,0.3);
+        }
+        .handoff-arrow-icon {
+            flex-shrink: 0;
+            width: 24px; height: 24px;
+            color: #d97706;
+            opacity: 0.7;
+        }
+
+        /* ═══ 다크모드 — CSS 변수 오버라이드 ═══ */
+        body.dark-mode .deliberation-container {
+            background: rgba(30,41,59,0.75);
+            border-color: rgba(99,102,241,0.3);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 2px 8px rgba(99,102,241,0.08);
+        }
+        body.dark-mode .deliberation-container .delib-header { color: #a5b4fc; }
+        body.dark-mode .delib-header-count {
+            background: rgba(99,102,241,0.2);
+            color: #a5b4fc;
+        }
+        body.dark-mode .deliberation-bubble .delib-name { color: #c7d2fe; }
+        body.dark-mode .deliberation-bubble.moderator .delib-name { color: #fde68a; }
+        body.dark-mode .deliberation-bubble .delib-text {
+            color: #e0e7ff;
+            background: rgba(15,23,42,0.6);
+            border-color: rgba(99,102,241,0.15);
+        }
+        body.dark-mode .deliberation-bubble.final-selection .delib-text {
+            border-color: #34d399;
+            background: rgba(16, 185, 129, 0.12);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+        }
+        body.dark-mode .delib-conclusion {
+            color: #34d399;
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.25);
+        }
+        body.dark-mode .delib-avatar-wrap::after {
+            border-color: #1e293b;
+        }
+        body.dark-mode .delib-time { color: #64748b; }
+        body.dark-mode .handoff-container {
+            background: rgba(30,41,59,0.75);
+            border-color: rgba(251,191,36,0.25);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 2px 8px rgba(217,119,6,0.08);
+        }
+        body.dark-mode .handoff-container .handoff-header { color: #fcd34d; }
+        body.dark-mode .handoff-bubble .delib-name { color: #fde68a; }
+        body.dark-mode .handoff-bubble .delib-text {
+            color: #fef3c7;
+            background: rgba(15,23,42,0.6);
+            border-color: rgba(251,191,36,0.1);
+        }
+        body.dark-mode .handoff-arrow-line {
+            border-top-color: rgba(251,191,36,0.25);
+        }
+        body.dark-mode .handoff-arrow-icon { color: #fbbf24; }
+
+        /* ═══ 모바일 반응형 — 2단계 ═══ */
+        @media (max-width: 768px) {
+            .deliberation-container, .handoff-container {
+                max-width: 100%;
+                padding: 14px;
+                margin: 6px 0 10px 0;
+                border-radius: 16px;
+            }
+            .deliberation-bubble .delib-avatar, .handoff-bubble .delib-avatar {
+                width: 38px;
+                height: 38px;
+            }
+            .delib-avatar-wrap::after {
+                width: 8px; height: 8px;
+            }
+            .deliberation-bubble .delib-text, .handoff-bubble .delib-text {
+                font-size: 12.5px;
+                padding: 8px 11px;
+            }
+            .deliberation-bubble, .handoff-bubble {
+                gap: 10px;
+            }
+        }
+        @media (max-width: 400px) {
+            .deliberation-container, .handoff-container {
+                padding: 10px;
+                border-radius: 14px;
+            }
+            .deliberation-bubble .delib-avatar, .handoff-bubble .delib-avatar {
+                width: 32px;
+                height: 32px;
+            }
+            .delib-avatar-wrap::after {
+                width: 7px; height: 7px;
+                bottom: 0; right: 0;
+            }
+            .deliberation-bubble .delib-name, .handoff-bubble .delib-name {
+                font-size: 12px;
+            }
+            .deliberation-bubble .delib-role, .handoff-bubble .delib-role {
+                font-size: 9.5px;
+                padding: 1px 6px;
+            }
+            .deliberation-bubble .delib-text, .handoff-bubble .delib-text {
+                font-size: 12px;
+                padding: 7px 10px;
+            }
+            .delib-time { font-size: 9.5px; }
+        }
+
     </style>
 </head>
 <body>
@@ -5467,6 +5886,8 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
         darkMode: false,
         MAX_RETRY: 2,
         currentAbortController: null,  // AbortController (항목 #12)
+        currentLeader: null,  // {name, specialty} — 현재 담당 리더
+        isFirstQuestion: true,  // 첫 질문 여부
 
         init() {
             this.menuToggle.onclick = (e) => {
@@ -5546,6 +5967,15 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
             try {
                 const saved = localStorage.getItem('lawmadi-chat-history');
                 if (saved) this.conversationHistory = JSON.parse(saved);
+            } catch(e) {}
+
+            // 현재 리더 상태 복원
+            try {
+                const savedLeader = localStorage.getItem('lawmadi-current-leader');
+                if (savedLeader) {
+                    this.currentLeader = JSON.parse(savedLeader);
+                    this.isFirstQuestion = false;
+                }
             } catch(e) {}
 
             // 즐겨찾기 초기화
@@ -5951,7 +6381,9 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     query: query,
-                    history: this.conversationHistory.slice(-10)
+                    history: this.conversationHistory.slice(-10),
+                    current_leader: this.currentLeader,
+                    is_first_question: this.isFirstQuestion,
                 }),
                 signal: this.currentAbortController.signal
             });
@@ -5969,6 +6401,17 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
             const data = await response.json();
 
             this.hideTypingIndicator();
+
+            // 협의/인수인계 렌더링
+            if (data.deliberation) this._renderDeliberation(data.deliberation);
+            if (data.handoff) this._renderHandoff(data.handoff);
+
+            // 현재 리더 상태 업데이트
+            if (data.current_leader) {
+                this.currentLeader = data.current_leader;
+                this.isFirstQuestion = false;
+                try { localStorage.setItem('lawmadi-current-leader', JSON.stringify(data.current_leader)); } catch(e) {}
+            }
 
             this.conversationHistory.push(
                 { role: 'user', content: query },
@@ -5992,7 +6435,9 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     query: query,
-                    history: this.conversationHistory.slice(-10)
+                    history: this.conversationHistory.slice(-10),
+                    current_leader: this.currentLeader,
+                    is_first_question: this.isFirstQuestion,
                 }),
                 signal: this.currentAbortController.signal
             });
@@ -6007,6 +6452,12 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                 return;
             }
             if (!response.ok) throw new Error(`서버 오류 (${response.status})`);
+
+            // 협의/인수인계 임시 상태 초기화
+            this._delibContainer = null;
+            this._delibTurnIndex = 0;
+            this._handoffContainer = null;
+            this._handoffTurnIndex = 0;
 
             // 스트리밍 메시지 컨테이너 생성 (고유 ID로 충돌 방지)
             // 첫 chunk 도착 시에만 DOM에 추가하여 이중 박스 방지
@@ -6074,7 +6525,22 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                             continue;
                         }
 
-                        if (eventType === 'status') {
+                        if (eventType === 'deliberation_start') {
+                            this.hideTypingIndicator();
+                            this._renderDeliberationStart(payload);
+
+                        } else if (eventType === 'deliberation_turn') {
+                            this._renderDeliberationTurn(payload);
+
+                        } else if (eventType === 'deliberation_end') {
+                            this._renderDeliberationEnd(payload);
+                            this.showTypingIndicator();
+
+                        } else if (eventType === 'handoff') {
+                            this.hideTypingIndicator();
+                            this._renderHandoffTurn(payload);
+
+                        } else if (eventType === 'status') {
                             const stepKey = payload.step || '';
                             const statusText = _statusLabels[stepKey] || stepKey;
                             const leaderInfo = payload.leader ? ` (${payload.leader})` : '';
@@ -6097,6 +6563,13 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                             leaderName = payload.leader || '';
                             leaderSpecialty = payload.leader_specialty || payload.specialty || '';
                             fullTextFromServer = payload.response || payload.full_text || accumulatedText;
+
+                            // 현재 리더 상태 업데이트
+                            if (payload.current_leader) {
+                                this.currentLeader = payload.current_leader;
+                                this.isFirstQuestion = false;
+                                try { localStorage.setItem('lawmadi-current-leader', JSON.stringify(payload.current_leader)); } catch(e) {}
+                            }
 
                         } else if (eventType === 'error') {
                             this.hideTypingIndicator();
@@ -6209,7 +6682,7 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                 const lastStep = steps[steps.length - 1];
                 lastStep.classList.remove('done');
                 lastStep.classList.add('active');
-                lastStep.innerHTML = statusText;
+                lastStep.textContent = statusText;
             }
         },
 
@@ -6727,7 +7200,7 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                                 panel.className = 'expert-response-panel';
                                 panel.innerHTML = _sanitize(this.formatReport(expertData.response));
                                 msgDiv.insertBefore(panel, ctaBar);
-                                const vScore = expertData.verification?.ssot_compliance_score || 0;
+                                const vScore = Number(expertData.verification?.ssot_compliance_score) || 0;
                                 if (vScore > 0) {
                                     const barDiv = document.createElement('div');
                                     barDiv.className = 'ssot-confidence-bar';
@@ -6928,13 +7401,206 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
             return typingId;
         },
 
+        // ═══ 리더 협의(Deliberation) 렌더링 — Premium UI ═══
+        _getLeaderAvatar(name) {
+            return leaderProfileImages[name] || 'images/leaders/L60-madi.jpg';
+        },
+
+        _getTimeStamp() {
+            const now = new Date();
+            return String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+        },
+
+        _buildAvatarHTML(name, context) {
+            const cls = context === 'handoff' ? '' : '';
+            return `<div class="delib-avatar-wrap"><img class="delib-avatar" src="${this._getLeaderAvatar(name)}" alt="${this.escapeHtml(name)}"></div>`;
+        },
+
+        _buildBubbleBody(name, role, text) {
+            const ts = this._getTimeStamp();
+            return `<div class="delib-body">` +
+                `<div class="delib-meta-row"><span class="delib-name">${this.escapeHtml(name)}</span>` +
+                `<span class="delib-role">${this.escapeHtml(role)}</span>` +
+                `<span class="delib-time">${ts}</span></div>` +
+                `<div class="delib-text">${this.escapeHtml(text)}</div></div>`;
+        },
+
+        _buildHandoffArrow() {
+            return '<div class="handoff-arrow">' +
+                '<div class="handoff-arrow-line"></div>' +
+                '<svg class="handoff-arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>' +
+                '<div class="handoff-arrow-line"></div>' +
+                '</div>';
+        },
+
+        // 스트리밍: deliberation_start 이벤트
+        _renderDeliberationStart(payload) {
+            const container = document.createElement('div');
+            container.className = 'deliberation-container';
+            container.id = 'delib-live-' + Date.now();
+            const leaders = payload.leaders || [];
+            const leaderNames = leaders.map(l => l.name).join(', ');
+            const count = leaders.length;
+            container.innerHTML = _sanitize(
+                `<div class="delib-header">` +
+                `<span class="delib-header-dot"></span>` +
+                `<span>회의 진행 중 — 서연(CSO) 주재</span>` +
+                `<span class="delib-header-count">${count}명 참석</span>` +
+                `</div>`
+            );
+            this.convArea.appendChild(container);
+            this._smartScroll(false);
+            this._delibContainer = container;
+            this._delibTurnIndex = 0;
+        },
+
+        // 스트리밍: deliberation_turn 이벤트
+        _renderDeliberationTurn(payload) {
+            const container = this._delibContainer;
+            if (!container) return;
+            const name = payload.speaker || '?';
+            const role = payload.role || '';
+            const text = payload.text || '';
+            const isFinal = payload.is_final || false;
+            const isMod = (name === '서연');
+            const idx = this._delibTurnIndex || 0;
+
+            const bubble = document.createElement('div');
+            bubble.className = 'deliberation-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
+            bubble.style.animationDelay = (idx * 0.25) + 's';
+            bubble.innerHTML = _sanitize(
+                this._buildAvatarHTML(name, 'deliberation') +
+                this._buildBubbleBody(name, role, text)
+            );
+            container.appendChild(bubble);
+            this._delibTurnIndex = idx + 1;
+            this._smartScroll(false);
+        },
+
+        // 스트리밍: deliberation_end 이벤트
+        _renderDeliberationEnd(payload) {
+            const container = this._delibContainer;
+            if (!container) return;
+            const selected = payload.selected_leader || '?';
+            const specialty = payload.selected_leader_specialty || '';
+            const summary = document.createElement('div');
+            summary.className = 'delib-conclusion';
+            summary.textContent = `${selected} (${specialty}) 리더가 담당합니다`;
+            container.appendChild(summary);
+            this._smartScroll(false);
+            this._delibContainer = null;
+        },
+
+        // 스트리밍: handoff 이벤트 (턴별)
+        _renderHandoffTurn(payload) {
+            if (!this._handoffContainer) {
+                const container = document.createElement('div');
+                container.className = 'handoff-container';
+                container.innerHTML = _sanitize(
+                    '<div class="handoff-header">' +
+                    '<span class="delib-header-dot"></span>' +
+                    '<span>리더 인수인계</span>' +
+                    '</div>'
+                );
+                this.convArea.appendChild(container);
+                this._handoffContainer = container;
+                this._handoffTurnIndex = 0;
+            }
+            const container = this._handoffContainer;
+            const name = payload.speaker || '?';
+            const role = payload.role || '';
+            const text = payload.text || '';
+            const idx = this._handoffTurnIndex || 0;
+
+            // 두 번째 말풍선 앞에 화살표 커넥터 삽입
+            if (idx === 1) {
+                const arrow = document.createElement('div');
+                arrow.innerHTML = this._buildHandoffArrow();
+                container.appendChild(arrow.firstChild);
+            }
+
+            const bubble = document.createElement('div');
+            bubble.className = 'handoff-bubble';
+            bubble.style.animationDelay = (idx * 0.25) + 's';
+            bubble.innerHTML = _sanitize(
+                this._buildAvatarHTML(name, 'handoff') +
+                this._buildBubbleBody(name, role, text)
+            );
+            container.appendChild(bubble);
+            this._handoffTurnIndex = idx + 1;
+            this._smartScroll(false);
+        },
+
+        // Classic (/ask) 응답의 deliberation 렌더링
+        _renderDeliberation(turns) {
+            if (!turns || !turns.length) return;
+            const container = document.createElement('div');
+            container.className = 'deliberation-container';
+            const names = [...new Set(turns.map(t => t.speaker))];
+            container.innerHTML = _sanitize(
+                `<div class="delib-header">` +
+                `<span class="delib-header-dot"></span>` +
+                `<span>회의 진행 중 — 서연(CSO) 주재</span>` +
+                `<span class="delib-header-count">${names.length}명 참석</span>` +
+                `</div>`
+            );
+            turns.forEach((turn, idx) => {
+                const isMod = (turn.speaker === '서연');
+                const isFinal = turn.is_final || false;
+                const bubble = document.createElement('div');
+                bubble.className = 'deliberation-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
+                bubble.style.animationDelay = (idx * 0.25) + 's';
+                bubble.innerHTML = _sanitize(
+                    this._buildAvatarHTML(turn.speaker, 'deliberation') +
+                    this._buildBubbleBody(turn.speaker, turn.role || '', turn.text || '')
+                );
+                container.appendChild(bubble);
+            });
+            this.convArea.appendChild(container);
+            this._smartScroll(false);
+        },
+
+        // Classic (/ask) 응답의 handoff 렌더링
+        _renderHandoff(turns) {
+            if (!turns || !turns.length) return;
+            const container = document.createElement('div');
+            container.className = 'handoff-container';
+            container.innerHTML = _sanitize(
+                '<div class="handoff-header">' +
+                '<span class="delib-header-dot"></span>' +
+                '<span>리더 인수인계</span>' +
+                '</div>'
+            );
+            turns.forEach((turn, idx) => {
+                // 두 번째 말풍선 앞에 화살표 커넥터 삽입
+                if (idx === 1) {
+                    const arrow = document.createElement('div');
+                    arrow.innerHTML = this._buildHandoffArrow();
+                    container.appendChild(arrow.firstChild);
+                }
+                const bubble = document.createElement('div');
+                bubble.className = 'handoff-bubble';
+                bubble.style.animationDelay = (idx * 0.25) + 's';
+                bubble.innerHTML = _sanitize(
+                    this._buildAvatarHTML(turn.speaker, 'handoff') +
+                    this._buildBubbleBody(turn.speaker, turn.role || '', turn.text || '')
+                );
+                container.appendChild(bubble);
+            });
+            this.convArea.appendChild(container);
+            this._smartScroll(false);
+        },
+
         // ═══ 새 대화 시작 ═══
         resetConversation() {
             this.conversationHistory = [];
             this.convArea.innerHTML = '';
             this.lastQuery = null;
             this.lastRawResponse = null;
+            this.currentLeader = null;
+            this.isFirstQuestion = true;
             try { localStorage.removeItem('lawmadi-chat-history'); } catch(e) {}
+            try { localStorage.removeItem('lawmadi-current-leader'); } catch(e) {}
             // 랜딩 화면으로 복귀
             this.convArea.classList.add('hidden');
             this.landingContent.classList.remove('hidden');
