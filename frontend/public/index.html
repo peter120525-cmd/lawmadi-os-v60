@@ -3203,9 +3203,15 @@
                 padding: 24px 10px 12px;
             }
             .example-card-grid {
-                grid-template-columns: repeat(2, 1fr) !important;
-                gap: 8px !important;
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 6px !important;
             }
+            .example-card {
+                padding: 8px 4px;
+                gap: 3px;
+            }
+            .example-card-icon { font-size: 1.2rem; }
+            .example-card-title { font-size: 0.8rem; }
             .user-msg {
                 max-width: 98%;
                 padding: 8px 12px;
@@ -4865,24 +4871,24 @@
            초소형 모바일 (≤480px) — 어른 가독성 강화
         ═══════════════════════════════════════════════════ */
         @media (max-width: 480px) {
-            /* 예시 카드: 3열x4행 유지, 가독성 개선 */
+            /* 예시 카드: 3열x4행, 가독성 개선 */
             .example-card-grid {
-                grid-template-columns: repeat(2, 1fr) !important;
-                gap: 10px !important;
-                padding: 0 12px;
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 8px !important;
+                padding: 0 8px;
             }
             #landing-content .example-card-grid {
-                grid-template-columns: repeat(2, 1fr) !important;
+                grid-template-columns: repeat(3, 1fr) !important;
             }
             #landing-content .example-card:nth-child(n+13) {
                 display: none;
             }
             .example-card {
-                padding: 12px 8px;
-                gap: 5px;
+                padding: 10px 6px;
+                gap: 4px;
             }
-            .example-card-icon { font-size: 1.6rem; }
-            .example-card-title { font-size: 1rem; font-weight: 700; }
+            .example-card-icon { font-size: 1.4rem; }
+            .example-card-title { font-size: 0.88rem; font-weight: 700; }
 
             /* 다크모드 토글 터치 영역 확대 (44x44px 최소) */
             .dark-toggle {
