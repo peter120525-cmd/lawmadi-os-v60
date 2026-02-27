@@ -607,8 +607,9 @@ _PREMIUM_KEYS = set(filter(None, os.getenv("PREMIUM_KEYS", "").split(",")))
 def _get_user_plan(request: Request) -> str:
     """X-Premium-Key 헤더 확인 → 유효하면 'premium', 아니면 'free'"""
     key = request.headers.get("X-Premium-Key", "").strip()
-    if key and _PREMIUM_KEYS and key in _PREMIUM_KEYS:
-        return "premium"
+    if key and _PREMIUM_KEYS:
+        if any(hmac.compare_digest(key, pk) for pk in _PREMIUM_KEYS):
+            return "premium"
     return "free"
 
 def _check_expert_access(request: Request) -> bool:
@@ -1374,7 +1375,7 @@ async def startup():
 
     # Wire route module dependencies
     _set_health_deps(RUNTIME, METRICS, LAW_CACHE, _KEYWORD_INDEX, optional_import("connectors.db_client_v2"))
-    _set_analytics_deps(limiter, _get_client_ip)
+    _set_analytics_deps(rate_limiter=limiter, get_client_ip_fn=_get_client_ip)
     _set_legal_deps(
         RUNTIME, METRICS, LEADER_REGISTRY, limiter,
         check_rate_limit=_check_rate_limit,
@@ -1393,8 +1394,8 @@ async def startup():
         optional_import_fn=optional_import,
         check_expert_access=_check_expert_access,
     )
-    _set_files_deps(RUNTIME, limiter)
-    _set_user_deps(RUNTIME, limiter, ask_fn=_legal_ask, search_fn=_legal_search)
+    _set_files_deps(RUNTIME, rate_limiter=limiter)
+    _set_user_deps(RUNTIME, rate_limiter=limiter, ask_fn=_legal_ask, search_fn=_legal_search)
 
     # Admin tables init
     db_v2 = optional_import("connectors.db_client_v2")

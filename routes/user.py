@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Callable, Coroutine
 from fastapi import APIRouter, Request, Header, HTTPException
 from fastapi.responses import JSONResponse
 from google.genai import types as genai_types
+from slowapi import Limiter
 
 from core.constants import OS_VERSION, GEMINI_MODEL
 from core.model_fallback import get_model
@@ -17,7 +18,7 @@ router = APIRouter()
 logger = logging.getLogger("LawmadiOS.User")
 
 _RUNTIME: Dict[str, Any] = {}
-_limiter = None
+limiter: Limiter = None  # type: ignore[assignment]
 
 # In-memory stores (FIFO)
 LAWYER_INQUIRY_STORE: List[Dict] = []
@@ -29,11 +30,12 @@ _ask_fn: Callable[..., Coroutine] = None  # type: ignore[assignment]
 _search_fn: Callable[..., Coroutine] = None  # type: ignore[assignment]
 
 
-def set_dependencies(runtime, limiter=None, ask_fn=None, search_fn=None):
+def set_dependencies(runtime, rate_limiter=None, ask_fn=None, search_fn=None):
     """Inject shared runtime objects from main.py at startup."""
-    global _RUNTIME, _limiter, _ask_fn, _search_fn
+    global _RUNTIME, limiter, _ask_fn, _search_fn
     _RUNTIME = runtime
-    _limiter = limiter
+    if rate_limiter:
+        limiter = rate_limiter
     _ask_fn = ask_fn
     _search_fn = search_fn
 
@@ -79,6 +81,7 @@ async def get_plans():
 # =============================================================
 
 @router.post("/lawyer-inquiry")
+@limiter.limit("5/hour")
 async def submit_lawyer_inquiry(request: Request):
     """Lawyer referral inquiry — name + contact + summary."""
     try:
@@ -114,6 +117,7 @@ async def submit_lawyer_inquiry(request: Request):
 # =============================================================
 
 @router.post("/feedback")
+@limiter.limit("30/hour")
 async def submit_feedback(request: Request):
     """Response satisfaction feedback (up/down) storage."""
     try:
@@ -144,6 +148,7 @@ async def submit_feedback(request: Request):
 # =============================================================
 
 @router.post("/suggest-questions")
+@limiter.limit("20/hour")
 async def suggest_questions(request: Request):
     """Suggest 3 follow-up questions based on current query/leader."""
     try:
