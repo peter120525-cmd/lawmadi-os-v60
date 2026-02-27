@@ -3,20 +3,126 @@ Lawmadi OS v60 — 리더 협의(Deliberation) & 인수인계(Handoff) 시스템
 
 CSO 서연이 주재하는 리더 회의 과정을 사용자에게 채팅 형식으로 보여주고,
 이후 질문에서는 리더 간 인수인계 과정도 표시.
+
+v2: 턴별 개별 Gemini 호출 + 실제 리더 페르소나 주입.
+    JSON 모드 완전 제거 → plain text → Python dict 조립.
 """
 import json
 import logging
 import asyncio
+import os
 from typing import Dict, List, Optional
 
 from core.model_fallback import get_model, on_quota_error, is_quota_error
-from utils.helpers import _safe_extract_gemini_text
+from core.pipeline import _build_leader_persona, _load_leader_profiles
+from utils.helpers import _safe_extract_gemini_text, _remove_think_blocks
 
 logger = logging.getLogger("LawmadiOS.Deliberation")
 
 # 협의 타임아웃 (초)
-_DELIBERATION_TIMEOUT = 5
-_HANDOFF_TIMEOUT = 5
+_DELIBERATION_TIMEOUT = 8
+_HANDOFF_TIMEOUT = 8
+
+# 이름 → ID 역매핑 캐시
+_NAME_TO_ID: Dict[str, str] = {}
+
+
+def _build_name_to_id_map() -> Dict[str, str]:
+    """leader-profiles.json + leaders.json 기반 이름→ID 역매핑 구축."""
+    global _NAME_TO_ID
+    if _NAME_TO_ID:
+        return _NAME_TO_ID
+
+    mapping: Dict[str, str] = {}
+    # leaders.json에서 이름 로드
+    try:
+        base = os.path.dirname(os.path.dirname(__file__))
+        path = os.path.join(base, "leaders.json")
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        # core_registry (CSO/CTO/CCO)
+        for lid, info in data.get("core_registry", {}).items():
+            name = info.get("name", "")
+            if name:
+                mapping[name] = lid
+        # swarm_engine_config.leader_registry (L01-L60)
+        registry = data.get("swarm_engine_config", {}).get("leader_registry", {})
+        for lid, info in registry.items():
+            name = info.get("name", "")
+            if name:
+                mapping[name] = lid
+    except Exception as e:
+        logger.warning(f"[Deliberation] leaders.json 로드 실패: {e}")
+
+    _NAME_TO_ID = mapping
+    return _NAME_TO_ID
+
+
+def _name_to_id(name: str) -> str:
+    """리더 이름 → ID 변환 (없으면 빈 문자열)."""
+    mapping = _build_name_to_id_map()
+    return mapping.get(name, "")
+
+
+def _build_cso_persona() -> str:
+    """CSO 서연의 페르소나 텍스트 (회의 진행자 역할)."""
+    profiles = _load_leader_profiles()
+    p = profiles.get("CSO")
+    if not p:
+        return "CSO 서연: Lawmadi OS 전략 총괄. 리더 회의를 주재합니다."
+    parts = []
+    if p.get("hero"):
+        parts.append(f"신조: {p['hero']}")
+    identity = p.get("identity", {})
+    if identity.get("what"):
+        parts.append(f"역할: {identity['what']}")
+    if p.get("philosophy"):
+        parts.append(f"철학: {p['philosophy']}")
+    if not parts:
+        return "CSO 서연: Lawmadi OS 전략 총괄."
+    return "CSO 서연\n" + "\n".join(parts)
+
+
+async def _single_leader_call(
+    gc,
+    persona: str,
+    prompt: str,
+    max_tokens: int = 2048,
+    temp: float = 0.5,
+) -> str:
+    """
+    단일 리더 plain text Gemini 호출.
+    JSON 모드 없음. 200자 truncate.
+    max_tokens를 크게 잡아 thinking 토큰 소비 후에도 충분한 응답 확보.
+    """
+    from google.genai import types as genai_types
+
+    full_prompt = f"[페르소나]\n{persona}\n\n[지시]\n{prompt}"
+    model_name = get_model()
+
+    for _attempt in range(2):
+        try:
+            resp = gc.models.generate_content(
+                model=model_name,
+                contents=full_prompt,
+                config=genai_types.GenerateContentConfig(
+                    max_output_tokens=max_tokens,
+                    temperature=temp,
+                ),
+            )
+            break
+        except Exception as e:
+            if is_quota_error(e) and _attempt < 1:
+                on_quota_error()
+                continue
+            raise
+
+    text = _safe_extract_gemini_text(resp).strip()
+    text = _remove_think_blocks(text).strip()
+    # 200자 truncate
+    if len(text) > 200:
+        text = text[:197] + "..."
+    return text
 
 
 def should_deliberate(
@@ -62,108 +168,108 @@ async def generate_deliberation(
     lang: str = "",
 ) -> Optional[List[Dict]]:
     """
-    CSO 서연 주재 리더 회의 대화 스크립트 생성 (Gemini Flash 1회 호출).
+    CSO 서연 주재 리더 회의 — 3턴 순차 개별 Gemini 호출.
+
+    Turn 1: CSO 서연 → 질문 요약 + 의견 요청
+    Turn 2: 담당 리더 → 자기 분야 관점 의견
+    Turn 3: CSO 서연 → 담당 리더 지명 (is_final=True)
 
     Args:
         gc: Gemini client
         query: 사용자 질문
-        leaders: 후보 리더 목록 [{"name": ..., "specialty": ...}, ...]
+        leaders: 후보 리더 목록 [{"name": ..., "specialty": ..., "leader_id": ...}, ...]
         lang: 언어 코드
 
     Returns:
         대화 턴 리스트 또는 None (실패 시)
-        [
-          {"speaker": "서연", "role": "CSO", "text": "...", "is_final": False},
-          {"speaker": "온유", "role": "임대차", "text": "...", "is_final": False},
-          ...
-          {"speaker": "서연", "role": "CSO", "text": "...리더 지명...", "is_final": True},
-        ]
     """
     if not gc or not leaders:
         return None
 
-    leader_list_str = ", ".join(
-        f"{l['name']}({l['specialty']})" for l in leaders[:3]
-    )
+    selected = leaders[0]
+    selected_name = selected.get("name", "?")
+    selected_specialty = selected.get("specialty", "")
+    selected_id = selected.get("leader_id", "") or _name_to_id(selected_name)
 
-    prompt = (
-        f"당신은 Lawmadi OS의 CSO 서연입니다. "
-        f"사용자의 법률 질문에 대해 어떤 리더가 담당할지 회의를 진행합니다.\n\n"
-        f"사용자 질문: {query[:500]}\n"
-        f"참석 리더: {leader_list_str}\n\n"
-        f"아래 규칙을 따라 JSON 배열로 회의 대화를 생성하세요:\n"
-        f"1. 서연(CSO)이 먼저 질문을 요약하고 관련 리더들에게 의견을 구합니다\n"
-        f"2. 각 리더가 짧게(1~2문장) 자기 분야 관점에서 의견을 말합니다\n"
-        f"3. 서연이 최종 담당 리더를 지명합니다 (is_final: true)\n"
-        f"4. 총 3~5턴, 각 턴 50자 이내\n"
-        f"5. 존댓말, 따뜻하고 전문적인 톤\n\n"
-        f"JSON 형식 (반드시 이 형식만 출력):\n"
-        f'[{{"speaker":"서연","role":"CSO","text":"...","is_final":false}},'
-        f'{{"speaker":"리더명","role":"전문분야","text":"...","is_final":false}},'
-        f'{{"speaker":"서연","role":"CSO","text":"...님이 담당하시겠습니다","is_final":true}}]'
-    )
+    # 페르소나 빌드
+    cso_persona = _build_cso_persona()
+    leader_persona = _build_leader_persona(selected_id) if selected_id else ""
+    if not leader_persona:
+        leader_persona = f"{selected_name}: {selected_specialty} 전문 리더"
+
+    turns: List[Dict] = []
 
     try:
-        from google.genai import types as genai_types
+        # ── Turn 1: CSO 서연 — 질문 요약 + 의견 요청 ──
+        t1_prompt = (
+            f"사용자 질문: {query[:300]}\n"
+            f"참석 리더: {', '.join(l.get('name','?') + '(' + l.get('specialty','') + ')' for l in leaders[:3])}\n\n"
+            f"당신은 CSO 서연입니다. 이 질문의 핵심을 요약하고, "
+            f"왜 이 분야의 전문가가 필요한지 설명한 뒤, "
+            f"{selected_name}님에게 의견을 요청하세요. "
+            f"반드시 100자 이상 150자 이내로 작성하세요. "
+            f"존댓말, 따뜻하고 전문적인 톤으로 자연스럽게 말하세요. "
+            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
+        )
+        t1_text = await _single_leader_call(gc, cso_persona, t1_prompt)
+        if not t1_text:
+            t1_text = f"이 질문은 {selected_specialty} 분야입니다. {selected_name}님, 의견 부탁드립니다."
+        turns.append({
+            "speaker": "서연",
+            "role": "CSO",
+            "text": t1_text,
+            "is_final": False,
+        })
 
-        model_name = get_model()
+        # ── Turn 2: 담당 리더 — 자기 분야 관점 의견 ──
+        t2_prompt = (
+            f"사용자 질문: {query[:300]}\n"
+            f"CSO 서연이 당신에게 의견을 요청했습니다.\n\n"
+            f"당신은 {selected_name}({selected_specialty} 전문)입니다. "
+            f"자기 분야의 전문 지식을 바탕으로 이 질문에 어떻게 도움을 줄 수 있는지 "
+            f"구체적으로 설명하고, 자신감 있게 돕겠다고 답하세요. "
+            f"반드시 100자 이상 150자 이내로 작성하세요. "
+            f"존댓말, 전문적이고 따뜻한 톤으로 자연스럽게 말하세요. "
+            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
+        )
+        t2_text = await _single_leader_call(gc, leader_persona, t2_prompt)
+        if not t2_text:
+            t2_text = f"네, {selected_specialty} 관점에서 바로 도와드리겠습니다."
+        turns.append({
+            "speaker": selected_name,
+            "role": selected_specialty,
+            "text": t2_text,
+            "is_final": False,
+        })
 
-        for _attempt in range(2):
-            try:
-                resp = gc.models.generate_content(
-                    model=model_name,
-                    contents=prompt,
-                    config=genai_types.GenerateContentConfig(
-                        max_output_tokens=600,
-                        temperature=0.7,
-                        response_mime_type="application/json",
-                    ),
-                )
-                break
-            except Exception as e:
-                if is_quota_error(e) and _attempt < 1:
-                    on_quota_error()
-                    continue
-                raise
+        # ── Turn 3: CSO 서연 — 담당 리더 지명 ──
+        t3_prompt = (
+            f"{selected_name}님이 {selected_specialty} 분야에서 돕겠다고 했습니다.\n\n"
+            f"당신은 CSO 서연입니다. {selected_name}님의 전문성을 인정하며 "
+            f"이 질문의 담당 리더로 공식 지명하세요. "
+            f"사용자에게 안심하라는 말도 덧붙이세요. "
+            f"반드시 100자 이상 150자 이내로 작성하세요. "
+            f"존댓말, 따뜻하고 신뢰감 있는 톤으로 자연스럽게 말하세요. "
+            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
+        )
+        try:
+            t3_text = await _single_leader_call(gc, cso_persona, t3_prompt)
+        except Exception:
+            t3_text = ""
+        if not t3_text:
+            t3_text = f"{selected_name}님이 담당하시겠습니다."
+        turns.append({
+            "speaker": "서연",
+            "role": "CSO",
+            "text": t3_text,
+            "is_final": True,
+        })
 
-        raw = _safe_extract_gemini_text(resp)
-        if not raw:
-            logger.warning("[Deliberation] Gemini 빈 응답")
-            return None
-
-        # JSON 추출 (코드블록 감싸진 경우 대응)
-        if "```" in raw:
-            import re
-            match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", raw, re.DOTALL)
-            if match:
-                raw = match.group(1).strip()
-
-        turns = json.loads(raw)
-        if not isinstance(turns, list) or len(turns) < 2:
-            logger.warning(f"[Deliberation] 유효하지 않은 턴 수: {len(turns) if isinstance(turns, list) else 'not list'}")
-            return None
-
-        # 필드 검증
-        validated = []
-        for t in turns[:5]:
-            if isinstance(t, dict) and "speaker" in t and "text" in t:
-                validated.append({
-                    "speaker": str(t["speaker"]),
-                    "role": str(t.get("role", "")),
-                    "text": str(t["text"])[:100],
-                    "is_final": bool(t.get("is_final", False)),
-                })
-        if not validated:
-            return None
-
-        logger.info(f"[Deliberation] {len(validated)}턴 생성 완료")
-        return validated
+        logger.info(f"[Deliberation] 3턴 생성 완료 (per-leader calls)")
+        return turns
 
     except asyncio.TimeoutError:
         logger.warning("[Deliberation] 타임아웃 — 스킵")
-        return None
-    except json.JSONDecodeError as e:
-        logger.warning(f"[Deliberation] JSON 파싱 실패: {e}")
         return None
     except Exception as e:
         logger.warning(f"[Deliberation] 생성 실패: {type(e).__name__}: {e}")
@@ -178,96 +284,95 @@ async def generate_handoff(
     lang: str = "",
 ) -> Optional[List[Dict]]:
     """
-    리더 간 인수인계 대화 생성 (Gemini Flash 1회 호출).
+    리더 간 인수인계 대화 — 2턴 병렬 Gemini 호출.
+
+    Turn 1: 현재 리더 → 인계 이유
+    Turn 2: 새 리더   → 인사
 
     Args:
         gc: Gemini client
         query: 사용자 질문
-        current_leader: {"name": ..., "specialty": ...}
-        new_leader: {"name": ..., "specialty": ...}
+        current_leader: {"name": ..., "specialty": ..., "leader_id": ...}
+        new_leader: {"name": ..., "specialty": ..., "leader_id": ...}
         lang: 언어 코드
 
     Returns:
         인수인계 턴 리스트 또는 None (실패 시)
-        [
-          {"speaker": "온유", "role": "임대차", "text": "이 질문은 형사법 관련이라..."},
-          {"speaker": "무결", "role": "형사법", "text": "안녕하세요, 바로 도와드리겠습니다."},
-        ]
     """
     if not gc or not current_leader or not new_leader:
         return None
 
-    prompt = (
-        f"Lawmadi OS 리더 인수인계 대화를 생성하세요.\n\n"
-        f"사용자 질문: {query[:500]}\n"
-        f"현재 리더: {current_leader['name']}({current_leader['specialty']})\n"
-        f"새 리더: {new_leader['name']}({new_leader['specialty']})\n\n"
-        f"규칙:\n"
-        f"1. 현재 리더가 먼저 새 리더에게 인계 이유를 짧게 설명 (1~2문장, 50자 이내)\n"
-        f"2. 새 리더가 사용자에게 인사하고 바로 돕겠다고 함 (1~2문장, 50자 이내)\n"
-        f"3. 존댓말, 따뜻하고 전문적인 톤\n\n"
-        f"JSON 형식 (반드시 이 형식만 출력):\n"
-        f'[{{"speaker":"{current_leader["name"]}","role":"{current_leader["specialty"]}","text":"..."}}, '
-        f'{{"speaker":"{new_leader["name"]}","role":"{new_leader["specialty"]}","text":"..."}}]'
+    cur_name = current_leader.get("name", "?")
+    cur_specialty = current_leader.get("specialty", "")
+    cur_id = current_leader.get("leader_id", "") or _name_to_id(cur_name)
+
+    new_name = new_leader.get("name", "?")
+    new_specialty = new_leader.get("specialty", "")
+    new_id = new_leader.get("leader_id", "") or _name_to_id(new_name)
+
+    # 페르소나 빌드
+    cur_persona = _build_leader_persona(cur_id) if cur_id else ""
+    if not cur_persona:
+        cur_persona = f"{cur_name}: {cur_specialty} 전문 리더"
+    new_persona = _build_leader_persona(new_id) if new_id else ""
+    if not new_persona:
+        new_persona = f"{new_name}: {new_specialty} 전문 리더"
+
+    # ── 병렬 호출 ──
+    t1_prompt = (
+        f"사용자 질문: {query[:300]}\n"
+        f"당신은 {cur_name}({cur_specialty} 전문)입니다. "
+        f"이 질문은 {new_specialty} 분야에 더 가까워서 "
+        f"{new_name}님에게 인계하려 합니다. "
+        f"왜 이 질문이 {new_specialty} 분야에 해당하는지, "
+        f"그리고 {new_name}님이 더 잘 도와드릴 수 있는 이유를 설명하세요. "
+        f"반드시 100자 이상 150자 이내로 작성하세요. "
+        f"존댓말, 따뜻한 톤으로 자연스럽게 말하세요. "
+        f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
+    )
+    t2_prompt = (
+        f"사용자 질문: {query[:300]}\n"
+        f"당신은 {new_name}({new_specialty} 전문)입니다. "
+        f"{cur_name}님이 이 질문을 인계해 주었습니다. "
+        f"사용자에게 따뜻하게 인사하고, 자신의 전문 분야에서 "
+        f"어떻게 도움을 드릴 수 있는지 구체적으로 설명하세요. "
+        f"반드시 100자 이상 150자 이내로 작성하세요. "
+        f"존댓말, 전문적이고 친절한 톤으로 자연스럽게 말하세요. "
+        f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
     )
 
+    # fallback 텍스트
+    t1_fallback = f"이 질문은 {new_specialty} 분야라 {new_name}님께 연결해 드리겠습니다."
+    t2_fallback = f"안녕하세요, {new_specialty} 전문 {new_name}입니다. 바로 도와드리겠습니다."
+
     try:
-        from google.genai import types as genai_types
+        results = await asyncio.gather(
+            _single_leader_call(gc, cur_persona, t1_prompt),
+            _single_leader_call(gc, new_persona, t2_prompt),
+            return_exceptions=True,
+        )
 
-        model_name = get_model()
+        t1_text = results[0] if isinstance(results[0], str) and results[0] else t1_fallback
+        t2_text = results[1] if isinstance(results[1], str) and results[1] else t2_fallback
 
-        for _attempt in range(2):
-            try:
-                resp = gc.models.generate_content(
-                    model=model_name,
-                    contents=prompt,
-                    config=genai_types.GenerateContentConfig(
-                        max_output_tokens=300,
-                        temperature=0.7,
-                        response_mime_type="application/json",
-                    ),
-                )
-                break
-            except Exception as e:
-                if is_quota_error(e) and _attempt < 1:
-                    on_quota_error()
-                    continue
-                raise
+        turns = [
+            {
+                "speaker": cur_name,
+                "role": cur_specialty,
+                "text": t1_text,
+            },
+            {
+                "speaker": new_name,
+                "role": new_specialty,
+                "text": t2_text,
+            },
+        ]
 
-        raw = _safe_extract_gemini_text(resp)
-        if not raw:
-            logger.warning("[Handoff] Gemini 빈 응답")
-            return None
-
-        if "```" in raw:
-            import re
-            match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", raw, re.DOTALL)
-            if match:
-                raw = match.group(1).strip()
-
-        turns = json.loads(raw)
-        if not isinstance(turns, list) or len(turns) < 1:
-            return None
-
-        validated = []
-        for t in turns[:2]:
-            if isinstance(t, dict) and "speaker" in t and "text" in t:
-                validated.append({
-                    "speaker": str(t["speaker"]),
-                    "role": str(t.get("role", "")),
-                    "text": str(t["text"])[:100],
-                })
-        if not validated:
-            return None
-
-        logger.info(f"[Handoff] {current_leader['name']} → {new_leader['name']} ({len(validated)}턴)")
-        return validated
+        logger.info(f"[Handoff] {cur_name} → {new_name} (2턴, parallel calls)")
+        return turns
 
     except asyncio.TimeoutError:
         logger.warning("[Handoff] 타임아웃 — 스킵")
-        return None
-    except json.JSONDecodeError as e:
-        logger.warning(f"[Handoff] JSON 파싱 실패: {e}")
         return None
     except Exception as e:
         logger.warning(f"[Handoff] 생성 실패: {type(e).__name__}: {e}")
