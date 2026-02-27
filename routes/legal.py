@@ -32,6 +32,7 @@ from core.constitutional import validate_constitutional_compliance
 from core.classifier import (
     _gemini_analyze_query,
     _fallback_tier_classification,
+    _nlu_detect_intent,
     select_swarm_leader,
 )
 from core.pipeline import (
@@ -412,6 +413,23 @@ async def ask(request: Request):
         is_legal = analysis.get("is_legal", True)
         is_document = analysis.get("is_document", False)
         swarm_mode = False
+
+        # NLU 검증/보정: Gemini 분류가 빈값이거나 NLU가 더 정확한 경우 보정
+        nlu_leader_id = _nlu_detect_intent(query)
+        if nlu_leader_id:
+            is_legal = True  # NLU 매칭되면 무조건 법률 질문
+            if not leader_name or leader_name == "마디":
+                # Gemini가 리더를 못 잡은 경우 → NLU 결과로 대체
+                _reg = _LEADER_REGISTRY.get("swarm_engine_config", {}).get("leader_registry", {})
+                _nlu_leader = _reg.get(nlu_leader_id, {})
+                if _nlu_leader:
+                    leader_name = _nlu_leader.get("name", leader_name)
+                    leader_specialty = _nlu_leader.get("specialty", leader_specialty)
+                    analysis["leader_name"] = leader_name
+                    analysis["leader_specialty"] = leader_specialty
+                    analysis["leader_id"] = nlu_leader_id
+                    _routing_method = "nlu_override"
+                    logger.info(f"🔄 [NLU Override] Gemini 빈값 → {leader_name}({leader_specialty}, {nlu_leader_id})")
 
         # SSOT 기반 리더 검증/보정
         if matched_sources and is_legal:
@@ -896,6 +914,20 @@ async def ask_stream(request: Request):
                 analysis = _fallback_tier_classification(query)
             is_legal = analysis.get("is_legal", True)
 
+            # NLU 검증/보정 (스트리밍)
+            _nlu_lid = _nlu_detect_intent(query)
+            if _nlu_lid:
+                is_legal = True
+                _s_name = analysis.get("leader_name", "")
+                if not _s_name or _s_name == "마디":
+                    _reg = _LEADER_REGISTRY.get("swarm_engine_config", {}).get("leader_registry", {})
+                    _nlu_l = _reg.get(_nlu_lid, {})
+                    if _nlu_l:
+                        analysis["leader_name"] = _nlu_l.get("name", _s_name)
+                        analysis["leader_specialty"] = _nlu_l.get("specialty", "통합")
+                        analysis["leader_id"] = _nlu_lid
+                        logger.info(f"🔄 [NLU Override/Stream] → {analysis['leader_name']}({_nlu_lid})")
+
             # ─── 비법률 질문: 유나(CCO) Gemini 응답 ───
             if not is_legal:
                 msg = await _generate_yuna_response(query, lang)
@@ -1170,6 +1202,19 @@ async def ask_expert(request: Request):
 
         leader_name = analysis.get("leader_name", "마디")
         leader_specialty = analysis.get("leader_specialty", "통합")
+
+        # NLU 검증/보정 (expert)
+        _nlu_lid = _nlu_detect_intent(query)
+        if _nlu_lid and (not leader_name or leader_name == "마디"):
+            _reg = _LEADER_REGISTRY.get("swarm_engine_config", {}).get("leader_registry", {})
+            _nlu_l = _reg.get(_nlu_lid, {})
+            if _nlu_l:
+                leader_name = _nlu_l.get("name", leader_name)
+                leader_specialty = _nlu_l.get("specialty", leader_specialty)
+                analysis["leader_name"] = leader_name
+                analysis["leader_specialty"] = leader_specialty
+                analysis["leader_id"] = _nlu_lid
+                logger.info(f"🔄 [NLU Override/Expert] → {leader_name}({_nlu_lid})")
 
         # SSOT/DRF 도구 설정
         ssot_available = _RUNTIME.get("drf_healthy", False)
