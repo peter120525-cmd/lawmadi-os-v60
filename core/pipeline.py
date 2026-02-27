@@ -1146,6 +1146,7 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
                     "verified": verified,
                     "prec_exists": prec_exists,
                     "content_match": content_match,
+                    "drf_summary": drf_summary[:800] if drf_summary else "",
                 }
                 if verified:
                     result.verified_refs.append(ref_entry)
