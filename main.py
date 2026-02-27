@@ -1157,6 +1157,13 @@ async def startup():
 
     logger.info(f"🚀 Lawmadi OS {OS_VERSION} starting...")
 
+    # 스레드 풀 확대: 기본 6개(cpu=2) → 40개
+    # asyncio.to_thread/run_in_executor 동기 Gemini/DRF 호출 병렬 처리용
+    import concurrent.futures
+    _executor = concurrent.futures.ThreadPoolExecutor(max_workers=40)
+    asyncio.get_running_loop().set_default_executor(_executor)
+    logger.info("✅ ThreadPoolExecutor: max_workers=40")
+
     # 만료된 업로드 파일 정리
     try:
         _cleanup_expired_uploads()
