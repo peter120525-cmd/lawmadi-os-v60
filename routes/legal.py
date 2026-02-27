@@ -47,7 +47,13 @@ from core.pipeline import (
     RAGContext,
 )
 from core.constants import FAIL_CLOSED_RESPONSE
-from core.deliberation import should_deliberate, generate_deliberation, generate_handoff
+from core.deliberation import (
+    should_deliberate,
+    generate_deliberation,
+    generate_handoff,
+    generate_deliberation_stream,
+    generate_handoff_stream,
+)
 from prompts.system_instructions import build_system_instruction as _build_system_instruction
 from tools.drf_tools import (
     search_law_drf,
@@ -1077,13 +1083,8 @@ async def ask_stream(request: Request):
                         "moderator": "서연",
                     })
 
-                    delib_turns = await asyncio.wait_for(
-                        generate_deliberation(gc, query, _candidate_leaders, lang),
-                        timeout=8,
-                    )
-                    if delib_turns:
-                        for turn in delib_turns:
-                            yield _sse("deliberation_turn", turn)
+                    async for turn in generate_deliberation_stream(gc, query, _candidate_leaders, lang):
+                        yield _sse("deliberation_turn", turn)
 
                     yield _sse("deliberation_end", {
                         "selected_leader": _new_leader_name,
@@ -1097,13 +1098,8 @@ async def ask_stream(request: Request):
                     _cur = req_current_leader if isinstance(req_current_leader, dict) else {"name": "마디", "specialty": "통합"}
                     _new = {"name": _new_leader_name, "specialty": analysis.get("leader_specialty", "통합"), "leader_id": analysis.get("leader_id", "")}
 
-                    handoff_turns = await asyncio.wait_for(
-                        generate_handoff(gc, query, _cur, _new, lang),
-                        timeout=8,
-                    )
-                    if handoff_turns:
-                        for turn in handoff_turns:
-                            yield _sse("handoff", turn)
+                    async for turn in generate_handoff_stream(gc, query, _cur, _new, lang):
+                        yield _sse("handoff", turn)
                 except Exception as handoff_err:
                     logger.warning(f"[Handoff] 스킵: {type(handoff_err).__name__}: {handoff_err}")
 
