@@ -1063,14 +1063,25 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
             result.drf_failed = True
             return result
 
-    # 결과 분리
+    # 결과 분리 (return_exceptions=True: exception은 결과로 반환됨)
     law_articles_cache: Dict[str, Any] = {}
     law_result_count = len(law_tasks)
     for i, res in enumerate(all_fetch_results[:law_result_count]):
-        ln, raw = res
-        law_articles_cache[ln] = raw
+        if isinstance(res, BaseException):
+            logger.warning(f"[Stage 4] 법률 fetch 예외: {res}")
+            continue
+        try:
+            ln, raw = res
+            law_articles_cache[ln] = raw
+        except (ValueError, TypeError) as e:
+            logger.warning(f"[Stage 4] 법률 결과 파싱 오류: {e}")
 
-    prec_results_raw = all_fetch_results[law_result_count:]
+    prec_results_raw = []
+    for res in all_fetch_results[law_result_count:]:
+        if isinstance(res, BaseException):
+            logger.warning(f"[Stage 4] 판례 fetch 예외: {res}")
+            continue
+        prec_results_raw.append(res)
     if unique_cases and not drf_inst:
         logger.debug("[Stage 4] 판례 DRF 미사용 (drf 인스턴스 없음)")
         prec_results_raw = [(cn, None, None) for cn in unique_cases]
@@ -1716,10 +1727,10 @@ async def _run_legal_pipeline(
     # FAIL_CLOSED 적용 (0.1% 초과 미검증 또는 DRF 오류 시 차단)
     fail_closed_result = _apply_fail_closed(final_text, drf_verification)
 
-    # -- FAIL_CLOSED: DRF 타임아웃/실패 시 미검증 문장 제거 후 면책 반환 (재생성 없음) --
+    # -- FAIL_CLOSED: DRF 타임아웃/실패 시 면책 반환, 미검증 시 재생성 --
     if fail_closed_result == FAIL_CLOSED_RESPONSE:
+        # DRF API 타임아웃/실패 → 검증 자체 불가 → 면책 문구 부착 후 반환
         if drf_verification and drf_verification.drf_failed:
-            # DRF API 자체 타임아웃/실패 → 응답 그대로 반환 + 면책 문구
             disclaimer = (
                 "\n\n---\n"
                 "※ 이 답변의 법률 조문은 실시간 검증 서버 응답 지연으로 자동 검증이 완료되지 않았습니다. "
@@ -1727,30 +1738,57 @@ async def _run_legal_pipeline(
             )
             logger.warning("[FAIL_CLOSED] DRF 실패/타임아웃 → 면책 문구 부착 후 반환")
             return final_text + disclaimer, drf_verification
-        else:
-            # 실제 미검증 법률 발견 → 해당 문장만 제거
-            stripped = _strip_unverified_sentences(final_text, drf_verification)
-            stripped = stripped.strip()
-            if len(stripped) >= 200:
-                disclaimer = (
-                    "\n\n---\n"
-                    "※ 이 답변의 일부 법률 조문은 실시간 검증에서 확인되지 않아 제거되었습니다. "
-                    "정확한 조문은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
-                )
-                logger.info(
-                    f"[FAIL_CLOSED] 미검증 문장 제거 후 반환 "
-                    f"({len(stripped)}자, 제거 {len(drf_verification.unverified_refs)}건)"
-                )
-                return stripped + disclaimer, drf_verification
+
+        # 실제 미검증 법률 발견 → 1회 재생성 + 재검증
+        logger.warning("[FAIL_CLOSED 재시도] 1회 재생성 시도")
+        banned_laws = [r["ref"] for r in drf_verification.unverified_refs]
+        if banned_laws:
+            ban_text = ", ".join(banned_laws)
+            ban_instruction = (
+                f"\n\n⚠️ 아래 법률은 DRF 검증에서 미확인되었으므로 절대 인용하지 마세요: {ban_text}\n"
+                f"반드시 [참고 법령 조문] 또는 [SSOT 캐시]에 있는 법률만 인용하세요."
+            )
+            if lm_draft:
+                lm_draft = lm_draft + ban_instruction
             else:
-                # 제거 후 텍스트 부족 → 원본 + 면책
-                disclaimer = (
-                    "\n\n---\n"
-                    "※ 이 답변에 인용된 일부 법률 조문은 실시간 검증에서 확인되지 않았습니다. "
-                    "정확한 조문은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
+                lm_draft = ban_instruction
+        try:
+            retry_text = await _gemini_fallback_compose(
+                query, analysis, rag_context, tools, gemini_history,
+                now_kst, ssot_available, lang=lang, mode=mode,
+                lm_draft=lm_draft,
+            )
+            if retry_text and len(retry_text.strip()) >= 30:
+                retry_drf = await asyncio.wait_for(
+                    _drf_verify_law_refs(retry_text), timeout=30.0,
                 )
-                logger.warning(f"[FAIL_CLOSED] 제거 후 텍스트 부족 ({len(stripped)}자) → 원본+면책 반환")
-                return final_text + disclaimer, drf_verification
+                retry_result = _apply_fail_closed(retry_text, retry_drf)
+                if retry_result != FAIL_CLOSED_RESPONSE:
+                    logger.info("[FAIL_CLOSED 재시도] 재생성 + 재검증 통과")
+                    return retry_result, retry_drf
+                else:
+                    # 재시도 실패 → 미검증 문장 제거 후 반환
+                    stripped = _strip_unverified_sentences(retry_text, retry_drf)
+                    stripped = stripped.strip()
+                    if len(stripped) >= 300:
+                        disclaimer = (
+                            "\n\n---\n"
+                            "※ 이 답변의 일부 법률 조문은 실시간 검증에서 확인되지 않아 제거되었습니다. "
+                            "정확한 조문은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
+                        )
+                        logger.info(
+                            f"[FAIL_CLOSED 재시도] 미검증 문장 제거 후 반환 "
+                            f"({len(stripped)}자, 제거 {len(retry_drf.unverified_refs)}건)"
+                        )
+                        return stripped + disclaimer, retry_drf
+            else:
+                logger.warning("[FAIL_CLOSED 재시도] 재생성 실패 (빈 응답)")
+        except asyncio.TimeoutError:
+            logger.warning("[FAIL_CLOSED 재시도] DRF 재검증 타임아웃")
+        except Exception as e:
+            logger.warning(f"[FAIL_CLOSED 재시도] 오류: {e}")
+
+        return fail_closed_result, drf_verification
 
     return fail_closed_result, drf_verification
 

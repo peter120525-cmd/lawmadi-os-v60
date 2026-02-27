@@ -572,11 +572,12 @@ class DRFConnector:
 
     async def search_by_target_async(self, query: str, target: str = "law") -> Optional[Any]:
         """비동기 target 검색 (캐싱 포함)"""
-        _init_cache()
+        import asyncio as _aio
+        await _aio.to_thread(_init_cache)
 
         cache_key = f"drf:v2:{target}:{hashlib.md5(query.encode('utf-8')).hexdigest()}"
         try:
-            cached_data = _cache_get(cache_key)
+            cached_data = await _aio.to_thread(_cache_get, cache_key)
             if cached_data and cached_data.get("data"):
                 logger.info(f"🎯 [Cache HIT async] target={target}, query={query[:30]}")
                 return cached_data["data"]
@@ -590,7 +591,7 @@ class DRFConnector:
                 logger.info(f"[DualSSOT async] SUCCESS (target={target})")
                 ttl = _CACHE_TTL.get(target, _CACHE_TTL["default"])
                 try:
-                    _cache_set(cache_key, {"data": result, "query": query[:200], "target": target}, ttl_seconds=ttl)
+                    await _aio.to_thread(_cache_set, cache_key, {"data": result, "query": query[:200], "target": target}, ttl)
                 except Exception:
                     pass
                 return result
@@ -598,8 +599,7 @@ class DRFConnector:
             logger.warning(f"[DualSSOT async] failed: {e}")
 
         # Fallback: sync 호출을 thread에서 실행 (이벤트 루프 블로킹 방지)
-        import asyncio
-        return await asyncio.to_thread(self.search_by_target, query, target)
+        return await _aio.to_thread(self.search_by_target, query, target)
 
     async def law_search_async(self, query: str) -> Optional[Any]:
         """비동기 법률 검색"""
@@ -611,15 +611,15 @@ class DRFConnector:
 
     async def get_law_articles_async(self, law_name: str) -> Optional[Any]:
         """비동기 법령 조문 상세 조회 (lawSearch → MST → lawService)"""
+        import asyncio as _aio
         if not _HTTPX_AVAILABLE:
-            import asyncio
-            return await asyncio.to_thread(self.get_law_articles, law_name)
+            return await _aio.to_thread(self.get_law_articles, law_name)
 
-        _init_cache()
+        await _aio.to_thread(_init_cache)
 
         cache_key = f"drf:v2:lawsvc:{hashlib.md5(law_name.encode('utf-8')).hexdigest()}"
         try:
-            cached = _cache_get(cache_key)
+            cached = await _aio.to_thread(_cache_get, cache_key)
             if cached and cached.get("data"):
                 cached_at = cached.get("_cached_at", 0)
                 if cached_at and (_time.time() - cached_at) > 21600:
@@ -682,7 +682,7 @@ class DRFConnector:
                 return None
             data = r.json()
             try:
-                _cache_set(cache_key, {"data": data, "law_name": law_name, "mst": mst, "_cached_at": _time.time()}, ttl_seconds=21600)
+                await _aio.to_thread(_cache_set, cache_key, {"data": data, "law_name": law_name, "mst": mst, "_cached_at": _time.time()}, 21600)
             except Exception:
                 pass
             return data
