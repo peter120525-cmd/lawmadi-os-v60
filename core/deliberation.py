@@ -11,7 +11,7 @@ import json
 import logging
 import asyncio
 import os
-from typing import Dict, List, Optional
+from typing import AsyncGenerator, Dict, List, Optional
 
 from core.model_fallback import get_model, on_quota_error, is_quota_error
 from core.pipeline import _build_leader_persona, _load_leader_profiles
@@ -380,3 +380,209 @@ async def generate_handoff(
     except Exception as e:
         logger.warning(f"[Handoff] 생성 실패: {type(e).__name__}: {e}")
         return None
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Streaming (async generator) 버전 — /ask-stream 전용
+# 턴별 즉시 yield → SSE 전송 → 실시간 채팅 UX
+# ═══════════════════════════════════════════════════════════════════
+
+_TURN_TIMEOUT = 5  # 개별 턴 타임아웃 (초)
+
+
+async def generate_deliberation_stream(
+    gc,
+    query: str,
+    leaders: List[Dict],
+    lang: str = "",
+) -> AsyncGenerator[Dict, None]:
+    """
+    CSO 서연 주재 리더 회의 — 3턴 순차, 턴별 즉시 yield.
+
+    Turn 1: CSO 서연 → 질문 요약 + 의견 요청
+    Turn 2: 담당 리더 → 자기 분야 관점 의견
+    Turn 3: CSO 서연 → 담당 리더 지명 (is_final=True)
+    """
+    if not gc or not leaders:
+        return
+
+    selected = leaders[0]
+    selected_name = selected.get("name", "?")
+    selected_specialty = selected.get("specialty", "")
+    selected_id = selected.get("leader_id", "") or _name_to_id(selected_name)
+
+    cso_persona = _build_cso_persona()
+    leader_persona = _build_leader_persona(selected_id) if selected_id else ""
+    if not leader_persona:
+        leader_persona = f"{selected_name}: {selected_specialty} 전문 리더"
+
+    # ── Turn 1: CSO 서연 ──
+    t1_prompt = (
+        f"사용자 질문: {query[:300]}\n"
+        f"참석 리더: {', '.join(l.get('name','?') + '(' + l.get('specialty','') + ')' for l in leaders[:3])}\n\n"
+        f"당신은 CSO 서연입니다. 이 질문의 핵심을 요약하고, "
+        f"왜 이 분야의 전문가가 필요한지 설명한 뒤, "
+        f"{selected_name}님에게 의견을 요청하세요. "
+        f"반드시 100자 이상 150자 이내로 작성하세요. "
+        f"존댓말, 따뜻하고 전문적인 톤으로 자연스럽게 말하세요. "
+        f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
+    )
+    try:
+        t1_text = await asyncio.wait_for(
+            _single_leader_call(gc, cso_persona, t1_prompt), timeout=_TURN_TIMEOUT
+        )
+    except Exception as e:
+        logger.warning(f"[Deliberation:Stream] Turn1 실패: {e}")
+        t1_text = ""
+    if not t1_text:
+        t1_text = f"이 질문은 {selected_specialty} 분야입니다. {selected_name}님, 의견 부탁드립니다."
+    yield {
+        "speaker": "서연",
+        "role": "CSO",
+        "text": t1_text,
+        "is_final": False,
+    }
+
+    # ── Turn 2: 담당 리더 ──
+    t2_prompt = (
+        f"사용자 질문: {query[:300]}\n"
+        f"CSO 서연이 당신에게 의견을 요청했습니다.\n\n"
+        f"당신은 {selected_name}({selected_specialty} 전문)입니다. "
+        f"자기 분야의 전문 지식을 바탕으로 이 질문에 어떻게 도움을 줄 수 있는지 "
+        f"구체적으로 설명하고, 자신감 있게 돕겠다고 답하세요. "
+        f"반드시 100자 이상 150자 이내로 작성하세요. "
+        f"존댓말, 전문적이고 따뜻한 톤으로 자연스럽게 말하세요. "
+        f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
+    )
+    try:
+        t2_text = await asyncio.wait_for(
+            _single_leader_call(gc, leader_persona, t2_prompt), timeout=_TURN_TIMEOUT
+        )
+    except Exception as e:
+        logger.warning(f"[Deliberation:Stream] Turn2 실패: {e}")
+        t2_text = ""
+    if not t2_text:
+        t2_text = f"네, {selected_specialty} 관점에서 바로 도와드리겠습니다."
+    yield {
+        "speaker": selected_name,
+        "role": selected_specialty,
+        "text": t2_text,
+        "is_final": False,
+    }
+
+    # ── Turn 3: CSO 서연 — 담당 리더 지명 ──
+    t3_prompt = (
+        f"{selected_name}님이 {selected_specialty} 분야에서 돕겠다고 했습니다.\n\n"
+        f"당신은 CSO 서연입니다. {selected_name}님의 전문성을 인정하며 "
+        f"이 질문의 담당 리더로 공식 지명하세요. "
+        f"사용자에게 안심하라는 말도 덧붙이세요. "
+        f"반드시 100자 이상 150자 이내로 작성하세요. "
+        f"존댓말, 따뜻하고 신뢰감 있는 톤으로 자연스럽게 말하세요. "
+        f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
+    )
+    try:
+        t3_text = await asyncio.wait_for(
+            _single_leader_call(gc, cso_persona, t3_prompt), timeout=_TURN_TIMEOUT
+        )
+    except Exception as e:
+        logger.warning(f"[Deliberation:Stream] Turn3 실패: {e}")
+        t3_text = ""
+    if not t3_text:
+        t3_text = f"{selected_name}님이 담당하시겠습니다."
+    yield {
+        "speaker": "서연",
+        "role": "CSO",
+        "text": t3_text,
+        "is_final": True,
+    }
+    logger.info("[Deliberation:Stream] 3턴 스트리밍 완료")
+
+
+async def generate_handoff_stream(
+    gc,
+    query: str,
+    current_leader: Dict,
+    new_leader: Dict,
+    lang: str = "",
+) -> AsyncGenerator[Dict, None]:
+    """
+    리더 간 인수인계 대화 — 2턴 순차 yield.
+
+    Turn 1: 현재 리더 → 인계 이유
+    Turn 2: 새 리더   → 인사
+    """
+    if not gc or not current_leader or not new_leader:
+        return
+
+    cur_name = current_leader.get("name", "?")
+    cur_specialty = current_leader.get("specialty", "")
+    cur_id = current_leader.get("leader_id", "") or _name_to_id(cur_name)
+
+    new_name = new_leader.get("name", "?")
+    new_specialty = new_leader.get("specialty", "")
+    new_id = new_leader.get("leader_id", "") or _name_to_id(new_name)
+
+    cur_persona = _build_leader_persona(cur_id) if cur_id else ""
+    if not cur_persona:
+        cur_persona = f"{cur_name}: {cur_specialty} 전문 리더"
+    new_persona = _build_leader_persona(new_id) if new_id else ""
+    if not new_persona:
+        new_persona = f"{new_name}: {new_specialty} 전문 리더"
+
+    # ── Turn 1: 현재 리더 ──
+    t1_prompt = (
+        f"사용자 질문: {query[:300]}\n"
+        f"당신은 {cur_name}({cur_specialty} 전문)입니다. "
+        f"이 질문은 {new_specialty} 분야에 더 가까워서 "
+        f"{new_name}님에게 인계하려 합니다. "
+        f"왜 이 질문이 {new_specialty} 분야에 해당하는지, "
+        f"그리고 {new_name}님이 더 잘 도와드릴 수 있는 이유를 설명하세요. "
+        f"반드시 100자 이상 150자 이내로 작성하세요. "
+        f"존댓말, 따뜻한 톤으로 자연스럽게 말하세요. "
+        f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
+    )
+    t1_fallback = f"이 질문은 {new_specialty} 분야라 {new_name}님께 연결해 드리겠습니다."
+
+    try:
+        t1_text = await asyncio.wait_for(
+            _single_leader_call(gc, cur_persona, t1_prompt), timeout=_TURN_TIMEOUT
+        )
+    except Exception as e:
+        logger.warning(f"[Handoff:Stream] Turn1 실패: {e}")
+        t1_text = ""
+    if not t1_text:
+        t1_text = t1_fallback
+    yield {
+        "speaker": cur_name,
+        "role": cur_specialty,
+        "text": t1_text,
+    }
+
+    # ── Turn 2: 새 리더 ──
+    t2_prompt = (
+        f"사용자 질문: {query[:300]}\n"
+        f"당신은 {new_name}({new_specialty} 전문)입니다. "
+        f"{cur_name}님이 이 질문을 인계해 주었습니다. "
+        f"사용자에게 따뜻하게 인사하고, 자신의 전문 분야에서 "
+        f"어떻게 도움을 드릴 수 있는지 구체적으로 설명하세요. "
+        f"반드시 100자 이상 150자 이내로 작성하세요. "
+        f"존댓말, 전문적이고 친절한 톤으로 자연스럽게 말하세요. "
+        f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
+    )
+    t2_fallback = f"안녕하세요, {new_specialty} 전문 {new_name}입니다. 바로 도와드리겠습니다."
+
+    try:
+        t2_text = await asyncio.wait_for(
+            _single_leader_call(gc, new_persona, t2_prompt), timeout=_TURN_TIMEOUT
+        )
+    except Exception as e:
+        logger.warning(f"[Handoff:Stream] Turn2 실패: {e}")
+        t2_text = ""
+    if not t2_text:
+        t2_text = t2_fallback
+    yield {
+        "speaker": new_name,
+        "role": new_specialty,
+        "text": t2_text,
+    }
+    logger.info(f"[Handoff:Stream] {cur_name} → {new_name} 스트리밍 완료")

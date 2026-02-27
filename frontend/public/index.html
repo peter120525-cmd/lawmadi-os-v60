@@ -5194,6 +5194,38 @@
             line-height: 1;
         }
 
+        /* 협의/인수인계 타이핑 인디케이터 */
+        .delib-typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            margin: 4px 0 4px 58px;
+            color: #6366f1;
+            font-size: 12px;
+            opacity: 0;
+            animation: bubbleSlideIn 0.3s ease forwards;
+        }
+        .delib-typing-indicator .delib-typing-dots {
+            display: flex;
+            gap: 3px;
+        }
+        .delib-typing-indicator .delib-typing-dots span {
+            width: 6px;
+            height: 6px;
+            background: #6366f1;
+            border-radius: 50%;
+            animation: delibDotPulse 1.2s infinite;
+        }
+        .delib-typing-indicator .delib-typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .delib-typing-indicator .delib-typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes delibDotPulse {
+            0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+            30% { opacity: 1; transform: scale(1); }
+        }
+        body.dark-mode .delib-typing-indicator { color: #a5b4fc; }
+        body.dark-mode .delib-typing-indicator .delib-typing-dots span { background: #a5b4fc; }
+
         /* ═══ 인수인계(Handoff) UI — Premium Glass ═══ */
         .handoff-container {
             position: relative;
@@ -7516,7 +7548,6 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
             container.className = 'deliberation-container';
             container.id = 'delib-live-' + Date.now();
             const leaders = payload.leaders || [];
-            const leaderNames = leaders.map(l => l.name).join(', ');
             const count = leaders.length;
             container.innerHTML = _sanitize(
                 `<div class="delib-header">` +
@@ -7525,6 +7556,8 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                 `<span class="delib-header-count">${count}명 참석</span>` +
                 `</div>`
             );
+            // 첫 턴 대기 타이핑 인디케이터
+            this._appendDelibTypingIndicator(container, '서연');
             this.convArea.appendChild(container);
             this._smartScroll(false);
             this._delibContainer = container;
@@ -7540,17 +7573,24 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
             const text = payload.text || '';
             const isFinal = payload.is_final || false;
             const isMod = (name === '서연');
-            const idx = this._delibTurnIndex || 0;
+
+            // 이전 타이핑 인디케이터 제거
+            this._removeDelibTypingIndicator(container);
 
             const bubble = document.createElement('div');
             bubble.className = 'deliberation-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
-            bubble.style.animationDelay = (idx * 0.25) + 's';
             bubble.innerHTML = _sanitize(
                 this._buildAvatarHTML(name, 'deliberation') +
                 this._buildBubbleBody(name, role, text)
             );
             container.appendChild(bubble);
-            this._delibTurnIndex = idx + 1;
+            this._delibTurnIndex = (this._delibTurnIndex || 0) + 1;
+
+            // 마지막 턴이 아니면 다음 턴 타이핑 인디케이터 표시
+            if (!isFinal) {
+                const nextSpeaker = isMod ? '' : '서연';
+                this._appendDelibTypingIndicator(container, nextSpeaker);
+            }
             this._smartScroll(false);
         },
 
@@ -7558,6 +7598,7 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
         _renderDeliberationEnd(payload) {
             const container = this._delibContainer;
             if (!container) return;
+            this._removeDelibTypingIndicator(container);
             const selected = payload.selected_leader || '?';
             const specialty = payload.selected_leader_specialty || '';
             const summary = document.createElement('div');
@@ -7589,6 +7630,9 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
             const text = payload.text || '';
             const idx = this._handoffTurnIndex || 0;
 
+            // 이전 타이핑 인디케이터 제거
+            this._removeDelibTypingIndicator(container);
+
             // 두 번째 말풍선 앞에 화살표 커넥터 삽입
             if (idx === 1) {
                 const arrow = document.createElement('div');
@@ -7598,13 +7642,17 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
 
             const bubble = document.createElement('div');
             bubble.className = 'handoff-bubble';
-            bubble.style.animationDelay = (idx * 0.25) + 's';
             bubble.innerHTML = _sanitize(
                 this._buildAvatarHTML(name, 'handoff') +
                 this._buildBubbleBody(name, role, text)
             );
             container.appendChild(bubble);
             this._handoffTurnIndex = idx + 1;
+
+            // 첫 턴 후 다음 턴 대기 인디케이터
+            if (idx === 0) {
+                this._appendDelibTypingIndicator(container, '');
+            }
             this._smartScroll(false);
         },
 
@@ -7666,6 +7714,23 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
             });
             this.convArea.appendChild(container);
             this._smartScroll(false);
+        },
+
+        // 협의/인수인계 타이핑 인디케이터 헬퍼
+        _appendDelibTypingIndicator(container, speakerHint) {
+            const indicator = document.createElement('div');
+            indicator.className = 'delib-typing-indicator';
+            const label = speakerHint ? `${speakerHint} 입력 중` : '입력 중';
+            indicator.innerHTML = _sanitize(
+                `<div class="delib-typing-dots"><span></span><span></span><span></span></div>` +
+                `<span>${label}</span>`
+            );
+            container.appendChild(indicator);
+            this._smartScroll(false);
+        },
+        _removeDelibTypingIndicator(container) {
+            const existing = container.querySelector('.delib-typing-indicator');
+            if (existing) existing.remove();
         },
 
         // ═══ 새 대화 시작 ═══
