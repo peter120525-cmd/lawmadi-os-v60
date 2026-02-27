@@ -452,7 +452,7 @@ async def ask(request: Request):
                     f"routing={_routing_method}, classify_ms={_classify_ms}")
 
         # -------------------------------------------------
-        # 4.05) 리더 협의(Deliberation) / 인수인계(Handoff) 생성
+        # 4.05) 리더 협의(Deliberation) / 인수인계(Handoff) 준비
         # -------------------------------------------------
         _ask_deliberation = None
         _ask_handoff = None
@@ -470,37 +470,42 @@ async def ask(request: Request):
             is_name_call=_ask_is_name_call,
         )
 
-        if _ask_delib_mode == "full" and is_legal:
-            try:
-                gc = _ensure_genai_client_fn(_RUNTIME)
-                _ask_candidates = []
-                so = _RUNTIME.get("swarm_orchestrator")
-                if so:
-                    _d = so.detect_domains(query)
-                    _s = so.select_leaders(query, _d)
-                    for sl in _s[:3]:
-                        _ask_candidates.append({"name": sl.get("name", "?"), "specialty": sl.get("specialty", ""), "leader_id": sl.get("_id", "")})
-                if not any(c["name"] == leader_name for c in _ask_candidates):
-                    _ask_candidates.insert(0, {"name": leader_name, "specialty": leader_specialty, "leader_id": analysis.get("leader_id", "")})
-                _ask_candidates = _ask_candidates[:3]
-                _ask_deliberation = await asyncio.wait_for(
-                    generate_deliberation(gc, query, _ask_candidates, lang),
-                    timeout=8,
-                )
-            except Exception as e:
-                logger.warning(f"[Deliberation/ask] 스킵: {type(e).__name__}: {e}")
-
-        elif _ask_delib_mode == "handoff" and is_legal:
-            try:
-                gc = _ensure_genai_client_fn(_RUNTIME)
-                _cur = ask_current_leader if isinstance(ask_current_leader, dict) else {"name": "마디", "specialty": "통합"}
-                _new = {"name": leader_name, "specialty": leader_specialty, "leader_id": analysis.get("leader_id", "")}
-                _ask_handoff = await asyncio.wait_for(
-                    generate_handoff(gc, query, _cur, _new, lang),
-                    timeout=8,
-                )
-            except Exception as e:
-                logger.warning(f"[Handoff/ask] 스킵: {type(e).__name__}: {e}")
+        # 협의/인수인계 코루틴 생성 (파이프라인과 병렬 실행용)
+        async def _run_deliberation_async():
+            """협의 or 인수인계 생성 — 실패 시 None 반환 (graceful)"""
+            _delib = None
+            _hand = None
+            if _ask_delib_mode == "full" and is_legal:
+                try:
+                    gc = _ensure_genai_client_fn(_RUNTIME)
+                    _ask_candidates = []
+                    so = _RUNTIME.get("swarm_orchestrator")
+                    if so:
+                        _d = so.detect_domains(query)
+                        _s = so.select_leaders(query, _d)
+                        for sl in _s[:3]:
+                            _ask_candidates.append({"name": sl.get("name", "?"), "specialty": sl.get("specialty", ""), "leader_id": sl.get("_id", "")})
+                    if not any(c["name"] == leader_name for c in _ask_candidates):
+                        _ask_candidates.insert(0, {"name": leader_name, "specialty": leader_specialty, "leader_id": analysis.get("leader_id", "")})
+                    _ask_candidates = _ask_candidates[:3]
+                    _delib = await asyncio.wait_for(
+                        generate_deliberation(gc, query, _ask_candidates, lang),
+                        timeout=8,
+                    )
+                except Exception as e:
+                    logger.warning(f"[Deliberation/ask] 스킵: {type(e).__name__}: {e}")
+            elif _ask_delib_mode == "handoff" and is_legal:
+                try:
+                    gc = _ensure_genai_client_fn(_RUNTIME)
+                    _cur = ask_current_leader if isinstance(ask_current_leader, dict) else {"name": "마디", "specialty": "통합"}
+                    _new = {"name": leader_name, "specialty": leader_specialty, "leader_id": analysis.get("leader_id", "")}
+                    _hand = await asyncio.wait_for(
+                        generate_handoff(gc, query, _cur, _new, lang),
+                        timeout=8,
+                    )
+                except Exception as e:
+                    logger.warning(f"[Handoff/ask] 스킵: {type(e).__name__}: {e}")
+            return _delib, _hand
 
         # -------------------------------------------------
         # 4.1) 비법률 질문: 유나(CCO) Gemini 응답
@@ -529,6 +534,8 @@ async def ask(request: Request):
         # 4.2) C-Level 직접 호출 처리
         # -------------------------------------------------
         if clevel_decision and clevel_decision.get("mode") == "direct":
+            # C-Level: 협의 직렬 실행 (파이프라인 없음)
+            _ask_deliberation, _ask_handoff = await _run_deliberation_async()
             exec_id = clevel_decision.get("executive_id")
             logger.info(f"🎯 C-Level 직접 모드: {exec_id}")
             clevel_instruction = clevel.get_clevel_system_instruction(exec_id, _build_system_instruction("general"))
@@ -553,16 +560,22 @@ async def ask(request: Request):
             final_text = _apply_fail_closed(final_text, drf_result)
 
         # -------------------------------------------------
-        # 5) 🎯 3-Stage Legal Pipeline (S0+S1 병렬화 적용)
+        # 5) 🎯 3-Stage Legal Pipeline (협의+파이프라인 병렬화)
         # -------------------------------------------------
         else:
             _t_pipeline = time.time()
-            final_text, drf_result = await _run_legal_pipeline(
+            # 협의(4-6초)와 파이프라인(22-36초)을 병렬 실행
+            # 파이프라인은 협의 결과에 의존하지 않음
+            _delib_task = _run_deliberation_async()
+            _pipeline_task = _run_legal_pipeline(
                 query, analysis, tools, gemini_history, now_kst, ssot_available,
                 lang=lang, mode="general", rag_context=rag_context,
             )
+            (_ask_deliberation, _ask_handoff), (final_text, drf_result) = await asyncio.gather(
+                _delib_task, _pipeline_task,
+            )
             _pipeline_ms = int((time.time() - _t_pipeline) * 1000)
-            logger.info(f"⏱ [Pipeline] {_pipeline_ms}ms | leader={leader_name} | tier={tier}")
+            logger.info(f"⏱ [Pipeline+Delib] {_pipeline_ms}ms | leader={leader_name} | tier={tier}")
 
         # -------------------------------------------------
         # 5.5) FAIL_CLOSED 감지 + 담당 리더 정보 헤더 삽입

@@ -50,6 +50,46 @@ _build_cache_context_fn = None
 _match_ssot_sources_fn = None
 _build_ssot_context_fn = None
 
+# ---------------------------------------------------------------------------
+# LawmadiLM Circuit Breaker (서킷브레이커)
+# ---------------------------------------------------------------------------
+_CB_THRESHOLD = int(os.getenv("LAWMADILM_CB_THRESHOLD", "5"))
+_CB_OPEN_SEC = float(os.getenv("LAWMADILM_CB_OPEN_SEC", "60"))
+_cb_consecutive_failures: int = 0
+_cb_open_since: float = 0.0  # time.monotonic() when circuit opened
+
+import time as _time
+
+
+def _cb_state() -> str:
+    """Circuit breaker state: 'closed' / 'open' / 'half_open'"""
+    global _cb_consecutive_failures, _cb_open_since
+    if _cb_consecutive_failures < _CB_THRESHOLD:
+        return "closed"
+    elapsed = _time.monotonic() - _cb_open_since
+    if elapsed < _CB_OPEN_SEC:
+        return "open"
+    return "half_open"
+
+
+def _cb_record_success() -> None:
+    global _cb_consecutive_failures, _cb_open_since
+    if _cb_consecutive_failures > 0:
+        logger.info(f"[CB] LawmadiLM 복구 (연속실패 {_cb_consecutive_failures}→0)")
+    _cb_consecutive_failures = 0
+    _cb_open_since = 0.0
+
+
+def _cb_record_failure() -> None:
+    global _cb_consecutive_failures, _cb_open_since
+    _cb_consecutive_failures += 1
+    if _cb_consecutive_failures >= _CB_THRESHOLD and _cb_open_since == 0.0:
+        _cb_open_since = _time.monotonic()
+        logger.warning(
+            f"[CB] LawmadiLM 서킷 OPEN (연속실패 {_cb_consecutive_failures}회, "
+            f"{_CB_OPEN_SEC}초 대기)"
+        )
+
 
 def _load_leader_profiles() -> Dict[str, Any]:
     """leader-profiles.json 로드 (리더 철학·접근방식·정체성)"""
@@ -899,33 +939,52 @@ def _get_article_text(articles: List[Dict], article_num: int) -> Optional[str]:
 
 
 async def _drf_verify_law_refs(text: str) -> VerificationResult:
-    """Stage 3: 응답에서 인용된 모든 법률 참조를 DRF API로 전수 검증 (조문번호까지 확인).
-    비동기 메서드 사용 가능 시 httpx로 직접 호출, 없으면 동기 fallback.
+    """Stage 4: 응답에서 인용된 모든 법률+판례 참조를 DRF API로 전수 검증.
+    법률 fetch와 판례 fetch를 동시 실행하여 0.5~1.5초 절약.
     """
     result = VerificationResult()
 
-    # 법률 참조 추출: "OO법 제X조" 또는 "OO법 제X조 제Y항"
+    # ── 1) 법률 참조 + 판례 참조 동시 추출 (regex, instant) ──
     refs = re.findall(
         r'([가-힣]+(?:법|시행령|시행규칙|규정|조례))\s*제(\d+)조(?:\s*제(\d+)항)?',
         text
     )
-    if not refs:
+
+    prec_refs = re.findall(
+        r'((?:대법원|대법|헌법재판소|헌재|서울고등법원|서울고법|서울중앙지방법원)\s*'
+        r'(\d{4})\s*[.]\s*(\d{1,2})\s*[.]\s*\d{1,2}\s*[.]?\s*선고\s*'
+        r'(\d{2,4}[가-힣]+\d+)\s*(?:판결|결정))',
+        text
+    )
+    if not prec_refs:
+        prec_refs_simple = re.findall(
+            r'(\d{2,4}'
+            r'(?:헌바|헌마|헌가|헌나|헌라|헌사|헌아|헌자|'
+            r'다|나|가|마|카|타|파|라|바|사|아|자|차|하|'
+            r'두|누|구|무|부|수|우|주|추|후|그|드|스|으)'
+            r'(?:합)?\d{2,6})',
+            text
+        )
+    else:
+        prec_refs_simple = [p[3] for p in prec_refs]
+
+    if not refs and not prec_refs_simple:
         result.all_passed = True
         return result
 
     svc = _RUNTIME.get("search_service")
-    if not svc:
-        logger.warning("[Stage 3] SearchService 없음 -> 검증 스킵")
+    if not svc and not refs:
+        # 법률 없고 서비스도 없으면 판례만 검증 가능 여부 확인
+        pass
+    elif not svc:
+        logger.warning("[Stage 4] SearchService 없음 -> 검증 스킵")
         result.all_passed = True
         return result
 
+    # ── 2) 법률·판례 고유 목록 추출 ──
     seen = set()
-    # 법령별로 lawService.do 호출 캐시 (조문 상세 포함)
-    law_articles_cache: Dict[str, Any] = {}
-
-    # 고유 법령 목록 추출 → 병렬 조회
     unique_laws = set()
-    ref_items = []  # (law_name, article_num, key)
+    ref_items = []
     for law_name, article_num_str, paragraph_str in refs:
         article_num = int(article_num_str)
         key = f"{law_name} 제{article_num}조"
@@ -935,7 +994,16 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
         ref_items.append((law_name, article_num, key))
         unique_laws.add(law_name)
 
-    # 법령별 조문 병렬 조회 (DRF 호출 병렬화, 실패 시 1회 재시도)
+    prec_seen = set()
+    unique_cases = []
+    for case_no in prec_refs_simple:
+        case_no = case_no.strip()
+        if case_no in prec_seen or len(case_no) < 5:
+            continue
+        prec_seen.add(case_no)
+        unique_cases.append(case_no)
+
+    # ── 3) 법률 fetch + 판례 fetch 동시 실행 (asyncio.gather) ──
     async def _fetch_law(ln: str):
         for attempt in range(2):
             try:
@@ -945,22 +1013,50 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
                     return ln, svc.get_law_articles(ln)
             except Exception as e:
                 if attempt == 0:
-                    logger.warning(f"[Stage 3] {ln} 법령 조회 실패 (재시도 1/1): {e}")
+                    logger.warning(f"[Stage 4] {ln} 법령 조회 실패 (재시도 1/1): {e}")
                     await asyncio.sleep(0.5)
                 else:
-                    logger.warning(f"[Stage 3] {ln} 법령 조회 최종 실패: {e}")
+                    logger.warning(f"[Stage 4] {ln} 법령 조회 최종 실패: {e}")
                     return ln, None
         return ln, None
 
-    if unique_laws:
-        fetch_results = await asyncio.gather(
-            *[_fetch_law(ln) for ln in unique_laws],
+    drf_inst = _RUNTIME.get("drf")
+
+    async def _fetch_prec(cn: str):
+        try:
+            raw_prec = None
+            if drf_inst and hasattr(drf_inst, "search_precedents_async"):
+                raw_prec = await drf_inst.search_precedents_async(cn)
+            elif drf_inst and hasattr(drf_inst, "search_precedents"):
+                raw_prec = drf_inst.search_precedents(cn)
+            return cn, raw_prec, None
+        except Exception as e:
+            return cn, None, e
+
+    # 법률 + 판례 fetch를 하나의 gather로 동시 실행
+    law_tasks = [_fetch_law(ln) for ln in unique_laws] if unique_laws and svc else []
+    prec_tasks = [_fetch_prec(cn) for cn in unique_cases] if unique_cases and drf_inst else []
+
+    all_fetch_results = []
+    if law_tasks or prec_tasks:
+        all_fetch_results = await asyncio.gather(
+            *law_tasks, *prec_tasks,
             return_exceptions=False,
         )
-        for ln, raw in fetch_results:
-            law_articles_cache[ln] = raw
 
-    # 조문별 검증
+    # 결과 분리
+    law_articles_cache: Dict[str, Any] = {}
+    law_result_count = len(law_tasks)
+    for i, res in enumerate(all_fetch_results[:law_result_count]):
+        ln, raw = res
+        law_articles_cache[ln] = raw
+
+    prec_results_raw = all_fetch_results[law_result_count:]
+    if unique_cases and not drf_inst:
+        logger.debug("[Stage 4] 판례 DRF 미사용 (drf 인스턴스 없음)")
+        prec_results_raw = [(cn, None, None) for cn in unique_cases]
+
+    # ── 4) 법률 조문별 검증 ──
     for law_name, article_num, key in ref_items:
         try:
             raw = law_articles_cache.get(law_name)
@@ -990,15 +1086,15 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
 
             if ref_entry["verified"]:
                 result.verified_refs.append(ref_entry)
-                logger.info(f"[Stage 3] ✅ {key}: 검증 통과")
+                logger.info(f"[Stage 4] ✅ {key}: 검증 통과")
             else:
                 reason = "법령 미존재" if not law_exists else f"제{article_num}조 미존재"
                 ref_entry["reason"] = reason
                 result.unverified_refs.append(ref_entry)
-                logger.warning(f"[Stage 3] ❌ {key}: {reason} (law_exists={law_exists}, articles={len(articles) if raw and articles else 0})")
+                logger.warning(f"[Stage 4] ❌ {key}: {reason} (law_exists={law_exists}, articles={len(articles) if raw and articles else 0})")
 
         except Exception as e:
-            logger.warning(f"[Stage 3] {key} 검증 실패: {e}")
+            logger.warning(f"[Stage 4] {key} 검증 실패: {e}")
             result.unverified_refs.append({
                 "ref": key,
                 "law_name": law_name,
@@ -1010,59 +1106,9 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
                 "reason": f"검증 오류: {type(e).__name__}",
             })
 
-    # ── 판례 검증: "대법원 YYYY다NNNNN" 등 판례번호 추출 + DRF 검증 ──
-    prec_refs = re.findall(
-        r'((?:대법원|대법|헌법재판소|헌재|서울고등법원|서울고법|서울중앙지방법원)\s*'
-        r'(\d{4})\s*[.]\s*(\d{1,2})\s*[.]\s*\d{1,2}\s*[.]?\s*선고\s*'
-        r'(\d{2,4}[가-힣]+\d+)\s*(?:판결|결정))',
-        text
-    )
-    # 더 간단한 패턴: "2020다12345", "2012헌바55", "2019헌마439" 등
-    if not prec_refs:
-        prec_refs_simple = re.findall(
-            r'(\d{2,4}'
-            r'(?:헌바|헌마|헌가|헌나|헌라|헌사|헌아|헌자|'  # 헌재결정례
-            r'다|나|가|마|카|타|파|라|바|사|아|자|차|하|'    # 대법원 판례
-            r'두|누|구|무|부|수|우|주|추|후|그|드|스|으)'
-            r'(?:합)?\d{2,6})',
-            text
-        )
-    else:
-        prec_refs_simple = [p[3] for p in prec_refs]  # 사건번호만 추출
-
-    if prec_refs_simple:
-        drf_inst = _RUNTIME.get("drf")
-        prec_seen = set()
-        unique_cases = []
-        for case_no in prec_refs_simple:
-            case_no = case_no.strip()
-            if case_no in prec_seen or len(case_no) < 5:
-                continue
-            prec_seen.add(case_no)
-            unique_cases.append(case_no)
-
-        # 판례 병렬 조회
-        async def _fetch_prec(cn: str):
-            try:
-                raw_prec = None
-                if drf_inst and hasattr(drf_inst, "search_precedents_async"):
-                    raw_prec = await drf_inst.search_precedents_async(cn)
-                elif drf_inst and hasattr(drf_inst, "search_precedents"):
-                    raw_prec = drf_inst.search_precedents(cn)
-                return cn, raw_prec, None
-            except Exception as e:
-                return cn, None, e
-
-        if drf_inst:
-            prec_results = await asyncio.gather(
-                *[_fetch_prec(cn) for cn in unique_cases],
-                return_exceptions=False,
-            )
-        else:
-            logger.debug("[Stage 4] 판례 DRF 미사용 (drf 인스턴스 없음)")
-            prec_results = [(cn, None, None) for cn in unique_cases]
-
-        for case_no, raw_prec, fetch_err in prec_results:
+    # ── 5) 판례 검증 ──
+    if prec_results_raw:
+        for case_no, raw_prec, fetch_err in prec_results_raw:
             try:
                 if fetch_err:
                     raise fetch_err
@@ -1328,12 +1374,14 @@ async def _gemini_fallback_compose(
             "아래 SSOT 캐시 데이터는 DRF API에서 사전 검증된 법률 정보입니다.\n"
             "답변 시 반드시 이 캐시의 법령명·조문번호·판례번호를 그대로 인용하세요.\n"
             "캐시에 없는 법령이나 판례를 임의 생성하지 마세요.\n"
+            "⛔ 캐시에 존재하지 않는 법률을 포함하면 DRF 검증에서 불합격되어 답변이 차단됩니다.\n"
             f"{rag_context.context_text[:100000]}"
         )
     elif rag_context.cache_context:
         ctx_section = (
             "\n\n[SSOT 캐시 — 반드시 최우선 참조]\n"
             "아래 캐시 데이터의 법령명·조문번호·판례번호를 그대로 인용하세요.\n"
+            "⛔ 캐시에 존재하지 않는 법률을 포함하면 DRF 검증에서 불합격되어 답변이 차단됩니다.\n"
             f"{rag_context.cache_context[:50000]}"
         )
 
@@ -1343,14 +1391,17 @@ async def _gemini_fallback_compose(
             "\n\n[구조 지시] 사안의 쟁점 → 관련 법령 → 판례 검토 → 실무 대응 절차 → 쟁점별 검토 의견 → 결론 및 권고 → 법률 근거"
             "\n핵심 쟁점, 법률명, 판례번호는 **굵은 글씨**로 표시. 4,000~5,000자."
             "\n\n[필수] 답변의 마지막에 반드시 '## 법률 근거' 섹션을 작성하고, 답변에서 인용한 모든 법령명과 조문번호를 '• 법령명 제N조 제N항: 내용 요약' 형식으로 최소 5개 이상 나열하세요."
-            "\n\n[필수] 답변 본문에 반드시 관련 판례를 1개 이상 인용하세요. 판례번호는 '대법원 YYYY. M. D. 선고 YYYY다NNNNN 판결' 형식으로 정확히 기재하세요."
+            "\n\n[필수] SSOT 캐시 또는 DRF 도구에서 확인된 판례만 인용하세요. 판례번호를 추측하거나 임의 생성하면 응답이 차단됩니다."
+            "\n판례가 없으면 '관련 판례는 법원 종합법률정보(glaw.scourt.go.kr)에서 확인하세요'로 대체하세요."
         )
         max_tokens = 5000
     else:
         enhance = (
             "\n\n[구조 지시] 결론부터 말씀드리면 → 왜 그런가요?(관련 판례 포함) → 지금 바로 하실 수 있는 일 → 그래도 해결이 안 되면 → 혼자 하기 어려우시면 → 지금 해야 할 행동 3가지 → 법률 근거"
             "\n한 문장은 100~200자 이내. 2,500~3,500자."
-            "\n\n[중요] '왜 그런가요?' 섹션에서 반드시 대법원 판례를 1개 이상 인용하세요. 형식: '대법원 2020. 5. 14. 선고 2019다12345 판결에서도 ~라고 판시하였습니다.' 판례 없이 법률만 나열하면 불완전한 답변입니다."
+            "\n\n[중요] '왜 그런가요?' 섹션에서 SSOT 캐시 또는 DRF 도구에서 확인된 판례만 인용하세요."
+            " 판례번호를 추측하거나 임의 생성하면 응답이 차단됩니다."
+            " 판례가 없으면 '관련 판례는 법원 종합법률정보(glaw.scourt.go.kr)에서 확인하세요'로 대체하세요."
             "\n\n[필수] 답변의 마지막에 '## 법률 근거' 섹션을 작성하고, 이 사건에 직접 적용되는 핵심 법조문을 최대 5개까지만 '• 법령명 제N조: 내용 요약' 형식으로 나열하세요. 5개를 초과하지 마세요. 사건과 무관한 법률은 절대 포함하지 마세요."
         )
         max_tokens = 4500
@@ -1386,7 +1437,15 @@ async def _gemini_fallback_compose(
     )
 
     # 429/할당량 초과 시 자동 모델 전환 (Pro→Flash→Lite)
-    user_msg = f"now_kst={now_kst}\nssot_available={ssot_available}\n사용자 질문: {query}"
+    user_msg = (
+        f"now_kst={now_kst}\nssot_available={ssot_available}\n\n"
+        "⚠️ 판례·법령 인용 절대 원칙 (위반 시 응답 차단):\n"
+        "1. [SSOT 캐시] 또는 DRF 도구 결과에 존재하는 판례·법령만 인용\n"
+        "2. 판례번호 절대 추측·생성 금지 — 존재 확인 불가 시 인용하지 말 것\n"
+        "3. 확인된 판례 없으면 → '관련 판례는 법원 종합법률정보(glaw.scourt.go.kr)에서 확인하세요'로 대체\n"
+        "4. [SSOT 캐시]에 없는 조문번호 인용 금지\n\n"
+        f"사용자 질문: {query}"
+    )
     for _attempt in range(3):
         try:
             chat = gc.chats.create(
@@ -1462,24 +1521,53 @@ async def _run_legal_pipeline(
             rag_context.context_text = boost_text
         logger.info(f"[Stage 1.5] 리더 {leader_id} 핵심 법률 RAG 주입")
 
-    # -- Stage 2: LawmadiLM 초안 (비활성화 가능) --
+    # -- Stage 2: LawmadiLM 초안 (서킷브레이커 + 비활성화 가능) --
     lm_draft = ""
     _enable_lm = os.getenv("ENABLE_LAWMADILM", "true").lower() == "true"
     if _enable_lm:
-        try:
-            logger.info("[Stage 2/4] LawmadiLM 초안 생성 (5초)")
-            raw_answer = await _call_lawmadilm(
-                query, analysis, rag_context, lang=lang, mode=mode,
-            )
-            lm_draft = _postprocess_lawmadilm(raw_answer, query)
-            if lm_draft:
-                logger.info(f"[Stage 2] LM 초안 완료 ({len(lm_draft)}자)")
+        cb = _cb_state()
+        if cb == "open":
+            logger.info(f"[Stage 2/4] LawmadiLM 스킵 — 서킷 OPEN (0ms 절약)")
+        else:
+            if cb == "half_open":
+                logger.info("[Stage 2/4] LawmadiLM 시험 호출 (서킷 HALF_OPEN)")
             else:
-                logger.warning("[Stage 2] 후처리 -> None (품질 미달)")
+                logger.info("[Stage 2/4] LawmadiLM 초안 생성")
+            try:
+                raw_answer = await _call_lawmadilm(
+                    query, analysis, rag_context, lang=lang, mode=mode,
+                )
+                lm_draft = _postprocess_lawmadilm(raw_answer, query)
+                if lm_draft:
+                    logger.info(f"[Stage 2] LM 초안 완료 ({len(lm_draft)}자)")
+                    _cb_record_success()
+                else:
+                    logger.warning("[Stage 2] 후처리 -> None (품질 미달)")
+                    lm_draft = ""
+            except httpx.HTTPStatusError as e:
+                status = e.response.status_code if e.response else 0
+                _cb_record_failure()
+                # 503만 0.5초 후 1회 재시도 (429/500은 재시도 불가)
+                if status == 503 and cb != "half_open":
+                    logger.warning(f"[Stage 2] LawmadiLM 503 → 0.5초 후 재시도")
+                    await asyncio.sleep(0.5)
+                    try:
+                        raw_answer = await _call_lawmadilm(
+                            query, analysis, rag_context, lang=lang, mode=mode,
+                        )
+                        lm_draft = _postprocess_lawmadilm(raw_answer, query) or ""
+                        if lm_draft:
+                            _cb_record_success()
+                            logger.info(f"[Stage 2] LM 503 재시도 성공 ({len(lm_draft)}자)")
+                    except Exception as e2:
+                        _cb_record_failure()
+                        logger.warning(f"[Stage 2] LM 503 재시도 실패: {e2} -> Gemini 단독")
+                else:
+                    logger.warning(f"[Stage 2] LawmadiLM {status} 실패: {e} -> Gemini 단독")
+            except Exception as e:
+                _cb_record_failure()
+                logger.warning(f"[Stage 2] LawmadiLM 실패/타임아웃: {e} -> Gemini 단독")
                 lm_draft = ""
-        except Exception as e:
-            logger.warning(f"[Stage 2] LawmadiLM 실패/타임아웃: {e} -> Gemini 단독")
-            lm_draft = ""
     else:
         logger.info("[Stage 2/4] LawmadiLM 스킵 (ENABLE_LAWMADILM=false)")
 
@@ -1699,10 +1787,16 @@ async def run_pipeline_stage2(
     lang: str = "",
     mode: str = "general",
 ) -> str:
-    """스트리밍용: Stage 2만 실행 (강화 프롬프트)"""
+    """스트리밍용: Stage 2만 실행 (서킷브레이커 + 강화 프롬프트)"""
     if os.getenv("ENABLE_LAWMADILM", "true").lower() != "true":
         logger.info("[Stream Stage 2] LawmadiLM 스킵 (ENABLE_LAWMADILM=false)")
         return ""
+    cb = _cb_state()
+    if cb == "open":
+        logger.info("[Stream Stage 2] LawmadiLM 스킵 — 서킷 OPEN")
+        return ""
+    if cb == "half_open":
+        logger.info("[Stream Stage 2] LawmadiLM 시험 호출 (서킷 HALF_OPEN)")
     try:
         raw = await _call_lawmadilm(
             query, analysis, rag_context,
@@ -1710,8 +1804,32 @@ async def run_pipeline_stage2(
             lang=lang,
             mode=mode,
         )
-        return _postprocess_lawmadilm(raw, query) or ""
+        draft = _postprocess_lawmadilm(raw, query) or ""
+        if draft:
+            _cb_record_success()
+        return draft
+    except httpx.HTTPStatusError as e:
+        status = e.response.status_code if e.response else 0
+        _cb_record_failure()
+        if status == 503 and cb != "half_open":
+            logger.warning(f"[Stream Stage 2] LawmadiLM 503 → 0.5초 후 재시도")
+            await asyncio.sleep(0.5)
+            try:
+                raw = await _call_lawmadilm(
+                    query, analysis, rag_context,
+                    drf_verification=drf_verification,
+                    lang=lang, mode=mode,
+                )
+                draft = _postprocess_lawmadilm(raw, query) or ""
+                if draft:
+                    _cb_record_success()
+                return draft
+            except Exception:
+                _cb_record_failure()
+        logger.warning(f"[Stream Stage 2] LawmadiLM {status} 실패: {e}")
+        return ""
     except Exception as e:
+        _cb_record_failure()
         logger.warning(f"[Stream Stage 2] LawmadiLM 실패: {e}")
         return ""
 
