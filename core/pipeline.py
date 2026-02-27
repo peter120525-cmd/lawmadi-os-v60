@@ -956,8 +956,10 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
     result = VerificationResult()
 
     # ── 1) 법률 참조 + 판례 참조 동시 추출 (regex, instant) ──
+    # ⚠️ (?:[가-힣]+\s*)+ 는 catastrophic backtracking 유발
+    #    → [가-힣]+(?:\s+[가-힣]+)* 로 교체 (whitespace+로 분리, 중첩 반복 제거)
     refs = re.findall(
-        r'((?:[가-힣]+\s*)+(?:등에\s+관한\s+)?(?:법률|법|시행령|시행규칙|규정|조례))\s*제(\d+)조(의\d+)?\s*(?:제(\d+)항)?',
+        r'([가-힣]+(?:\s+[가-힣]+)*\s*(?:등에\s+관한\s+)?(?:법률|법|시행령|시행규칙|규정|조례))\s*제(\d+)조(의\d+)?\s*(?:제(\d+)항)?',
         text
     )
 
