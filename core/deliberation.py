@@ -10,6 +10,7 @@ import asyncio
 from typing import Dict, List, Optional
 
 from core.model_fallback import get_model, on_quota_error, is_quota_error
+from utils.helpers import _safe_extract_gemini_text
 
 logger = logging.getLogger("LawmadiOS.Deliberation")
 
@@ -115,6 +116,7 @@ async def generate_deliberation(
                     config=genai_types.GenerateContentConfig(
                         max_output_tokens=600,
                         temperature=0.7,
+                        response_mime_type="application/json",
                     ),
                 )
                 break
@@ -124,7 +126,10 @@ async def generate_deliberation(
                     continue
                 raise
 
-        raw = (resp.text or "").strip()
+        raw = _safe_extract_gemini_text(resp)
+        if not raw:
+            logger.warning("[Deliberation] Gemini 빈 응답")
+            return None
 
         # JSON 추출 (코드블록 감싸진 경우 대응)
         if "```" in raw:
@@ -219,6 +224,7 @@ async def generate_handoff(
                     config=genai_types.GenerateContentConfig(
                         max_output_tokens=300,
                         temperature=0.7,
+                        response_mime_type="application/json",
                     ),
                 )
                 break
@@ -228,7 +234,10 @@ async def generate_handoff(
                     continue
                 raise
 
-        raw = (resp.text or "").strip()
+        raw = _safe_extract_gemini_text(resp)
+        if not raw:
+            logger.warning("[Handoff] Gemini 빈 응답")
+            return None
 
         if "```" in raw:
             import re
