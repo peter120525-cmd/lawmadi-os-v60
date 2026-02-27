@@ -119,7 +119,15 @@ class ResponseVerifier:
         for i, result in enumerate(tool_results, 1):
             result_status = result.get("result", "UNKNOWN")
             result_source = result.get("source", "N/A")
-            results_summary.append(f"{i}. 상태: {result_status}, 출처: {result_source}")
+            ref_name = result.get("ref", "")
+            line = f"{i}. [{result_status}] {ref_name} (출처: {result_source})"
+            article_text = result.get("article_text", "")
+            if article_text:
+                line += f"\n   조문 본문: {article_text}"
+            drf_summary = result.get("drf_summary", "")
+            if drf_summary:
+                line += f"\n   판시사항/판결요지: {drf_summary}"
+            results_summary.append(line)
 
         results_text = "\n".join(results_summary) if results_summary else "없음"
 
@@ -163,6 +171,13 @@ class ResponseVerifier:
    - 응답에 나온 법령명/조문/판례가 Tool 결과에 실제로 있는가?
    - Tool 결과에 없는 정보를 임의로 추가했는가?
    - 예시: Tool에서 "민법 제650조"를 찾았는데, 응답에서 "제651조"를 언급 → FAIL
+   - ⚠️ 항/호/목 검증: Tool 결과에 "조문 본문"이 포함된 경우, 응답이 인용한 항·호·목이 본문에 실제로 존재하는지 대조하라. 본문에 "①", "②", "1.", "제1항" 등이 있으면 해당 항 인용은 정당. 본문에 없는 항/호를 인용하면 → FAIL.
+   - 조문 본문이 없는 경우: 상위 조문이 FOUND이면 항/호/목 참조는 WARNING (FAIL이 아님).
+   - ⚠️ **판례/헌재결정례 내용 검증**: Tool 결과에 "판시사항/판결요지"가 포함된 경우:
+     a. 응답이 해당 판례의 내용을 설명할 때, 판시사항/판결요지와 실질적으로 일치하는지 대조
+     b. 판시사항에 없는 내용을 판례 해석으로 제시하면 → FAIL
+     c. 판례번호가 FOUND이지만 판시사항/판결요지와 내용이 다르면 → FAIL (번호만 맞고 내용 불일치)
+     d. 헌법재판소 결정(헌재)도 동일 기준 적용: 결정요지와 응답 내용 대조
 
 3. **출처 명확성**
    - 응답이 Tool 결과의 출처를 정확히 반영하는가?

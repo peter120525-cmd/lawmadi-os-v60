@@ -662,9 +662,17 @@ async def ask(request: Request):
                 if drf_result and drf_result.total_refs > 0:
                     _tools_used = [{"name": "DRF_Stage4_전수검증", "args": {"total": drf_result.total_refs}}]
                     for ref in drf_result.verified_refs:
-                        _tool_results.append({"result": "FOUND", "source": "DRF", "ref": ref.get("ref", ""), "verified": True})
+                        entry = {"result": "FOUND", "source": "DRF", "ref": ref.get("ref", ""), "verified": True}
+                        if ref.get("article_text"):
+                            entry["article_text"] = ref["article_text"][:800]
+                        if ref.get("drf_summary"):
+                            entry["drf_summary"] = ref["drf_summary"][:800]
+                        _tool_results.append(entry)
                     for ref in drf_result.unverified_refs:
-                        _tool_results.append({"result": "NO_DATA", "source": "DRF", "ref": ref.get("ref", ""), "verified": False, "reason": ref.get("reason", "")})
+                        entry = {"result": "NO_DATA", "source": "DRF", "ref": ref.get("ref", ""), "verified": False, "reason": ref.get("reason", "")}
+                        if ref.get("drf_summary"):
+                            entry["drf_summary"] = ref["drf_summary"][:800]
+                        _tool_results.append(entry)
 
                 verifier_module = _optional_import_fn("engines.response_verifier")
                 if verifier_module:
@@ -1255,9 +1263,17 @@ async def ask_stream(request: Request):
                     if drf_verification and drf_verification.total_refs > 0:
                         _bg_tools_used = [{"name": "DRF_Stage4_전수검증", "args": {"total": drf_verification.total_refs}}]
                         for ref in drf_verification.verified_refs:
-                            _bg_tool_results.append({"result": "FOUND", "source": "DRF", "ref": ref.get("ref", ""), "verified": True})
+                            entry = {"result": "FOUND", "source": "DRF", "ref": ref.get("ref", ""), "verified": True}
+                            if ref.get("article_text"):
+                                entry["article_text"] = ref["article_text"][:800]
+                            if ref.get("drf_summary"):
+                                entry["drf_summary"] = ref["drf_summary"][:800]
+                            _bg_tool_results.append(entry)
                         for ref in drf_verification.unverified_refs:
-                            _bg_tool_results.append({"result": "NO_DATA", "source": "DRF", "ref": ref.get("ref", ""), "verified": False, "reason": ref.get("reason", "")})
+                            entry = {"result": "NO_DATA", "source": "DRF", "ref": ref.get("ref", ""), "verified": False, "reason": ref.get("reason", "")}
+                            if ref.get("drf_summary"):
+                                entry["drf_summary"] = ref["drf_summary"][:800]
+                            _bg_tool_results.append(entry)
 
                     verifier_module = _optional_import_fn("engines.response_verifier")
                     if verifier_module:
