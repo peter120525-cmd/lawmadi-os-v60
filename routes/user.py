@@ -8,6 +8,7 @@ from fastapi import APIRouter, Request, Header, HTTPException
 from fastapi.responses import JSONResponse
 from google.genai import types as genai_types
 from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from core.constants import OS_VERSION, GEMINI_MODEL
 from core.model_fallback import get_model
@@ -18,7 +19,7 @@ router = APIRouter()
 logger = logging.getLogger("LawmadiOS.User")
 
 _RUNTIME: Dict[str, Any] = {}
-limiter: Limiter = None  # type: ignore[assignment]
+limiter = Limiter(key_func=get_remote_address)
 
 # In-memory stores (FIFO)
 LAWYER_INQUIRY_STORE: List[Dict] = []

@@ -16,6 +16,7 @@ from fastapi import APIRouter, Request, HTTPException, File, UploadFile
 from fastapi.responses import FileResponse
 from google.genai import types as genai_types
 from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from core.constants import OS_VERSION, GEMINI_MODEL
 from core.model_fallback import get_model
@@ -27,7 +28,7 @@ logger = logging.getLogger("LawmadiOS.Files")
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 
 _RUNTIME: Dict[str, Any] = {}
-limiter: Limiter = None  # type: ignore[assignment]
+limiter = Limiter(key_func=get_remote_address)
 
 
 def set_dependencies(runtime, rate_limiter=None):
