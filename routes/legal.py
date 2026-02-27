@@ -479,13 +479,13 @@ async def ask(request: Request):
                     _d = so.detect_domains(query)
                     _s = so.select_leaders(query, _d)
                     for sl in _s[:3]:
-                        _ask_candidates.append({"name": sl.get("name", "?"), "specialty": sl.get("specialty", "")})
+                        _ask_candidates.append({"name": sl.get("name", "?"), "specialty": sl.get("specialty", ""), "leader_id": sl.get("_id", "")})
                 if not any(c["name"] == leader_name for c in _ask_candidates):
-                    _ask_candidates.insert(0, {"name": leader_name, "specialty": leader_specialty})
+                    _ask_candidates.insert(0, {"name": leader_name, "specialty": leader_specialty, "leader_id": analysis.get("leader_id", "")})
                 _ask_candidates = _ask_candidates[:3]
                 _ask_deliberation = await asyncio.wait_for(
                     generate_deliberation(gc, query, _ask_candidates, lang),
-                    timeout=5,
+                    timeout=8,
                 )
             except Exception as e:
                 logger.warning(f"[Deliberation/ask] 스킵: {type(e).__name__}: {e}")
@@ -494,10 +494,10 @@ async def ask(request: Request):
             try:
                 gc = _ensure_genai_client_fn(_RUNTIME)
                 _cur = ask_current_leader if isinstance(ask_current_leader, dict) else {"name": "마디", "specialty": "통합"}
-                _new = {"name": leader_name, "specialty": leader_specialty}
+                _new = {"name": leader_name, "specialty": leader_specialty, "leader_id": analysis.get("leader_id", "")}
                 _ask_handoff = await asyncio.wait_for(
                     generate_handoff(gc, query, _cur, _new, lang),
-                    timeout=5,
+                    timeout=8,
                 )
             except Exception as e:
                 logger.warning(f"[Handoff/ask] 스킵: {type(e).__name__}: {e}")
@@ -723,7 +723,7 @@ async def ask(request: Request):
             "constitutional_check": "PASS" if const_check.get("passed", True) else "WARNING",
             "ssot_sources": [f"{s['type']}:{s['law']}" for s in matched_sources[:3]] if matched_sources else [],
             "meta": {**_compute_quality_meta_fn(final_text_clean, matched_sources), "model": get_model()},
-            "current_leader": {"name": leader_name, "specialty": leader_specialty},
+            "current_leader": {"name": leader_name, "specialty": leader_specialty, "leader_id": analysis.get("leader_id", "")},
         }
         if _ask_deliberation:
             _ask_result["deliberation"] = _ask_deliberation
@@ -1040,12 +1040,14 @@ async def ask_stream(request: Request):
                             _candidate_leaders.append({
                                 "name": sl.get("name", "?"),
                                 "specialty": sl.get("specialty", ""),
+                                "leader_id": sl.get("_id", ""),
                             })
                     # 최소한 분류된 리더는 포함
                     if not any(c["name"] == _new_leader_name for c in _candidate_leaders):
                         _candidate_leaders.insert(0, {
                             "name": _new_leader_name,
                             "specialty": analysis.get("leader_specialty", "통합"),
+                            "leader_id": analysis.get("leader_id", ""),
                         })
                     _candidate_leaders = _candidate_leaders[:3]
 
@@ -1056,7 +1058,7 @@ async def ask_stream(request: Request):
 
                     delib_turns = await asyncio.wait_for(
                         generate_deliberation(gc, query, _candidate_leaders, lang),
-                        timeout=5,
+                        timeout=8,
                     )
                     if delib_turns:
                         for turn in delib_turns:
@@ -1072,11 +1074,11 @@ async def ask_stream(request: Request):
             elif _delib_mode == "handoff":
                 try:
                     _cur = req_current_leader if isinstance(req_current_leader, dict) else {"name": "마디", "specialty": "통합"}
-                    _new = {"name": _new_leader_name, "specialty": analysis.get("leader_specialty", "통합")}
+                    _new = {"name": _new_leader_name, "specialty": analysis.get("leader_specialty", "통합"), "leader_id": analysis.get("leader_id", "")}
 
                     handoff_turns = await asyncio.wait_for(
                         generate_handoff(gc, query, _cur, _new, lang),
-                        timeout=5,
+                        timeout=8,
                     )
                     if handoff_turns:
                         for turn in handoff_turns:
@@ -1228,7 +1230,7 @@ async def ask_stream(request: Request):
                 "swarm_mode": swarm_mode,
                 "response": final_text_clean,
                 "status": "SUCCESS",
-                "current_leader": {"name": leader_name, "specialty": leader_specialty},
+                "current_leader": {"name": leader_name, "specialty": leader_specialty, "leader_id": analysis.get("leader_id", "")},
             })
 
             # 백그라운드 검증/저장

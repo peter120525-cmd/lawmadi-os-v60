@@ -1906,6 +1906,7 @@
             header.top-status {
                 height: 56px;
                 padding: 0 12px;
+                padding-top: env(safe-area-inset-top);
             }
 
             /* 모바일: 예시질문 중앙 배치 */
@@ -1932,8 +1933,9 @@
             }
 
             .example-btn {
-                padding: 9px 8px;
-                font-size: 0.85rem;
+                padding: 12px 8px;
+                font-size: 0.9rem;
+                min-height: 44px;
                 white-space: nowrap;
                 text-align: center;
                 border-width: 1px;
@@ -2044,7 +2046,7 @@
 
             /* ── 입력창 ── */
             .input-pipeline-wrapper {
-                padding: 2px 6px;
+                padding: 6px 10px;
             }
 
             .input-container {
@@ -2068,8 +2070,8 @@
             }
 
             .send-action {
-                width: 36px;
-                height: 36px;
+                width: 44px;
+                height: 44px;
                 border-radius: 10px;
             }
 
@@ -2082,6 +2084,10 @@
 
             .ai-msg .arrow-section-box {
                 padding: 10px 14px 10px 12px;
+            }
+
+            .ai-msg ul li, .ai-msg ol li {
+                padding-left: 30px;
             }
 
             /* ── v60.1: 헤더 모바일 최적화 ── */
@@ -2186,25 +2192,26 @@
             /* ── AI 메시지 ── */
             .ai-msg {
                 max-width: 100%;
-                padding: 28px 10px 14px;
-                font-size: 14px;
+                padding: 28px 14px 14px;
+                font-size: 15.5px;
+                line-height: 1.9;
                 border-radius: 14px;
             }
 
             .ai-msg h1 {
                 margin-left: -10px;
                 margin-right: -10px;
-                font-size: 1.1rem;
+                font-size: 1.2rem;
                 padding: 12px 10px;
             }
 
             .ai-msg h2 {
-                font-size: 0.93rem;
+                font-size: 1.05rem;
                 padding: 9px 10px;
             }
 
             .ai-msg h3 {
-                font-size: 0.88rem;
+                font-size: 1rem;
                 padding: 8px 10px;
                 margin-left: 0;
             }
@@ -2235,8 +2242,8 @@
             }
 
             .send-action {
-                width: 40px;
-                height: 40px;
+                width: 48px;
+                height: 48px;
                 border-radius: 11px;
             }
 
@@ -2246,7 +2253,7 @@
             }
 
             .conversation-viewport {
-                padding: 12px 8px;
+                padding: 16px 10px;
                 gap: 12px;
             }
 
@@ -3188,6 +3195,46 @@
            Responsive — 360px (Extra Small Mobile)
         ═══════════════════════════════════════════════════ */
         @media (max-width: 360px) {
+            header.top-status {
+                height: 48px;
+                padding: 0 8px;
+            }
+            .ai-msg {
+                padding: 24px 10px 12px;
+            }
+            .example-card-grid {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 8px !important;
+            }
+            .user-msg {
+                max-width: 98%;
+                padding: 8px 12px;
+                font-size: 14px;
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════
+           Landscape — 짧은 화면 (가로 모드)
+        ═══════════════════════════════════════════════════ */
+        @media (max-height: 500px) and (orientation: landscape) {
+            header.top-status {
+                height: 40px;
+                padding: 0 10px;
+            }
+            .tab-bar {
+                display: none;
+            }
+            .input-pipeline-wrapper {
+                padding: 4px 8px;
+            }
+            #userInput {
+                max-height: 60px;
+                font-size: 0.9rem;
+            }
+            .conversation-viewport {
+                padding: 8px 10px;
+                gap: 8px;
+            }
         }
 
         /* 리더 응답 프로필 헤더 */
@@ -3667,9 +3714,28 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+        .example-btn,
+        .example-card,
+        .toolbar-btn,
+        .suggest-chip,
+        .tab-item,
+        .scroll-bottom-btn,
+        .send-action,
+        .dark-toggle,
+        .menu-item,
+        .feature-card-mini {
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
         .send-action:active,
         .dark-toggle:active,
         .example-btn:active,
+        .example-card:active,
+        .toolbar-btn:active,
+        .suggest-chip:active,
+        .tab-item:active,
+        .scroll-bottom-btn:active,
         .menu-item:active,
         .feature-card-mini:active {
             transform: scale(0.95) !important;
@@ -4801,12 +4867,12 @@
         @media (max-width: 480px) {
             /* 예시 카드: 3열x4행 유지, 가독성 개선 */
             .example-card-grid {
-                grid-template-columns: repeat(3, 1fr) !important;
+                grid-template-columns: repeat(2, 1fr) !important;
                 gap: 10px !important;
                 padding: 0 12px;
             }
             #landing-content .example-card-grid {
-                grid-template-columns: repeat(3, 1fr) !important;
+                grid-template-columns: repeat(2, 1fr) !important;
             }
             #landing-content .example-card:nth-child(n+13) {
                 display: none;
@@ -4843,7 +4909,7 @@
                 margin: 16px 0;
             }
             .ai-msg ul li, .ai-msg ol li {
-                padding: 10px 14px 10px 38px;
+                padding: 10px 14px 10px 24px;
                 line-height: 1.8;
             }
 
@@ -5304,8 +5370,8 @@
                 border-radius: 14px;
             }
             .deliberation-bubble .delib-avatar, .handoff-bubble .delib-avatar {
-                width: 32px;
-                height: 32px;
+                width: 36px;
+                height: 36px;
             }
             .delib-avatar-wrap::after {
                 width: 7px; height: 7px;
@@ -5319,7 +5385,7 @@
                 padding: 1px 6px;
             }
             .deliberation-bubble .delib-text, .handoff-bubble .delib-text {
-                font-size: 12px;
+                font-size: 13px;
                 padding: 7px 10px;
             }
             .delib-time { font-size: 9.5px; }
@@ -5337,7 +5403,7 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
 // In-app browser detection & viewport fix
 (function() {
     var ua = navigator.userAgent || '';
-    var isInApp = /KAKAOTALK|FBAN|FBAV|Instagram|Line\/|NAVER|Snapchat|Twitter/i.test(ua);
+    var isInApp = /KAKAOTALK|FBAN|FBAV|Instagram|Line\/|NAVER|Snapchat|Twitter|SamsungBrowser|Whale|DaumApps|MicroMessenger|Telegram/i.test(ua);
     if (isInApp) {
         document.body.classList.add('is-inapp-browser');
         // Fix viewport height for in-app browsers that miscalculate dvh/vh
@@ -5348,12 +5414,17 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
         }
         setVH();
         window.addEventListener('resize', setVH);
-        // Virtual keyboard detection
+        // Virtual keyboard detection & auto-scroll
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', function() {
                 var kbOpen = window.visualViewport.height < window.innerHeight * 0.75;
                 document.body.classList.toggle('keyboard-open', kbOpen);
                 document.body.style.height = window.visualViewport.height + 'px';
+                // 키보드 열릴 때 대화 영역 자동 스크롤
+                if (kbOpen) {
+                    var cv = document.querySelector('.conversation-viewport');
+                    if (cv) cv.scrollTop = cv.scrollHeight;
+                }
             });
         }
     }
@@ -7891,7 +7962,7 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
     var isIOS = /iPad|iPhone|iPod/.test(ua);
     var isAndroid = /Android/i.test(ua);
     var isSamsung = /SamsungBrowser/i.test(ua);
-    var isInApp = /KAKAOTALK|FBAN|FBAV|Instagram|Line\/|NAVER|Snapchat|Twitter/i.test(ua);
+    var isInApp = /KAKAOTALK|FBAN|FBAV|Instagram|Line\/|NAVER|Snapchat|Twitter|SamsungBrowser|Whale|DaumApps|MicroMessenger|Telegram/i.test(ua);
 
     if (isInApp) {
         // 인앱 브라우저: 외부 브라우저로 열기 안내
