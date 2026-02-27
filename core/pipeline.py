@@ -821,16 +821,16 @@ async def _call_lawmadilm(
     # 300자 초안 목표: 150토큰 (한국어 ~2자/토큰), expert는 200토큰
     max_tokens = 200 if mode == "expert" else 150
 
-    # n_ctx=4096 초과 방지: system_prompt 토큰 예산 내로 자르기
-    # 한국어 ~2자/토큰 추정, 메시지 포맷 오버헤드 100토큰
+    # n_ctx=4096 초과 방지: system_prompt 문자수 제한
+    # llama.cpp BPE는 한국어를 ~1자/1토큰으로 토큰화 (보수적 추정)
+    # 메시지 포맷 오버헤드 ~150토큰
     _n_ctx = 4096
-    _query_tokens = len(query) // 2 + 10
-    _budget_tokens = _n_ctx - max_tokens - _query_tokens - 100
-    _budget_chars = max(_budget_tokens * 2, 500)
+    _query_chars = len(query)
+    _budget_chars = max(_n_ctx - max_tokens - _query_chars - 150, 500)
     if len(system_prompt) > _budget_chars:
         logger.warning(
             f"[Stage 2] system_prompt 잘라냄: {len(system_prompt)}자 → {_budget_chars}자 "
-            f"(n_ctx={_n_ctx}, query≈{_query_tokens}tok, max={max_tokens}tok)"
+            f"(n_ctx={_n_ctx}, query={_query_chars}자, max={max_tokens}tok)"
         )
         system_prompt = system_prompt[:_budget_chars]
 
