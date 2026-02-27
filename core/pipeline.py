@@ -935,16 +935,22 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
         ref_items.append((law_name, article_num, key))
         unique_laws.add(law_name)
 
-    # 법령별 조문 병렬 조회 (DRF 호출 병렬화)
+    # 법령별 조문 병렬 조회 (DRF 호출 병렬화, 실패 시 1회 재시도)
     async def _fetch_law(ln: str):
-        try:
-            if hasattr(svc, "get_law_articles_async"):
-                return ln, await svc.get_law_articles_async(ln)
-            else:
-                return ln, svc.get_law_articles(ln)
-        except Exception as e:
-            logger.warning(f"[Stage 3] {ln} 법령 조회 실패: {e}")
-            return ln, None
+        for attempt in range(2):
+            try:
+                if hasattr(svc, "get_law_articles_async"):
+                    return ln, await svc.get_law_articles_async(ln)
+                else:
+                    return ln, svc.get_law_articles(ln)
+            except Exception as e:
+                if attempt == 0:
+                    logger.warning(f"[Stage 3] {ln} 법령 조회 실패 (재시도 1/1): {e}")
+                    await asyncio.sleep(0.5)
+                else:
+                    logger.warning(f"[Stage 3] {ln} 법령 조회 최종 실패: {e}")
+                    return ln, None
+        return ln, None
 
     if unique_laws:
         fetch_results = await asyncio.gather(
@@ -1571,13 +1577,20 @@ async def _run_legal_pipeline(
                 final_text = final_text.rstrip() + basis_section
                 logger.info(f"[Stage 3.9] '## 법률 근거' 자동 부착 ({len(selected)}개 조문)")
 
-    # -- Stage 4: DRF 실시간 전수 검증 --
+    # -- Stage 4: DRF 실시간 전수 검증 (타임아웃/오류 시 최대 2회 재시도) --
     logger.info("[Stage 4/4] DRF 전수 검증")
-    try:
-        drf_verification = await _drf_verify_law_refs(final_text)
-    except Exception as e:
-        logger.error(f"[Stage 4] DRF 검증 시스템 오류 → FAIL_CLOSED: {e}")
-        drf_verification = VerificationResult(drf_failed=True)
+    drf_verification = None
+    for _drf_attempt in range(3):
+        try:
+            drf_verification = await _drf_verify_law_refs(final_text)
+            break
+        except Exception as e:
+            if _drf_attempt < 2:
+                logger.warning(f"[Stage 4] DRF 검증 오류 (재시도 {_drf_attempt+1}/2): {e}")
+                await asyncio.sleep(0.5 * (_drf_attempt + 1))
+            else:
+                logger.error(f"[Stage 4] DRF 검증 최종 실패 → FAIL_CLOSED: {e}")
+                drf_verification = VerificationResult(drf_failed=True)
 
     # FAIL_CLOSED 적용 (0.1% 초과 미검증 또는 DRF 오류 시 차단)
     fail_closed_result = _apply_fail_closed(final_text, drf_verification)
@@ -1704,14 +1717,20 @@ async def run_pipeline_stage2(
 
 
 async def run_pipeline_stage3(text: str) -> VerificationResult:
-    """스트리밍용: Stage 3만 실행"""
+    """스트리밍용: Stage 3만 실행 (타임아웃/오류 시 최대 2회 재시도)"""
     if not text:
         return VerificationResult()
-    try:
-        return await _drf_verify_law_refs(text)
-    except Exception as e:
-        logger.error(f"[Stream Stage 3] DRF 검증 시스템 오류 → FAIL_CLOSED: {e}")
-        return VerificationResult(drf_failed=True)
+    for _attempt in range(3):
+        try:
+            return await _drf_verify_law_refs(text)
+        except Exception as e:
+            if _attempt < 2:
+                logger.warning(f"[Stream Stage 3] DRF 검증 오류 (재시도 {_attempt+1}/2): {e}")
+                await asyncio.sleep(0.5 * (_attempt + 1))
+            else:
+                logger.error(f"[Stream Stage 3] DRF 검증 최종 실패 → FAIL_CLOSED: {e}")
+                return VerificationResult(drf_failed=True)
+    return VerificationResult(drf_failed=True)
 
 
 # Public alias for external use
