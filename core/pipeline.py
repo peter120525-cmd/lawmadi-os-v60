@@ -1733,8 +1733,23 @@ async def _run_legal_pipeline(
             logger.warning("[FAIL_CLOSED] DRF 실패/타임아웃 → 면책 문구 부착 후 반환")
             return final_text + disclaimer, drf_verification
 
-        # 실제 미검증 법률 발견 → 1회 재생성 + 재검증
-        logger.warning("[FAIL_CLOSED 재시도] 1회 재생성 시도")
+        # ── 원본에서 미검증 문장 제거 시도 (재생성보다 먼저) ──
+        stripped_orig = _strip_unverified_sentences(final_text, drf_verification)
+        stripped_orig = stripped_orig.strip()
+        if len(stripped_orig) >= 300:
+            disclaimer = (
+                "\n\n---\n"
+                "※ 이 답변의 일부 법률 조문은 실시간 검증에서 확인되지 않아 제거되었습니다. "
+                "정확한 조문은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
+            )
+            logger.info(
+                f"[FAIL_CLOSED 복구] 원본에서 미검증 문장 제거 후 반환 "
+                f"({len(stripped_orig)}자, 제거 {len(drf_verification.unverified_refs)}건)"
+            )
+            return stripped_orig + disclaimer, drf_verification
+
+        # ── 원본 제거 후 텍스트 부족 → 1회 재생성 + 재검증 ──
+        logger.warning("[FAIL_CLOSED 재시도] 원본 제거 부족 → 1회 재생성 시도")
         banned_laws = [r["ref"] for r in drf_verification.unverified_refs]
         if banned_laws:
             ban_text = ", ".join(banned_laws)
@@ -1761,7 +1776,7 @@ async def _run_legal_pipeline(
                     logger.info("[FAIL_CLOSED 재시도] 재생성 + 재검증 통과")
                     return retry_result, retry_drf
                 else:
-                    # 재시도 실패 → 미검증 문장 제거 후 반환
+                    # 재시도도 실패 → 재시도 텍스트에서 미검증 문장 제거
                     stripped = _strip_unverified_sentences(retry_text, retry_drf)
                     stripped = stripped.strip()
                     if len(stripped) >= 300:
