@@ -87,13 +87,13 @@ async def _single_leader_call(
     gc,
     persona: str,
     prompt: str,
-    max_tokens: int = 2048,
+    max_tokens: int = 300,
     temp: float = 0.5,
 ) -> str:
     """
     단일 리더 plain text Gemini 호출.
     JSON 모드 없음. 200자 truncate.
-    max_tokens를 크게 잡아 thinking 토큰 소비 후에도 충분한 응답 확보.
+    thinking 비활성화 — 협의 대사는 간단한 대화문이므로 추론 불필요.
     """
     from google.genai import types as genai_types
 
@@ -109,6 +109,9 @@ async def _single_leader_call(
                     config=genai_types.GenerateContentConfig(
                         max_output_tokens=max_tokens,
                         temperature=temp,
+                        thinking_config=genai_types.ThinkingConfig(
+                            thinking_budget=0,
+                        ),
                     ),
                 )
             except Exception as e:
@@ -203,7 +206,7 @@ async def generate_deliberation(
     turns: List[Dict] = []
 
     try:
-        # ── Turn 1: CSO 서연 — 질문 요약 + 의견 요청 ──
+        # ── Turn 1: CSO 서연 — 질문 요약 + 의견 요청 (순차) ──
         t1_prompt = (
             f"사용자 질문: {query[:300]}\n"
             f"참석 리더: {', '.join(l.get('name','?') + '(' + l.get('specialty','') + ')' for l in leaders[:3])}\n\n"
@@ -214,7 +217,13 @@ async def generate_deliberation(
             f"존댓말, 따뜻하고 전문적인 톤으로 자연스럽게 말하세요. "
             f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
         )
-        t1_text = await _single_leader_call(gc, cso_persona, t1_prompt)
+        try:
+            t1_text = await asyncio.wait_for(
+                _single_leader_call(gc, cso_persona, t1_prompt),
+                timeout=_TURN_TIMEOUT,
+            )
+        except Exception:
+            t1_text = ""
         if not t1_text:
             t1_text = f"이 질문은 {selected_specialty} 분야입니다. {selected_name}님, 의견 부탁드립니다."
         turns.append({
@@ -224,7 +233,7 @@ async def generate_deliberation(
             "is_final": False,
         })
 
-        # ── Turn 2: 담당 리더 — 자기 분야 관점 의견 ──
+        # ── Turn 2+3: 병렬 — 담당 리더 의견 + CSO 지명 ──
         t2_prompt = (
             f"사용자 질문: {query[:300]}\n"
             f"CSO 서연이 당신에게 의견을 요청했습니다.\n\n"
@@ -235,17 +244,6 @@ async def generate_deliberation(
             f"존댓말, 전문적이고 따뜻한 톤으로 자연스럽게 말하세요. "
             f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
         )
-        t2_text = await _single_leader_call(gc, leader_persona, t2_prompt)
-        if not t2_text:
-            t2_text = f"네, {selected_specialty} 관점에서 바로 도와드리겠습니다."
-        turns.append({
-            "speaker": selected_name,
-            "role": selected_specialty,
-            "text": t2_text,
-            "is_final": False,
-        })
-
-        # ── Turn 3: CSO 서연 — 담당 리더 지명 ──
         t3_prompt = (
             f"{selected_name}님이 {selected_specialty} 분야에서 돕겠다고 했습니다.\n\n"
             f"당신은 CSO 서연입니다. {selected_name}님의 전문성을 인정하며 "
@@ -255,12 +253,29 @@ async def generate_deliberation(
             f"존댓말, 따뜻하고 신뢰감 있는 톤으로 자연스럽게 말하세요. "
             f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
         )
-        try:
-            t3_text = await _single_leader_call(gc, cso_persona, t3_prompt)
-        except Exception:
-            t3_text = ""
+        results = await asyncio.gather(
+            asyncio.wait_for(
+                _single_leader_call(gc, leader_persona, t2_prompt),
+                timeout=_TURN_TIMEOUT,
+            ),
+            asyncio.wait_for(
+                _single_leader_call(gc, cso_persona, t3_prompt),
+                timeout=_TURN_TIMEOUT,
+            ),
+            return_exceptions=True,
+        )
+        t2_text = results[0] if isinstance(results[0], str) and results[0] else ""
+        t3_text = results[1] if isinstance(results[1], str) and results[1] else ""
+        if not t2_text:
+            t2_text = f"네, {selected_specialty} 관점에서 바로 도와드리겠습니다."
         if not t3_text:
             t3_text = f"{selected_name}님이 담당하시겠습니다."
+        turns.append({
+            "speaker": selected_name,
+            "role": selected_specialty,
+            "text": t2_text,
+            "is_final": False,
+        })
         turns.append({
             "speaker": "서연",
             "role": "CSO",
@@ -268,7 +283,7 @@ async def generate_deliberation(
             "is_final": True,
         })
 
-        logger.info(f"[Deliberation] 3턴 생성 완료 (per-leader calls)")
+        logger.info(f"[Deliberation] 3턴 생성 완료 (Turn1 순차 + Turn2+3 병렬)")
         return turns
 
     except asyncio.TimeoutError:
