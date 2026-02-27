@@ -1039,8 +1039,7 @@ def _fallback_tier_classification(query: str) -> Dict[str, Any]:
             # 교육/학업
             "수학", "영어", "시험", "공부", "대학",
             # 쇼핑/생활
-            "쇼핑", "할인", "세일", "배송",
-            "택배", "반품", "교환",
+            "쇼핑", "할인", "세일",
         ]
         is_legal = not any(kw in query for kw in non_legal_keywords)
 
