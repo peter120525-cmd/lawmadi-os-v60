@@ -934,18 +934,16 @@ def _extract_articles_from_drf(raw_response) -> List[Dict]:
     return articles
 
 
-def _get_article_text(articles: List[Dict], article_num: int) -> Optional[str]:
-    """조문 목록에서 특정 조문번호의 텍스트를 반환"""
+def _get_article_text(articles: List[Dict], article_num: int, suffix: str = "") -> Optional[str]:
+    """조문 목록에서 특정 조문번호(+suffix)의 텍스트를 반환"""
+    art_label = f"제{article_num}조{suffix}"
     for art in articles:
         try:
-            num = art.get("조문번호", "")
-            if isinstance(num, str):
-                num = int(num.strip()) if num.strip().isdigit() else None
-            if num == article_num:
+            if _match_article_num(art, article_num, suffix):
                 content = art.get("조문내용", "") or art.get("조문", "") or art.get("content", "")
                 title = art.get("조문제목", "") or art.get("제목", "")
                 if content:
-                    return f"제{article_num}조({title}) {content}" if title else f"제{article_num}조 {content}"
+                    return f"{art_label}({title}) {content}" if title else f"{art_label} {content}"
         except (ValueError, TypeError):
             continue
     return None
@@ -959,7 +957,7 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
 
     # ── 1) 법률 참조 + 판례 참조 동시 추출 (regex, instant) ──
     refs = re.findall(
-        r'([가-힣]+(?:법|시행령|시행규칙|규정|조례))\s*제(\d+)조(?:\s*제(\d+)항)?',
+        r'((?:[가-힣]+\s*)+(?:등에\s+관한\s+)?(?:법률|법|시행령|시행규칙|규정|조례))\s*제(\d+)조(의\d+)?\s*(?:제(\d+)항)?',
         text
     )
 
@@ -998,13 +996,15 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
     seen = set()
     unique_laws = set()
     ref_items = []
-    for law_name, article_num_str, paragraph_str in refs:
+    for law_name, article_num_str, suffix_str, paragraph_str in refs:
+        law_name = law_name.strip()
         article_num = int(article_num_str)
-        key = f"{law_name} 제{article_num}조"
+        suffix = suffix_str.strip() if suffix_str else ""
+        key = f"{law_name} 제{article_num}조{suffix}"
         if key in seen:
             continue
         seen.add(key)
-        ref_items.append((law_name, article_num, key))
+        ref_items.append((law_name, article_num, suffix, key))
         unique_laws.add(law_name)
 
     prec_seen = set()
@@ -1070,7 +1070,7 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
         prec_results_raw = [(cn, None, None) for cn in unique_cases]
 
     # ── 4) 법률 조문별 검증 ──
-    for law_name, article_num, key in ref_items:
+    for law_name, article_num, suffix, key in ref_items:
         try:
             raw = law_articles_cache.get(law_name)
 
@@ -1083,9 +1083,9 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
                 articles = _extract_articles_from_drf(raw)
                 if articles:
                     article_exists = any(
-                        _match_article_num(a, article_num) for a in articles
+                        _match_article_num(a, article_num, suffix) for a in articles
                     )
-                    article_text = _get_article_text(articles, article_num)
+                    article_text = _get_article_text(articles, article_num, suffix)
 
             ref_entry = {
                 "ref": key,
@@ -1101,7 +1101,7 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
                 result.verified_refs.append(ref_entry)
                 logger.info(f"[Stage 4] ✅ {key}: 검증 통과")
             else:
-                reason = "법령 미존재" if not law_exists else f"제{article_num}조 미존재"
+                reason = "법령 미존재" if not law_exists else f"제{article_num}조{suffix} 미존재"
                 ref_entry["reason"] = reason
                 result.unverified_refs.append(ref_entry)
                 logger.warning(f"[Stage 4] ❌ {key}: {reason} (law_exists={law_exists}, articles={len(articles) if raw and articles else 0})")
@@ -1255,16 +1255,24 @@ def _check_precedent_content_match(drf_summary: str, cited_context: str) -> bool
     return match_count >= 3 or match_ratio >= 0.2
 
 
-def _match_article_num(article_dict: Dict, target_num: int) -> bool:
-    """조문 딕셔너리에서 조문번호가 target_num과 일치하는지 확인"""
+def _match_article_num(article_dict: Dict, target_num: int, suffix: str = "") -> bool:
+    """조문 딕셔너리에서 조문번호가 target_num(+suffix)과 일치하는지 확인.
+    suffix 예: "의2", "의3" (제839조의2 → target_num=839, suffix="의2")
+    DRF 조문번호 형태: "10", "10의4", "839의2", "제10조의4" 등
+    """
     try:
-        num = article_dict.get("조문번호", "")
-        if isinstance(num, (int, float)):
-            return int(num) == target_num
-        if isinstance(num, str):
-            cleaned = num.strip().replace("조", "")
-            if cleaned.isdigit():
-                return int(cleaned) == target_num
+        raw = article_dict.get("조문번호", "")
+        # 정규화: "제", "조" 제거 → "10의4", "839의2", "10" 등
+        num_str = str(raw).strip().replace("제", "").replace("조", "").strip()
+        target_str = f"{target_num}{suffix}" if suffix else str(target_num)
+
+        if num_str == target_str:
+            return True
+
+        # suffix 없이 순수 숫자 비교 (기존 호환)
+        if not suffix and num_str.isdigit():
+            return int(num_str) == target_num
+
     except (ValueError, TypeError):
         pass
     return False
