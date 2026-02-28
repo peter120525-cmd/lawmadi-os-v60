@@ -125,9 +125,9 @@ async def _single_leader_call(
 
     text = _safe_extract_gemini_text(resp).strip()
     text = _remove_think_blocks(text).strip()
-    # 200자 truncate
-    if len(text) > 200:
-        text = text[:197] + "..."
+    # 300자 truncate (프롬프트에서 150자 이내 지시, 여유분 확보)
+    if len(text) > 300:
+        text = text[:297] + "..."
     return text
 
 

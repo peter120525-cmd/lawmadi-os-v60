@@ -2907,8 +2907,12 @@
             transition: all 0.3s;
         }
 
-        .typing-step.active { color: var(--primary); font-weight: 600; }
-        .typing-step.done { color: var(--success); }
+        .typing-step { opacity: 0.4; }
+        .typing-step.active { color: var(--primary); font-weight: 600; opacity: 1; }
+        .typing-step.active .step-icon { animation: spin-icon 1s linear infinite; }
+        @keyframes spin-icon { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .typing-step.done { color: var(--success); opacity: 0.7; }
+        .typing-step.done .step-icon { animation: none; }
 
         .typing-step .step-icon {
             width: 18px;
@@ -7638,7 +7642,11 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                         el.classList.add('active');
                         if (idx > 0) {
                             const prev = document.getElementById(steps[idx - 1].id);
-                            if (prev) { prev.classList.remove('active'); prev.classList.add('done'); }
+                            if (prev) {
+                                prev.classList.remove('active'); prev.classList.add('done');
+                                const icon = prev.querySelector('.step-icon');
+                                if (icon) icon.textContent = '✓';
+                            }
                         }
                     }
                 }, step.delay);
@@ -8078,9 +8086,9 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
             <span class="material-symbols-outlined" aria-hidden="true">account_tree</span>
             <span class="tab-label">리더</span>
         </button>
-        <button class="tab-item" data-tab="clevel" id="tabClevel" role="tab" aria-selected="false" aria-label="C-Level 임원">
+        <button class="tab-item" data-tab="clevel" id="tabClevel" role="tab" aria-selected="false" aria-label="전문가 팀">
             <span class="material-symbols-outlined" aria-hidden="true">groups</span>
-            <span class="tab-label">임원</span>
+            <span class="tab-label">전문가 팀</span>
         </button>
         <button class="tab-item" data-tab="more" id="tabMore" role="tab" aria-selected="false" aria-label="더보기">
             <span class="material-symbols-outlined" aria-hidden="true">more_horiz</span>
