@@ -484,15 +484,16 @@ async def ask(request: Request):
             if _ask_delib_mode == "full" and is_legal:
                 try:
                     gc = _ensure_genai_client_fn(_RUNTIME)
-                    _ask_candidates = []
+                    # NLU가 결정한 리더를 항상 첫 번째 후보로 고정
+                    _routed = {"name": leader_name, "specialty": leader_specialty, "leader_id": analysis.get("leader_id", "")}
+                    _ask_candidates = [_routed]
                     so = _RUNTIME.get("swarm_orchestrator")
                     if so:
                         _d = so.detect_domains(query)
                         _s = so.select_leaders(query, _d)
                         for sl in _s[:3]:
-                            _ask_candidates.append({"name": sl.get("name", "?"), "specialty": sl.get("specialty", ""), "leader_id": sl.get("_id", "")})
-                    if not any(c["name"] == leader_name for c in _ask_candidates):
-                        _ask_candidates.insert(0, {"name": leader_name, "specialty": leader_specialty, "leader_id": analysis.get("leader_id", "")})
+                            if sl.get("name") != leader_name:
+                                _ask_candidates.append({"name": sl.get("name", "?"), "specialty": sl.get("specialty", ""), "leader_id": sl.get("_id", "")})
                     _ask_candidates = _ask_candidates[:3]
                     _delib = await asyncio.wait_for(
                         generate_deliberation(gc, query, _ask_candidates, lang),
