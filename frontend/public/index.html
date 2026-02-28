@@ -7694,12 +7694,12 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
             container.className = 'deliberation-container';
             container.id = 'delib-live-' + Date.now();
             const leaders = payload.leaders || [];
-            const count = leaders.length;
+            const count = leaders.filter(l => l.name !== '서연').length;
             container.innerHTML = _sanitize(
                 `<div class="delib-header">` +
                 `<span class="delib-header-dot"></span>` +
                 `<span>회의 진행 중 — 서연(CSO) 주재</span>` +
-                `<span class="delib-header-count">${count}명 참석</span>` +
+                (count > 1 ? `<span class="delib-header-count">${count}명 참석</span>` : ``) +
                 `</div>`
             );
             // 첫 턴 대기 타이핑 인디케이터
@@ -7807,12 +7807,12 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
             if (!turns || !turns.length) return;
             const container = document.createElement('div');
             container.className = 'deliberation-container';
-            const names = [...new Set(turns.map(t => t.speaker))];
+            const names = [...new Set(turns.map(t => t.speaker))].filter(n => n !== '서연');
             container.innerHTML = _sanitize(
                 `<div class="delib-header">` +
                 `<span class="delib-header-dot"></span>` +
                 `<span>회의 진행 중 — 서연(CSO) 주재</span>` +
-                `<span class="delib-header-count">${names.length}명 참석</span>` +
+                (names.length > 1 ? `<span class="delib-header-count">${names.length}명 참석</span>` : ``) +
                 `</div>`
             );
             turns.forEach((turn, idx) => {
