@@ -126,7 +126,8 @@ jobs:
           adk deploy agent_engine \
             --project=${{ env.PROJECT_ID }} \
             --region=${{ env.REGION }} \
-            --agent_name=lawmadi-os
+            --display_name="Lawmadi OS v60" \
+            .
 
       - name: Get Agent Resource Name
         id: agent
@@ -134,7 +135,7 @@ jobs:
           RESOURCE=$(gcloud ai reasoning-engines list \
             --project=${{ env.PROJECT_ID }} \
             --region=${{ env.REGION }} \
-            --filter="displayName=lawmadi-os" \
+            --filter="displayName='Lawmadi OS v60'" \
             --format="value(name)" \
             --limit=1)
           echo "resource_name=$RESOURCE" >> $GITHUB_OUTPUT
