@@ -271,10 +271,11 @@ def _get_agent():
     global _remote_agent
     if _remote_agent is None:
         import vertexai
+        from vertexai import agent_engines
         project = os.environ.get("GOOGLE_CLOUD_PROJECT", "lawmadi-db")
         location = os.environ.get("GOOGLE_CLOUD_LOCATION", "asia-northeast3")
-        client = vertexai.Client(project=project, location=location)
-        _remote_agent = client.agent_engines.get(agent_engine=AGENT_RESOURCE_NAME)
+        vertexai.init(project=project, location=location)
+        _remote_agent = agent_engines.get(AGENT_RESOURCE_NAME)
     return _remote_agent
 
 
