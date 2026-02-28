@@ -3327,6 +3327,10 @@
         @media (max-width: 768px) {
             .leader-response-header {
                 position: static;
+                max-width: 100%;
+                box-sizing: border-box;
+                gap: 10px;
+                padding: 10px 12px;
             }
             .leader-response-header .leader-avatar-item {
                 flex-direction: column;
@@ -3340,9 +3344,37 @@
             }
             .leader-response-header .leader-name {
                 font-size: 1.4rem;
+                white-space: normal;
+                word-break: keep-all;
             }
             .leader-response-header .leader-specialty {
                 font-size: 0.85rem;
+            }
+        }
+        @media (max-width: 400px) {
+            .leader-response-header {
+                gap: 8px;
+                padding: 8px 10px;
+            }
+            .leader-response-header img {
+                width: 56px;
+                height: 56px;
+                border-radius: 10px;
+            }
+            .leader-response-header .leader-name {
+                font-size: 1.2rem;
+            }
+            .leader-response-header .leader-specialty {
+                font-size: 0.8rem;
+            }
+        }
+        @media (max-width: 360px) {
+            .leader-response-header img {
+                width: 48px;
+                height: 48px;
+            }
+            .leader-response-header .leader-name {
+                font-size: 1.1rem;
             }
         }
 
@@ -4968,13 +5000,13 @@
             background: rgba(15, 23, 42, 0.98);
         }
 
-        /* in-app browser keyboard handling */
-        body.is-inapp-browser.keyboard-open .mobile-tab-bar {
+        /* keyboard handling — 모든 모바일 (인앱 + 일반) */
+        body.keyboard-open .mobile-tab-bar {
             display: none !important;
         }
 
-        body.is-inapp-browser.keyboard-open .input-pipeline-wrapper {
-            margin-bottom: 0;
+        body.keyboard-open .input-pipeline-wrapper {
+            margin-bottom: 0 !important;
             padding-bottom: 8px;
         }
 
@@ -4989,6 +5021,8 @@
             padding: 20px;
             margin: 10px 0 14px 0;
             max-width: 620px;
+            width: 100%;
+            box-sizing: border-box;
             box-shadow: 0 8px 32px rgba(99,102,241,0.12), 0 2px 8px rgba(0,0,0,0.04);
             overflow: hidden;
         }
@@ -5000,6 +5034,7 @@
             background: linear-gradient(90deg, #6366f1, #818cf8, #a5b4fc, #818cf8, #6366f1);
             background-size: 200% 100%;
             animation: shimmerBar 3s linear infinite;
+            border-radius: 20px 20px 0 0;
         }
         @keyframes shimmerBar {
             0% { background-position: 200% 0; }
@@ -5048,6 +5083,7 @@
             margin-bottom: 12px;
             opacity: 0;
             animation: bubbleSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            max-width: 100%;
         }
 
         /* 아바타 래퍼 (online dot용) */
@@ -5127,6 +5163,8 @@
             border-radius: 12px;
             padding: 10px 14px;
             transition: box-shadow 0.2s ease;
+            word-break: break-word;
+            overflow-wrap: break-word;
         }
         .deliberation-bubble .delib-text:hover {
             box-shadow: 0 2px 12px rgba(99,102,241,0.1);
@@ -5200,7 +5238,7 @@
             align-items: center;
             gap: 8px;
             padding: 8px 16px;
-            margin: 4px 0 4px 58px;
+            margin: 4px 0 4px 56px;
             color: #6366f1;
             font-size: 12px;
             opacity: 0;
@@ -5237,6 +5275,8 @@
             padding: 20px;
             margin: 10px 0 14px 0;
             max-width: 620px;
+            width: 100%;
+            box-sizing: border-box;
             box-shadow: 0 8px 32px rgba(217,119,6,0.1), 0 2px 8px rgba(0,0,0,0.04);
             overflow: hidden;
         }
@@ -5248,6 +5288,7 @@
             background: linear-gradient(90deg, #d97706, #f59e0b, #fbbf24, #f59e0b, #d97706);
             background-size: 200% 100%;
             animation: shimmerBar 3s linear infinite;
+            border-radius: 20px 20px 0 0;
         }
         .handoff-container .handoff-header {
             font-size: 13px;
@@ -5265,6 +5306,7 @@
             margin-bottom: 12px;
             opacity: 0;
             animation: bubbleSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            max-width: 100%;
         }
         .handoff-bubble .delib-avatar {
             width: 46px;
@@ -5304,6 +5346,8 @@
             border-radius: 12px;
             padding: 10px 14px;
             transition: box-shadow 0.2s ease;
+            word-break: break-word;
+            overflow-wrap: break-word;
         }
         .handoff-bubble .delib-text:hover {
             box-shadow: 0 2px 12px rgba(217,119,6,0.1);
@@ -5383,9 +5427,14 @@
         @media (max-width: 768px) {
             .deliberation-container, .handoff-container {
                 max-width: 100%;
+                width: 100%;
                 padding: 14px;
                 margin: 6px 0 10px 0;
                 border-radius: 16px;
+                box-sizing: border-box;
+            }
+            .deliberation-container::before, .handoff-container::before {
+                border-radius: 16px 16px 0 0;
             }
             .deliberation-bubble .delib-avatar, .handoff-bubble .delib-avatar {
                 width: 38px;
@@ -5395,11 +5444,19 @@
                 width: 8px; height: 8px;
             }
             .deliberation-bubble .delib-text, .handoff-bubble .delib-text {
-                font-size: 12.5px;
+                font-size: 13px;
                 padding: 8px 11px;
             }
             .deliberation-bubble, .handoff-bubble {
                 gap: 10px;
+            }
+            .deliberation-bubble .delib-body, .handoff-bubble .delib-body {
+                min-width: 0;
+                overflow: hidden;
+            }
+            .delib-typing-indicator {
+                margin-left: 48px;
+                padding: 6px 12px;
             }
         }
         @media (max-width: 400px) {
@@ -5407,9 +5464,12 @@
                 padding: 10px;
                 border-radius: 14px;
             }
+            .deliberation-container::before, .handoff-container::before {
+                border-radius: 14px 14px 0 0;
+            }
             .deliberation-bubble .delib-avatar, .handoff-bubble .delib-avatar {
-                width: 36px;
-                height: 36px;
+                width: 34px;
+                height: 34px;
             }
             .delib-avatar-wrap::after {
                 width: 7px; height: 7px;
@@ -5427,6 +5487,51 @@
                 padding: 7px 10px;
             }
             .delib-time { font-size: 9.5px; }
+            .delib-typing-indicator {
+                margin-left: 44px;
+                padding: 5px 10px;
+                font-size: 11px;
+            }
+        }
+        @media (max-width: 360px) {
+            .deliberation-container, .handoff-container {
+                padding: 8px;
+                border-radius: 12px;
+            }
+            .deliberation-container::before, .handoff-container::before {
+                border-radius: 12px 12px 0 0;
+            }
+            .deliberation-bubble .delib-avatar, .handoff-bubble .delib-avatar {
+                width: 30px;
+                height: 30px;
+            }
+            .delib-avatar-wrap::after {
+                width: 6px; height: 6px;
+            }
+            .deliberation-bubble, .handoff-bubble {
+                gap: 8px;
+                margin-bottom: 8px;
+            }
+            .deliberation-bubble .delib-name, .handoff-bubble .delib-name {
+                font-size: 11.5px;
+            }
+            .deliberation-bubble .delib-text, .handoff-bubble .delib-text {
+                font-size: 12.5px;
+                padding: 6px 8px;
+            }
+            .delib-header-count { font-size: 10px; }
+            .delib-typing-indicator {
+                margin-left: 38px;
+                font-size: 10.5px;
+            }
+            .handoff-arrow { height: 20px; margin: 2px 0 6px 0; }
+        }
+        /* 애니메이션 미지원/감소 모션 폴백 */
+        @media (prefers-reduced-motion: reduce) {
+            .deliberation-bubble, .handoff-bubble {
+                opacity: 1 !important;
+                animation: none !important;
+            }
         }
 
     </style>
@@ -5438,27 +5543,34 @@
 function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(html, {ADD_ATTR: ['target','data-tooltip'], ALLOW_DATA_ATTR: true}) : html; }
 </script>
 <script>
-// In-app browser detection & viewport fix
+// Mobile & In-app browser viewport fix (모바일 전체 + 인앱 브라우저)
 (function() {
     var ua = navigator.userAgent || '';
     var isInApp = /KAKAOTALK|FBAN|FBAV|Instagram|Line\/|NAVER|Snapchat|Twitter|SamsungBrowser|Whale|DaumApps|MicroMessenger|Telegram/i.test(ua);
-    if (isInApp) {
-        document.body.classList.add('is-inapp-browser');
-        // Fix viewport height for in-app browsers that miscalculate dvh/vh
-        function setVH() {
-            var vh = window.innerHeight;
-            document.documentElement.style.setProperty('--app-height', vh + 'px');
-            document.body.style.height = vh + 'px';
+    var isMobile = /Android|iPhone|iPad|iPod/i.test(ua) || window.innerWidth <= 768;
+
+    if (isInApp) document.body.classList.add('is-inapp-browser');
+
+    if (isInApp || isMobile) {
+        // visualViewport 우선, 없으면 innerHeight 폴백
+        function setAppHeight() {
+            var h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+            document.documentElement.style.setProperty('--app-height', h + 'px');
+            document.body.style.height = h + 'px';
         }
-        setVH();
-        window.addEventListener('resize', setVH);
+        setAppHeight();
+        window.addEventListener('resize', setAppHeight);
+        window.addEventListener('orientationchange', function() {
+            setTimeout(setAppHeight, 150);
+        });
+
         // Virtual keyboard detection & auto-scroll
         if (window.visualViewport) {
+            var baseHeight = window.innerHeight;
             window.visualViewport.addEventListener('resize', function() {
-                var kbOpen = window.visualViewport.height < window.innerHeight * 0.75;
+                setAppHeight();
+                var kbOpen = window.visualViewport.height < baseHeight * 0.75;
                 document.body.classList.toggle('keyboard-open', kbOpen);
-                document.body.style.height = window.visualViewport.height + 'px';
-                // 키보드 열릴 때 대화 영역 자동 스크롤
                 if (kbOpen) {
                     var cv = document.querySelector('.conversation-viewport');
                     if (cv) cv.scrollTop = cv.scrollHeight;
