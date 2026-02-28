@@ -2085,13 +2085,14 @@
             }
 
             /* ── v60.1: 헤더 모바일 최적화 ── */
-            .header-right > div:first-child {
+            .header-right > div:first-of-type {
                 display: none;
             }
 
             .header-right {
-                gap: 8px;
+                gap: 6px;
                 flex-shrink: 0;
+                overflow: visible;
             }
 
             .header-left {
@@ -2100,12 +2101,7 @@
             }
 
             .header-left .badge-base {
-                font-size: 0;
-                padding: 6px;
-            }
-
-            .header-left .badge-base .material-symbols-outlined {
-                font-size: 1.1rem;
+                display: none;
             }
 
             .dark-toggle {
@@ -3127,6 +3123,22 @@
            Responsive — 360px (Extra Small Mobile)
         ═══════════════════════════════════════════════════ */
         @media (max-width: 360px) {
+            header.top-status {
+                padding: 0 6px;
+            }
+            .header-right {
+                gap: 4px;
+            }
+            .dark-toggle {
+                min-width: 32px;
+                min-height: 32px;
+                padding: 4px;
+            }
+            .lang-toggle {
+                width: 28px;
+                height: 28px;
+                font-size: 0.65rem;
+            }
         }
 
         /* 리더 응답 프로필 헤더 */
@@ -4757,11 +4769,11 @@
             .example-card-icon { font-size: 1.6rem; }
             .example-card-title { font-size: 1rem; font-weight: 700; }
 
-            /* 다크모드 토글 터치 영역 확대 (44x44px 최소) */
+            /* 다크모드 토글 터치 영역 확대 (36x36px — 헤더 잘림 방지) */
             .dark-toggle {
-                min-width: 44px;
-                min-height: 44px;
-                padding: 10px;
+                min-width: 36px;
+                min-height: 36px;
+                padding: 6px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
