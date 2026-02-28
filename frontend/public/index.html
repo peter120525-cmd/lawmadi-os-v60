@@ -2098,15 +2098,18 @@
             .header-right {
                 gap: 6px;
                 flex-shrink: 0;
-                overflow: visible;
             }
 
             .header-left {
                 min-width: 0;
-                overflow: hidden;
+                flex: 1;
             }
 
             .header-left .badge-base {
+                display: none;
+            }
+
+            .header-left #newChatBtn {
                 display: none;
             }
 
