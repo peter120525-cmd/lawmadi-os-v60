@@ -11,6 +11,7 @@ import json
 import logging
 import asyncio
 import os
+import re
 from typing import AsyncGenerator, Dict, List, Optional
 
 from core.model_fallback import get_model, on_quota_error, is_quota_error
@@ -125,6 +126,8 @@ async def _single_leader_call(
 
     text = _safe_extract_gemini_text(resp).strip()
     text = _remove_think_blocks(text).strip()
+    # "변호사" 명칭 사용 금지 — 후처리 안전장치
+    text = re.sub(r'변호사', '전문가', text)
     # 300자 truncate (프롬프트에서 150자 이내 지시, 여유분 확보)
     if len(text) > 300:
         text = text[:297] + "..."
@@ -215,6 +218,7 @@ async def generate_deliberation(
             f"{selected_name}님에게 의견을 요청하세요. "
             f"반드시 100자 이상 150자 이내로 작성하세요. "
             f"존댓말, 따뜻하고 전문적인 톤으로 자연스럽게 말하세요. "
+            f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
             f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
         )
         try:
@@ -237,12 +241,13 @@ async def generate_deliberation(
         t2_prompt = (
             f"사용자 질문: {query[:300]}\n"
             f"CSO 서연이 당신에게 의견을 요청했습니다.\n\n"
-            f"당신은 {selected_name}({selected_specialty} 전문)입니다. "
+            f"당신은 {selected_name}({selected_specialty} 전문 리더)입니다. "
             f"자기 분야의 전문 지식을 바탕으로 이 질문에 어떻게 도움을 줄 수 있는지 "
             f"구체적으로 설명하고, 자신감 있게 돕겠다고 답하세요. "
             f"반드시 100자 이상 150자 이내로 작성하세요. "
             f"존댓말, 전문적이고 따뜻한 톤으로 자연스럽게 말하세요. "
             f"과장된 자기소개(CLO급, 유니콘 등)는 하지 마세요. 겸손하고 실질적으로 말하세요. "
+            f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
             f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
         )
         t3_prompt = (
@@ -252,6 +257,7 @@ async def generate_deliberation(
             f"사용자에게 안심하라는 말도 덧붙이세요. "
             f"반드시 100자 이상 150자 이내로 작성하세요. "
             f"존댓말, 따뜻하고 신뢰감 있는 톤으로 자연스럽게 말하세요. "
+            f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
             f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
         )
         results = await asyncio.gather(
@@ -347,6 +353,7 @@ async def generate_handoff(
         f"그리고 {new_name}님이 더 잘 도와드릴 수 있는 이유를 설명하세요. "
         f"반드시 100자 이상 150자 이내로 작성하세요. "
         f"존댓말, 따뜻한 톤으로 자연스럽게 말하세요. "
+        f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
         f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
     )
     t2_prompt = (
@@ -581,6 +588,7 @@ async def generate_handoff_stream(
         f"그리고 {new_name}님이 더 잘 도와드릴 수 있는 이유를 설명하세요. "
         f"반드시 100자 이상 150자 이내로 작성하세요. "
         f"존댓말, 따뜻한 톤으로 자연스럽게 말하세요. "
+        f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
         f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
     )
     t1_fallback = f"이 질문은 {new_specialty} 분야라 {new_name}님께 연결해 드리겠습니다."
