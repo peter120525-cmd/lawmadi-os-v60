@@ -350,34 +350,40 @@ def _handle_ask(request, ch: dict):
 
     try:
         agent = _get_agent()
-
-        # query() 동기 호출 — Agent Engine이 최종 응답을 반환
-        raw = agent.query(user_id=user_id, message=query)
-        logger.info(f"Agent raw response type={type(raw).__name__}")
-
-        # 응답 파싱: str, dict, 또는 ADK Event 객체
         response_text = ""
         leader_id, leader_name = "", ""
 
-        if isinstance(raw, str):
-            response_text = raw
-        elif isinstance(raw, dict):
-            response_text = raw.get("response", raw.get("text", raw.get("output", "")))
-            leader_id = raw.get("leader_id", raw.get("leader", ""))
-            leader_name = raw.get("leader_name", "")
-            if not response_text:
-                # dict 전체를 문자열로
-                response_text = json.dumps(raw, ensure_ascii=False)
-        elif hasattr(raw, "content"):
-            # ADK Event-like object
-            if raw.content and hasattr(raw.content, "parts"):
-                for part in raw.content.parts:
-                    if hasattr(part, "text") and part.text:
-                        response_text += part.text
-        else:
-            response_text = str(raw) if raw else ""
+        # stream_query 동기 제너레이터 사용
+        for event in agent.stream_query(user_id=user_id, message=query):
+            # 디버그: 이벤트 구조 로깅
+            logger.info(f"Event type={type(event).__name__}, attrs={[a for a in dir(event) if not a.startswith('_')][:15]}")
 
-        logger.info(f"Parsed response: len={len(response_text)}, leader={leader_id}")
+            # Case 1: .content.parts[].text (Gemini 표준)
+            if hasattr(event, "content") and event.content:
+                parts = getattr(event.content, "parts", []) or []
+                for part in parts:
+                    txt = getattr(part, "text", None)
+                    if txt:
+                        response_text += txt
+                    # function_response에서 leader_id 추출
+                    fr = getattr(part, "function_response", None)
+                    if fr:
+                        resp_data = getattr(fr, "response", None)
+                        if isinstance(resp_data, dict) and "leader_id" in resp_data:
+                            leader_id = resp_data.get("leader_id", "")
+                            leader_name = resp_data.get("leader_name", "")
+
+            # Case 2: dict 형태 이벤트
+            elif isinstance(event, dict):
+                txt = event.get("text", event.get("response", event.get("output", "")))
+                if txt:
+                    response_text += str(txt)
+
+            # Case 3: str 형태
+            elif isinstance(event, str):
+                response_text += event
+
+        logger.info(f"Final response: len={len(response_text)}, leader={leader_id}")
 
         elapsed = round(time.time() - start_time, 2)
         _agent_cb.success()
@@ -465,34 +471,35 @@ def _handle_ask_stream(request, ch: dict):
             # SSE: deliberation_start
             yield f"event: deliberation_start\ndata: {json.dumps({'status': 'starting'})}\n\n"
 
-            # 동기 query() 호출 후 결과를 SSE로 전달
             agent = _get_agent()
-            raw = agent.query(user_id=user_id, message=query)
-
             response_text = ""
-            if isinstance(raw, str):
-                response_text = raw
-            elif isinstance(raw, dict):
-                response_text = raw.get("response", raw.get("text", raw.get("output", "")))
-                if not response_text:
-                    response_text = json.dumps(raw, ensure_ascii=False)
-            elif hasattr(raw, "content") and raw.content:
-                for part in raw.content.parts:
-                    if hasattr(part, "text") and part.text:
-                        response_text += part.text
-            else:
-                response_text = str(raw) if raw else ""
+            leader_id, leader_name = "", ""
 
-            # SSE: content (single chunk)
-            yield f"data: {json.dumps({'text': response_text}, ensure_ascii=False)}\n\n"
+            for event in agent.stream_query(user_id=user_id, message=query):
+                if hasattr(event, "content") and event.content:
+                    parts = getattr(event.content, "parts", []) or []
+                    for part in parts:
+                        txt = getattr(part, "text", None)
+                        if txt:
+                            response_text += txt
+                            # SSE: content chunk
+                            yield f"data: {json.dumps({'text': txt}, ensure_ascii=False)}\n\n"
+                        fr = getattr(part, "function_response", None)
+                        if fr:
+                            resp_data = getattr(fr, "response", None)
+                            if isinstance(resp_data, dict) and "leader_id" in resp_data:
+                                leader_id = resp_data.get("leader_id", "")
+                                leader_name = resp_data.get("leader_name", "")
+                elif isinstance(event, (str, dict)):
+                    txt = event if isinstance(event, str) else event.get("text", "")
+                    if txt:
+                        response_text += str(txt)
+                        yield f"data: {json.dumps({'text': str(txt)}, ensure_ascii=False)}\n\n"
 
             elapsed = round(time.time() - start_time, 2)
             _agent_cb.success()
             _record_latency(elapsed * 1000)
 
-            if isinstance(raw, dict):
-                leader_id = raw.get("leader_id", raw.get("leader", ""))
-                leader_name = raw.get("leader_name", "")
             if not leader_id:
                 leader_id = _extract_leader_from_response(response_text)
 
@@ -559,21 +566,21 @@ def _handle_ask_expert(request, ch: dict):
 
     try:
         agent = _get_agent()
-        raw = agent.query(user_id=user_id, message=expert_query)
-
         response_text = ""
-        if isinstance(raw, str):
-            response_text = raw
-        elif isinstance(raw, dict):
-            response_text = raw.get("response", raw.get("text", raw.get("output", "")))
-            if not response_text:
-                response_text = json.dumps(raw, ensure_ascii=False)
-        elif hasattr(raw, "content") and raw.content:
-            for part in raw.content.parts:
-                if hasattr(part, "text") and part.text:
-                    response_text += part.text
-        else:
-            response_text = str(raw) if raw else ""
+
+        for event in agent.stream_query(user_id=user_id, message=expert_query):
+            if hasattr(event, "content") and event.content:
+                parts = getattr(event.content, "parts", []) or []
+                for part in parts:
+                    txt = getattr(part, "text", None)
+                    if txt:
+                        response_text += txt
+            elif isinstance(event, str):
+                response_text += event
+            elif isinstance(event, dict):
+                txt = event.get("text", event.get("response", ""))
+                if txt:
+                    response_text += str(txt)
 
         elapsed = round(time.time() - start_time, 2)
         _agent_cb.success()
