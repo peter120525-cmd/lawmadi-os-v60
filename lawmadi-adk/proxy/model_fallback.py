@@ -53,6 +53,17 @@ def on_quota_error() -> str:
         return MODEL_CHAIN[_current_index]
 
 
+def get_status() -> dict:
+    """Return current model chain status for metrics endpoint."""
+    with _lock:
+        return {
+            "current_model": MODEL_CHAIN[_current_index],
+            "model_index": _current_index,
+            "model_chain": list(MODEL_CHAIN),
+            "downgraded": _current_index > 0,
+        }
+
+
 def is_quota_error(e: Exception) -> bool:
     """Detect 429/ResourceExhausted errors."""
     err_msg = str(e).lower()

@@ -22,6 +22,7 @@ from tools.drf_tools import (
 )
 from tools.rag_tools import get_leader_context, get_leader_law_boost
 from tools.verify import verify_law_references, strip_unverified_sentences
+from tools.deliberation import generate_deliberation, generate_handoff
 from prompts.system_instruction import SYSTEM_INSTRUCTION
 
 
@@ -52,5 +53,8 @@ root_agent = Agent(
         # 4. 법률 인용 검증
         verify_law_references,
         strip_unverified_sentences,
+        # 5. 리더 협의 & 인수인계
+        generate_deliberation,
+        generate_handoff,
     ],
 )
