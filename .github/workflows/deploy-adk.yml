@@ -121,23 +121,24 @@ jobs:
           pip install google-adk google-cloud-aiplatform[agent_engines]
 
       - name: Deploy Agent to Vertex AI
+        id: agent
         run: |
           cd lawmadi-adk
-          adk deploy agent_engine \
+          OUTPUT=$(adk deploy agent_engine \
             --project=${{ env.PROJECT_ID }} \
             --region=${{ env.REGION }} \
             --display_name="Lawmadi OS v60" \
-            .
-
-      - name: Get Agent Resource Name
-        id: agent
-        run: |
-          RESOURCE=$(gcloud ai reasoning-engines list \
-            --project=${{ env.PROJECT_ID }} \
-            --region=${{ env.REGION }} \
-            --filter="displayName='Lawmadi OS v60'" \
-            --format="value(name)" \
-            --limit=1)
+            . 2>&1) || true
+          echo "$OUTPUT"
+          # adk deploy 출력에서 resource name 파싱
+          RESOURCE=$(echo "$OUTPUT" | grep -oP 'projects/[^\s]+/reasoningEngines/\d+' | head -1)
+          if [ -z "$RESOURCE" ]; then
+            # REST API로 조회 (fallback)
+            TOKEN=$(gcloud auth print-access-token)
+            RESOURCE=$(curl -s -H "Authorization: Bearer $TOKEN" \
+              "https://${{ env.REGION }}-aiplatform.googleapis.com/v1/projects/${{ env.PROJECT_ID }}/locations/${{ env.REGION }}/reasoningEngines" \
+              | python3 -c "import sys,json; engines=json.load(sys.stdin).get('reasoningEngines',[]); print(engines[0]['name'] if engines else '')")
+          fi
           echo "resource_name=$RESOURCE" >> $GITHUB_OUTPUT
           echo "Agent Engine: $RESOURCE"
 
