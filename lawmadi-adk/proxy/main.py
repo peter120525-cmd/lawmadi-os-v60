@@ -1,10 +1,15 @@
 """
-Lawmadi OS ADK — Cloud Functions Gen2 프록시.
+Lawmadi OS ADK — Cloud Functions Gen2 proxy.
 
-Firebase Hosting → Cloud Functions → Vertex AI Agent Engine
-무료 tier 범위 내에서 작동.
+Firebase Hosting -> Cloud Functions -> Vertex AI Agent Engine
 
-배포:
+Features:
+  - Model fallback (quota error auto-switch)
+  - Agent Engine circuit breaker
+  - IP-based sliding window rate limiting
+  - Structured audit logging (Cloud Logging)
+
+Deploy:
   gcloud functions deploy lawmadi-proxy \
     --gen2 \
     --runtime python312 \
@@ -21,22 +26,30 @@ Firebase rewrite (firebase.json):
   ]
 """
 
-import os
+import hashlib
 import hmac
 import json
-import asyncio
 import logging
+import os
 import re
+import threading
 import time
+
 import functions_framework
+
+from model_fallback import get_model, is_quota_error, on_quota_error
 
 logger = logging.getLogger("LawmadiProxy")
 
-# Agent Engine 리소스 (배포 후 설정)
+# ---------------------------------------------------------------------------
+# Agent Engine
+# ---------------------------------------------------------------------------
 AGENT_RESOURCE_NAME = os.environ.get("AGENT_RESOURCE_NAME", "")
 _remote_agent = None
 
-# ── CORS 허용 도메인 (메인 앱과 동일) ──
+# ---------------------------------------------------------------------------
+# CORS
+# ---------------------------------------------------------------------------
 _ALLOWED_ORIGINS = {
     "https://lawmadi.com",
     "https://www.lawmadi.com",
@@ -50,23 +63,22 @@ if _extra:
 
 
 def _get_cors_origin(request) -> str:
-    """요청 Origin이 허용 목록에 있으면 반환, 아니면 빈 문자열."""
     origin = request.headers.get("Origin", "")
-    if origin in _ALLOWED_ORIGINS:
-        return origin
-    return ""
+    return origin if origin in _ALLOWED_ORIGINS else ""
 
 
 def _cors_headers(request) -> dict:
-    """CORS 응답 헤더 생성."""
     origin = _get_cors_origin(request)
     if origin:
         return {"Access-Control-Allow-Origin": origin, "Vary": "Origin"}
     return {}
 
 
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
 def _verify_auth(request) -> bool:
-    """Bearer 토큰 인증 검증. INTERNAL_API_KEY 미설정 시 통과(개발 환경)."""
+    """Bearer token auth. Passes if INTERNAL_API_KEY not set (dev mode)."""
     api_key = os.environ.get("INTERNAL_API_KEY", "").strip()
     if not api_key:
         return True
@@ -79,8 +91,109 @@ def _verify_auth(request) -> bool:
     return hmac.compare_digest(token, api_key)
 
 
+# ---------------------------------------------------------------------------
+# Agent Engine circuit breaker (inline, separate from DRF CB)
+# ---------------------------------------------------------------------------
+class _AgentCB:
+    """Lightweight circuit breaker for Agent Engine calls."""
+
+    def __init__(self, threshold: int = 3, recovery: int = 30):
+        self._lock = threading.Lock()
+        self._failures = 0
+        self._threshold = threshold
+        self._recovery = recovery
+        self._state = "CLOSED"
+        self._last_fail: float = 0.0
+
+    def allow(self) -> bool:
+        with self._lock:
+            if self._state == "OPEN":
+                if time.time() - self._last_fail >= self._recovery:
+                    self._state = "HALF_OPEN"
+                    return True
+                return False
+            return True
+
+    def success(self) -> None:
+        with self._lock:
+            self._failures = 0
+            self._state = "CLOSED"
+
+    def failure(self) -> None:
+        with self._lock:
+            self._failures += 1
+            self._last_fail = time.time()
+            if self._failures >= self._threshold:
+                self._state = "OPEN"
+
+
+_agent_cb = _AgentCB(threshold=3, recovery=30)
+
+# ---------------------------------------------------------------------------
+# Rate limiter (IP hash sliding window, instance-scoped)
+# ---------------------------------------------------------------------------
+_RATE_WINDOW = int(os.environ.get("RATE_LIMIT_WINDOW", str(4 * 3600)))  # 4h
+_RATE_MAX = int(os.environ.get("RATE_LIMIT_MAX", "100"))
+_rate_store: dict = {}  # ip_hash -> [timestamps]
+_rate_lock = threading.Lock()
+_RATE_STORE_MAX = 5000
+
+
+def _ip_hash(request) -> str:
+    """Hash client IP for privacy-safe rate limiting."""
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown")
+    ip = ip.split(",")[0].strip()
+    return hashlib.sha256(ip.encode()).hexdigest()[:16]
+
+
+def _check_rate_limit(ip_h: str) -> bool:
+    """Return True if request is allowed, False if rate-limited."""
+    now = time.time()
+    cutoff = now - _RATE_WINDOW
+    with _rate_lock:
+        # Stale cleanup
+        if len(_rate_store) > _RATE_STORE_MAX:
+            stale_keys = [
+                k for k, ts in _rate_store.items()
+                if not ts or ts[-1] < cutoff
+            ]
+            for k in stale_keys:
+                del _rate_store[k]
+
+        timestamps = _rate_store.get(ip_h, [])
+        timestamps = [t for t in timestamps if t > cutoff]
+
+        if len(timestamps) >= _RATE_MAX:
+            _rate_store[ip_h] = timestamps
+            return False
+
+        timestamps.append(now)
+        _rate_store[ip_h] = timestamps
+        return True
+
+
+# ---------------------------------------------------------------------------
+# Audit logging (structured JSON via print -> Cloud Logging)
+# ---------------------------------------------------------------------------
+def _audit(event_type: str, payload: dict) -> None:
+    """Emit structured audit log. Fail-soft."""
+    try:
+        entry = {
+            "severity": "INFO",
+            "event": event_type,
+            "timestamp": time.time(),
+            **payload,
+        }
+        print(json.dumps(entry, ensure_ascii=False, default=str))
+    except Exception:
+        pass
+
+
+# ---------------------------------------------------------------------------
+# Agent Engine client
+# ---------------------------------------------------------------------------
 def _get_agent():
-    """Lazy init: Agent Engine 클라이언트."""
+    """Lazy init: Agent Engine client."""
     global _remote_agent
     if _remote_agent is None:
         import vertexai
@@ -92,18 +205,19 @@ def _get_agent():
 
 
 def _extract_leader_from_response(text: str) -> str:
-    """응답 텍스트에서 리더 정보 추출 시도."""
-    # Agent가 tool_call 결과로 리더 ID를 포함했는지 확인
     m = re.search(r"\b(L\d{2})\b", text[:200])
     return m.group(1) if m else ""
 
 
+# ---------------------------------------------------------------------------
+# Main handler
+# ---------------------------------------------------------------------------
 @functions_framework.http
 def handle_ask(request):
-    """POST /api/ask → Agent Engine 쿼리.
+    """POST /api/ask -> Agent Engine query.
 
-    요청 body: {"query": "...", "user_id": "..."}
-    응답: {"response": "...", "leader": "...", "status": "ok", "meta": {...}}
+    Request body: {"query": "...", "user_id": "..."}
+    Response: {"response": "...", "leader": "...", "status": "ok", "meta": {...}}
     """
     ch = _cors_headers(request)
 
@@ -123,12 +237,25 @@ def handle_ask(request):
             {**ch, "Content-Type": "application/json"},
         )
 
-    # 인증 검증
+    # Auth
     if not _verify_auth(request):
         return (
             json.dumps({"status": "error", "response": "인증 실패"}),
             401,
             {**ch, "Content-Type": "application/json"},
+        )
+
+    # Rate limit (after auth, before Agent Engine)
+    ip_h = _ip_hash(request)
+    if not _check_rate_limit(ip_h):
+        _audit("rate_limited", {"ip_hash": ip_h})
+        return (
+            json.dumps({
+                "status": "error",
+                "response": "요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.",
+            }, ensure_ascii=False),
+            429,
+            {**ch, "Content-Type": "application/json; charset=utf-8"},
         )
 
     try:
@@ -146,13 +273,28 @@ def handle_ask(request):
 
     user_id = body.get("user_id", "anonymous")
     start_time = time.time()
+    model = get_model()
+
+    # Circuit breaker check
+    if not _agent_cb.allow():
+        _audit("agent_cb_open", {"query": query[:2000]})
+        return (
+            json.dumps({
+                "status": "error",
+                "response": "서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요.",
+            }, ensure_ascii=False),
+            503,
+            {**ch, "Content-Type": "application/json; charset=utf-8"},
+        )
 
     try:
         agent = _get_agent()
 
-        # Agent Engine 쿼리
+        # Agent Engine query (sync streaming)
         response_text = ""
         tool_calls_info = []
+
+        import asyncio
 
         async def _query():
             nonlocal response_text
@@ -164,7 +306,6 @@ def handle_ask(request):
                     for part in event.content.parts:
                         if hasattr(part, "text") and part.text:
                             response_text += part.text
-                        # tool call 결과에서 리더 정보 추출
                         if hasattr(part, "function_response"):
                             fr = part.function_response
                             if hasattr(fr, "response") and isinstance(fr.response, dict):
@@ -174,8 +315,9 @@ def handle_ask(request):
         asyncio.run(_query())
 
         elapsed = round(time.time() - start_time, 2)
+        _agent_cb.success()
 
-        # classify_query tool 결과에서 리더 정보 추출
+        # Extract leader info from classify_query tool result
         leader_id = ""
         leader_name = ""
         for info in tool_calls_info:
@@ -192,12 +334,24 @@ def handle_ask(request):
             "response": response_text,
             "leader": leader_id,
             "meta": {
-                "model": "gemini-2.5-flash",
+                "model": model,
                 "elapsed_seconds": elapsed,
                 "engine": "vertex-ai-agent-engine",
                 "leader_name": leader_name,
             },
         }
+
+        # Audit: success
+        _audit("query_success", {
+            "query": query[:2000],
+            "response_sha256": hashlib.sha256(
+                response_text.encode()
+            ).hexdigest()[:16],
+            "leader": leader_id,
+            "status": "ok",
+            "latency_ms": int(elapsed * 1000),
+            "model": model,
+        })
 
         return (
             json.dumps(result, ensure_ascii=False),
@@ -206,18 +360,45 @@ def handle_ask(request):
         )
 
     except Exception as e:
-        logger.error(f"Agent Engine 쿼리 실패: {e}")
         elapsed = round(time.time() - start_time, 2)
+        _agent_cb.failure()
+
+        # Model fallback on quota error
+        if is_quota_error(e):
+            new_model = on_quota_error()
+            logger.warning(f"Quota error, switched to {new_model}: {e}")
+            _audit("quota_error", {
+                "query": query[:2000],
+                "model": model,
+                "new_model": new_model,
+                "latency_ms": int(elapsed * 1000),
+            })
+            return (
+                json.dumps({
+                    "status": "error",
+                    "response": "모델 할당량 초과로 전환 중입니다. 다시 시도해주세요.",
+                    "meta": {"model": new_model, "elapsed_seconds": elapsed},
+                }, ensure_ascii=False),
+                503,
+                {**ch, "Content-Type": "application/json; charset=utf-8"},
+            )
+
+        logger.error(f"Agent Engine query failed: {e}")
+
+        # Audit: failure
+        _audit("query_error", {
+            "query": query[:2000],
+            "error": str(e)[:500],
+            "latency_ms": int(elapsed * 1000),
+            "model": model,
+        })
 
         return (
-            json.dumps(
-                {
-                    "status": "error",
-                    "response": "죄송합니다. 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
-                    "meta": {"error": str(e), "elapsed_seconds": elapsed},
-                },
-                ensure_ascii=False,
-            ),
+            json.dumps({
+                "status": "error",
+                "response": "죄송합니다. 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+                "meta": {"error": str(e), "elapsed_seconds": elapsed},
+            }, ensure_ascii=False),
             500,
             {**ch, "Content-Type": "application/json; charset=utf-8"},
         )
