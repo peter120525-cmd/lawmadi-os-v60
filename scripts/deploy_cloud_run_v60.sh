@@ -54,7 +54,7 @@ gcloud run deploy ${SERVICE_NAME} \
   --cpu 2 \
   --timeout 300 \
   --concurrency 15 \
-  --min-instances 1 \
+  --min-instances 0 \
   --max-instances 10 \
   --port 8080 \
   --set-env-vars "ENABLE_LAWMADILM=false,LAWMADILM_TIMEOUT=3" \
