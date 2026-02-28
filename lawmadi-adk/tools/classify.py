@@ -808,6 +808,37 @@ def _name_detect(query: str) -> Optional[str]:
 # PUBLIC API: classify_query  (ADK FunctionTool target)
 # ====================================================================
 
+def _build_deliberation(leader_id: str, leader_name: str) -> List[Dict[str, str]]:
+    """Build 3-turn deliberation context (CSO -> Leader -> CSO assignment).
+
+    Simulates internal leadership discussion before answering.
+    """
+    return [
+        {
+            "speaker": "CSO 서연",
+            "message": (
+                f"새로운 법률 상담 요청이 접수되었습니다. "
+                f"분석 결과, {leader_name} 리더({leader_id})님의 전문 영역에 해당합니다. "
+                f"{leader_name} 리더님, 검토 부탁드립니다."
+            ),
+        },
+        {
+            "speaker": f"{leader_name} 리더",
+            "message": (
+                f"네, 확인했습니다. 해당 질문은 제 담당 영역입니다. "
+                f"관련 법령과 판례를 확인한 후 답변을 준비하겠습니다."
+            ),
+        },
+        {
+            "speaker": "CSO 서연",
+            "message": (
+                f"감사합니다. {leader_name} 리더({leader_id})님께 본 건을 공식 배정합니다. "
+                f"정확한 법률 근거에 기반하여 답변해 주세요."
+            ),
+        },
+    ]
+
+
 def classify_query(query: str) -> dict:
     """Classify a Korean legal query into the appropriate expert leader.
 
@@ -822,10 +853,12 @@ def classify_query(query: str) -> dict:
 
     Returns:
         dict with keys:
-            leader_id   (str):  e.g. "L08"
-            leader_name (str):  e.g. "온유"
-            method      (str):  "name" | "nlu" | "keyword" | "fallback"
-            confidence  (float): 0.0 ~ 1.0
+            leader_id    (str):  e.g. "L08"
+            leader_name  (str):  e.g. "온유"
+            method       (str):  "name" | "nlu" | "keyword" | "fallback"
+            confidence   (float): 0.0 ~ 1.0
+            deliberation (list[dict]): 3-turn internal discussion context
+                         (empty list for fallback/non-legal queries)
     """
     if not query or not query.strip():
         return {
@@ -833,6 +866,7 @@ def classify_query(query: str) -> dict:
             "leader_name": LEADER_NAMES["L60"],
             "method": "fallback",
             "confidence": 0.0,
+            "deliberation": [],
         }
 
     query = query.strip()
@@ -840,37 +874,44 @@ def classify_query(query: str) -> dict:
     # --- 1) Name matching (highest confidence) ---
     name_id = _name_detect(query)
     if name_id:
+        name = LEADER_NAMES.get(name_id, "")
         return {
             "leader_id": name_id,
-            "leader_name": LEADER_NAMES.get(name_id, ""),
+            "leader_name": name,
             "method": "name",
             "confidence": 1.0,
+            "deliberation": _build_deliberation(name_id, name),
         }
 
     # --- 2) NLU pattern matching ---
     nlu_id = _nlu_detect_intent(query)
     if nlu_id:
+        name = LEADER_NAMES.get(nlu_id, "")
         return {
             "leader_id": nlu_id,
-            "leader_name": LEADER_NAMES.get(nlu_id, ""),
+            "leader_name": name,
             "method": "nlu",
             "confidence": 0.9,
+            "deliberation": _build_deliberation(nlu_id, name),
         }
 
     # --- 3) Keyword matching ---
     kw_id = _keyword_detect(query)
     if kw_id:
+        name = LEADER_NAMES.get(kw_id, "")
         return {
             "leader_id": kw_id,
-            "leader_name": LEADER_NAMES.get(kw_id, ""),
+            "leader_name": name,
             "method": "keyword",
             "confidence": 0.7,
+            "deliberation": _build_deliberation(kw_id, name),
         }
 
-    # --- 4) Fallback -> L60 (CCO) ---
+    # --- 4) Fallback -> L60 (CCO) — no deliberation for non-legal queries ---
     return {
         "leader_id": "L60",
         "leader_name": LEADER_NAMES["L60"],
         "method": "fallback",
         "confidence": 0.3,
+        "deliberation": [],
     }

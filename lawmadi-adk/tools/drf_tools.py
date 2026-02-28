@@ -14,6 +14,8 @@ from typing import Dict, List, Optional
 
 import requests
 
+from tools.circuit_breaker import drf_circuit_breaker
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -43,11 +45,14 @@ def _request_with_retry(
     timeout: int = _TIMEOUT_SEC,
 ) -> Optional[dict]:
     """
-    HTTP GET with exponential backoff retry.
+    HTTP GET with exponential backoff retry + circuit breaker.
 
     Returns parsed JSON dict on success, raises RuntimeError on exhausted retries.
     Backoff schedule: 0.5s, 1.0s, 2.0s
     """
+    if not drf_circuit_breaker.allow_request():
+        raise RuntimeError("DRF circuit breaker OPEN — requests blocked")
+
     last_err: Optional[Exception] = None
     for attempt in range(retries):
         try:
@@ -57,9 +62,11 @@ def _request_with_retry(
             content_type = r.headers.get("Content-Type", "")
             if "json" not in content_type.lower():
                 raise RuntimeError(f"Unexpected Content-Type: {content_type}")
+            drf_circuit_breaker.record_success()
             return r.json()
         except Exception as e:
             last_err = e
+            drf_circuit_breaker.record_failure()
             if attempt < retries - 1:
                 wait = (2 ** attempt) * 0.5  # 0.5s, 1s, 2s
                 logger.warning(

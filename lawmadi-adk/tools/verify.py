@@ -9,7 +9,6 @@ Key functions:
 - strip_unverified_sentences(response_text, unverified_refs) -- remove sentences with bad refs
 """
 
-import asyncio
 import concurrent.futures
 import logging
 import os
@@ -17,6 +16,8 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
+
+from tools.circuit_breaker import drf_circuit_breaker
 
 logger = logging.getLogger("LawmadiADK.Verify")
 
@@ -454,22 +455,26 @@ def _extract_prec_refs(text: str) -> List[str]:
 # Core verification function (sync -- runs DRF calls in threads)
 # ---------------------------------------------------------------------------
 
-async def _verify_single_law(law_name: str) -> Tuple[str, Optional[Any]]:
-    """Fetch law articles for a single law name in a thread."""
+def _fetch_law_safe(law_name: str) -> Tuple[str, Optional[Any]]:
+    """Fetch law articles (sync, for ThreadPoolExecutor)."""
     try:
-        raw = await asyncio.to_thread(_get_law_articles, law_name)
+        raw = _get_law_articles(law_name)
+        drf_circuit_breaker.record_success()
         return law_name, raw
     except Exception as e:
+        drf_circuit_breaker.record_failure()
         logger.warning(f"[Verify] Failed to fetch '{law_name}': {e}")
         return law_name, None
 
 
-async def _verify_single_prec(case_no: str) -> Tuple[str, Optional[Dict], Optional[Exception]]:
-    """Fetch precedent data for a single case number in a thread."""
+def _fetch_prec_safe(case_no: str) -> Tuple[str, Optional[Dict], Optional[Exception]]:
+    """Fetch precedent data (sync, for ThreadPoolExecutor)."""
     try:
-        raw = await asyncio.to_thread(_drf_prec_search, case_no)
+        raw = _drf_prec_search(case_no)
+        drf_circuit_breaker.record_success()
         return case_no, raw, None
     except Exception as e:
+        drf_circuit_breaker.record_failure()
         return case_no, None, e
 
 
@@ -537,17 +542,24 @@ def verify_law_references(response_text: str) -> dict:
             "summary": "DRF API 키(LAWGO_DRF_OC)가 설정되지 않아 검증을 수행할 수 없습니다.",
         }
 
-    # ── 2) Run async verification ──
-    # Agent Engine은 async 환경 — 별도 스레드에서 새 이벤트 루프 실행
+    # ── 2) Circuit breaker check ──
+    if not drf_circuit_breaker.allow_request():
+        return {
+            "status": "error",
+            "total_refs": len(law_items) + len(prec_items),
+            "verified_refs": [],
+            "unverified_refs": [],
+            "verification_ratio": 0.0,
+            "all_passed": False,
+            "fail_closed": False,
+            "summary": "DRF API 서킷브레이커 OPEN — 일시적으로 검증 불가.",
+        }
+
+    # ── 3) Run sync verification in thread pool ──
     try:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            future = pool.submit(
-                asyncio.run,
-                _async_verify_all(response_text, law_items, prec_items),
-            )
-            return future.result(timeout=30.0)
+        return _sync_verify_all(response_text, law_items, prec_items)
     except Exception as e:
-        logger.error(f"[Verify] Async verification failed: {e}")
+        logger.error(f"[Verify] Verification failed: {e}")
         return {
             "status": "error",
             "total_refs": len(law_items) + len(prec_items),
@@ -560,12 +572,12 @@ def verify_law_references(response_text: str) -> dict:
         }
 
 
-async def _async_verify_all(
+def _sync_verify_all(
     response_text: str,
     law_items: List[Tuple[str, int, str, str]],
     prec_items: List[str],
 ) -> dict:
-    """Async core: verify all law + precedent references concurrently.
+    """Sync core: verify all law + precedent references concurrently via ThreadPoolExecutor.
 
     Groups law references by law_name and verifies once per law.
     Total timeout: 25 seconds for all DRF calls.
@@ -578,27 +590,50 @@ async def _async_verify_all(
     for law_name, _, _, _ in law_items:
         unique_laws.add(law_name)
 
-    # ── Fetch all law data + precedent data concurrently ──
-    law_tasks = [_verify_single_law(ln) for ln in unique_laws]
-    prec_tasks = [_verify_single_prec(cn) for cn in prec_items]
+    # ── Fetch all law data + precedent data concurrently via threads ──
+    law_articles_cache: Dict[str, Any] = {}
+    prec_results_raw: List[Tuple[str, Optional[Dict], Optional[Exception]]] = []
 
-    drf_failed = False
-    all_fetch_results: List[Any] = []
+    max_workers = min(len(unique_laws) + len(prec_items), 8) or 1
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        law_futures = {
+            executor.submit(_fetch_law_safe, ln): ln for ln in unique_laws
+        }
+        prec_futures = {
+            executor.submit(_fetch_prec_safe, cn): cn for cn in prec_items
+        }
 
-    if law_tasks or prec_tasks:
-        try:
-            all_fetch_results = await asyncio.wait_for(
-                asyncio.gather(*law_tasks, *prec_tasks, return_exceptions=True),
-                timeout=25.0,
-            )
-        except asyncio.TimeoutError:
+        all_futures = {**law_futures, **prec_futures}
+        done, not_done = concurrent.futures.wait(
+            all_futures, timeout=25.0
+        )
+
+        # Cancel timed-out futures
+        for f in not_done:
+            f.cancel()
+
+        if not_done:
             logger.warning(
                 f"[Verify] DRF fetch timeout (25s) -- "
-                f"laws: {len(law_tasks)}, precs: {len(prec_tasks)}"
+                f"{len(not_done)} tasks cancelled"
             )
-            drf_failed = True
 
-    if drf_failed:
+        # Collect results from completed futures
+        for f in done:
+            try:
+                result = f.result(timeout=0)
+            except Exception as e:
+                logger.warning(f"[Verify] Future exception: {e}")
+                continue
+
+            if f in law_futures:
+                ln, raw = result
+                law_articles_cache[ln] = raw
+            else:
+                prec_results_raw.append(result)
+
+    # Check if all timed out
+    if not done and (unique_laws or prec_items):
         total = len(law_items) + len(prec_items)
         return {
             "status": "error",
@@ -608,29 +643,8 @@ async def _async_verify_all(
             "verification_ratio": 0.0,
             "all_passed": False,
             "fail_closed": True,
-            "summary": f"DRF API 타임아웃 (25초). 법률 {len(law_tasks)}건, 판례 {len(prec_tasks)}건 검증 실패.",
+            "summary": f"DRF API 타임아웃 (25초). 법률 {len(unique_laws)}건, 판례 {len(prec_items)}건 검증 실패.",
         }
-
-    # ── Parse fetch results ──
-    law_articles_cache: Dict[str, Any] = {}
-    law_result_count = len(law_tasks)
-
-    for i, res in enumerate(all_fetch_results[:law_result_count]):
-        if isinstance(res, BaseException):
-            logger.warning(f"[Verify] Law fetch exception: {res}")
-            continue
-        try:
-            ln, raw = res
-            law_articles_cache[ln] = raw
-        except (ValueError, TypeError) as e:
-            logger.warning(f"[Verify] Law result parse error: {e}")
-
-    prec_results_raw: List[Tuple[str, Optional[Dict], Optional[Exception]]] = []
-    for res in all_fetch_results[law_result_count:]:
-        if isinstance(res, BaseException):
-            logger.warning(f"[Verify] Precedent fetch exception: {res}")
-            continue
-        prec_results_raw.append(res)
 
     # ── Verify each law article reference ──
     for law_name, article_num, suffix, key in law_items:
