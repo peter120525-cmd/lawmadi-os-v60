@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
-from tools.circuit_breaker import drf_circuit_breaker
+from .circuit_breaker import drf_circuit_breaker
 
 logger = logging.getLogger("LawmadiADK.Verify")
 

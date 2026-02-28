@@ -14,7 +14,7 @@ from typing import Dict, List, Optional
 
 import requests
 
-from tools.circuit_breaker import drf_circuit_breaker
+from .circuit_breaker import drf_circuit_breaker
 
 logger = logging.getLogger(__name__)
 
