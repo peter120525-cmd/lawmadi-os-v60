@@ -7496,6 +7496,20 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
             tsDiv.textContent = tsText;
             msgDiv.appendChild(tsDiv);
 
+            // 협의/인수인계 컨테이너를 AI 메시지 안으로 이동 (응답 후에도 항상 보이도록)
+            // leader-response-header(sticky) 바로 아래에 삽입하여 덮이지 않도록 함
+            if (sender === 'ai') {
+                const delibEls = Array.from(this.convArea.querySelectorAll(':scope > .deliberation-container, :scope > .handoff-container'));
+                if (delibEls.length) {
+                    const headerEl = msgDiv.querySelector('.leader-response-header');
+                    const summaryEl = msgDiv.querySelector('.response-summary-card');
+                    const insertRef = summaryEl ? summaryEl.nextSibling : (headerEl ? headerEl.nextSibling : msgDiv.firstChild);
+                    for (let i = delibEls.length - 1; i >= 0; i--) {
+                        msgDiv.insertBefore(delibEls[i], insertRef);
+                    }
+                }
+            }
+
             this.convArea.appendChild(msgDiv);
             this._smartScroll(sender === 'user');
         },
