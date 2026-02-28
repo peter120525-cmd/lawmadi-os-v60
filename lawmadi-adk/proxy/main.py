@@ -350,38 +350,39 @@ def _handle_ask(request, ch: dict):
 
     try:
         agent = _get_agent()
+
+        # query() 동기 호출 — Agent Engine이 최종 응답을 반환
+        raw = agent.query(user_id=user_id, message=query)
+        logger.info(f"Agent raw response type={type(raw).__name__}")
+
+        # 응답 파싱: str, dict, 또는 ADK Event 객체
         response_text = ""
-        tool_calls_info = []
+        leader_id, leader_name = "", ""
 
-        import asyncio
+        if isinstance(raw, str):
+            response_text = raw
+        elif isinstance(raw, dict):
+            response_text = raw.get("response", raw.get("text", raw.get("output", "")))
+            leader_id = raw.get("leader_id", raw.get("leader", ""))
+            leader_name = raw.get("leader_name", "")
+            if not response_text:
+                # dict 전체를 문자열로
+                response_text = json.dumps(raw, ensure_ascii=False)
+        elif hasattr(raw, "content"):
+            # ADK Event-like object
+            if raw.content and hasattr(raw.content, "parts"):
+                for part in raw.content.parts:
+                    if hasattr(part, "text") and part.text:
+                        response_text += part.text
+        else:
+            response_text = str(raw) if raw else ""
 
-        async def _query():
-            nonlocal response_text
-            async for event in agent.async_stream_query(
-                user_id=user_id, message=query,
-            ):
-                if hasattr(event, "content") and event.content:
-                    for part in event.content.parts:
-                        if hasattr(part, "text") and part.text:
-                            response_text += part.text
-                        if hasattr(part, "function_response"):
-                            fr = part.function_response
-                            if hasattr(fr, "response") and isinstance(fr.response, dict):
-                                if "leader_id" in fr.response:
-                                    tool_calls_info.append(fr.response)
-
-        asyncio.run(_query())
+        logger.info(f"Parsed response: len={len(response_text)}, leader={leader_id}")
 
         elapsed = round(time.time() - start_time, 2)
         _agent_cb.success()
         _record_latency(elapsed * 1000)
 
-        leader_id, leader_name = "", ""
-        for info in tool_calls_info:
-            if "leader_id" in info:
-                leader_id = info.get("leader_id", "")
-                leader_name = info.get("leader_name", "")
-                break
         if not leader_id:
             leader_id = _extract_leader_from_response(response_text)
 
@@ -458,59 +459,40 @@ def _handle_ask_stream(request, ch: dict):
     model = get_model()
 
     def _sse_generator():
-        import asyncio
-
         start_time = time.time()
-        response_text = ""
-        tool_calls_info = []
-
-        async def _stream():
-            nonlocal response_text
-            agent = _get_agent()
-            async for event in agent.async_stream_query(
-                user_id=user_id, message=query,
-            ):
-                if hasattr(event, "content") and event.content:
-                    for part in event.content.parts:
-                        if hasattr(part, "text") and part.text:
-                            response_text += part.text
-                            yield part.text
-                        if hasattr(part, "function_response"):
-                            fr = part.function_response
-                            if hasattr(fr, "response") and isinstance(fr.response, dict):
-                                if "leader_id" in fr.response:
-                                    tool_calls_info.append(fr.response)
 
         try:
             # SSE: deliberation_start
             yield f"event: deliberation_start\ndata: {json.dumps({'status': 'starting'})}\n\n"
 
-            loop = asyncio.new_event_loop()
-            gen = _stream()
+            # 동기 query() 호출 후 결과를 SSE로 전달
+            agent = _get_agent()
+            raw = agent.query(user_id=user_id, message=query)
 
-            async def _collect():
-                chunks = []
-                async for chunk in gen:
-                    chunks.append(chunk)
-                return chunks
+            response_text = ""
+            if isinstance(raw, str):
+                response_text = raw
+            elif isinstance(raw, dict):
+                response_text = raw.get("response", raw.get("text", raw.get("output", "")))
+                if not response_text:
+                    response_text = json.dumps(raw, ensure_ascii=False)
+            elif hasattr(raw, "content") and raw.content:
+                for part in raw.content.parts:
+                    if hasattr(part, "text") and part.text:
+                        response_text += part.text
+            else:
+                response_text = str(raw) if raw else ""
 
-            chunks = loop.run_until_complete(_collect())
-            loop.close()
-
-            # SSE: content chunks
-            for chunk in chunks:
-                yield f"data: {json.dumps({'text': chunk}, ensure_ascii=False)}\n\n"
+            # SSE: content (single chunk)
+            yield f"data: {json.dumps({'text': response_text}, ensure_ascii=False)}\n\n"
 
             elapsed = round(time.time() - start_time, 2)
             _agent_cb.success()
             _record_latency(elapsed * 1000)
 
-            leader_id, leader_name = "", ""
-            for info in tool_calls_info:
-                if "leader_id" in info:
-                    leader_id = info.get("leader_id", "")
-                    leader_name = info.get("leader_name", "")
-                    break
+            if isinstance(raw, dict):
+                leader_id = raw.get("leader_id", raw.get("leader", ""))
+                leader_name = raw.get("leader_name", "")
             if not leader_id:
                 leader_id = _extract_leader_from_response(response_text)
 
@@ -577,21 +559,21 @@ def _handle_ask_expert(request, ch: dict):
 
     try:
         agent = _get_agent()
+        raw = agent.query(user_id=user_id, message=expert_query)
+
         response_text = ""
-
-        import asyncio
-
-        async def _query():
-            nonlocal response_text
-            async for event in agent.async_stream_query(
-                user_id=user_id, message=expert_query,
-            ):
-                if hasattr(event, "content") and event.content:
-                    for part in event.content.parts:
-                        if hasattr(part, "text") and part.text:
-                            response_text += part.text
-
-        asyncio.run(_query())
+        if isinstance(raw, str):
+            response_text = raw
+        elif isinstance(raw, dict):
+            response_text = raw.get("response", raw.get("text", raw.get("output", "")))
+            if not response_text:
+                response_text = json.dumps(raw, ensure_ascii=False)
+        elif hasattr(raw, "content") and raw.content:
+            for part in raw.content.parts:
+                if hasattr(part, "text") and part.text:
+                    response_text += part.text
+        else:
+            response_text = str(raw) if raw else ""
 
         elapsed = round(time.time() - start_time, 2)
         _agent_cb.success()
