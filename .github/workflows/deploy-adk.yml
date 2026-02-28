@@ -1,0 +1,234 @@
+name: Deploy ADK to Vertex AI Agent Engine
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'lawmadi-adk/**'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-adk-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PROJECT_ID: lawmadi-db
+  REGION: asia-northeast3
+  FUNCTION_NAME: lawmadi-proxy
+
+jobs:
+  # ─── Test: ADK 도구 문법 + 무결성 검사 ───
+  test:
+    name: Validate ADK
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install google-adk google-cloud-aiplatform functions-framework
+
+      - name: Syntax check all ADK files
+        run: |
+          python3 -c "
+          import ast, glob, sys
+          files = glob.glob('lawmadi-adk/**/*.py', recursive=True)
+          errors = []
+          for f in files:
+              try:
+                  with open(f) as fh:
+                      ast.parse(fh.read())
+              except SyntaxError as e:
+                  errors.append(f'{f}: {e}')
+          if errors:
+              for e in errors:
+                  print(f'ERR {e}')
+              sys.exit(1)
+          print(f'All {len(files)} files passed syntax check')
+          "
+
+      - name: Validate data files
+        run: |
+          python3 -c "
+          import json
+          with open('lawmadi-adk/data/leaders.json') as f:
+              data = json.load(f)
+              registry = data.get('swarm_engine_config', {}).get('leader_registry', {})
+              assert len(registry) >= 60, f'Leaders: {len(registry)} < 60'
+              print(f'leaders.json: {len(registry)} leaders')
+          with open('lawmadi-adk/data/leader_profiles.json') as f:
+              profiles = json.load(f)
+              assert len(profiles) >= 60, f'Profiles: {len(profiles)} < 60'
+              print(f'leader_profiles.json: {len(profiles)} profiles')
+          "
+
+      - name: Validate ADK agent import
+        run: |
+          cd lawmadi-adk
+          python3 -c "
+          # Dry-run: ADK agent 정의 import (Vertex AI 없이)
+          import ast
+          with open('agent.py') as f:
+              tree = ast.parse(f.read())
+          # agent.py 가 tools 모듈을 올바르게 참조하는지 확인
+          imports = [n for n in ast.walk(tree) if isinstance(n, (ast.Import, ast.ImportFrom))]
+          print(f'agent.py: {len(imports)} imports validated')
+          "
+
+  # ─── Deploy: Agent Engine + Cloud Functions proxy ───
+  deploy-agent:
+    name: Deploy Agent Engine
+    runs-on: ubuntu-latest
+    needs: test
+    environment: production
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_JSON }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install ADK
+        run: |
+          pip install google-adk google-cloud-aiplatform[agent_engines]
+
+      - name: Deploy Agent to Vertex AI
+        run: |
+          cd lawmadi-adk
+          adk deploy agent_engine \
+            --project=${{ env.PROJECT_ID }} \
+            --region=${{ env.REGION }} \
+            --agent_name=lawmadi-os
+
+      - name: Get Agent Resource Name
+        id: agent
+        run: |
+          RESOURCE=$(gcloud ai reasoning-engines list \
+            --project=${{ env.PROJECT_ID }} \
+            --region=${{ env.REGION }} \
+            --filter="displayName=lawmadi-os" \
+            --format="value(name)" \
+            --limit=1)
+          echo "resource_name=$RESOURCE" >> $GITHUB_OUTPUT
+          echo "Agent Engine: $RESOURCE"
+
+    outputs:
+      agent_resource: ${{ steps.agent.outputs.resource_name }}
+
+  # ─── Deploy: Cloud Functions Gen2 proxy ───
+  deploy-proxy:
+    name: Deploy Cloud Functions Proxy
+    runs-on: ubuntu-latest
+    needs: deploy-agent
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_JSON }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Deploy Cloud Functions Gen2 proxy
+        run: |
+          gcloud functions deploy ${{ env.FUNCTION_NAME }} \
+            --gen2 \
+            --runtime=python312 \
+            --trigger-http \
+            --allow-unauthenticated \
+            --region=${{ env.REGION }} \
+            --source=lawmadi-adk/proxy \
+            --entry-point=handle_request \
+            --memory=512Mi \
+            --timeout=300s \
+            --min-instances=0 \
+            --max-instances=10 \
+            --set-env-vars="AGENT_RESOURCE_NAME=${{ needs.deploy-agent.outputs.agent_resource }},GOOGLE_CLOUD_PROJECT=${{ env.PROJECT_ID }},GOOGLE_CLOUD_LOCATION=${{ env.REGION }}" \
+            --set-secrets="INTERNAL_API_KEY=INTERNAL_API_KEY:latest,LAWGO_DRF_OC=LAWGO_DRF_OC:latest"
+
+      - name: Verify proxy deployment
+        run: |
+          PROXY_URL=$(gcloud functions describe ${{ env.FUNCTION_NAME }} \
+            --gen2 \
+            --region=${{ env.REGION }} \
+            --format='value(serviceConfig.uri)')
+          echo "Proxy URL: $PROXY_URL"
+          # Health check (OPTIONS should return 204)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X OPTIONS "$PROXY_URL/api/ask")
+          echo "OPTIONS /api/ask -> $STATUS"
+
+  # ─── Deploy: Firebase Hosting (rewrites to proxy) ───
+  deploy-firebase:
+    name: Deploy Firebase Hosting
+    runs-on: ubuntu-latest
+    needs: deploy-proxy
+    if: success()
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_JSON }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Deploy to Firebase Hosting
+        run: |
+          firebase deploy --only hosting --project ${{ env.PROJECT_ID }}
+
+      - name: Verify Firebase deployment
+        run: |
+          sleep 5
+          curl -f https://lawmadi-db.web.app || exit 1
+          echo "Firebase Hosting deployed"

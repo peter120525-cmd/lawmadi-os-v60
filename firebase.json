@@ -93,7 +93,10 @@
       },
       {
         "source": "/api/**",
-        "function": "api"
+        "function": {
+          "functionId": "lawmadi-proxy",
+          "region": "asia-northeast3"
+        }
       }
     ]
   }
