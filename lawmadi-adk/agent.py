@@ -8,8 +8,8 @@ ADK CLI: `adk web` 또는 `adk run lawmadi-adk`
 
 from google.adk.agents import Agent
 
-from tools.classify import classify_query
-from tools.drf_tools import (
+from .tools.classify import classify_query
+from .tools.drf_tools import (
     search_law_drf,
     search_precedents_drf,
     get_law_articles,
@@ -20,10 +20,10 @@ from tools.drf_tools import (
     search_expc_drf,
     search_treaty_drf,
 )
-from tools.rag_tools import get_leader_context, get_leader_law_boost
-from tools.verify import verify_law_references, strip_unverified_sentences
-from tools.deliberation import generate_deliberation, generate_handoff
-from prompts.system_instruction import SYSTEM_INSTRUCTION
+from .tools.rag_tools import get_leader_context, get_leader_law_boost
+from .tools.verify import verify_law_references, strip_unverified_sentences
+from .tools.deliberation import generate_deliberation, generate_handoff
+from .prompts.system_instruction import SYSTEM_INSTRUCTION
 
 
 root_agent = Agent(
