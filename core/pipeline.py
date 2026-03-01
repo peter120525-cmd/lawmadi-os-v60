@@ -38,7 +38,7 @@ from prompts.system_instructions import build_lawmadilm_prompt, build_system_ins
 logger = logging.getLogger("LawmadiOS.Pipeline")
 
 # 최소 법률 응답 길이 (이 미만이면 재생성 시도)
-MIN_LEGAL_RESPONSE_GENERAL = 2000   # 일반 답변 최소 2000자
+MIN_LEGAL_RESPONSE_GENERAL = 1500   # 일반 답변 최소 1500자
 MIN_LEGAL_RESPONSE_EXPERT = 4000    # 전문가 답변 최소 4000자
 
 # ---------------------------------------------------------------------------
@@ -1485,6 +1485,10 @@ async def _gemini_fallback_compose(
             ),
         ]
 
+    # ── Selective Thinking (expert=1024, general=0) ──
+    thinking_budget = 1024 if mode == "expert" else 0
+    thinking_config = genai_types.ThinkingConfig(thinking_budget=thinking_budget)
+
     # ── GenerateContentConfig 조립 ──
     gen_config = genai_types.GenerateContentConfig(
         tools=list(tools) if tools else [],
@@ -1492,6 +1496,7 @@ async def _gemini_fallback_compose(
         max_output_tokens=max_tokens,
         automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
         safety_settings=safety_settings,
+        thinking_config=thinking_config,
     )
 
     # 429/할당량 초과 시 자동 모델 전환 (Pro→Flash→Lite)
