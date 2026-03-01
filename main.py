@@ -1266,17 +1266,38 @@ async def startup():
     # --------------------------------------------------
     # 4️⃣ Gemini 설정
     # [감사 #4.1] 모델명 환경변수화
+    # Vertex AI 모드: Cloud Run ADC 자동 인증 (USE_VERTEX_AI=true)
+    # API key fallback: GEMINI_KEY 환경변수 (USE_VERTEX_AI=false 또는 Vertex AI 실패 시)
     # --------------------------------------------------
-    gemini_key = os.getenv("GEMINI_KEY")
+    from core.constants import USE_VERTEX_AI, VERTEX_PROJECT, VERTEX_LOCATION
+
     genai_client = None
-    if gemini_key:
-        genai_client = genai.Client(api_key=gemini_key)
-        logger.info("✅ Gemini client initialized (google-genai SDK)")
+    if USE_VERTEX_AI:
+        try:
+            genai_client = genai.Client(
+                vertexai=True,
+                project=VERTEX_PROJECT,
+                location=VERTEX_LOCATION,
+            )
+            logger.info(f"✅ Gemini client (Vertex AI, {VERTEX_PROJECT}/{VERTEX_LOCATION})")
+        except Exception as e:
+            logger.error(f"❌ Vertex AI init 실패: {e}")
+            gemini_key = os.getenv("GEMINI_KEY")
+            if gemini_key:
+                genai_client = genai.Client(api_key=gemini_key)
+                logger.warning("⚠️ Vertex AI 실패 → API key fallback")
+
+    if genai_client is None:
+        gemini_key = os.getenv("GEMINI_KEY")
+        if gemini_key:
+            genai_client = genai.Client(api_key=gemini_key)
+            logger.info("✅ Gemini client initialized (API key mode)")
+        else:
+            logger.warning("⚠️ GEMINI_KEY 누락 (FAIL_CLOSED)")
+
+    if genai_client and swarm_orchestrator:
         # SwarmOrchestrator에 genai_client 주입 (초기화 순서 이슈 해결)
-        if swarm_orchestrator:
-            swarm_orchestrator.genai_client = genai_client
-    else:
-        logger.warning("⚠️ GEMINI_KEY 누락 (FAIL_CLOSED)")
+        swarm_orchestrator.genai_client = genai_client
 
     # --------------------------------------------------
     # 5️⃣ DRF Connector (Fail-Soft)

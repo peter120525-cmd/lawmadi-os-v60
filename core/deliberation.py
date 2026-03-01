@@ -98,8 +98,32 @@ async def _single_leader_call(
     """
     from google.genai import types as genai_types
 
+    from core.constants import USE_VERTEX_AI
+
     full_prompt = f"[페르소나]\n{persona}\n\n[지시]\n{prompt}"
     model_name = get_model()
+
+    # Safety settings: 법률 상담 주제 차단 방지 (Vertex AI 모드)
+    safety_settings = None
+    if USE_VERTEX_AI:
+        safety_settings = [
+            genai_types.SafetySetting(
+                category="HARM_CATEGORY_HARASSMENT",
+                threshold="BLOCK_ONLY_HIGH",
+            ),
+            genai_types.SafetySetting(
+                category="HARM_CATEGORY_HATE_SPEECH",
+                threshold="BLOCK_ONLY_HIGH",
+            ),
+            genai_types.SafetySetting(
+                category="HARM_CATEGORY_DANGEROUS_CONTENT",
+                threshold="BLOCK_ONLY_HIGH",
+            ),
+            genai_types.SafetySetting(
+                category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                threshold="BLOCK_MEDIUM_AND_ABOVE",
+            ),
+        ]
 
     def _sync_call():
         for _attempt in range(2):
@@ -113,6 +137,7 @@ async def _single_leader_call(
                         thinking_config=genai_types.ThinkingConfig(
                             thinking_budget=0,
                         ),
+                        safety_settings=safety_settings,
                     ),
                 )
             except Exception as e:
@@ -211,7 +236,7 @@ async def generate_deliberation(
     try:
         # ── Turn 1: CSO 서연 — 질문 요약 + 의견 요청 (순차) ──
         t1_prompt = (
-            f"사용자 질문: {query[:300]}\n"
+            f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
             f"참석 리더: {', '.join(l.get('name','?') + '(' + l.get('specialty','') + ')' for l in leaders[:3])}\n\n"
             f"당신은 CSO 서연입니다. 이 질문의 핵심을 요약하고, "
             f"왜 이 분야의 전문가가 필요한지 설명한 뒤, "
@@ -239,7 +264,7 @@ async def generate_deliberation(
 
         # ── Turn 2+3: 병렬 — 담당 리더 의견 + CSO 지명 ──
         t2_prompt = (
-            f"사용자 질문: {query[:300]}\n"
+            f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
             f"CSO 서연이 당신에게 의견을 요청했습니다.\n\n"
             f"당신은 {selected_name}({selected_specialty} 전문 리더)입니다. "
             f"자기 분야의 전문 지식을 바탕으로 이 질문에 어떻게 도움을 줄 수 있는지 "
@@ -345,7 +370,7 @@ async def generate_handoff(
 
     # ── 병렬 호출 ──
     t1_prompt = (
-        f"사용자 질문: {query[:300]}\n"
+        f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
         f"당신은 {cur_name}({cur_specialty} 전문)입니다. "
         f"이 질문은 {new_specialty} 분야에 더 가까워서 "
         f"{new_name}님에게 인계하려 합니다. "
@@ -357,7 +382,7 @@ async def generate_handoff(
         f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
     )
     t2_prompt = (
-        f"사용자 질문: {query[:300]}\n"
+        f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
         f"당신은 {new_name}({new_specialty} 전문)입니다. "
         f"{cur_name}님이 이 질문을 인계해 주었습니다. "
         f"사용자에게 따뜻하게 인사하고, 자신의 전문 분야에서 "
@@ -449,7 +474,7 @@ async def generate_deliberation_stream(
 
     # ── Turn 1: CSO 서연 ──
     t1_prompt = (
-        f"사용자 질문: {query[:300]}\n"
+        f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
         f"참석 리더: {', '.join(l.get('name','?') + '(' + l.get('specialty','') + ')' for l in leaders[:3])}\n\n"
         f"당신은 CSO 서연입니다. 이 질문의 핵심을 요약하고, "
         f"왜 이 분야의 전문가가 필요한지 설명한 뒤, "
@@ -482,7 +507,7 @@ async def generate_deliberation_stream(
 
     # ── Turn 2: 담당 리더 ──
     t2_prompt = (
-        f"사용자 질문: {query[:300]}\n"
+        f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
         f"CSO 서연이 당신에게 의견을 요청했습니다.\n\n"
         f"당신은 {selected_name}({selected_specialty} 전문)입니다. "
         f"자기 분야의 전문 지식을 바탕으로 이 질문에 어떻게 도움을 줄 수 있는지 "
@@ -580,7 +605,7 @@ async def generate_handoff_stream(
 
     # ── Turn 1: 현재 리더 ──
     t1_prompt = (
-        f"사용자 질문: {query[:300]}\n"
+        f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
         f"당신은 {cur_name}({cur_specialty} 전문)입니다. "
         f"이 질문은 {new_specialty} 분야에 더 가까워서 "
         f"{new_name}님에게 인계하려 합니다. "
@@ -612,7 +637,7 @@ async def generate_handoff_stream(
 
     # ── Turn 2: 새 리더 ──
     t2_prompt = (
-        f"사용자 질문: {query[:300]}\n"
+        f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
         f"당신은 {new_name}({new_specialty} 전문)입니다. "
         f"{cur_name}님이 이 질문을 인계해 주었습니다. "
         f"사용자에게 따뜻하게 인사하고, 자신의 전문 분야에서 "

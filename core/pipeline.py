@@ -29,6 +29,7 @@ from core.constants import (
     LAWMADILM_API_URL,
     LAWMADILM_RAG_URL,
     FAIL_CLOSED_RESPONSE,
+    USE_VERTEX_AI,
 )
 from core.model_fallback import get_model, on_quota_error, is_quota_error
 from utils.helpers import _remove_think_blocks, _safe_extract_gemini_text
@@ -1462,11 +1463,35 @@ async def _gemini_fallback_compose(
         f"{lang_instruction}"
     )
 
+    # ── Safety Settings (Vertex AI: 법률 상담 주제 차단 방지, 추가 비용 없음) ──
+    safety_settings = None
+    if USE_VERTEX_AI:
+        safety_settings = [
+            genai_types.SafetySetting(
+                category="HARM_CATEGORY_HARASSMENT",
+                threshold="BLOCK_ONLY_HIGH",
+            ),
+            genai_types.SafetySetting(
+                category="HARM_CATEGORY_HATE_SPEECH",
+                threshold="BLOCK_ONLY_HIGH",
+            ),
+            genai_types.SafetySetting(
+                category="HARM_CATEGORY_DANGEROUS_CONTENT",
+                threshold="BLOCK_ONLY_HIGH",
+            ),
+            genai_types.SafetySetting(
+                category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                threshold="BLOCK_MEDIUM_AND_ABOVE",
+            ),
+        ]
+
+    # ── GenerateContentConfig 조립 ──
     gen_config = genai_types.GenerateContentConfig(
-        tools=tools,
+        tools=list(tools) if tools else [],
         system_instruction=instruction,
         max_output_tokens=max_tokens,
         automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
+        safety_settings=safety_settings,
     )
 
     # 429/할당량 초과 시 자동 모델 전환 (Pro→Flash→Lite)
@@ -1492,7 +1517,7 @@ async def _gemini_fallback_compose(
         try:
             resp = await loop.run_in_executor(None, _sync_gemini_call, model_name)
             text = _safe_extract_gemini_text(resp)
-            logger.info(f"[Gemini] 답변 생성 완료 ({len(text)}자, model={model_name}, mode={mode})")
+            logger.info(f"[Gemini] 답변 생성 완료 ({len(text)}자, model={model_name}, mode={mode}, vertex={USE_VERTEX_AI})")
             return text
         except Exception as e:
             if is_quota_error(e) and _attempt < 2:

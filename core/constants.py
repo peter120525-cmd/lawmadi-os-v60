@@ -25,6 +25,11 @@ LAWMADILM_RAG_URL = os.getenv("LAWMADILM_RAG_URL", "")
 # Lawmadi OS 메인 API URL (테스트/모니터링/스크립트 공통)
 LAWMADI_OS_API_URL = os.getenv("LAWMADI_OS_API_URL", "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app")
 
+# Vertex AI configuration (Cloud Run ADC 자동 인증)
+USE_VERTEX_AI = os.getenv("USE_VERTEX_AI", "false").lower() == "true"
+VERTEX_PROJECT = os.getenv("VERTEX_PROJECT", "lawmadi-db")
+VERTEX_LOCATION = os.getenv("VERTEX_LOCATION", "asia-northeast3")
+
 # FAIL_CLOSED 응답: 검증 실패 시 사용자에게 반환
 FAIL_CLOSED_RESPONSE = (
     "⚠️ **법률 정보 검증 실패**\n\n"
