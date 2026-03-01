@@ -454,8 +454,9 @@ def save_chat_history(
                 ADD COLUMN IF NOT EXISTS query_category VARCHAR(50),
                 ADD COLUMN IF NOT EXISTS env_version VARCHAR(50)
             """)
+            conn.commit()
         except Exception:
-            pass  # 컬럼이 이미 있으면 무시
+            conn.rollback()  # 트랜잭션 abort 상태 해소
 
         # 데이터 삽입
         leaders_str = ",".join(leaders_used) if leaders_used else leader
@@ -1204,7 +1205,7 @@ def save_feedback(trace_id: str, rating: str, query: str, leader: str, comment: 
 def init_frontend_logs_table():
     """프론트엔드 에러/성능 로그 테이블 생성"""
     try:
-        execute("""
+        execute(f"""
             CREATE TABLE IF NOT EXISTS frontend_errors (
                 id SERIAL PRIMARY KEY,
                 visitor_id VARCHAR(64),
@@ -1216,11 +1217,11 @@ def init_frontend_logs_table():
                 url VARCHAR(500),
                 user_agent VARCHAR(300),
                 created_at TIMESTAMPTZ DEFAULT NOW(),
-                env_version VARCHAR(50) DEFAULT %s
+                env_version VARCHAR(50) DEFAULT '{_ENV_VERSION}'
             )
-        """, (_ENV_VERSION,), fetch="none")
+        """, fetch="none")
 
-        execute("""
+        execute(f"""
             CREATE TABLE IF NOT EXISTS frontend_perf (
                 id SERIAL PRIMARY KEY,
                 visitor_id VARCHAR(64),
@@ -1233,9 +1234,9 @@ def init_frontend_logs_table():
                 url VARCHAR(500),
                 user_agent VARCHAR(300),
                 created_at TIMESTAMPTZ DEFAULT NOW(),
-                env_version VARCHAR(50) DEFAULT %s
+                env_version VARCHAR(50) DEFAULT '{_ENV_VERSION}'
             )
-        """, (_ENV_VERSION,), fetch="none")
+        """, fetch="none")
 
         # 인덱스
         execute("CREATE INDEX IF NOT EXISTS idx_fe_errors_created ON frontend_errors(created_at)", fetch="none")
