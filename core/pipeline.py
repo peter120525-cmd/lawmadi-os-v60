@@ -1001,6 +1001,12 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
     ref_items = []
     for law_name, article_num_str, suffix_str, paragraph_str in refs:
         law_name = law_name.strip()
+        # 법령명 앞에 붙은 비법률 텍스트 제거 (예: "지금 바로 하실 수 있는 일 민법" → "민법")
+        # [가-힣]+(?:법률|법|...) 은 최소 1자 + 접미사라 "법률"/"법" 단독은 매칭 불가 → 안전
+        if ' ' in law_name:
+            _m_law = re.search(r'([가-힣]+(?:법률|법|시행령|시행규칙|규정|조례))$', law_name)
+            if _m_law and _m_law.group(1) != law_name:
+                law_name = _m_law.group(1)
         article_num = int(article_num_str)
         suffix = suffix_str.strip() if suffix_str else ""
         key = f"{law_name} 제{article_num}조{suffix}"
