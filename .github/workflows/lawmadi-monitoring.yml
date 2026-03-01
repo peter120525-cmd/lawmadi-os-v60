@@ -144,6 +144,22 @@ jobs:
           import requests, json, time, sys
 
           API = "${{ env.API_URL }}"
+          TIMEOUT = 120  # Cold Start 고려 (60→120초)
+
+          # 1단계: 워밍업 요청 (Cold Start 대응, 점수 미반영)
+          print("🔥 워밍업 요청 (Cold Start 대응, 점수 미반영)")
+          try:
+              s = time.time()
+              r = requests.post(f"{API}/ask", json={"query": "안녕하세요"}, timeout=TIMEOUT)
+              ms = (time.time() - s) * 1000
+              print(f"  워밍업 완료: HTTP {r.status_code} ({ms/1000:.1f}s)")
+          except Exception as e:
+              ms = (time.time() - s) * 1000
+              print(f"  워밍업 타임아웃 ({ms/1000:.1f}s) — 인스턴스 부팅 중")
+          time.sleep(3)
+
+          # 2단계: 실제 시뮬레이션
+          print("\n📋 시뮬레이션 시작")
           scenarios = [
               {"query": "부당해고 구제 방법 알려주세요", "category": "labor"},
               {"query": "전세 보증금 3억인데 집주인이 안 돌려줘요", "category": "lease"},
@@ -157,7 +173,7 @@ jobs:
           for i, sc in enumerate(scenarios):
               s = time.time()
               try:
-                  r = requests.post(f"{API}/ask", json={"query": sc["query"]}, timeout=60)
+                  r = requests.post(f"{API}/ask", json={"query": sc["query"]}, timeout=TIMEOUT)
                   ms = (time.time() - s) * 1000
                   if r.status_code == 200:
                       data = r.json()
