@@ -24,15 +24,32 @@ class ResponseVerifier:
     """
 
     def __init__(self):
-        self.api_key = os.getenv("GEMINI_KEY", "")
-        self.enabled = bool(self.api_key)
-        self.model_name = GEMINI_MODEL
+        from core.constants import USE_VERTEX_AI, VERTEX_PROJECT, VERTEX_LOCATION
 
-        if self.enabled:
-            self.client = genai.Client(api_key=self.api_key)
-            logger.info("✅ [Verifier] Gemini API 초기화 완료")
-        else:
-            logger.warning("⚠️ [Verifier] GEMINI_KEY 미설정 - 검증 비활성화")
+        self.model_name = GEMINI_MODEL
+        self.client = None
+        self.enabled = False
+
+        if USE_VERTEX_AI:
+            try:
+                self.client = genai.Client(
+                    vertexai=True,
+                    project=VERTEX_PROJECT,
+                    location=VERTEX_LOCATION,
+                )
+                self.enabled = True
+                logger.info(f"✅ [Verifier] Vertex AI 초기화 완료 ({VERTEX_PROJECT}/{VERTEX_LOCATION})")
+            except Exception as e:
+                logger.error(f"❌ [Verifier] Vertex AI init 실패: {e}")
+
+        if not self.enabled:
+            api_key = os.getenv("GEMINI_KEY", "")
+            if api_key:
+                self.client = genai.Client(api_key=api_key)
+                self.enabled = True
+                logger.info("✅ [Verifier] Gemini API 초기화 완료 (API key)")
+            else:
+                logger.warning("⚠️ [Verifier] GEMINI_KEY 미설정 - 검증 비활성화")
 
     def verify_response(
         self,

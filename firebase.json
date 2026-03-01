@@ -90,13 +90,6 @@
       {
         "source": "/leader",
         "destination": "/leader-profile.html"
-      },
-      {
-        "source": "/api/**",
-        "function": {
-          "functionId": "lawmadi-proxy",
-          "region": "asia-northeast3"
-        }
       }
     ]
   }

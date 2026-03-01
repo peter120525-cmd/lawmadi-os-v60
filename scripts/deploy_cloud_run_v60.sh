@@ -51,14 +51,14 @@ gcloud run deploy ${SERVICE_NAME} \
   --region ${REGION} \
   --allow-unauthenticated \
   --memory 4Gi \
-  --cpu 2 \
+  --cpu 1 \
   --timeout 300 \
   --concurrency 15 \
   --min-instances 0 \
-  --max-instances 10 \
+  --max-instances 5 \
   --port 8080 \
-  --set-env-vars "ENABLE_LAWMADILM=false,LAWMADILM_TIMEOUT=3" \
-  --set-secrets "GEMINI_API_KEY=GEMINI_API_KEY:latest,GEMINI_KEY=GEMINI_KEY:latest,LAWGO_DRF_OC=LAWGO_DRF_OC:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,DATABASE_URL=DATABASE_URL:latest,CLOUD_SQL_INSTANCE=CLOUD_SQL_INSTANCE:latest,DB_USER=DB_USER:latest,DB_PASS=DB_PASS:latest,DB_NAME=DB_NAME:latest,MCP_API_KEY=MCP_API_KEY:latest,INTERNAL_API_KEY=INTERNAL_API_KEY:latest,PREMIUM_KEYS=PREMIUM_KEYS:latest"
+  --set-env-vars "ENABLE_LAWMADILM=false,LAWMADILM_TIMEOUT=3,USE_VERTEX_AI=true,VERTEX_PROJECT=lawmadi-db,VERTEX_LOCATION=asia-northeast3" \
+  --set-secrets "GEMINI_KEY=GEMINI_KEY:latest,LAWGO_DRF_OC=LAWGO_DRF_OC:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,DATABASE_URL=DATABASE_URL:latest,CLOUD_SQL_INSTANCE=CLOUD_SQL_INSTANCE:latest,DB_USER=DB_USER:latest,DB_PASS=DB_PASS:latest,DB_NAME=DB_NAME:latest,MCP_API_KEY=MCP_API_KEY:latest,API_KEYS=API_KEYS:latest,INTERNAL_API_KEY=INTERNAL_API_KEY:latest,PREMIUM_KEYS=PREMIUM_KEYS:latest"
 
 # 6. 배포 URL 확인
 echo ""
