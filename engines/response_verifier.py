@@ -96,11 +96,21 @@ class ResponseVerifier:
                     response_mime_type="application/json",
                     temperature=0.0,
                     max_output_tokens=2000,
+                    thinking_config=genai_types.ThinkingConfig(
+                        thinking_budget=0,
+                    ),
                 ),
             )
 
-            # Gemini의 응답 파싱
-            verification_text = response.text or ""
+            # Gemini의 응답 파싱 (thinking 파트 제외, 안전 추출)
+            try:
+                verification_text = response.text or ""
+            except ValueError:
+                # thinking 파트만 있을 때 .text가 ValueError 발생
+                verification_text = ""
+                for part in (response.candidates[0].content.parts or []):
+                    if part.text and not getattr(part, "thought", False):
+                        verification_text += part.text
             result = self._parse_verification_result(verification_text)
 
             logger.info(f"✅ [Verifier] 검증 완료: {result['result']} (점수: {result['ssot_compliance_score']})")
