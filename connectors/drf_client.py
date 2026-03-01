@@ -303,10 +303,10 @@ class DRFConnector:
                 if cached_at and (_time.time() - cached_at) > 21600:  # 6h
                     logger.warning(f"⚠️ [Cache EXPIRED] lawService {law_name}: 캐시 6시간 초과 → 재조회")
                 else:
-                    # 캐시 검증: 조문 수가 너무 적으면 잘린 데이터일 수 있음 → 재조회
+                    # 캐시 검증: 조문 수가 극히 적으면 잘린 데이터일 수 있음 → 재조회
                     cached_data = cached["data"]
                     arts = cached_data.get("법령", {}).get("조문", {}).get("조문단위", [])
-                    if isinstance(arts, list) and len(arts) < 50:
+                    if isinstance(arts, list) and len(arts) < 3:
                         logger.warning(f"⚠️ [Cache STALE] lawService {law_name}: 조문 {len(arts)}건 → 재조회")
                     else:
                         logger.info(f"🎯 [Cache HIT] lawService, query={law_name[:30]} ({len(arts) if isinstance(arts, list) else '?'}건)")
@@ -353,26 +353,33 @@ class DRFConnector:
             return None
 
         logger.info(f"🔍 [lawService] {law_name} → MST={mst}")
-        # Step 2: lawService.do로 조문 상세 조회 (타임아웃 10초: 민법 등 대용량 법령)
-        try:
-            params = {
-                "OC": self.drf_key,
-                "target": "law",
-                "MST": mst,
-                "type": "JSON",
-            }
-            r = requests.get(_LAW_SERVICE_URL, params=params, timeout=max(self.timeout_sec, 10))
-            if r.status_code != 200:
-                return None
-            data = r.json()
+        # Step 2: lawService.do로 조문 상세 조회 (3회 재시도 + 지수 백오프)
+        last_err = None
+        for attempt in range(3):
             try:
-                _cache_set(cache_key, {"data": data, "law_name": law_name, "mst": mst, "_cached_at": _time.time()}, ttl_seconds=21600)
-            except Exception:
-                pass
-            return data
-        except Exception as e:
-            logger.warning(f"⚠️ lawService 조회 실패: {e}")
-            return None
+                params = {
+                    "OC": self.drf_key,
+                    "target": "law",
+                    "MST": mst,
+                    "type": "JSON",
+                }
+                r = requests.get(_LAW_SERVICE_URL, params=params, timeout=max(self.timeout_sec, 15))
+                if r.status_code != 200:
+                    raise RuntimeError(f"HTTP {r.status_code}")
+                data = r.json()
+                try:
+                    _cache_set(cache_key, {"data": data, "law_name": law_name, "mst": mst, "_cached_at": _time.time()}, ttl_seconds=21600)
+                except Exception:
+                    pass
+                return data
+            except Exception as e:
+                last_err = e
+                if attempt < 2:
+                    wait = (2 ** attempt) * 0.5
+                    logger.warning(f"⚠️ lawService 재시도 {attempt+1}/3: {law_name} MST={mst}: {e}")
+                    _time.sleep(wait)
+        logger.warning(f"⚠️ lawService 3회 실패: {law_name}: {last_err}")
+        return None
 
     def search_legal_term(self, query: str) -> Optional[Any]:
         """
@@ -627,7 +634,7 @@ class DRFConnector:
                 else:
                     cached_data = cached["data"]
                     arts = cached_data.get("법령", {}).get("조문", {}).get("조문단위", [])
-                    if isinstance(arts, list) and len(arts) < 50:
+                    if isinstance(arts, list) and len(arts) < 3:
                         logger.warning(f"⚠️ [Cache STALE async] lawService {law_name}: 조문 {len(arts)}건 → 재조회")
                     else:
                         return cached_data
@@ -668,24 +675,31 @@ class DRFConnector:
         if not mst:
             return None
 
-        # Step 2: lawService.do 비동기 호출
-        try:
-            params = {
-                "OC": self.drf_key,
-                "target": "law",
-                "MST": mst,
-                "type": "JSON",
-            }
-            async with httpx.AsyncClient(timeout=max(float(self.timeout_sec), 10.0)) as client:
-                r = await client.get(_LAW_SERVICE_URL, params=params)
-            if r.status_code != 200:
-                return None
-            data = r.json()
+        # Step 2: lawService.do 비동기 호출 (3회 재시도 + 지수 백오프)
+        last_err = None
+        for attempt in range(3):
             try:
-                await _aio.to_thread(_cache_set, cache_key, {"data": data, "law_name": law_name, "mst": mst, "_cached_at": _time.time()}, 21600)
-            except Exception:
-                pass
-            return data
-        except Exception as e:
-            logger.warning(f"⚠️ lawService async 조회 실패: {e}")
-            return None
+                params = {
+                    "OC": self.drf_key,
+                    "target": "law",
+                    "MST": mst,
+                    "type": "JSON",
+                }
+                async with httpx.AsyncClient(timeout=max(float(self.timeout_sec), 15.0)) as client:
+                    r = await client.get(_LAW_SERVICE_URL, params=params)
+                if r.status_code != 200:
+                    raise RuntimeError(f"HTTP {r.status_code}")
+                data = r.json()
+                try:
+                    await _aio.to_thread(_cache_set, cache_key, {"data": data, "law_name": law_name, "mst": mst, "_cached_at": _time.time()}, 21600)
+                except Exception:
+                    pass
+                return data
+            except Exception as e:
+                last_err = e
+                if attempt < 2:
+                    wait = (2 ** attempt) * 0.5
+                    logger.warning(f"⚠️ lawService async 재시도 {attempt+1}/3: {law_name} MST={mst}: {e}")
+                    await _aio.sleep(wait)
+        logger.warning(f"⚠️ lawService async 3회 실패: {law_name}: {last_err}")
+        return None
