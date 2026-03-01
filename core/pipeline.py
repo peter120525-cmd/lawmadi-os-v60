@@ -1022,13 +1022,15 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
     # ── 3) 법률 fetch + 판례 fetch 동시 실행 (asyncio.gather) ──
     # ⚠️ async DRF 코드에 이벤트 루프 블로킹 요소가 있어
     #    sync 버전 전체를 asyncio.to_thread로 실행 (스레드 내부에서 requests.get timeout 정상 작동)
+    _FETCH_ERROR = "FETCH_ERROR"
+
     async def _fetch_law(ln: str):
         try:
             raw = await asyncio.to_thread(svc.get_law_articles, ln)
             return ln, raw
         except Exception as e:
             logger.warning(f"[Stage 4] {ln} 법령 조회 실패: {e}")
-            return ln, None
+            return ln, _FETCH_ERROR
 
     drf_inst = _RUNTIME.get("drf")
 
@@ -1085,6 +1087,11 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
     for law_name, article_num, suffix, key in ref_items:
         try:
             raw = law_articles_cache.get(law_name)
+
+            # fetch 실패(Connection reset 등)와 실제 미존재를 구분
+            if raw == _FETCH_ERROR:
+                logger.warning(f"[Stage 4] ⚠️ {key}: DRF 조회 실패 → 검증 스킵")
+                continue  # 미검증 목록에 추가하지 않음 (검증불가)
 
             law_exists = bool(raw)
             article_exists = False
@@ -1270,7 +1277,7 @@ def _check_precedent_content_match(drf_summary: str, cited_context: str) -> bool
 def _match_article_num(article_dict: Dict, target_num: int, suffix: str = "") -> bool:
     """조문 딕셔너리에서 조문번호가 target_num(+suffix)과 일치하는지 확인.
     suffix 예: "의2", "의3" (제839조의2 → target_num=839, suffix="의2")
-    DRF 조문번호 형태: "10", "10의4", "839의2", "제10조의4" 등
+    DRF 조문번호 형태: "10", "10의4", "839의2", "제10조의4", "0003의0002" 등
     """
     try:
         raw = article_dict.get("조문번호", "")
@@ -1281,9 +1288,22 @@ def _match_article_num(article_dict: Dict, target_num: int, suffix: str = "") ->
         if num_str == target_str:
             return True
 
+        # 앞자리 0 제거: "0003의0002" → "3의2", "0010" → "10"
+        num_clean = re.sub(r'\b0+(\d)', r'\1', num_str)
+        if num_clean == target_str:
+            return True
+
         # suffix 없이 순수 숫자 비교 (기존 호환)
-        if not suffix and num_str.isdigit():
-            return int(num_str) == target_num
+        if not suffix:
+            try:
+                return int(re.sub(r'\D.*', '', num_str)) == target_num
+            except ValueError:
+                pass
+
+        # 조문내용에서 "제N조의M" 패턴 확인 (fallback)
+        content = str(article_dict.get("조문내용", ""))
+        if f"제{target_num}조{suffix}" in content[:50]:
+            return True
 
     except (ValueError, TypeError):
         pass
