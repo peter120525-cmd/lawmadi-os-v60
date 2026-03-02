@@ -119,7 +119,7 @@ from tools.drf_tools import (
 # =============================================================
 # [Phase 6] Import extracted modules
 # =============================================================
-from core.constants import OS_VERSION, GEMINI_MODEL, LAWMADILM_API_URL, LAWMADI_OS_API_URL
+from core.constants import OS_VERSION, GEMINI_MODEL, LAWMADILM_API_URL, LAWMADI_OS_API_URL, USE_VERTEX_SEARCH
 from core.classifier import (
     set_runtime as _set_classifier_runtime,
     set_leader_registry as _set_classifier_leader_registry,
@@ -320,6 +320,7 @@ except Exception as e:
 
 # =============================================================
 # 📦 [LAW_CACHE] SSOT 10종 사전 캐시 — 다중 파일 로딩 (952K QA)
+# USE_VERTEX_SEARCH=true 시 로딩 스킵 (메모리 ~614MB 절감)
 # =============================================================
 LAW_CACHE: Dict[str, Any] = {}
 _CACHE_FILES = [
@@ -331,42 +332,46 @@ _CACHE_FILES = [
     "law_cache_6.json",
     "law_cache_7.json",
 ]
-try:
-    _base_dir = os.path.dirname(__file__)
-    _loaded_files = 0
-    for _cf in _CACHE_FILES:
-        _cache_path = os.path.join(_base_dir, _cf)
-        if os.path.exists(_cache_path):
-            with open(_cache_path, "r", encoding="utf-8") as f:
-                _part = json.load(f)
-            for _stype, _sdata in _part.items():
-                if _stype in LAW_CACHE:
-                    # 동일 stype이면 entries 병합
-                    LAW_CACHE[_stype]["entries"].update(_sdata.get("entries", {}))
-                    LAW_CACHE[_stype]["entry_count"] = len(LAW_CACHE[_stype]["entries"])
-                else:
-                    LAW_CACHE[_stype] = _sdata
-            _loaded_files += 1
-    if _loaded_files:
-        _total_entries = sum(len(d.get("entries", {})) for d in LAW_CACHE.values())
-        _total_qa = sum(
-            len(info.get("key_qa", []))
-            for d in LAW_CACHE.values()
-            for info in d.get("entries", {}).values()
-        )
-        logger.info(f"✅ LAW_CACHE loaded: {len(LAW_CACHE)} types, {_total_entries} entries, {_total_qa} QA ({_loaded_files} files)")
-    else:
-        # 레거시 단일 파일 호환
-        _cache_path = os.path.join(_base_dir, "law_cache.json")
-        if os.path.exists(_cache_path):
-            with open(_cache_path, "r", encoding="utf-8") as f:
-                LAW_CACHE = json.load(f)
-            _total_entries = sum(d.get("entry_count", 0) for d in LAW_CACHE.values())
-            logger.info(f"✅ LAW_CACHE loaded (legacy): {len(LAW_CACHE)} types, {_total_entries} entries")
+
+if USE_VERTEX_SEARCH:
+    logger.info("🔍 USE_VERTEX_SEARCH=true → law_cache 로딩 스킵 (Vertex AI Search 사용)")
+else:
+    try:
+        _base_dir = os.path.dirname(__file__)
+        _loaded_files = 0
+        for _cf in _CACHE_FILES:
+            _cache_path = os.path.join(_base_dir, _cf)
+            if os.path.exists(_cache_path):
+                with open(_cache_path, "r", encoding="utf-8") as f:
+                    _part = json.load(f)
+                for _stype, _sdata in _part.items():
+                    if _stype in LAW_CACHE:
+                        # 동일 stype이면 entries 병합
+                        LAW_CACHE[_stype]["entries"].update(_sdata.get("entries", {}))
+                        LAW_CACHE[_stype]["entry_count"] = len(LAW_CACHE[_stype]["entries"])
+                    else:
+                        LAW_CACHE[_stype] = _sdata
+                _loaded_files += 1
+        if _loaded_files:
+            _total_entries = sum(len(d.get("entries", {})) for d in LAW_CACHE.values())
+            _total_qa = sum(
+                len(info.get("key_qa", []))
+                for d in LAW_CACHE.values()
+                for info in d.get("entries", {}).values()
+            )
+            logger.info(f"✅ LAW_CACHE loaded: {len(LAW_CACHE)} types, {_total_entries} entries, {_total_qa} QA ({_loaded_files} files)")
         else:
-            logger.warning("⚠️ law_cache 파일 미존재: DRF 실시간 검색만 사용")
-except Exception as _e:
-    logger.warning(f"⚠️ law_cache 로드 실패: {_e}")
+            # 레거시 단일 파일 호환
+            _cache_path = os.path.join(_base_dir, "law_cache.json")
+            if os.path.exists(_cache_path):
+                with open(_cache_path, "r", encoding="utf-8") as f:
+                    LAW_CACHE = json.load(f)
+                _total_entries = sum(d.get("entry_count", 0) for d in LAW_CACHE.values())
+                logger.info(f"✅ LAW_CACHE loaded (legacy): {len(LAW_CACHE)} types, {_total_entries} entries")
+            else:
+                logger.warning("⚠️ law_cache 파일 미존재: DRF 실시간 검색만 사용")
+    except Exception as _e:
+        logger.warning(f"⚠️ law_cache 로드 실패: {_e}")
 
 # 역 인덱스: keyword → [(ssot_type, law_name, score)] 빌드
 _KEYWORD_INDEX: Dict[str, list] = {}  # keyword -> [(type, law, qa_count)]
@@ -1403,7 +1408,49 @@ async def startup():
     _set_classifier_runtime(RUNTIME)
     _set_classifier_leader_registry(LEADER_REGISTRY)
     _set_pipeline_runtime(RUNTIME)
-    _set_pipeline_law_cache(LAW_CACHE, build_cache_context, match_ssot_sources, build_ssot_context)
+
+    # Vertex AI Search 모드 시 pipeline에 Vertex 함수 주입
+    if USE_VERTEX_SEARCH:
+        from connectors.vertex_search_client import (
+            search_legal_documents as _vertex_search,
+            build_vertex_context as _vertex_ctx,
+            build_vertex_cache_context as _vertex_cache_ctx,
+        )
+        _set_pipeline_law_cache(
+            LAW_CACHE,
+            build_cache_context_fn=None,
+            match_ssot_sources_fn=None,
+            build_ssot_context_fn=None,
+        )
+        from core.pipeline import set_vertex_search_fns as _set_vertex_fns
+        _set_vertex_fns(_vertex_search, _vertex_ctx, _vertex_cache_ctx)
+        logger.info("🔍 Pipeline wired with Vertex AI Search functions")
+    else:
+        _set_pipeline_law_cache(LAW_CACHE, build_cache_context, match_ssot_sources, build_ssot_context)
+
+    # Vertex Search 모드에서 match_ssot_sources 래퍼 생성
+    if USE_VERTEX_SEARCH:
+        import asyncio as _asyncio
+        from connectors.vertex_search_client import search_legal_documents as _vertex_search_fn
+
+        def _vertex_match_ssot_sync(query, top_k=8):
+            """Vertex AI Search 동기 래퍼 (routes/legal.py 호환)."""
+            try:
+                loop = _asyncio.get_event_loop()
+                if loop.is_running():
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        future = pool.submit(_asyncio.run, _vertex_search_fn(query, top_k))
+                        return future.result(timeout=10)
+                else:
+                    return _asyncio.run(_vertex_search_fn(query, top_k))
+            except Exception as e:
+                logger.warning(f"[VertexSearch] 동기 래퍼 실패: {e}")
+                return match_ssot_sources(query, top_k)  # 폴백
+
+        _match_ssot_for_routes = _vertex_match_ssot_sync
+    else:
+        _match_ssot_for_routes = match_ssot_sources
 
     # Wire route module dependencies
     _set_health_deps(RUNTIME, METRICS, LAW_CACHE, _KEYWORD_INDEX, optional_import("connectors.db_client_v2"))
@@ -1413,7 +1460,7 @@ async def startup():
         check_rate_limit=_check_rate_limit,
         rate_limit_response=_rate_limit_response,
         check_response_cache=_check_response_cache,
-        match_ssot_sources=match_ssot_sources,
+        match_ssot_sources=_match_ssot_for_routes,
         resolve_leader_from_ssot=_resolve_leader_from_ssot,
         ensure_genai_client=_ensure_genai_client,
         classify_gemini_error=_classify_gemini_error,
