@@ -32,6 +32,7 @@ COPY main.py .
 COPY config.json .
 COPY leaders.json .
 # law_cache 다중 파일 (952K QA, 10 SSOT types, 7 files)
+# TODO: USE_VERTEX_SEARCH=true 안정화 후 아래 7줄 삭제 (이미지 ~614MB 절감)
 COPY law_cache_1.json .
 COPY law_cache_2.json .
 COPY law_cache_3.json .

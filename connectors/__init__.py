@@ -7,4 +7,4 @@ from . import db_client
 from . import drf_client
 from . import validator
 
-__all__ = ['db_client', 'drf_client', 'validator']
+__all__ = ['db_client', 'drf_client', 'validator', 'vertex_search_client']

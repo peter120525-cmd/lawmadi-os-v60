@@ -30,6 +30,7 @@ from core.constants import (
     LAWMADILM_RAG_URL,
     FAIL_CLOSED_RESPONSE,
     USE_VERTEX_AI,
+    USE_VERTEX_SEARCH,
 )
 from core.model_fallback import get_model, on_quota_error, is_quota_error
 from utils.helpers import _remove_think_blocks, _safe_extract_gemini_text
@@ -656,6 +657,11 @@ def _build_leader_persona(leader_id: str) -> str:
         return ""
     return "\n".join(parts)
 
+# Vertex AI Search 함수 참조 (USE_VERTEX_SEARCH=true 시 주입)
+_vertex_search_fn = None          # search_legal_documents (async)
+_vertex_context_fn = None         # build_vertex_context (async)
+_vertex_cache_context_fn = None   # build_vertex_cache_context (async)
+
 
 # ---------------------------------------------------------------------------
 # Setters
@@ -679,6 +685,15 @@ def set_law_cache(
     _build_cache_context_fn = build_cache_context_fn
     _match_ssot_sources_fn = match_ssot_sources_fn
     _build_ssot_context_fn = build_ssot_context_fn
+
+
+def set_vertex_search_fns(search_fn=None, context_fn=None, cache_context_fn=None) -> None:
+    """Vertex AI Search 비동기 함수들을 주입."""
+    global _vertex_search_fn, _vertex_context_fn, _vertex_cache_context_fn
+    _vertex_search_fn = search_fn
+    _vertex_context_fn = context_fn
+    _vertex_cache_context_fn = cache_context_fn
+    logger.info("🔍 Vertex AI Search functions injected into pipeline")
 
 
 # ---------------------------------------------------------------------------
@@ -714,8 +729,44 @@ class VerificationResult:
 # =============================================================
 
 async def _stage1_rag_search(query: str, top_k: int = 10) -> RAGContext:
-    """Stage 1: RAG 서비스 + law_cache 키워드 매칭으로 관련 조문 검색"""
+    """Stage 1: RAG 서비스 + law_cache/Vertex AI Search로 관련 조문 검색"""
     ctx = RAGContext()
+
+    # ─── Vertex AI Search 모드 ───
+    if USE_VERTEX_SEARCH and _vertex_search_fn:
+        try:
+            # 병렬 호출: 시맨틱 검색 + 컨텍스트 생성
+            search_task = _vertex_search_fn(query, top_k=8)
+            context_task = _vertex_context_fn(query, top_k=30) if _vertex_context_fn else asyncio.coroutine(lambda: "")()
+            cache_ctx_task = _vertex_cache_context_fn(query, top_k=30) if _vertex_cache_context_fn else asyncio.coroutine(lambda: "")()
+
+            matched, context_text, cache_context = await asyncio.gather(
+                search_task, context_task, cache_ctx_task,
+                return_exceptions=True,
+            )
+
+            # 예외 처리
+            if isinstance(matched, Exception):
+                logger.warning(f"[Stage 1] Vertex Search 실패: {matched}")
+                matched = []
+            if isinstance(context_text, Exception):
+                context_text = ""
+            if isinstance(cache_context, Exception):
+                cache_context = ""
+
+            ctx.matched_laws = matched or []
+            ctx.context_text = context_text or ""
+            ctx.cache_context = cache_context or ""
+
+            total = len(ctx.matched_laws)
+            logger.info(f"[Stage 1] Vertex AI Search 완료: {total}건 시맨틱 매칭")
+            return ctx
+
+        except Exception as e:
+            logger.warning(f"[Stage 1] Vertex AI Search 전체 실패, law_cache 폴백: {e}")
+            # 폴백: 기존 law_cache 로직으로 계속
+
+    # ─── 기존 law_cache 모드 (또는 Vertex 실패 시 폴백) ───
 
     # 1a. LawmadiLM RAG API 호출 (설정된 경우)
     rag_url = LAWMADILM_RAG_URL

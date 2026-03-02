@@ -30,6 +30,13 @@ USE_VERTEX_AI = os.getenv("USE_VERTEX_AI", "false").lower() == "true"
 VERTEX_PROJECT = os.getenv("VERTEX_PROJECT", "lawmadi-db")
 VERTEX_LOCATION = os.getenv("VERTEX_LOCATION", "asia-northeast3")
 
+# Vertex AI Search 설정 (Stage 1 RAG 시맨틱 검색)
+USE_VERTEX_SEARCH = os.getenv("USE_VERTEX_SEARCH", "false").lower() == "true"
+VERTEX_SEARCH_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "lawmadi-db")
+VERTEX_SEARCH_LOCATION = os.getenv("VERTEX_SEARCH_LOCATION", "global")
+VERTEX_SEARCH_DATA_STORE_ID = os.getenv("VERTEX_SEARCH_DATA_STORE_ID", "lawmadi-legal-cache")
+VERTEX_SEARCH_ENGINE_ID = os.getenv("VERTEX_SEARCH_ENGINE_ID", "lawmadi-search-engine")
+
 # FAIL_CLOSED 응답: 검증 실패 시 사용자에게 반환
 FAIL_CLOSED_RESPONSE = (
     "⚠️ **법률 정보 검증 실패**\n\n"

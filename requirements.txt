@@ -14,3 +14,4 @@ fpdf2==2.8.3  # PDF 법률문서 내보내기
 slowapi==0.1.9  # Rate limiting
 aiofiles==24.1.0  # 비동기 파일 I/O
 fastapi-mcp>=0.2.0,<1.0  # MCP (Model Context Protocol) 서버
+google-cloud-discoveryengine>=0.13.0,<1.0  # Vertex AI Search (Stage 1 RAG 시맨틱 검색)
