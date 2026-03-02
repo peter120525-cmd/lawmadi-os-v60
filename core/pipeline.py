@@ -1480,65 +1480,123 @@ async def _gemini_fallback_compose(
     # RAG/캐시 컨텍스트 주입 (SSOT 캐시 최우선 참조)
     ctx_section = ""
     if rag_context.context_text:
-        ctx_section = (
-            "\n\n[SSOT 캐시 — 반드시 최우선 참조]\n"
-            "아래 SSOT 캐시 데이터는 DRF API에서 사전 검증된 법률 정보입니다.\n"
-            "답변 시 반드시 이 캐시의 법령명·조문번호·판례번호를 그대로 인용하세요.\n"
-            "캐시에 없는 법령이나 판례를 임의 생성하지 마세요.\n"
-            "⛔ 캐시에 존재하지 않는 법률을 포함하면 DRF 검증에서 불합격되어 답변이 차단됩니다.\n"
-            f"{rag_context.context_text[:100000]}"
-        )
+        if lang == "en":
+            ctx_section = (
+                "\n\n[SSOT Cache — MUST reference as primary source]\n"
+                "The SSOT cache data below is pre-verified legal information from the DRF API.\n"
+                "You MUST cite statute names, article numbers, and case numbers exactly as they appear.\n"
+                "Do NOT fabricate any statutes or cases not found in this cache.\n"
+                f"{rag_context.context_text[:100000]}"
+            )
+        else:
+            ctx_section = (
+                "\n\n[SSOT 캐시 — 반드시 최우선 참조]\n"
+                "아래 SSOT 캐시 데이터는 DRF API에서 사전 검증된 법률 정보입니다.\n"
+                "답변 시 반드시 이 캐시의 법령명·조문번호·판례번호를 그대로 인용하세요.\n"
+                "캐시에 없는 법령이나 판례를 임의 생성하지 마세요.\n"
+                "⛔ 캐시에 존재하지 않는 법률을 포함하면 DRF 검증에서 불합격되어 답변이 차단됩니다.\n"
+                f"{rag_context.context_text[:100000]}"
+            )
     elif rag_context.cache_context:
-        ctx_section = (
-            "\n\n[SSOT 캐시 — 반드시 최우선 참조]\n"
-            "아래 캐시 데이터의 법령명·조문번호·판례번호를 그대로 인용하세요.\n"
-            "⛔ 캐시에 존재하지 않는 법률을 포함하면 DRF 검증에서 불합격되어 답변이 차단됩니다.\n"
-            f"{rag_context.cache_context[:50000]}"
-        )
+        if lang == "en":
+            ctx_section = (
+                "\n\n[SSOT Cache — MUST reference as primary source]\n"
+                "Cite statute names, article numbers, and case numbers exactly as they appear below.\n"
+                f"{rag_context.cache_context[:50000]}"
+            )
+        else:
+            ctx_section = (
+                "\n\n[SSOT 캐시 — 반드시 최우선 참조]\n"
+                "아래 캐시 데이터의 법령명·조문번호·판례번호를 그대로 인용하세요.\n"
+                "⛔ 캐시에 존재하지 않는 법률을 포함하면 DRF 검증에서 불합격되어 답변이 차단됩니다.\n"
+                f"{rag_context.cache_context[:50000]}"
+            )
 
     # 모드별 보강 지시
+    _en = lang == "en"
+    _case_law_note_ko = "판례번호를 추측하거나 임의 생성하면 응답이 차단됩니다."
+    _case_law_note_en = "Fabricating or guessing case numbers will cause the response to be blocked."
+    _no_case_ko = "판례가 없으면 '관련 판례는 법원 종합법률정보(glaw.scourt.go.kr)에서 확인하세요'로 대체하세요."
+    _no_case_en = "If no case law is available, write: 'Relevant case law can be found at the Korea Courts website (glaw.scourt.go.kr).'"
+
     if mode == "expert":
-        enhance = (
-            "\n\n[구조 지시] 사안의 쟁점 → 관련 법령 → 판례 검토 → 실무 대응 절차 → 쟁점별 검토 의견 → 결론 및 권고 → 법률 근거"
-            "\n핵심 쟁점, 법률명, 판례번호는 **굵은 글씨**로 표시. 4,000~5,000자."
-            "\n\n[필수] 답변의 마지막에 반드시 '## 법률 근거' 섹션을 작성하고, 답변에서 인용한 모든 법령명과 조문번호를 '• 법령명 제N조 제N항: 내용 요약' 형식으로 최소 5개 이상 나열하세요."
-            "\n\n[필수] SSOT 캐시 또는 DRF 도구에서 확인된 판례만 인용하세요. 판례번호를 추측하거나 임의 생성하면 응답이 차단됩니다."
-            "\n판례가 없으면 '관련 판례는 법원 종합법률정보(glaw.scourt.go.kr)에서 확인하세요'로 대체하세요."
-        )
+        if _en:
+            enhance = (
+                "\n\n[Structure] Key Issues → Relevant Statutes → Case Law Review → Practical Procedures → Issue-by-Issue Analysis → Conclusion & Recommendations → Legal Basis"
+                "\nHighlight key issues, statute names, and case numbers in **bold**. 4,000-5,000 characters."
+                f"\n\n[Required] End with a '## Legal Basis' section listing all cited statutes as '• Statute Name Art. N Para. N: Summary'. At least 5 entries."
+                f"\n\n[Required] Only cite case law confirmed via SSOT cache or DRF tools. {_case_law_note_en}"
+                f"\n{_no_case_en}"
+            )
+        else:
+            enhance = (
+                "\n\n[구조 지시] 사안의 쟁점 → 관련 법령 → 판례 검토 → 실무 대응 절차 → 쟁점별 검토 의견 → 결론 및 권고 → 법률 근거"
+                "\n핵심 쟁점, 법률명, 판례번호는 **굵은 글씨**로 표시. 4,000~5,000자."
+                "\n\n[필수] 답변의 마지막에 반드시 '## 법률 근거' 섹션을 작성하고, 답변에서 인용한 모든 법령명과 조문번호를 '• 법령명 제N조 제N항: 내용 요약' 형식으로 최소 5개 이상 나열하세요."
+                f"\n\n[필수] SSOT 캐시 또는 DRF 도구에서 확인된 판례만 인용하세요. {_case_law_note_ko}"
+                f"\n{_no_case_ko}"
+            )
         max_tokens = 5000
     else:
-        enhance = (
-            "\n\n[구조 지시] 결론부터 말씀드리면 → 왜 그런가요?(관련 판례 포함) → 지금 바로 하실 수 있는 일 → 그래도 해결이 안 되면 → 혼자 하기 어려우시면 → 지금 해야 할 행동 3가지 → 법률 근거"
-            "\n한 문장은 100~200자 이내. 2,500~3,500자."
-            "\n\n[중요] '왜 그런가요?' 섹션에서 SSOT 캐시 또는 DRF 도구에서 확인된 판례만 인용하세요."
-            " 판례번호를 추측하거나 임의 생성하면 응답이 차단됩니다."
-            " 판례가 없으면 '관련 판례는 법원 종합법률정보(glaw.scourt.go.kr)에서 확인하세요'로 대체하세요."
-            "\n\n[필수] 답변의 마지막에 '## 법률 근거' 섹션을 작성하고, 이 사건에 직접 적용되는 핵심 법조문을 최대 5개까지만 '• 법령명 제N조: 내용 요약' 형식으로 나열하세요. 5개를 초과하지 마세요. 사건과 무관한 법률은 절대 포함하지 마세요."
-        )
+        if _en:
+            enhance = (
+                "\n\n[Structure] In Conclusion → Why? (with relevant case law) → Actions You Can Take Now → If Still Unresolved → Free Legal Aid → Top 3 Actions Right Now → Legal Basis"
+                "\nKeep sentences concise. 2,500-3,500 characters."
+                f"\n\n[Important] In the 'Why?' section, only cite case law confirmed via SSOT cache or DRF tools. {_case_law_note_en}"
+                f" {_no_case_en}"
+                "\n\n[Required] End with a '## Legal Basis' section listing up to 5 directly applicable statutes as '• Statute Name Art. N: Summary'. Do not exceed 5. Do not include unrelated statutes."
+            )
+        else:
+            enhance = (
+                "\n\n[구조 지시] 결론부터 말씀드리면 → 왜 그런가요?(관련 판례 포함) → 지금 바로 하실 수 있는 일 → 그래도 해결이 안 되면 → 혼자 하기 어려우시면 → 지금 해야 할 행동 3가지 → 법률 근거"
+                "\n한 문장은 100~200자 이내. 2,500~3,500자."
+                f"\n\n[중요] '왜 그런가요?' 섹션에서 SSOT 캐시 또는 DRF 도구에서 확인된 판례만 인용하세요."
+                f" {_case_law_note_ko}"
+                f" {_no_case_ko}"
+                "\n\n[필수] 답변의 마지막에 '## 법률 근거' 섹션을 작성하고, 이 사건에 직접 적용되는 핵심 법조문을 최대 5개까지만 '• 법령명 제N조: 내용 요약' 형식으로 나열하세요. 5개를 초과하지 마세요. 사건과 무관한 법률은 절대 포함하지 마세요."
+            )
         max_tokens = 4500
-
-    lang_instruction = ""
-    if lang == "en":
-        lang_instruction = "\n\nIMPORTANT: Respond entirely in English. Translate Korean legal terms with the original Korean in parentheses."
 
     # 리더 인격·철학 주입
     leader_id = analysis.get("leader_id", "")
     persona_section = ""
     persona_text = _build_leader_persona(leader_id)
     if persona_text:
-        persona_section = f"\n\n[리더 인격]\n{persona_text}"
+        if _en:
+            persona_section = f"\n\n[Leader Persona]\n{persona_text}\n(Respond entirely in English with a professional, empathetic tone.)"
+        else:
+            persona_section = f"\n\n[리더 인격]\n{persona_text}"
 
-    instruction = (
-        f"{build_system_instruction(mode)}\n"
-        f"현재 당신은 '{leader_name}' 리더입니다.\n"
-        f"전문 분야: {leader_specialty}"
-        f"{persona_section}\n"
-        f"질문 요약: {analysis.get('summary', '')}"
-        f"{draft_section}"
-        f"{ctx_section}"
-        f"{enhance}"
-        f"{lang_instruction}"
-    )
+    if _en:
+        lang_header = (
+            "\n\n[LANGUAGE INSTRUCTION — HIGHEST PRIORITY]\n"
+            "You MUST respond entirely in English.\n"
+            "Translate Korean legal terms with the original Korean in parentheses.\n"
+            "Use English section headers (## In Conclusion, ## Why?, ## Actions You Can Take Now, etc.).\n"
+            "Do NOT use any Korean in the response body."
+        )
+        instruction = (
+            f"{build_system_instruction(mode, lang='en')}\n"
+            f"You are leader '{leader_name}'.\n"
+            f"Specialty: {leader_specialty}"
+            f"{persona_section}\n"
+            f"Question summary: {analysis.get('summary', '')}"
+            f"{draft_section}"
+            f"{ctx_section}"
+            f"{enhance}"
+            f"{lang_header}"
+        )
+    else:
+        instruction = (
+            f"{build_system_instruction(mode)}\n"
+            f"현재 당신은 '{leader_name}' 리더입니다.\n"
+            f"전문 분야: {leader_specialty}"
+            f"{persona_section}\n"
+            f"질문 요약: {analysis.get('summary', '')}"
+            f"{draft_section}"
+            f"{ctx_section}"
+            f"{enhance}"
+        )
 
     # ── Safety Settings (Vertex AI: 법률 상담 주제 차단 방지, 추가 비용 없음) ──
     safety_settings = None
