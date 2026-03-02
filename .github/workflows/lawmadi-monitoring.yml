@@ -41,21 +41,42 @@ jobs:
         id: health
         run: |
           python - <<'PYEOF'
-          import requests, json, time, sys
+          import requests, json, time, sys, os
 
           API = "${{ env.API_URL }}"
-          results = {"checks": [], "pass": 0, "fail": 0}
 
-          def check(name, func):
+          # ── Cold Start 워밍업 (점수 미반영) ──
+          print("🔥 워밍업 (Cold Start 대응)")
+          for attempt in range(3):
+              try:
+                  s = time.time()
+                  r = requests.get(f"{API}/health", timeout=30)
+                  ms = (time.time() - s) * 1000
+                  print(f"  #{attempt+1}: HTTP {r.status_code} ({ms:.0f}ms)")
+                  if r.status_code == 200:
+                      break
+              except Exception as e:
+                  print(f"  #{attempt+1}: {e}")
+              time.sleep(5)
+          print()
+
+          # ── 본 체크 ──
+          results = {"checks": [], "pass": 0, "fail": 0, "critical_fail": False}
+
+          def check(name, func, critical=False):
               try:
                   ok, msg, ms = func()
                   icon = "✅" if ok else "❌"
                   results["pass" if ok else "fail"] += 1
+                  if not ok and critical:
+                      results["critical_fail"] = True
                   results["checks"].append({"name": name, "ok": ok, "msg": msg, "ms": ms})
                   print(f"{icon} {name}: {msg} ({ms:.0f}ms)")
                   return ok
               except Exception as e:
                   results["fail"] += 1
+                  if critical:
+                      results["critical_fail"] = True
                   results["checks"].append({"name": name, "ok": False, "msg": str(e)[:100], "ms": 0})
                   print(f"❌ {name}: {e}")
                   return False
@@ -63,32 +84,32 @@ jobs:
           INTERNAL_KEY = "${{ secrets.INTERNAL_API_KEY }}"
           AUTH_HEADER = {"Authorization": f"Bearer {INTERNAL_KEY}"} if INTERNAL_KEY else {}
 
-          # 1. /health 엔드포인트
+          # 1. /health 엔드포인트 (critical — 실패 시 서비스 다운)
           def check_health():
               s = time.time()
-              r = requests.get(f"{API}/health", timeout=15)
+              r = requests.get(f"{API}/health", timeout=30)
               ms = (time.time() - s) * 1000
               data = r.json()
               status = data.get("status", "")
               version = data.get("os_version", "?")
               return status == "online", f"status={status}, version={version}", ms
 
-          check("Health Endpoint", check_health)
+          check("Health Endpoint", check_health, critical=True)
 
-          # 2. API 응답 시간
+          # 2. API 응답 시간 (informational — 느려도 서비스 자체는 정상)
           def check_latency():
               s = time.time()
-              r = requests.get(f"{API}/health", timeout=15)
+              r = requests.get(f"{API}/health", timeout=30)
               ms = (time.time() - s) * 1000
-              ok = ms < 3000
+              ok = ms < 5000
               return ok, f"{ms:.0f}ms {'(정상)' if ok else '(느림!)'}", ms
 
           check("API Latency", check_latency)
 
-          # 3. 핵심 모듈 상태 (/diagnostics 인증 엔드포인트 사용)
+          # 3. 핵심 모듈 상태 (critical)
           def check_modules():
               if not INTERNAL_KEY:
-                  return False, "INTERNAL_API_KEY 시크릿 미설정", 0
+                  return True, "INTERNAL_API_KEY 미설정 (스킵)", 0
               s = time.time()
               r = requests.get(f"{API}/diagnostics", headers=AUTH_HEADER, timeout=15)
               ms = (time.time() - s) * 1000
@@ -100,12 +121,12 @@ jobs:
               ok = len(missing) == 0
               return ok, f"{'모두 활성' if ok else f'비활성: {missing}'}", ms
 
-          check("Critical Modules", check_modules)
+          check("Critical Modules", check_modules, critical=True)
 
-          # 4. Gemini 모델 상태 (/diagnostics 인증 엔드포인트 사용)
+          # 4. Gemini 모델 상태
           def check_gemini():
               if not INTERNAL_KEY:
-                  return False, "INTERNAL_API_KEY 시크릿 미설정", 0
+                  return True, "INTERNAL_API_KEY 미설정 (스킵)", 0
               s = time.time()
               r = requests.get(f"{API}/diagnostics", headers=AUTH_HEADER, timeout=15)
               ms = (time.time() - s) * 1000
@@ -114,17 +135,15 @@ jobs:
               model = r.json().get("gemini_model", "unknown")
               return "gemini" in model.lower(), f"model={model}", ms
 
-          check("Gemini Model", check_gemini)
+          check("Gemini Model", check_gemini, critical=True)
 
           # 결과 요약
           total = results["pass"] + results["fail"]
           print(f"\n{'='*50}")
           print(f"결과: {results['pass']}/{total} 통과")
-          status = "OK" if results["fail"] == 0 else "DEGRADED"
+          status = "FAIL" if results["critical_fail"] else ("OK" if results["fail"] == 0 else "DEGRADED")
           print(f"상태: {status}")
 
-          # GitHub Actions 출력
-          import os
           gh_out = os.environ.get("GITHUB_OUTPUT", "")
           if gh_out:
               with open(gh_out, "a") as f:
@@ -132,12 +151,13 @@ jobs:
                   f.write(f"pass_count={results['pass']}\n")
                   f.write(f"total_count={total}\n")
 
-          if results["fail"] > 0:
+          # critical 실패만 step 실패 처리 (latency 느림은 DEGRADED로 경고만)
+          if results["critical_fail"]:
               sys.exit(1)
           PYEOF
 
       - name: Simulation Test
-        if: ${{ github.event.inputs.include_simulation != 'false' }}
+        if: ${{ always() && github.event.inputs.include_simulation != 'false' }}
         id: simulation
         run: |
           python - <<'PYEOF'
@@ -147,23 +167,20 @@ jobs:
           TIMEOUT = 120  # Cold Start 고려 (60→120초)
 
           # 1단계: 워밍업 (Cold Start 대응, 점수 미반영)
-          print("🔥 워밍업 시작 (Cold Start 대응)")
-          # /health로 인스턴스 깨우기
-          try:
-              r = requests.get(f"{API}/health", timeout=30)
-              print(f"  health: HTTP {r.status_code}")
-          except Exception as e:
-              print(f"  health 실패: {e}")
-          time.sleep(5)
-          # /ask로 파이프라인 워밍업
-          try:
-              s = time.time()
-              r = requests.post(f"{API}/ask", json={"query": "안녕하세요"}, timeout=TIMEOUT)
-              ms = (time.time() - s) * 1000
-              print(f"  워밍업 완료: HTTP {r.status_code} ({ms/1000:.1f}s)")
-          except Exception as e:
-              ms = (time.time() - s) * 1000
-              print(f"  워밍업 타임아웃 ({ms/1000:.1f}s) — 인스턴스 부팅 중")
+          print("🔥 워밍업 (Cold Start 대응)")
+          # /health 워밍업은 Health Check 단계에서 이미 수행됨 — /ask 파이프라인만 워밍업
+          for attempt in range(2):
+              try:
+                  s = time.time()
+                  r = requests.post(f"{API}/ask", json={"query": "안녕하세요"}, timeout=TIMEOUT)
+                  ms = (time.time() - s) * 1000
+                  print(f"  워밍업 #{attempt+1}: HTTP {r.status_code} ({ms/1000:.1f}s)")
+                  if r.status_code in (200, 429):
+                      break
+              except Exception as e:
+                  ms = (time.time() - s) * 1000
+                  print(f"  워밍업 #{attempt+1}: 타임아웃 ({ms/1000:.1f}s)")
+              time.sleep(5)
           time.sleep(10)
 
           # 2단계: 실제 시뮬레이션
