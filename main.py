@@ -222,9 +222,9 @@ _cors_origins = [
     "https://www.lawmadi.com",
     "https://lawmadi-os.web.app",
     "https://lawmadi-db.web.app",  # Firebase Hosting (current)
-    "http://localhost:3000",  # lawmadi-os-pwa 로컬 개발
     "https://lawmadi-os-ee38lfjfg-choe-jainams-projects.vercel.app",  # lawmadi-os-pwa Vercel
 ]
+# localhost는 프로덕션 CORS에서 제거 — 필요 시 CORS_EXTRA_ORIGINS=http://localhost:3000 으로 추가
 _extra_cors = os.getenv("CORS_EXTRA_ORIGINS", "")
 if _extra_cors:
     _cors_origins.extend([o.strip() for o in _extra_cors.split(",") if o.strip()])
@@ -285,6 +285,7 @@ async def security_headers_middleware(request: Request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     # CSP: XSS 방어 — 인라인 스크립트/스타일 허용(자체 렌더링), 외부는 화이트리스트만
+    # NOTE: 'unsafe-inline' 제거는 인라인 JS 외부 파일 추출 후 가능 (향후 과제)
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; "
@@ -296,6 +297,7 @@ async def security_headers_middleware(request: Request, call_next):
         "object-src 'none'; "
         "base-uri 'self'; "
         "form-action 'self'; "
+        "block-all-mixed-content; "
         "upgrade-insecure-requests"
     )
     # API 응답 캐시 방지 — 법률 분석 내용이 프록시/브라우저에 캐시되지 않도록
@@ -613,7 +615,9 @@ def _get_user_plan(request: Request) -> str:
     """X-Premium-Key 헤더 확인 → 유효하면 'premium', 아니면 'free'"""
     key = request.headers.get("X-Premium-Key", "").strip()
     if key and _PREMIUM_KEYS:
-        if any(hmac.compare_digest(key, pk) for pk in _PREMIUM_KEYS):
+        # constant-time: 모든 키와 비교 후 판단 (timing attack 방어)
+        matches = [hmac.compare_digest(key, pk) for pk in _PREMIUM_KEYS]
+        if any(matches):
             return "premium"
     return "free"
 
@@ -629,17 +633,16 @@ def _check_expert_access(request: Request) -> bool:
     return plan_cfg.get("expert_access", False)
 
 _WINDOW_HOURS = 4
-_rate_usage: Dict[str, List[float]] = {}  # {ip_hash: [timestamp1, timestamp2, ...]}
+_rate_usage: Dict[str, List[float]] = {}  # 인메모리 fallback용
 
 def _check_rate_limit(request: Request) -> Union[bool, dict]:
     """
-    4시간 슬라이딩 윈도우 기준 요청 제한.
+    4시간 윈도우 기준 요청 제한 — DB 우선, 인메모리 fallback.
     통과 시 True, 초과 시 {"blocked": True, "retry_at_kst": "HH:MM"} 반환.
     IP는 해시로만 저장 (원본 비노출).
-    관리자 키(X-Admin-Key 헤더)가 유효하면 제한 우회.
+    관리자 키(X-Admin-Key 헤더)가 유효하면 높은 제한 적용.
     플랜에 따라 window_limit 동적 적용.
     """
-    # 관리자 키: 완전 우회 대신 높은 제한 적용 (1000회/4시간)
     _ADMIN_WINDOW_LIMIT = 1000
     _admin_key = os.getenv("MCP_API_KEY", "").strip() or os.getenv("INTERNAL_API_KEY", "").strip()
     is_admin = False
@@ -660,14 +663,25 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
     now = time.time()
     window = _WINDOW_HOURS * 3600
 
-    timestamps = _rate_usage.get(ip_hash, [])
-    # 윈도우 밖의 오래된 기록 제거 + IP당 최대 기록 수 제한
+    # ── DB 우선: 멀티인스턴스 환경에서 정확한 카운트 ──
+    try:
+        from connectors.db_client_v2 import rate_limit_check, rate_limit_hit
+        db_key = f"ip:{ip_hash}"
+        if not rate_limit_check(db_key, window_limit):
+            retry_kst = (datetime.datetime.utcnow() + datetime.timedelta(hours=9, seconds=window)).strftime("%H:%M")
+            return {"blocked": True, "retry_at_kst": retry_kst}
+        rate_limit_hit(db_key, window_seconds=int(window))
+        return True
+    except Exception:
+        pass  # DB 불가 시 인메모리 fallback
+
+    # ── 인메모리 fallback ──
     _MAX_TIMESTAMPS_PER_IP = 200
+    timestamps = _rate_usage.get(ip_hash, [])
     timestamps = [t for t in timestamps if now - t < window][-_MAX_TIMESTAMPS_PER_IP:]
 
     if len(timestamps) >= window_limit:
         _rate_usage[ip_hash] = timestamps
-        # 가장 오래된 요청이 윈도우를 벗어나는 KST 시각 계산
         oldest = min(timestamps)
         retry_ts = oldest + window
         retry_kst = datetime.datetime.utcfromtimestamp(retry_ts) + datetime.timedelta(hours=9)
@@ -676,13 +690,11 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
     timestamps.append(now)
     _rate_usage[ip_hash] = timestamps
 
-    # 메모리 정리: IP 엔트리 수 제한 (5000개 초과 시 오래된 엔트리 정리)
     _MAX_RATE_ENTRIES = 5000
     if len(_rate_usage) > _MAX_RATE_ENTRIES:
         stale_keys = [k for k, v in _rate_usage.items() if not v or max(v) < now - window]
         for k in stale_keys:
             del _rate_usage[k]
-        # 여전히 초과 시 가장 오래된 50% 삭제
         if len(_rate_usage) > _MAX_RATE_ENTRIES:
             sorted_keys = sorted(_rate_usage.keys(), key=lambda k: max(_rate_usage[k], default=0))
             for k in sorted_keys[:len(_rate_usage) // 2]:
