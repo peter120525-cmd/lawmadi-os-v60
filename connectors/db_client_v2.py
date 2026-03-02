@@ -272,6 +272,49 @@ def add_audit_log(
 
 
 # =====================================================
+# 💬 Chat History Table
+# =====================================================
+
+def init_chat_history_table():
+    """채팅 기록 테이블 초기화"""
+    if not _db_enabled():
+        return
+
+    conn = None
+    cur = None
+    try:
+        conn = get_connection()
+        if conn is None:
+            logger.warning("⚠️ [ChatHistory] DB 연결 실패로 테이블 초기화 스킵")
+            return
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS chat_history (
+                id SERIAL PRIMARY KEY,
+                user_id VARCHAR(64),
+                user_query TEXT,
+                ai_response TEXT,
+                leader_code VARCHAR(50),
+                status VARCHAR(20),
+                latency_ms INTEGER,
+                visitor_id VARCHAR(64),
+                swarm_mode BOOLEAN DEFAULT FALSE,
+                leaders_used TEXT,
+                query_category VARCHAR(50),
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                env_version VARCHAR(50)
+            )
+        """)
+        conn.commit()
+        logger.info("✅ [ChatHistory] 테이블 초기화 완료")
+    except Exception as e:
+        logger.error(f"⚠️ [ChatHistory] 테이블 생성 실패: {e}")
+    finally:
+        if cur: cur.close()
+        if conn: release_connection(conn)
+
+
+# =====================================================
 # 📊 Visitor Tracking System
 # =====================================================
 

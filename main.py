@@ -1185,8 +1185,12 @@ async def startup():
                     init_fn()
                     logger.info("✅ DB init complete")
 
-                # 방문자 통계 테이블 초기화
+                # 채팅 기록 테이블 초기화
                 db_client_v2 = optional_import("connectors.db_client_v2")
+                if db_client_v2 and hasattr(db_client_v2, "init_chat_history_table"):
+                    db_client_v2.init_chat_history_table()
+
+                # 방문자 통계 테이블 초기화
                 if db_client_v2 and hasattr(db_client_v2, "init_visitor_stats_table"):
                     db_client_v2.init_visitor_stats_table()
 
@@ -1478,6 +1482,13 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 @app.on_event("shutdown")
 async def shutdown():
+    drf = RUNTIME.get("drf")
+    if drf:
+        try:
+            await drf.close_async()
+            drf.close()
+        except Exception:
+            pass
     logger.info(f"🛑 Lawmadi OS {OS_VERSION} Shutdown")
 
 # =============================================================
