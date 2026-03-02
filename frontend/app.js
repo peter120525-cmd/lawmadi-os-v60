@@ -18,6 +18,11 @@ const API_URL = `${API_BASE}/ask`;
 const PDF_URL = `${API_BASE}/export-pdf`;
 const SYSTEM_VERSION = 'v60.0.0';
 
+// XSS 방어: DOMPurify sanitize wrapper
+const _sanitize = (html) => (typeof DOMPurify !== 'undefined')
+    ? DOMPurify.sanitize(html, {ADD_ATTR: ['target','data-tooltip'], ALLOW_DATA_ATTR: true})
+    : html;
+
 /**
  * L7 RENDERER: 시스템 로그 터미널 출력 함수
  * 실시간 커널 트레이싱 및 L3/L5 데이터 흐름을 모니터링합니다.
@@ -75,7 +80,7 @@ const execute = async () => {
         addLog("서연: 인사말 프로토콜 감지 -> 유나(Yuna) 노드 활성화", "system");
         setTimeout(() => {
             const aiDiv = document.createElement('div');
-            aiDiv.className = 'ai-msg'; aiDiv.innerHTML = yunaIntro;
+            aiDiv.className = 'ai-msg'; aiDiv.innerHTML = _sanitize(yunaIntro);
             conversationArea.appendChild(aiDiv);
             if(terminal) terminal.classList.add('hidden');
         }, 600);
@@ -128,7 +133,7 @@ const execute = async () => {
                 </div>
             `;
             
-            aiDiv.innerHTML = leaderBadge + formattedResponse;
+            aiDiv.innerHTML = _sanitize(leaderBadge + formattedResponse);
 
             // 법률문서 감지: 코드블록(```) 안에 법률문서 키워드가 있으면 PDF 다운로드 버튼 추가
             const docKeywords = ['고 소 장', '고소장', '소    장', '소장', '답 변 서', '답변서', '내 용 증 명', '내용증명', '고소취하서', '고 소 취 하 서'];
@@ -201,7 +206,7 @@ const execute = async () => {
         
         const errDiv = document.createElement('div');
         errDiv.className = 'ai-msg';
-        errDiv.innerHTML = `<p style="color:#ef4444; font-weight:bold;">🚨 커널 파이프라인 단절 (네트워크 상태 또는 API 게이트웨이 설정을 점검하십시오)</p>`;
+        errDiv.innerHTML = _sanitize(`<p style="color:#ef4444; font-weight:bold;">🚨 커널 파이프라인 단절 (네트워크 상태 또는 API 게이트웨이 설정을 점검하십시오)</p>`);
         conversationArea.appendChild(errDiv);
     }
 };

@@ -746,11 +746,10 @@ async def ask(request: Request):
             "leader_specialty": leader_specialty,
             "tier": tier,
             "status": _response_status,
-            "latency_ms": latency_ms,
             "swarm_mode": False,
             "constitutional_check": "PASS" if const_check.get("passed", True) else "WARNING",
             "ssot_sources": [f"{s['type']}:{s['law']}" for s in matched_sources[:3]] if matched_sources else [],
-            "meta": {**_compute_quality_meta_fn(final_text_clean, matched_sources), "model": get_model()},
+            "meta": {**_compute_quality_meta_fn(final_text_clean, matched_sources), "model": "lawmadi-primary"},
             "current_leader": {"name": leader_name, "specialty": leader_specialty, "leader_id": analysis.get("leader_id", "")},
         }
         if _ask_deliberation:
@@ -765,8 +764,8 @@ async def ask(request: Request):
         _err_latency = int((time.time() - start_time) * 1000)
         ref = datetime.datetime.now().strftime("%H%M%S")
         _err_cat = _classify_error_category(e)
-        logger.error(f"💥 커널 에러 (trace={trace}, ref={ref}): {type(e).__name__}: {e} | category={_err_cat} | latency={_err_latency}ms")
-        logger.error(traceback.format_exc())
+        logger.error(f"💥 커널 에러 (trace={trace}, ref={ref}): {type(e).__name__} | category={_err_cat} | latency={_err_latency}ms")
+        logger.debug(traceback.format_exc())  # traceback은 DEBUG 레벨로 (운영 로그 노출 최소화)
         _audit_fn("ask_error", {"query": str(locals().get("query", "")), "status": "ERROR", "leader": "SYSTEM", "latency_ms": _err_latency, "error_type": type(e).__name__, "error_category": _err_cat})
         record_request("/ask", _err_latency, status="ERROR", error_category=_err_cat)
         _lang = locals().get("lang", "")
