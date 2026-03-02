@@ -545,7 +545,7 @@ async def ask(request: Request):
             _ask_deliberation, _ask_handoff = await _run_deliberation_async()
             exec_id = clevel_decision.get("executive_id")
             logger.info(f"🎯 C-Level 직접 모드: {exec_id}")
-            clevel_instruction = clevel.get_clevel_system_instruction(exec_id, _build_system_instruction("general"))
+            clevel_instruction = clevel.get_clevel_system_instruction(exec_id, _build_system_instruction("general", lang=lang))
             gc = _ensure_genai_client_fn(_RUNTIME)
             model_name = get_model()
             chat = gc.chats.create(
@@ -1107,9 +1107,7 @@ async def ask_stream(request: Request):
             # ─── 경로 A: C-Level 직접 호출 (검증 후 스트리밍) ───
             if clevel_decision and clevel_decision.get("mode") == "direct":
                 exec_id = clevel_decision.get("executive_id")
-                clevel_instruction = clevel.get_clevel_system_instruction(exec_id, _build_system_instruction(stream_mode))
-                if lang == "en":
-                    clevel_instruction += "\n\nIMPORTANT: Respond entirely in English. Translate Korean legal terms with the original Korean in parentheses."
+                clevel_instruction = clevel.get_clevel_system_instruction(exec_id, _build_system_instruction(stream_mode, lang=lang))
                 leader_name = clevel.executives.get(exec_id, {}).get("name", exec_id)
                 leader_specialty = clevel.executives.get(exec_id, {}).get("role", exec_id)
 

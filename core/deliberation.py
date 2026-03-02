@@ -233,19 +233,33 @@ async def generate_deliberation(
 
     turns: List[Dict] = []
 
+    _en = lang == "en"
+
     try:
         # ── Turn 1: CSO 서연 — 질문 요약 + 의견 요청 (순차) ──
-        t1_prompt = (
-            f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
-            f"참석 리더: {', '.join(l.get('name','?') + '(' + l.get('specialty','') + ')' for l in leaders[:3])}\n\n"
-            f"당신은 CSO 서연입니다. 이 질문의 핵심을 요약하고, "
-            f"왜 이 분야의 전문가가 필요한지 설명한 뒤, "
-            f"{selected_name}님에게 의견을 요청하세요. "
-            f"반드시 100자 이상 150자 이내로 작성하세요. "
-            f"존댓말, 따뜻하고 전문적인 톤으로 자연스럽게 말하세요. "
-            f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
-            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-        )
+        _leaders_str = ', '.join(l.get('name','?') + '(' + l.get('specialty','') + ')' for l in leaders[:3])
+        if _en:
+            t1_prompt = (
+                f"[This is an external client's question — NOT your case or any leader's case.]\nClient question: {query[:300]}\n"
+                f"Leaders present: {_leaders_str}\n\n"
+                f"You are CSO Seoyeon. Summarize the core of this question, "
+                f"explain why an expert in this field is needed, "
+                f"then ask {selected_name} for their input. "
+                f"Write 2-3 complete sentences. Professional, warm, and natural tone. "
+                f"Respond entirely in English. Use 'leader' or 'expert', never 'lawyer'."
+            )
+        else:
+            t1_prompt = (
+                f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
+                f"참석 리더: {_leaders_str}\n\n"
+                f"당신은 CSO 서연입니다. 이 질문의 핵심을 요약하고, "
+                f"왜 이 분야의 전문가가 필요한지 설명한 뒤, "
+                f"{selected_name}님에게 의견을 요청하세요. "
+                f"반드시 100자 이상 150자 이내로 작성하세요. "
+                f"존댓말, 따뜻하고 전문적인 톤으로 자연스럽게 말하세요. "
+                f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
+                f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
+            )
         try:
             t1_text = await asyncio.wait_for(
                 _single_leader_call(gc, cso_persona, t1_prompt),
@@ -254,37 +268,60 @@ async def generate_deliberation(
         except Exception:
             t1_text = ""
         if not t1_text:
-            t1_text = f"이 질문은 {selected_specialty} 분야입니다. {selected_name}님, 의견 부탁드립니다."
+            t1_text = (
+                f"This question falls under {selected_specialty}. {selected_name}, could you share your perspective?"
+                if _en else
+                f"이 질문은 {selected_specialty} 분야입니다. {selected_name}님, 의견 부탁드립니다."
+            )
         turns.append({
-            "speaker": "서연",
+            "speaker": "Seoyeon" if _en else "서연",
             "role": "CSO",
             "text": t1_text,
             "is_final": False,
         })
 
         # ── Turn 2+3: 병렬 — 담당 리더 의견 + CSO 지명 ──
-        t2_prompt = (
-            f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
-            f"CSO 서연이 당신에게 의견을 요청했습니다.\n\n"
-            f"당신은 {selected_name}({selected_specialty} 전문 리더)입니다. "
-            f"자기 분야의 전문 지식을 바탕으로 이 질문에 어떻게 도움을 줄 수 있는지 "
-            f"구체적으로 설명하고, 자신감 있게 돕겠다고 답하세요. "
-            f"반드시 100자 이상 150자 이내로 작성하세요. "
-            f"존댓말, 전문적이고 따뜻한 톤으로 자연스럽게 말하세요. "
-            f"과장된 자기소개(CLO급, 유니콘 등)는 하지 마세요. 겸손하고 실질적으로 말하세요. "
-            f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
-            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-        )
-        t3_prompt = (
-            f"{selected_name}님이 {selected_specialty} 분야에서 돕겠다고 했습니다.\n\n"
-            f"당신은 CSO 서연입니다. {selected_name}님의 전문성을 인정하며 "
-            f"이 질문의 담당 리더로 공식 지명하세요. "
-            f"사용자에게 안심하라는 말도 덧붙이세요. "
-            f"반드시 100자 이상 150자 이내로 작성하세요. "
-            f"존댓말, 따뜻하고 신뢰감 있는 톤으로 자연스럽게 말하세요. "
-            f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
-            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-        )
+        if _en:
+            t2_prompt = (
+                f"[This is an external client's question — NOT your case.]\nClient question: {query[:300]}\n"
+                f"CSO Seoyeon has asked for your input.\n\n"
+                f"You are {selected_name} ({selected_specialty} expert leader). "
+                f"Based on your expertise, explain specifically how you can help with this question "
+                f"and confidently offer your assistance. "
+                f"Write 2-3 complete sentences. Professional, warm, and natural tone. "
+                f"Respond entirely in English. Be humble and practical — no exaggeration."
+            )
+            t3_prompt = (
+                f"{selected_name} has offered to help from the {selected_specialty} perspective.\n\n"
+                f"You are CSO Seoyeon. Acknowledge {selected_name}'s expertise "
+                f"and officially designate them as the assigned leader for this question. "
+                f"Add a reassuring note to the user. "
+                f"Write 2-3 complete sentences. Warm, trustworthy, and professional tone. "
+                f"Respond entirely in English. Use 'leader' or 'expert', never 'lawyer'."
+            )
+        else:
+            t2_prompt = (
+                f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
+                f"CSO 서연이 당신에게 의견을 요청했습니다.\n\n"
+                f"당신은 {selected_name}({selected_specialty} 전문 리더)입니다. "
+                f"자기 분야의 전문 지식을 바탕으로 이 질문에 어떻게 도움을 줄 수 있는지 "
+                f"구체적으로 설명하고, 자신감 있게 돕겠다고 답하세요. "
+                f"반드시 100자 이상 150자 이내로 작성하세요. "
+                f"존댓말, 전문적이고 따뜻한 톤으로 자연스럽게 말하세요. "
+                f"과장된 자기소개(CLO급, 유니콘 등)는 하지 마세요. 겸손하고 실질적으로 말하세요. "
+                f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
+                f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
+            )
+            t3_prompt = (
+                f"{selected_name}님이 {selected_specialty} 분야에서 돕겠다고 했습니다.\n\n"
+                f"당신은 CSO 서연입니다. {selected_name}님의 전문성을 인정하며 "
+                f"이 질문의 담당 리더로 공식 지명하세요. "
+                f"사용자에게 안심하라는 말도 덧붙이세요. "
+                f"반드시 100자 이상 150자 이내로 작성하세요. "
+                f"존댓말, 따뜻하고 신뢰감 있는 톤으로 자연스럽게 말하세요. "
+                f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
+                f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
+            )
         results = await asyncio.gather(
             asyncio.wait_for(
                 _single_leader_call(gc, leader_persona, t2_prompt),
@@ -299,9 +336,17 @@ async def generate_deliberation(
         t2_text = results[0] if isinstance(results[0], str) and results[0] else ""
         t3_text = results[1] if isinstance(results[1], str) and results[1] else ""
         if not t2_text:
-            t2_text = f"네, {selected_specialty} 관점에서 바로 도와드리겠습니다."
+            t2_text = (
+                f"Absolutely — I'll assist right away from the {selected_specialty} perspective."
+                if _en else
+                f"네, {selected_specialty} 관점에서 바로 도와드리겠습니다."
+            )
         if not t3_text:
-            t3_text = f"{selected_name}님이 담당하시겠습니다."
+            t3_text = (
+                f"{selected_name} will be your assigned leader for this matter."
+                if _en else
+                f"{selected_name}님이 담당하시겠습니다."
+            )
         turns.append({
             "speaker": selected_name,
             "role": selected_specialty,
@@ -309,7 +354,7 @@ async def generate_deliberation(
             "is_final": False,
         })
         turns.append({
-            "speaker": "서연",
+            "speaker": "Seoyeon" if _en else "서연",
             "role": "CSO",
             "text": t3_text,
             "is_final": True,
@@ -369,33 +414,55 @@ async def generate_handoff(
         new_persona = f"{new_name}: {new_specialty} 전문 리더"
 
     # ── 병렬 호출 ──
-    t1_prompt = (
-        f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
-        f"당신은 {cur_name}({cur_specialty} 전문)입니다. "
-        f"이 질문은 {new_specialty} 분야에 더 가까워서 "
-        f"{new_name}님에게 인계하려 합니다. "
-        f"왜 이 질문이 {new_specialty} 분야에 해당하는지, "
-        f"그리고 {new_name}님이 더 잘 도와드릴 수 있는 이유를 설명하세요. "
-        f"반드시 100자 이상 150자 이내로 작성하세요. "
-        f"존댓말, 따뜻한 톤으로 자연스럽게 말하세요. "
-        f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
-        f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-    )
-    t2_prompt = (
-        f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
-        f"당신은 {new_name}({new_specialty} 전문)입니다. "
-        f"{cur_name}님이 이 질문을 인계해 주었습니다. "
-        f"사용자에게 따뜻하게 인사하고, 자신의 전문 분야에서 "
-        f"어떻게 도움을 드릴 수 있는지 구체적으로 설명하세요. "
-        f"반드시 100자 이상 150자 이내로 작성하세요. "
-        f"존댓말, 전문적이고 친절한 톤으로 자연스럽게 말하세요. "
-        f"과장된 자기소개(CLO급, 유니콘 등)는 하지 마세요. 겸손하고 실질적으로 말하세요. "
-        f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-    )
-
-    # fallback 텍스트
-    t1_fallback = f"이 질문은 {new_specialty} 분야라 {new_name}님께 연결해 드리겠습니다."
-    t2_fallback = f"안녕하세요, {new_specialty} 전문 {new_name}입니다. 바로 도와드리겠습니다."
+    _en = lang == "en"
+    if _en:
+        t1_prompt = (
+            f"[This is an external client's question — NOT your case.]\nClient question: {query[:300]}\n"
+            f"You are {cur_name} ({cur_specialty} expert). "
+            f"This question is closer to {new_specialty}, "
+            f"so you're handing it off to {new_name}. "
+            f"Explain why this question falls under {new_specialty} "
+            f"and why {new_name} can better assist. "
+            f"Write 2-3 complete sentences. Warm, natural tone. "
+            f"Respond entirely in English. Use 'leader' or 'expert', never 'lawyer'."
+        )
+        t2_prompt = (
+            f"[This is an external client's question — NOT your case.]\nClient question: {query[:300]}\n"
+            f"You are {new_name} ({new_specialty} expert). "
+            f"{cur_name} has handed off this question to you. "
+            f"Greet the user warmly and explain specifically "
+            f"how you can help from your area of expertise. "
+            f"Write 2-3 complete sentences. Professional, friendly tone. "
+            f"Respond entirely in English. Be humble and practical — no exaggeration."
+        )
+        t1_fallback = f"This question is better suited for {new_specialty}, so I'm connecting you with {new_name}."
+        t2_fallback = f"Hello, I'm {new_name}, specializing in {new_specialty}. I'll assist you right away."
+    else:
+        t1_prompt = (
+            f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
+            f"당신은 {cur_name}({cur_specialty} 전문)입니다. "
+            f"이 질문은 {new_specialty} 분야에 더 가까워서 "
+            f"{new_name}님에게 인계하려 합니다. "
+            f"왜 이 질문이 {new_specialty} 분야에 해당하는지, "
+            f"그리고 {new_name}님이 더 잘 도와드릴 수 있는 이유를 설명하세요. "
+            f"반드시 100자 이상 150자 이내로 작성하세요. "
+            f"존댓말, 따뜻한 톤으로 자연스럽게 말하세요. "
+            f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
+            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
+        )
+        t2_prompt = (
+            f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
+            f"당신은 {new_name}({new_specialty} 전문)입니다. "
+            f"{cur_name}님이 이 질문을 인계해 주었습니다. "
+            f"사용자에게 따뜻하게 인사하고, 자신의 전문 분야에서 "
+            f"어떻게 도움을 드릴 수 있는지 구체적으로 설명하세요. "
+            f"반드시 100자 이상 150자 이내로 작성하세요. "
+            f"존댓말, 전문적이고 친절한 톤으로 자연스럽게 말하세요. "
+            f"과장된 자기소개(CLO급, 유니콘 등)는 하지 마세요. 겸손하고 실질적으로 말하세요. "
+            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
+        )
+        t1_fallback = f"이 질문은 {new_specialty} 분야라 {new_name}님께 연결해 드리겠습니다."
+        t2_fallback = f"안녕하세요, {new_specialty} 전문 {new_name}입니다. 바로 도와드리겠습니다."
 
     try:
         results = await asyncio.gather(
@@ -472,17 +539,31 @@ async def generate_deliberation_stream(
         logger.error(f"[Deliberation:Stream] 페르소나 빌드 실패: {type(e).__name__}: {e}")
         return
 
+    _en = lang == "en"
+    _leaders_str = ', '.join(l.get('name','?') + '(' + l.get('specialty','') + ')' for l in leaders[:3])
+
     # ── Turn 1: CSO 서연 ──
-    t1_prompt = (
-        f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
-        f"참석 리더: {', '.join(l.get('name','?') + '(' + l.get('specialty','') + ')' for l in leaders[:3])}\n\n"
-        f"당신은 CSO 서연입니다. 이 질문의 핵심을 요약하고, "
-        f"왜 이 분야의 전문가가 필요한지 설명한 뒤, "
-        f"{selected_name}님에게 의견을 요청하세요. "
-        f"반드시 100자 이상 150자 이내로 작성하세요. "
-        f"존댓말, 따뜻하고 전문적인 톤으로 자연스럽게 말하세요. "
-        f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-    )
+    if _en:
+        t1_prompt = (
+            f"[This is an external client's question — NOT your case or any leader's case.]\nClient question: {query[:300]}\n"
+            f"Leaders present: {_leaders_str}\n\n"
+            f"You are CSO Seoyeon. Summarize the core of this question, "
+            f"explain why an expert in this field is needed, "
+            f"then ask {selected_name} for their input. "
+            f"Write 2-3 complete sentences. Professional, warm, and natural tone. "
+            f"Respond entirely in English. Use 'leader' or 'expert', never 'lawyer'."
+        )
+    else:
+        t1_prompt = (
+            f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
+            f"참석 리더: {_leaders_str}\n\n"
+            f"당신은 CSO 서연입니다. 이 질문의 핵심을 요약하고, "
+            f"왜 이 분야의 전문가가 필요한지 설명한 뒤, "
+            f"{selected_name}님에게 의견을 요청하세요. "
+            f"반드시 100자 이상 150자 이내로 작성하세요. "
+            f"존댓말, 따뜻하고 전문적인 톤으로 자연스럽게 말하세요. "
+            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
+        )
     logger.info("[Deliberation:Stream] Turn1 Gemini 호출 시작")
     try:
         t1_text = await asyncio.wait_for(
@@ -492,13 +573,16 @@ async def generate_deliberation_stream(
     except BaseException as e:
         logger.warning(f"[Deliberation:Stream] Turn1 실패: {type(e).__name__}: {e}")
         t1_text = ""
-        # CancelledError는 재발생시켜야 함
         if isinstance(e, asyncio.CancelledError):
             raise
     if not t1_text:
-        t1_text = f"이 질문은 {selected_specialty} 분야입니다. {selected_name}님, 의견 부탁드립니다."
+        t1_text = (
+            f"This question falls under {selected_specialty}. {selected_name}, could you share your perspective?"
+            if _en else
+            f"이 질문은 {selected_specialty} 분야입니다. {selected_name}님, 의견 부탁드립니다."
+        )
     yield {
-        "speaker": "서연",
+        "speaker": "Seoyeon" if _en else "서연",
         "role": "CSO",
         "text": t1_text,
         "is_final": False,
@@ -506,16 +590,27 @@ async def generate_deliberation_stream(
     logger.info("[Deliberation:Stream] Turn1 yield 완료")
 
     # ── Turn 2: 담당 리더 ──
-    t2_prompt = (
-        f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
-        f"CSO 서연이 당신에게 의견을 요청했습니다.\n\n"
-        f"당신은 {selected_name}({selected_specialty} 전문)입니다. "
-        f"자기 분야의 전문 지식을 바탕으로 이 질문에 어떻게 도움을 줄 수 있는지 "
-        f"구체적으로 설명하고, 자신감 있게 돕겠다고 답하세요. "
-        f"반드시 100자 이상 150자 이내로 작성하세요. "
-        f"존댓말, 전문적이고 따뜻한 톤으로 자연스럽게 말하세요. "
-        f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-    )
+    if _en:
+        t2_prompt = (
+            f"[This is an external client's question — NOT your case.]\nClient question: {query[:300]}\n"
+            f"CSO Seoyeon has asked for your input.\n\n"
+            f"You are {selected_name} ({selected_specialty} expert). "
+            f"Based on your expertise, explain specifically how you can help with this question "
+            f"and confidently offer your assistance. "
+            f"Write 2-3 complete sentences. Professional, warm, and natural tone. "
+            f"Respond entirely in English. Be humble and practical — no exaggeration."
+        )
+    else:
+        t2_prompt = (
+            f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
+            f"CSO 서연이 당신에게 의견을 요청했습니다.\n\n"
+            f"당신은 {selected_name}({selected_specialty} 전문)입니다. "
+            f"자기 분야의 전문 지식을 바탕으로 이 질문에 어떻게 도움을 줄 수 있는지 "
+            f"구체적으로 설명하고, 자신감 있게 돕겠다고 답하세요. "
+            f"반드시 100자 이상 150자 이내로 작성하세요. "
+            f"존댓말, 전문적이고 따뜻한 톤으로 자연스럽게 말하세요. "
+            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
+        )
     logger.info("[Deliberation:Stream] Turn2 Gemini 호출 시작")
     try:
         t2_text = await asyncio.wait_for(
@@ -528,7 +623,11 @@ async def generate_deliberation_stream(
         if isinstance(e, asyncio.CancelledError):
             raise
     if not t2_text:
-        t2_text = f"네, {selected_specialty} 관점에서 바로 도와드리겠습니다."
+        t2_text = (
+            f"Absolutely — I'll assist right away from the {selected_specialty} perspective."
+            if _en else
+            f"네, {selected_specialty} 관점에서 바로 도와드리겠습니다."
+        )
     yield {
         "speaker": selected_name,
         "role": selected_specialty,
@@ -538,15 +637,25 @@ async def generate_deliberation_stream(
     logger.info("[Deliberation:Stream] Turn2 yield 완료")
 
     # ── Turn 3: CSO 서연 — 담당 리더 지명 ──
-    t3_prompt = (
-        f"{selected_name}님이 {selected_specialty} 분야에서 돕겠다고 했습니다.\n\n"
-        f"당신은 CSO 서연입니다. {selected_name}님의 전문성을 인정하며 "
-        f"이 질문의 담당 리더로 공식 지명하세요. "
-        f"사용자에게 안심하라는 말도 덧붙이세요. "
-        f"반드시 100자 이상 150자 이내로 작성하세요. "
-        f"존댓말, 따뜻하고 신뢰감 있는 톤으로 자연스럽게 말하세요. "
-        f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-    )
+    if _en:
+        t3_prompt = (
+            f"{selected_name} has offered to help from the {selected_specialty} perspective.\n\n"
+            f"You are CSO Seoyeon. Acknowledge {selected_name}'s expertise "
+            f"and officially designate them as the assigned leader for this question. "
+            f"Add a reassuring note to the user. "
+            f"Write 2-3 complete sentences. Warm, trustworthy, and professional tone. "
+            f"Respond entirely in English. Use 'leader' or 'expert', never 'lawyer'."
+        )
+    else:
+        t3_prompt = (
+            f"{selected_name}님이 {selected_specialty} 분야에서 돕겠다고 했습니다.\n\n"
+            f"당신은 CSO 서연입니다. {selected_name}님의 전문성을 인정하며 "
+            f"이 질문의 담당 리더로 공식 지명하세요. "
+            f"사용자에게 안심하라는 말도 덧붙이세요. "
+            f"반드시 100자 이상 150자 이내로 작성하세요. "
+            f"존댓말, 따뜻하고 신뢰감 있는 톤으로 자연스럽게 말하세요. "
+            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
+        )
     logger.info("[Deliberation:Stream] Turn3 Gemini 호출 시작")
     try:
         t3_text = await asyncio.wait_for(
@@ -559,9 +668,13 @@ async def generate_deliberation_stream(
         if isinstance(e, asyncio.CancelledError):
             raise
     if not t3_text:
-        t3_text = f"{selected_name}님이 담당하시겠습니다."
+        t3_text = (
+            f"{selected_name} will be your assigned leader for this matter."
+            if _en else
+            f"{selected_name}님이 담당하시겠습니다."
+        )
     yield {
-        "speaker": "서연",
+        "speaker": "Seoyeon" if _en else "서연",
         "role": "CSO",
         "text": t3_text,
         "is_final": True,
@@ -603,20 +716,35 @@ async def generate_handoff_stream(
     if not new_persona:
         new_persona = f"{new_name}: {new_specialty} 전문 리더"
 
+    _en = lang == "en"
+
     # ── Turn 1: 현재 리더 ──
-    t1_prompt = (
-        f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
-        f"당신은 {cur_name}({cur_specialty} 전문)입니다. "
-        f"이 질문은 {new_specialty} 분야에 더 가까워서 "
-        f"{new_name}님에게 인계하려 합니다. "
-        f"왜 이 질문이 {new_specialty} 분야에 해당하는지, "
-        f"그리고 {new_name}님이 더 잘 도와드릴 수 있는 이유를 설명하세요. "
-        f"반드시 100자 이상 150자 이내로 작성하세요. "
-        f"존댓말, 따뜻한 톤으로 자연스럽게 말하세요. "
-        f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
-        f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-    )
-    t1_fallback = f"이 질문은 {new_specialty} 분야라 {new_name}님께 연결해 드리겠습니다."
+    if _en:
+        t1_prompt = (
+            f"[This is an external client's question — NOT your case.]\nClient question: {query[:300]}\n"
+            f"You are {cur_name} ({cur_specialty} expert). "
+            f"This question is closer to {new_specialty}, "
+            f"so you're handing it off to {new_name}. "
+            f"Explain why this question falls under {new_specialty} "
+            f"and why {new_name} can better assist. "
+            f"Write 2-3 complete sentences. Warm, natural tone. "
+            f"Respond entirely in English. Use 'leader' or 'expert', never 'lawyer'."
+        )
+        t1_fallback = f"This question is better suited for {new_specialty}, so I'm connecting you with {new_name}."
+    else:
+        t1_prompt = (
+            f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
+            f"당신은 {cur_name}({cur_specialty} 전문)입니다. "
+            f"이 질문은 {new_specialty} 분야에 더 가까워서 "
+            f"{new_name}님에게 인계하려 합니다. "
+            f"왜 이 질문이 {new_specialty} 분야에 해당하는지, "
+            f"그리고 {new_name}님이 더 잘 도와드릴 수 있는 이유를 설명하세요. "
+            f"반드시 100자 이상 150자 이내로 작성하세요. "
+            f"존댓말, 따뜻한 톤으로 자연스럽게 말하세요. "
+            f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
+            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
+        )
+        t1_fallback = f"이 질문은 {new_specialty} 분야라 {new_name}님께 연결해 드리겠습니다."
 
     try:
         t1_text = await asyncio.wait_for(
@@ -636,18 +764,30 @@ async def generate_handoff_stream(
     }
 
     # ── Turn 2: 새 리더 ──
-    t2_prompt = (
-        f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
-        f"당신은 {new_name}({new_specialty} 전문)입니다. "
-        f"{cur_name}님이 이 질문을 인계해 주었습니다. "
-        f"사용자에게 따뜻하게 인사하고, 자신의 전문 분야에서 "
-        f"어떻게 도움을 드릴 수 있는지 구체적으로 설명하세요. "
-        f"반드시 100자 이상 150자 이내로 작성하세요. "
-        f"존댓말, 전문적이고 친절한 톤으로 자연스럽게 말하세요. "
-        f"과장된 자기소개(CLO급, 유니콘 등)는 하지 마세요. 겸손하고 실질적으로 말하세요. "
-        f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-    )
-    t2_fallback = f"안녕하세요, {new_specialty} 전문 {new_name}입니다. 바로 도와드리겠습니다."
+    if _en:
+        t2_prompt = (
+            f"[This is an external client's question — NOT your case.]\nClient question: {query[:300]}\n"
+            f"You are {new_name} ({new_specialty} expert). "
+            f"{cur_name} has handed off this question to you. "
+            f"Greet the user warmly and explain specifically "
+            f"how you can help from your area of expertise. "
+            f"Write 2-3 complete sentences. Professional, friendly tone. "
+            f"Respond entirely in English. Be humble and practical — no exaggeration."
+        )
+        t2_fallback = f"Hello, I'm {new_name}, specializing in {new_specialty}. I'll assist you right away."
+    else:
+        t2_prompt = (
+            f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
+            f"당신은 {new_name}({new_specialty} 전문)입니다. "
+            f"{cur_name}님이 이 질문을 인계해 주었습니다. "
+            f"사용자에게 따뜻하게 인사하고, 자신의 전문 분야에서 "
+            f"어떻게 도움을 드릴 수 있는지 구체적으로 설명하세요. "
+            f"반드시 100자 이상 150자 이내로 작성하세요. "
+            f"존댓말, 전문적이고 친절한 톤으로 자연스럽게 말하세요. "
+            f"과장된 자기소개(CLO급, 유니콘 등)는 하지 마세요. 겸손하고 실질적으로 말하세요. "
+            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
+        )
+        t2_fallback = f"안녕하세요, {new_specialty} 전문 {new_name}입니다. 바로 도와드리겠습니다."
 
     try:
         t2_text = await asyncio.wait_for(
