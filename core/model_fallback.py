@@ -64,6 +64,21 @@ def is_quota_error(e: Exception) -> bool:
     ])
 
 
+def is_model_unavailable(e: Exception) -> bool:
+    """404/모델 미지원 에러 여부 판별 (리전 미배포 등)."""
+    err_msg = str(e).lower()
+    return any(kw in err_msg for kw in [
+        "404", "not_found", "not found",
+        "was not found", "does not have access",
+        "model is not available", "model_not_found",
+    ])
+
+
+def is_retryable_model_error(e: Exception) -> bool:
+    """할당량 초과 OR 모델 미지원 → 다음 모델로 전환해야 하는 에러."""
+    return is_quota_error(e) or is_model_unavailable(e)
+
+
 def get_status() -> dict:
     """현재 모델 상태 (health/diagnostics용)."""
     with _lock:
