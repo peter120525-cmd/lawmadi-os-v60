@@ -1,7 +1,10 @@
 from core.drf_integrity import validate_drf_xml
 import os
 import time as _time
+import random as _random
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import xml.etree.ElementTree as ET
 import logging
 import hashlib
@@ -72,6 +75,52 @@ class DRFConnector:
 
         self.timeout_sec = max(1, timeout_ms // 1000)
 
+        # --- 커넥션 풀: requests.Session ---
+        self._session = requests.Session()
+        self._session.headers.update({
+            "Connection": "keep-alive",
+            "User-Agent": "Lawmadi-OS/v60 (DRF Client)",
+        })
+        _adapter = HTTPAdapter(
+            pool_connections=5,
+            pool_maxsize=10,
+            max_retries=Retry(total=0),   # 재시도는 앱 레벨에서 관리
+        )
+        self._session.mount("https://", _adapter)
+        self._session.mount("http://", _adapter)
+
+        # --- 커넥션 풀: httpx.AsyncClient ---
+        self._async_client: Optional[httpx.AsyncClient] = None
+
+        logger.info("✅ DRF 커넥션 풀 초기화 (pool_connections=5, pool_maxsize=10)")
+
+    # -------------------------------------------------
+    # 세션 / Async 클라이언트 관리
+    # -------------------------------------------------
+    async def _get_async_client(self) -> "httpx.AsyncClient":
+        if self._async_client is None or self._async_client.is_closed:
+            self._async_client = httpx.AsyncClient(
+                timeout=float(self.timeout_sec),
+                limits=httpx.Limits(
+                    max_connections=10,
+                    max_keepalive_connections=5,
+                ),
+                headers={
+                    "Connection": "keep-alive",
+                    "User-Agent": "Lawmadi-OS/v60 (DRF AsyncClient)",
+                },
+            )
+        return self._async_client
+
+    async def close_async(self):
+        if self._async_client and not self._async_client.is_closed:
+            await self._async_client.aclose()
+            self._async_client = None
+
+    def close(self):
+        self._session.close()
+        logger.info("✅ DRF 세션 종료")
+
     # -------------------------------------------------
     # DRF 호출
     # -------------------------------------------------
@@ -97,7 +146,7 @@ class DRFConnector:
         last_err = None
         for attempt in range(_retries):
             try:
-                r = requests.get(self.drf_url, params=params, timeout=self.timeout_sec)
+                r = self._session.get(self.drf_url, params=params, timeout=self.timeout_sec)
 
                 if r.status_code != 200:
                     raise RuntimeError(f"DRF HTTP {r.status_code}")
@@ -110,10 +159,9 @@ class DRFConnector:
             except Exception as e:
                 last_err = e
                 if attempt < _retries - 1:
-                    import time
-                    wait = (2 ** attempt) * 0.5  # 0.5s, 1s, 2s
-                    logger.warning(f"⚠️ DRF 재시도 {attempt+1}/{_retries} ({target}): {e}, {wait}s 대기")
-                    time.sleep(wait)
+                    wait = (2 ** attempt) * 0.5 + _random.uniform(0, 0.3)
+                    logger.warning(f"⚠️ DRF 재시도 {attempt+1}/{_retries} ({target}): {e}, {wait:.1f}s 대기")
+                    _time.sleep(wait)
 
         raise RuntimeError(f"DRF {_retries}회 시도 실패: {last_err}")
 
@@ -131,7 +179,7 @@ class DRFConnector:
             "type": "XML"
         }
 
-        r = requests.get(self.data_url, params=params, timeout=self.timeout_sec)
+        r = self._session.get(self.data_url, params=params, timeout=self.timeout_sec)
 
         if r.status_code != 200:
             raise RuntimeError(f"data.go.kr HTTP {r.status_code}")
@@ -231,7 +279,7 @@ class DRFConnector:
             "query": query
         }
 
-        r = requests.get(_LAW_SERVICE_URL, params=params, timeout=self.timeout_sec)
+        r = self._session.get(_LAW_SERVICE_URL, params=params, timeout=self.timeout_sec)
 
         if r.status_code != 200:
             raise RuntimeError(f"lawService HTTP {r.status_code}")
@@ -270,7 +318,7 @@ class DRFConnector:
             "ID": doc_id
         }
 
-        r = requests.get(_LAW_SERVICE_URL, params=params, timeout=self.timeout_sec)
+        r = self._session.get(_LAW_SERVICE_URL, params=params, timeout=self.timeout_sec)
 
         if r.status_code != 200:
             raise RuntimeError(f"lawService HTTP {r.status_code}")
@@ -363,7 +411,7 @@ class DRFConnector:
                     "MST": mst,
                     "type": "JSON",
                 }
-                r = requests.get(_LAW_SERVICE_URL, params=params, timeout=max(self.timeout_sec, 15))
+                r = self._session.get(_LAW_SERVICE_URL, params=params, timeout=max(self.timeout_sec, 15))
                 if r.status_code != 200:
                     raise RuntimeError(f"HTTP {r.status_code}")
                 data = r.json()
@@ -375,7 +423,7 @@ class DRFConnector:
             except Exception as e:
                 last_err = e
                 if attempt < 2:
-                    wait = (2 ** attempt) * 0.5
+                    wait = (2 ** attempt) * 0.5 + _random.uniform(0, 0.3)
                     logger.warning(f"⚠️ lawService 재시도 {attempt+1}/3: {law_name} MST={mst}: {e}")
                     _time.sleep(wait)
         logger.warning(f"⚠️ lawService 3회 실패: {law_name}: {last_err}")
@@ -554,10 +602,10 @@ class DRFConnector:
         }
 
         last_err = None
+        client = await self._get_async_client()
         for attempt in range(_retries):
             try:
-                async with httpx.AsyncClient(timeout=float(self.timeout_sec)) as client:
-                    r = await client.get(self.drf_url, params=params)
+                r = await client.get(self.drf_url, params=params)
 
                 if r.status_code != 200:
                     raise RuntimeError(f"DRF HTTP {r.status_code}")
@@ -571,8 +619,8 @@ class DRFConnector:
                 last_err = e
                 if attempt < _retries - 1:
                     import asyncio
-                    wait = (2 ** attempt) * 0.5
-                    logger.warning(f"⚠️ DRF async 재시도 {attempt+1}/{_retries} ({target}): {e}, {wait}s 대기")
+                    wait = (2 ** attempt) * 0.5 + _random.uniform(0, 0.3)
+                    logger.warning(f"⚠️ DRF async 재시도 {attempt+1}/{_retries} ({target}): {e}, {wait:.1f}s 대기")
                     await asyncio.sleep(wait)
 
         raise RuntimeError(f"DRF async {_retries}회 시도 실패: {last_err}")
@@ -677,6 +725,7 @@ class DRFConnector:
 
         # Step 2: lawService.do 비동기 호출 (3회 재시도 + 지수 백오프)
         last_err = None
+        client = await self._get_async_client()
         for attempt in range(3):
             try:
                 params = {
@@ -685,8 +734,7 @@ class DRFConnector:
                     "MST": mst,
                     "type": "JSON",
                 }
-                async with httpx.AsyncClient(timeout=max(float(self.timeout_sec), 15.0)) as client:
-                    r = await client.get(_LAW_SERVICE_URL, params=params)
+                r = await client.get(_LAW_SERVICE_URL, params=params, timeout=max(float(self.timeout_sec), 15.0))
                 if r.status_code != 200:
                     raise RuntimeError(f"HTTP {r.status_code}")
                 data = r.json()
@@ -698,7 +746,7 @@ class DRFConnector:
             except Exception as e:
                 last_err = e
                 if attempt < 2:
-                    wait = (2 ** attempt) * 0.5
+                    wait = (2 ** attempt) * 0.5 + _random.uniform(0, 0.3)
                     logger.warning(f"⚠️ lawService async 재시도 {attempt+1}/3: {law_name} MST={mst}: {e}")
                     await _aio.sleep(wait)
         logger.warning(f"⚠️ lawService async 3회 실패: {law_name}: {last_err}")
