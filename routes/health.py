@@ -7,7 +7,7 @@ from fastapi import APIRouter, Header, HTTPException
 from core.constants import OS_VERSION, GEMINI_MODEL, LAWMADILM_API_URL
 from core.model_fallback import get_model, get_status as get_model_status
 from core.metrics import get_summary as get_enhanced_metrics
-from core.auth import verify_internal_key as _verify_internal_auth
+from core.auth import verify_internal_key as _verify_internal_auth, verify_jwt_token, extract_bearer_token
 from utils.helpers import _now_iso
 
 router = APIRouter()
@@ -67,15 +67,30 @@ async def health():
     }
 
 
+def _verify_admin_auth(authorization: str) -> None:
+    """Dual auth: JWT (role=admin) 우선, 실패 시 API key fallback."""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+    try:
+        token = extract_bearer_token(authorization)
+        payload = verify_jwt_token(token)
+        if payload.get("role") == "admin":
+            return
+        raise HTTPException(status_code=403, detail="Admin role required")
+    except HTTPException:
+        # JWT 실패 → INTERNAL_API_KEY fallback (CI/CD 호환)
+        _verify_internal_auth(authorization)
+
+
 @router.get("/metrics")
 async def metrics(authorization: str = Header(default="")):
-    """Runtime metrics (auth required)."""
-    _verify_internal_auth(authorization)
+    """Runtime metrics (admin auth required)."""
+    _verify_admin_auth(authorization)
     return _METRICS
 
 
 @router.get("/diagnostics")
 async def diagnostics(authorization: str = Header(default="")):
-    """Full diagnostic snapshot (auth required)."""
-    _verify_internal_auth(authorization)
+    """Full diagnostic snapshot (admin auth required)."""
+    _verify_admin_auth(authorization)
     return _diagnostic_snapshot()
