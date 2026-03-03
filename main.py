@@ -142,6 +142,7 @@ from routes.legal import router as legal_router, set_dependencies as _set_legal_
 from routes.files import router as files_router, set_dependencies as _set_files_deps
 from routes.user import router as user_router, set_dependencies as _set_user_deps
 from routes.admin import router as admin_router
+from routes.auth import router as auth_router
 
 # =============================================================
 # BOOTSTRAP
@@ -284,11 +285,10 @@ async def security_headers_middleware(request: Request, call_next):
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-    # CSP: XSS 방어 — 인라인 스크립트/스타일 허용(자체 렌더링), 외부는 화이트리스트만
-    # NOTE: 'unsafe-inline' 제거는 인라인 JS 외부 파일 추출 후 가능 (향후 과제)
+    # CSP: XSS 방어 — 외부 파일만 허용, 인라인 JS 완전 제거 완료
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; "
+        "script-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' https: data:; "
@@ -605,7 +605,7 @@ def _now_iso() -> str:
 # 🕐 플랜별 요청 제한 (IP당, KST 기준)
 # =============================================================
 PLAN_CONFIG = {
-    "free":    {"window_limit": 3, "window_hours": 4, "max_tokens": 3000, "expert_access": True},
+    "free":    {"window_limit": 2, "window_hours": 4, "max_tokens": 3000, "expert_access": True},
     "premium": {"window_limit": 200, "window_hours": 4, "max_tokens": 5000, "expert_access": True},
 }
 
@@ -1519,6 +1519,7 @@ app.include_router(legal_router)
 app.include_router(files_router)
 app.include_router(user_router)
 app.include_router(admin_router)
+app.include_router(auth_router)
 
 # =============================================================
 # [ULTRA] GLOBAL EXCEPTION HANDLER

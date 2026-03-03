@@ -1,16 +1,81 @@
 """
 Lawmadi OS v60 — 공통 인증 헬퍼
 
-Bearer 토큰 파싱, API 키 검증을 안전하게 수행.
+Bearer 토큰 파싱, API 키 검증, JWT RBAC를 안전하게 수행.
 모든 routes에서 이 모듈을 사용.
 """
 import os
 import hmac
 import hashlib
 import logging
+import datetime
+from typing import Callable, Dict
+
+import jwt
 from fastapi import Header, HTTPException
 
 logger = logging.getLogger("LawmadiOS.Auth")
+
+# ─── JWT 설정 ────────────────────────────────────────────────
+_JWT_ALGORITHM = "HS256"
+
+
+def _get_jwt_secret() -> str:
+    """JWT 서명 키 반환. JWT_SECRET 우선, 없으면 INTERNAL_API_KEY fallback."""
+    secret = os.getenv("JWT_SECRET", "").strip()
+    if not secret:
+        secret = os.getenv("INTERNAL_API_KEY", "").strip()
+    if not secret:
+        raise HTTPException(status_code=500, detail="JWT secret not configured")
+    return secret
+
+
+def create_access_token(user_id: str, role: str, expires_hours: int = 24) -> str:
+    """JWT 액세스 토큰 생성."""
+    valid_roles = {"admin", "premium", "user"}
+    if role not in valid_roles:
+        raise ValueError(f"Invalid role: {role}. Must be one of: {valid_roles}")
+    now = datetime.datetime.now(datetime.timezone.utc)
+    payload = {
+        "sub": user_id,
+        "role": role,
+        "exp": now + datetime.timedelta(hours=expires_hours),
+        "iat": now,
+    }
+    return jwt.encode(payload, _get_jwt_secret(), algorithm=_JWT_ALGORITHM)
+
+
+def verify_jwt_token(token: str) -> Dict:
+    """JWT 토큰 검증 및 페이로드 반환."""
+    try:
+        return jwt.decode(token, _get_jwt_secret(), algorithms=[_JWT_ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError as e:
+        logger.warning(f"[Auth] JWT validation failed: {e}")
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
+def require_role(*roles: str) -> Callable:
+    """FastAPI Depends용 역할 검사 팩토리."""
+    allowed = set(roles)
+
+    def _role_checker(authorization: str = Header(default="")) -> Dict:
+        token = extract_bearer_token(authorization)
+        payload = verify_jwt_token(token)
+        user_role = payload.get("role", "")
+        if user_role not in allowed:
+            logger.warning(
+                f"[Auth] Role denied: user={payload.get('sub')}, "
+                f"role={user_role}, required={allowed}"
+            )
+            raise HTTPException(
+                status_code=403,
+                detail=f"Insufficient permissions. Required: {', '.join(sorted(allowed))}"
+            )
+        return payload
+
+    return _role_checker
 
 
 def extract_bearer_token(authorization: str) -> str:
