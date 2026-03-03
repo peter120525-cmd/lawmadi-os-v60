@@ -68,6 +68,12 @@
         ]
       },
       {
+        "source": "/@(page-common|clevel-page|leaders-ko|leaders-en|leader-profile-ko|leader-profile-en).js",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
+        ]
+      },
+      {
         "source": "**/*.@(jpg|jpeg|png|gif|svg|webp|ico|mp4)",
         "headers": [
           { "key": "Cache-Control", "value": "public, max-age=604800, immutable" }
