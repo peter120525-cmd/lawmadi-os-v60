@@ -50,7 +50,7 @@ gcloud run deploy ${SERVICE_NAME} \
   --platform managed \
   --region ${REGION} \
   --allow-unauthenticated \
-  --memory 4Gi \
+  --memory 2Gi \
   --cpu 1 \
   --timeout 300 \
   --concurrency 15 \
