@@ -605,8 +605,8 @@ def _now_iso() -> str:
 # 🕐 플랜별 요청 제한 (IP당, KST 기준)
 # =============================================================
 PLAN_CONFIG = {
-    "free":    {"window_limit": 2, "window_hours": 4, "max_tokens": 3000, "expert_access": True},
-    "premium": {"window_limit": 200, "window_hours": 4, "max_tokens": 5000, "expert_access": True},
+    "free":    {"window_limit": 10, "daily": True, "max_tokens": 3000, "expert_access": True},
+    "premium": {"window_limit": 200, "daily": True, "max_tokens": 5000, "expert_access": True},
 }
 
 _PREMIUM_KEYS = set(filter(None, os.getenv("PREMIUM_KEYS", "").split(",")))
@@ -632,13 +632,25 @@ def _check_expert_access(request: Request) -> bool:
     plan_cfg = PLAN_CONFIG.get(plan, PLAN_CONFIG["free"])
     return plan_cfg.get("expert_access", False)
 
-_WINDOW_HOURS = 4
 _rate_usage: Dict[str, List[float]] = {}  # 인메모리 fallback용
+_KST = datetime.timezone(datetime.timedelta(hours=9))
+
+def _seconds_until_kst_midnight() -> int:
+    """현재 시각부터 다음 KST 자정(00:00)까지 남은 초"""
+    now_kst = datetime.datetime.now(_KST)
+    tomorrow = (now_kst + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    return int((tomorrow - now_kst).total_seconds())
+
+def _kst_today_start_ts() -> float:
+    """오늘 KST 00:00:00의 UNIX timestamp"""
+    now_kst = datetime.datetime.now(_KST)
+    today_start = now_kst.replace(hour=0, minute=0, second=0, microsecond=0)
+    return today_start.timestamp()
 
 def _check_rate_limit(request: Request) -> Union[bool, dict]:
     """
-    4시간 윈도우 기준 요청 제한 — DB 우선, 인메모리 fallback.
-    통과 시 True, 초과 시 {"blocked": True, "retry_at_kst": "HH:MM"} 반환.
+    1일 요청 제한 (KST 00:00 리셋) — DB 우선, 인메모리 fallback.
+    통과 시 True, 초과 시 {"blocked": True, "retry_at_kst": "00:00"} 반환.
     IP는 해시로만 저장 (원본 비노출).
     관리자 키(X-Admin-Key 헤더)가 유효하면 높은 제한 적용.
     플랜에 따라 window_limit 동적 적용.
@@ -660,39 +672,36 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
 
     ip = _get_client_ip(request)
     ip_hash = _sha256(ip)
-    now = time.time()
-    window = _WINDOW_HOURS * 3600
+    window_seconds = _seconds_until_kst_midnight()
 
     # ── DB 우선: 멀티인스턴스 환경에서 정확한 카운트 ──
     try:
         from connectors.db_client_v2 import rate_limit_check, rate_limit_hit
         db_key = f"ip:{ip_hash}"
         if not rate_limit_check(db_key, window_limit):
-            retry_kst = (datetime.datetime.utcnow() + datetime.timedelta(hours=9, seconds=window)).strftime("%H:%M")
-            return {"blocked": True, "retry_at_kst": retry_kst}
-        rate_limit_hit(db_key, window_seconds=int(window))
+            return {"blocked": True, "retry_at_kst": "00:00"}
+        rate_limit_hit(db_key, window_seconds=window_seconds)
         return True
     except Exception:
         pass  # DB 불가 시 인메모리 fallback
 
-    # ── 인메모리 fallback ──
+    # ── 인메모리 fallback (오늘 KST 00:00 이후 타임스탬프만 유지) ──
+    now = time.time()
+    today_start = _kst_today_start_ts()
     _MAX_TIMESTAMPS_PER_IP = 200
     timestamps = _rate_usage.get(ip_hash, [])
-    timestamps = [t for t in timestamps if now - t < window][-_MAX_TIMESTAMPS_PER_IP:]
+    timestamps = [t for t in timestamps if t >= today_start][-_MAX_TIMESTAMPS_PER_IP:]
 
     if len(timestamps) >= window_limit:
         _rate_usage[ip_hash] = timestamps
-        oldest = min(timestamps)
-        retry_ts = oldest + window
-        retry_kst = datetime.datetime.utcfromtimestamp(retry_ts) + datetime.timedelta(hours=9)
-        return {"blocked": True, "retry_at_kst": retry_kst.strftime("%H:%M")}
+        return {"blocked": True, "retry_at_kst": "00:00"}
 
     timestamps.append(now)
     _rate_usage[ip_hash] = timestamps
 
     _MAX_RATE_ENTRIES = 5000
     if len(_rate_usage) > _MAX_RATE_ENTRIES:
-        stale_keys = [k for k, v in _rate_usage.items() if not v or max(v) < now - window]
+        stale_keys = [k for k, v in _rate_usage.items() if not v or max(v) < today_start]
         for k in stale_keys:
             del _rate_usage[k]
         if len(_rate_usage) > _MAX_RATE_ENTRIES:
@@ -704,7 +713,7 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
 
 def _rate_limit_response(retry_at_kst: str = ""):
     """제한 초과 시 응답 — 다음 이용 가능 시각 안내"""
-    msg = f"이용 한도에 도달했습니다. {retry_at_kst} 이후 다시 이용 가능합니다." if retry_at_kst else "이용 한도에 도달했습니다. 잠시 후 다시 이용해주세요."
+    msg = "오늘 무료 이용 한도(10회)에 도달했습니다. 내일 00:00(한국시간) 이후 다시 이용 가능합니다." if retry_at_kst else "이용 한도에 도달했습니다. 잠시 후 다시 이용해주세요."
     return JSONResponse(
         status_code=429,
         content={"error": msg, "blocked": True, "retry_at_kst": retry_at_kst}
