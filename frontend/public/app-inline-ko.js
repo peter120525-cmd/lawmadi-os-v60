@@ -1985,52 +1985,6 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
     window.onload = () => {
         UI.init();
 
-        // ── Splash Screen: 파티클 + 글자 애니메이션 + 프로그레스 바 ──
-        const splash = document.getElementById('splash-screen');
-        if (splash) {
-            // 파티클 20개 동적 생성
-            for (let i = 0; i < 20; i++) {
-                const p = document.createElement('div');
-                p.className = 'splash-particle';
-                p.style.left = Math.random() * 100 + '%';
-                p.style.top = (80 + Math.random() * 20) + '%';
-                p.style.animationDuration = (3 + Math.random() * 4) + 's';
-                p.style.animationDelay = (Math.random() * 2) + 's';
-                p.style.width = p.style.height = (2 + Math.random() * 4) + 'px';
-                splash.appendChild(p);
-            }
-            // 글자 하나씩 등장
-            const titleEl = document.getElementById('splashTitle');
-            if (titleEl) {
-                const letters = 'Lawmadi OS'.split('');
-                letters.forEach((ch, i) => {
-                    const span = document.createElement('span');
-                    span.className = 'splash-letter';
-                    span.textContent = ch === ' ' ? '\u00A0' : ch;
-                    span.style.animationDelay = (0.3 + i * 0.05) + 's';
-                    titleEl.appendChild(span);
-                });
-            }
-            // 프로그레스 바
-            const bar = document.getElementById('splashProgress');
-            if (bar) {
-                let progress = 0;
-                const iv = setInterval(() => {
-                    progress += 8 + Math.random() * 12;
-                    if (progress >= 100) {
-                        progress = 100;
-                        bar.style.width = '100%';
-                        clearInterval(iv);
-                        setTimeout(() => {
-                            splash.classList.add('fade-out');
-                            setTimeout(() => splash.remove(), 600);
-                        }, 200);
-                    } else {
-                        bar.style.width = progress + '%';
-                    }
-                }, 200);
-            }
-        }
 
         // ── Mobile Tab Bar ──
         const tabItems = document.querySelectorAll('.tab-item');
