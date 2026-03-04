@@ -500,6 +500,335 @@ _NLU_COMPILED: Dict[str, List[re.Pattern]] = {
     for lid, patterns in _NLU_INTENT_PATTERNS.items()
 }
 
+# =============================================================
+# [NLU] English intent patterns — same structure as Korean
+# =============================================================
+
+_NLU_INTENT_PATTERNS_EN: Dict[str, List[str]] = {
+    "L22": [
+        r"(?:someone|friend|person|man|woman|neighbor).*(?:hit|beat|punch|assault|threaten|attack|stalk|harass)",
+        r"(?:hit|beat|punch|assault|threaten|attack|stalk).*(?:me|him|her|victim|police|report|charge)",
+        r"(?:stalk|follow|harass|spy).*(?:me|victim|report|how|what)",
+        r"(?:stole|stolen|theft|robbery|burglary|pickpocket).*(?:report|police|how|what|charge)",
+        r"(?:fraud|scam|phishing|swindle|deceive|cheat).*(?:victim|money|report|how|police)",
+        r"(?:hidden\s*camera|spy\s*cam|sexual\s*assault|sexual\s*harassment|molestation|groping)",
+        r"(?:lent|loaned)\s*(?:money|cash).*(?:won't\s*pay|wont\s*pay|not\s*pay|refuse|disappear|ghosted|scam)",
+        r"(?:prosecute|press\s*charges|criminal\s*complaint|file\s*charges).*(?:how|method|should|want)",
+        r"(?:defamation|insult|slander|libel).*(?:victim|sued|how|what)",
+        r"(?:drunk\s*driv|DUI|DWI).*(?:caught|arrested|penalty|fine|license)",
+    ],
+    "L08": [
+        r"(?:deposit|jeonse|rent|security\s*deposit).*(?:refund|return|not\s*return|won't\s*return|refuse|get\s*back|how)",
+        r"(?:landlord|owner|lessor).*(?:refuse|return|repair|evict|not\s*pay|how|contact)",
+        r"(?:lease|rental|tenancy|jeonse|wolse|rent).*(?:problem|dispute|issue|how|what|expire|renew)",
+        r"(?:evict|move\s*out|vacate|kick\s*out).*(?:force|how|should|refuse|illegal)",
+        r"(?:contract\s*expir|renew|extend).*(?:lease|rental|refuse|how|what)",
+        r"(?:repair|leak|mold|defect).*(?:landlord|refuse|responsib|how|demand)",
+    ],
+    "L30": [
+        r"(?:fired|terminated|laid\s*off|dismissed|let\s*go|resign|forced\s*to\s*quit).*(?:unfair|wrongful|how|what|rights|sue)",
+        r"(?:fired|terminated|dismissed|laid\s*off|forced\s*resignation)",
+        r"(?:salary|wage|pay|overtime|bonus).*(?:unpaid|not\s*paid|overdue|owed|how|withh[eo]ld)",
+        r"(?:overtime|extra\s*hours|holiday\s*work|weekend\s*work).*(?:pay|unpaid|compensation|how)",
+        r"(?:workplace|office|boss|employer|manager|supervisor).*(?:bully|harass|abuse|hostile|discriminat|how)",
+        r"(?:severance|retirement\s*pay).*(?:unpaid|not\s*paid|calculat|how|demand|owed)",
+        r"(?:wrongful\s*dismissal|unfair\s*termination|constructive\s*dismissal).*(?:how|rights|sue|remedy|claim)",
+        r"(?:employment\s*contract|labor\s*contract).*(?:missing|no\s*contract|verbal|how|issue)",
+    ],
+    "L41": [
+        r"(?:husband|wife|spouse|partner|boyfriend|girlfriend).*(?:hit|beat|assault|violence|affair|cheat|infidelity|abuse|hide|hiding)",
+        r"(?:divorce|separate|split\s*up|break\s*up).*(?:want|how|procedure|process|condition|file|apply|rights)",
+        r"(?:file|apply|want).*(?:divorce|separation|split\s*up)",
+        r"(?:custody|child\s*support|visitation|parental\s*rights|children).*(?:how|rights|claim|demand|refuse|fight|modify|get|want)",
+        r"(?:get|want|fight\s*for|claim).*(?:custody|child\s*support|visitation|parental\s*rights)",
+        r"(?:property\s*division|alimony|settlement|division\s*of\s*assets).*(?:how|amount|claim|demand|calculate|entitle)",
+        r"(?:domestic\s*violence|DV|family\s*violence|abusive).*(?:how|report|protect|restrain|shelter|help|order)",
+        r"(?:foreign|international|overseas)\s*(?:spouse|marriage|divorce).*(?:how|rights|procedure|custody|jurisdiction)",
+    ],
+    "L57": [
+        r"(?:parent|father|mother|grandparent|sibling|spouse).*(?:passed\s*away|died|death|deceased|inherit|estate|property|left)",
+        r"(?:inherit|estate|will|bequest|legacy).*(?:divide|share|renounce|waive|debt|how|tax|rights|portion|claim)",
+        r"(?:debt|liability).*(?:inherit|pass\s*on).*(?:how|renounce|waive|reject|limit)",
+        r"(?:inheritance\s*tax|estate\s*tax).*(?:how|calculate|pay|reduce|exempt|file)",
+    ],
+    "L38": [
+        r"(?:refund|return|exchange).*(?:refuse|denied|can't|won't|how|demand|policy)",
+        r"(?:defective|faulty|broken|damaged).*(?:product|item|goods|appliance).*(?:how|exchange|refund|claim)",
+        r"(?:cancel|terminate|withdraw).*(?:subscription|membership|contract|service|refuse|penalty|how)",
+        r"(?:purchase|payment|order|bought).*(?:cancel|fraud|scam|defective|refund|how)",
+        r"(?:used\s*car|second\s*hand|pre-owned).*(?:defect|lemon|flood|damage|fraud|misrepresent|refund|how)",
+        r"(?:warranty|guarantee).*(?:refuse|expired|void|how|claim|repair)",
+    ],
+    "L07": [
+        r"(?:car|vehicle|motorcycle|bicycle|scooter|bus|truck).*(?:accident|crash|collision|hit|struck|rear-end)",
+        r"(?:traffic\s*accident|car\s*accident|auto\s*accident|fender\s*bender)",
+        r"(?:insurance\s*claim|fault\s*ratio|liability|negligence).*(?:how|dispute|calculate|process)",
+        r"(?:traffic|car|auto)\s*(?:accident|crash).*(?:insurance|claim|settlement|compensation|how)",
+    ],
+    "L05": [
+        r"(?:hospital|doctor|surgeon|surgery|treatment|procedure|physician).*(?:mistake|error|negligence|malpractice|harm|side\s*effect|complication)",
+        r"(?:medical\s*malpractice|medical\s*negligence|misdiagnosis|surgical\s*error|medical\s*accident)",
+        r"(?:cosmetic|plastic\s*surgery|procedure|medication).*(?:botch|fail|side\s*effect|wrong|defect)",
+        r"(?:complication|secondary\s*surgery|after-effect).*(?:occur|happen|develop|how|liable|compensat)",
+    ],
+    "L11": [
+        r"(?:debt|loan|interest|creditor).*(?:can't\s*pay|overwhelm|restructur|bankrupt|how|harass)",
+        r"(?:collect|collector|collection|calls|demand).*(?:constant|harass|every\s*day|how|stop|illegal)",
+        r"(?:personal\s*(?:recovery|rehabilitation)|individual\s*bankruptcy|debt\s*restructuring|credit\s*recovery)",
+        r"(?:discharge|bankrupt|insolvency).*(?:decision|petition|apply|file|qualify|debt|how)",
+    ],
+    "L01": [
+        r"(?:contract|agreement).*(?:breach|violat|cancel|terminat|void|dispute|how|sue|claim)",
+        r"(?:contract|agreement).*(?:damages|compensation|lawsuit|litigation|sue)",
+        r"(?:money|loan|debt|lent|borrowed|owed).*(?:return|recover|repay|collect|sue|claim|how|statute)",
+        r"(?:demand\s*letter|payment\s*order|lawsuit|civil\s*suit|small\s*claims).*(?:send|file|how|procedure)",
+        r"(?:provisional\s*seizure|preliminary\s*injunction|garnish).*(?:apply|file|how|procedure)",
+    ],
+    "L06": [
+        r"(?:damage|harm|injur|broken|destroy).*(?:compensat|liable|pay|how|sue|amount)",
+        r"(?:compensat|damages|settlement).*(?:demand|claim|how|amount|calculate)",
+        r"(?:emotional\s*distress|mental\s*suffering|pain\s*and\s*suffering).*(?:claim|sue|how|amount)",
+        r"(?:tort|negligence|wrongful\s*act).*(?:damage|liable|compensat|how|sue)",
+    ],
+    "L10": [
+        r"(?:seiz|garnish|attach|levy).*(?:account|salary|property|how|release|challenge)",
+        r"(?:bank\s*account|salary|wage).*(?:frozen|seized|garnished|attached|blocked|how)",
+        r"(?:civil\s*enforcement|compulsory\s*execution|forced\s*execution).*(?:how|procedure|apply|file)",
+    ],
+    "L34": [
+        r"(?:personal\s*(?:data|information)|my\s*(?:data|information)).*(?:leak|breach|stolen|misuse|how|protect)",
+        r"(?:CCTV|surveillance|wiretap|spy).*(?:illegal|privacy|invasion|how|report)",
+    ],
+    "L02": [
+        r"(?:registration|title|ownership).*(?:transfer|change|issue|how|dispute|property)",
+        r"(?:apartment|condo|land|building|property).*(?:fraud|defect|dispute|purchase|buy|sell|how)",
+        r"(?:real\s*estate|property|land|apartment).*(?:transaction|contract|purchase|sale|how|dispute|title)",
+    ],
+    "L20": [
+        r"(?:tax|income\s*tax|capital\s*gains|gift\s*tax|inheritance\s*tax|property\s*tax).*(?:how\s*much|file|pay|how|owe|delinquent|overdue)",
+    ],
+    "L52": [
+        r"(?:internet|social\s*media|online|post|comment|youtube|blog|SNS).*(?:defamation|slander|insult|delete|harm|false|fake)",
+        r"(?:false\s*information|fake\s*news|rumor).*(?:spread|post|report|sue|how)",
+    ],
+    "L37": [
+        r"(?:school\s*(?:violence|bully)|bullying|hazing|ostraciz).*(?:victim|report|how|punish|committee|what)",
+        r"(?:minor|juvenile|teenager|youth|child).*(?:crime|incident|victim|perpetrat|how|assault|beat)",
+        r"(?:school|class|student).*(?:beat|hit|assault|bully|harass|ostraciz|how)",
+    ],
+    "L43": [
+        r"(?:workplace\s*(?:accident|injury)|industrial\s*accident|work\s*(?:accident|injury)|on-the-job\s*injury)",
+        r"(?:factory|site|workshop|workplace).*(?:accident|injur|burn|fall|how|compensat)",
+        r"(?:workplace|office|job).*(?:bully|harass|stress|overwork).*(?:workers?\s*comp|industrial\s*accident|depression|illness|death)",
+    ],
+    "L25": [
+        r"(?:military|army|soldier|service|enlist|discharge|duty).*(?:assault|violence|accident|bully|hazing|issue|unfair|how|draft|exempt|defer)",
+        r"(?:military\s*violence|military\s*accident|hazing|military\s*assault)",
+    ],
+    "L31": [
+        r"(?:fine|penalty|administrative\s*(?:action|sanction)|license\s*(?:suspension|revocation)|permit).*(?:appeal|challenge|unfair|dispute|cancel|how)",
+        r"(?:administrative\s*(?:litigation|lawsuit|appeal|tribunal)).*(?:procedure|file|how|deadline)",
+    ],
+    "L42": [
+        r"(?:photo|image|article|video|music|song|work|content).*(?:without\s*permission|unauthorized|stolen|copied|plagiariz|pirate|use)",
+        r"(?:stole|stolen|took|used).*(?:photo|image|video|music|song|work|content|article).*(?:post|upload|online|website|without)",
+        r"(?:copyright|intellectual\s*property|DMCA|plagiarism).*(?:infring|violat|stolen|report|how|claim)",
+    ],
+    "L04": [
+        r"(?:redevelopment|reconstruction|urban\s*renewal).*(?:association|contribution|relocation|compensat|how|dispute)",
+        r"(?:association\s*member|occupancy\s*right).*(?:purchase|sell|dispute|how)",
+    ],
+    "L14": [
+        r"(?:director|officer|CEO|board).*(?:breach|embezzl|fiduciary|dismiss|appoint|liab)",
+        r"(?:shareholder|minority\s*shareholder).*(?:derivative\s*suit|rights|meeting|vote|dividend|how)",
+        r"(?:merger|acquisition|M&A|split|takeover).*(?:procedure|oppose|appraisal|how)",
+        r"(?:corporation|company).*(?:establish|dissolve|liquidat|board|articles|how)",
+    ],
+    "L16": [
+        r"(?:insurance\s*(?:claim|payment|benefit|payout)).*(?:denied|refused|reject|reduced|how|dispute)",
+        r"(?:insurer|insurance\s*company).*(?:denied|refused|reject|dispute|how)",
+        r"(?:insurance\s*(?:fraud|claim)).*(?:suspect|investigat|how)",
+        r"(?:policy|coverage|exclusion|insurance\s*contract).*(?:unfair|dispute|how|interpret)",
+    ],
+    "L26": [
+        r"(?:patent|utility\s*model).*(?:infring|register|file|reject|how|dispute|sue)",
+        r"(?:trademark|brand|trade\s*name).*(?:infring|stolen|register|similar|how|dispute|sue)",
+        r"(?:trade\s*secret|proprietary|confidential).*(?:leak|stolen|misappropriat|protect|how)",
+    ],
+    "L15": [
+        r"(?:partnership|joint\s*venture|co-found|start\s*together).*(?:contract|agreement|company|register|how|caution)",
+        r"(?:cafe|restaurant|shop|store|franchise).*(?:start|open|establish|run|operate|how|license)",
+        r"(?:investment|equity|share|capital\s*contribution).*(?:split|divide|how|agreement|contract)",
+        r"(?:start\s*a?\s*business|start-?up|entrepreneur|found\s*a?\s*company).*(?:how|register|procedure|foreign|visa|requirement)",
+    ],
+    "L03": [
+        r"(?:building\s*permit|construction\s*permit).*(?:procedure|denied|how|apply)",
+        r"(?:building|apartment|house).*(?:defect|leak|crack|poor\s*construction).*(?:liable|claim|how|repair)",
+        r"(?:construction\s*(?:payment|cost)|progress\s*payment).*(?:unpaid|owed|overdue|how|claim)",
+        r"(?:contractor|builder|construction\s*company).*(?:defect|abandon|bankrupt|how|dispute)",
+    ],
+    "L09": [
+        r"(?:bid|tender|procurement).*(?:qualif|cancel|protest|collusion|rigg|how|dispute)",
+        r"(?:government\s*contract|public\s*procurement).*(?:dispute|challenge|cancel|how|procedure)",
+    ],
+    "L12": [
+        r"(?:auction|foreclosure|public\s*sale).*(?:bid|participate|distribute|vacate|procedure|how)",
+        r"(?:registry|title\s*deed|registration).*(?:inspect|change|cancel|transfer|how|procedure)",
+    ],
+    "L13": [
+        r"(?:promissory\s*note|check|bill\s*of\s*exchange).*(?:dishonor|forge|endorse|collect|how)",
+        r"(?:commercial|trade|mercantile).*(?:dispute|litigation|how|procedure)",
+    ],
+    "L17": [
+        r"(?:international\s*(?:contract|transaction|trade)|cross-border|overseas\s*(?:deal|transaction)).*(?:dispute|governing\s*law|arbitration|how)",
+        r"(?:governing\s*law|international\s*arbitration|ICC|UNCITRAL).*(?:choose|apply|procedure|how)",
+    ],
+    "L18": [
+        r"(?:power\s*plant|solar|wind|nuclear).*(?:permit|license|construct|operate|dispute|accident|how)",
+        r"(?:energy\s*(?:business|project)|renewable\s*energy|electricity\s*business).*(?:permit|regulat|dispute|subsidy|how)",
+    ],
+    "L19": [
+        r"(?:ship|vessel).*(?:accident|collision|sink|ground|insurance|dispute|how)",
+        r"(?:maritime\s*(?:transport|shipping)|charter).*(?:contract|dispute|claim|damage|how)",
+        r"(?:flight|airline|aviation).*(?:delay|cancel|accident|compensat|dispute|how)",
+    ],
+    "L21": [
+        r"(?:hack|hacker|ransomware|DDoS|cyber\s*attack).*(?:victim|damage|attack|report|how|respond)",
+        r"(?:cyber\s*crime|internet\s*crime).*(?:report|victim|penalty|how)",
+        r"(?:data\s*(?:breach|security)|information\s*security|security\s*incident).*(?:obligation|violation|regulat|how)",
+    ],
+    "L23": [
+        r"(?:exclusive\s*contract|talent\s*(?:contract|agreement)|management\s*(?:contract|agreement)).*(?:terminat|breach|unfair|dispute|how)",
+        r"(?:management|agency|entertainment).*(?:contract|dispute|conflict|terminat|unfair|how)",
+        r"(?:celebrity|idol|actor|singer|artist).*(?:contract|exclusive|penalty|dispute|how)",
+    ],
+    "L24": [
+        r"(?:tax\s*(?:audit|investigation|examination)).*(?:respond|prepare|notice|how)",
+        r"(?:tax\s*(?:assessment|levy|imposition)).*(?:appeal|challenge|cancel|how)",
+        r"(?:tax\s*(?:tribunal|appeal|review)).*(?:file|procedure|how|deadline)",
+    ],
+    "L27": [
+        r"(?:pollution|contamination|air\s*quality|water\s*quality|soil).*(?:damage|compensat|report|how)",
+        r"(?:noise|vibration|odor|smell).*(?:damage|complaint|standard|how|dispute|neighbor)",
+        r"(?:waste|garbage|sewage|hazardous).*(?:illegal|dump|disposal|report|how)",
+    ],
+    "L28": [
+        r"(?:import|export|customs\s*clearance|customs).*(?:delay|refuse|problem|dispute|how|procedure)",
+        r"(?:tariff|customs\s*duty|duty\s*rate).*(?:assess|appeal|refund|how|exemption)",
+        r"(?:FTA|certificate\s*of\s*origin|rules\s*of\s*origin).*(?:issue|apply|benefit|how)",
+    ],
+    "L29": [
+        r"(?:game\s*item|in-game|virtual\s*item).*(?:scam|fraud|refund|dispute|how)",
+        r"(?:game|gaming).*(?:refund|scam|fraud|regulat).*(?:how|report|claim)",
+        r"(?:digital\s*content|online\s*content).*(?:dispute|refund|cancel|contract|how)",
+    ],
+    "L32": [
+        r"(?:monopoly|market\s*dominan).*(?:abuse|regulat|report|how)",
+        r"(?:cartel|collusion|bid\s*rigging|price\s*fixing).*(?:report|penalty|fine|how|suspect)",
+        r"(?:unfair\s*(?:trade|business)|anti-competitive).*(?:report|victim|regulat|how)",
+        r"(?:franchise|franchis).*(?:dispute|unfair|terminat|penalty|how|victim)",
+    ],
+    "L35": [
+        r"(?:fundamental\s*rights|basic\s*rights|constitutional\s*rights).*(?:violat|restrict|protect|how|remedy)",
+        r"(?:unconstitutional|constitutional\s*(?:review|challenge|petition|complaint)).*(?:file|procedure|how)",
+        r"(?:protest|demonstration|rally|freedom\s*of\s*(?:speech|expression|assembly)).*(?:restrict|ban|violat|permit|how)",
+    ],
+    "L39": [
+        r"(?:telecom|phone|internet\s*service|ISP|carrier).*(?:dispute|cancel|penalty|overcharg|how)",
+        r"(?:broadcast|TV).*(?:regulat|violation|sanction|appeal|dispute|how)",
+    ],
+    "L40": [
+        r"(?:discriminat|racial|gender|disability|age|employment).*(?:discriminat|victim|report|remedy|how)",
+        r"(?:human\s*rights?\s*violation).*(?:victim|report|remedy|how|complaint)",
+        r"(?:hate\s*speech|hate\s*expression).*(?:report|penalty|regulat|how|victim)",
+    ],
+    "L44": [
+        r"(?:basic\s*living|welfare\s*benefit|livelihood\s*benefit).*(?:apply|denied|qualif|how|eligib)",
+        r"(?:emergency\s*(?:aid|assistance|relief|welfare)).*(?:apply|qualif|how|procedure)",
+        r"(?:social\s*(?:welfare|security|service)).*(?:apply|denied|eligib|how)",
+    ],
+    "L45": [
+        r"(?:academy|cram\s*school|tuition|tutoring).*(?:refund|cancel|dispute|how|penalty)",
+        r"(?:education|school|admission).*(?:discriminat|victim|report|how|remedy)",
+        r"(?:school|board\s*of\s*education).*(?:disciplin|expel|suspend|appeal|unfair|how)",
+    ],
+    "L46": [
+        r"(?:national\s*pension|pension).*(?:receive|apply|unpaid|overdue|how|reduce|amount)",
+        r"(?:health\s*insurance|national\s*health).*(?:dependent|eligib|premium|overdue|how|dispute)",
+        r"(?:retirement\s*(?:pension|fund)|IRP).*(?:receive|withdraw|early|dispute|how)",
+    ],
+    "L50": [
+        r"(?:visa|residence\s*(?:permit|status)|work\s*permit).*(?:apply|extend|change|denied|cancel|revoke|how|procedure|transfer|switch)",
+        r"(?:naturaliz|citizenship|nationality).*(?:apply|qualif|condition|procedure|how)",
+        r"(?:refugee|asylum).*(?:apply|recognized|denied|procedure|how|claim)",
+        r"(?:foreign(?:er)?|immigrant|migrant\s*worker).*(?:visa|residence|rights|discriminat|how|issue)",
+        r"(?:marriage\s*(?:immigration|visa|immigrant)|multicultural\s*family).*(?:residence|status|divorce|dispute|how)",
+        r"(?:E-2|F-2|F-4|F-5|F-6|D-10|H-1|H-2).*(?:visa|status|extend|change|transfer|how)",
+    ],
+    "L33": [
+        r"(?:drone|UAV|unmanned).*(?:regulat|permit|register|flight|restrict|how|accident)",
+        r"(?:satellite|spacecraft).*(?:launch|register|frequency|permit|how)",
+        r"(?:space|aerospace).*(?:develop|business|damage|liability|regulat|how)",
+    ],
+    "L36": [
+        r"(?:cultural\s*(?:heritage|property|asset)).*(?:protect|designat|alter|damage|how|report)",
+        r"(?:buried\s*cultural\s*(?:property|asset)).*(?:discover|excavat|report|how|procedure)",
+    ],
+    "L47": [
+        r"(?:regulatory\s*sandbox|pilot\s*program|special\s*(?:zone|exemption)).*(?:apply|approv|how|procedure)",
+        r"(?:new\s*(?:industry|technology)|innovat).*(?:regulat|permit|exemption|how|special)",
+    ],
+    "L48": [
+        r"(?:artist|art\s*worker|arts?\s*welfare).*(?:register|certif|support|insurance|contract|how)",
+        r"(?:performance|exhibition|festival).*(?:contract|cancel|compensat|liable|how|dispute)",
+    ],
+    "L49": [
+        r"(?:food|restaurant|dining).*(?:hygiene|safety|permit|violation|fine|how|license)",
+        r"(?:drug|medicine|pharmaceutical).*(?:approv|side\s*effect|recall|illegal|how|sale)",
+    ],
+    "L51": [
+        r"(?:religious\s*(?:organization|institution)|church|temple|mosque).*(?:dispute|property|tax|exempt|how)",
+        r"(?:religion|faith|belief).*(?:freedom|discriminat|violat|force|how)",
+    ],
+    "L53": [
+        r"(?:farmland|agricultural|farming).*(?:acquir|convert|sale|lease|violation|how|permit)",
+        r"(?:livestock|cattle|farm\s*animal).*(?:permit|report|waste|odor|relocation|how|dispute)",
+    ],
+    "L54": [
+        r"(?:fishing|fishery).*(?:license|permit|infring|dispute|compensat|how)",
+        r"(?:ocean|marine|sea).*(?:pollution|environment|accident|dump|how|regulat)",
+    ],
+    "L55": [
+        r"(?:R&D|research|national\s*project).*(?:result|ownership|royalty|fraud|how|manage)",
+        r"(?:technology\s*transfer|commercializ).*(?:contract|royalty|dispute|how|procedure)",
+        r"(?:research\s*(?:ethics|misconduct)|plagiarism).*(?:violation|investigat|sanction|how)",
+    ],
+    "L56": [
+        r"(?:disab(?:led|ility)).*(?:discriminat|accommodat|accessib|employment|how|rights|facilit)",
+        r"(?:disability\s*(?:rating|assessment|grade)).*(?:review|appeal|reassess|how)",
+    ],
+    "L58": [
+        r"(?:athlete|player|sports\s*(?:person|professional)).*(?:contract|transfer|salary|violence|how|dispute)",
+        r"(?:doping|banned\s*substance|prohibited\s*substance).*(?:caught|sanction|appeal|how)",
+        r"(?:gym|sports\s*facility|pool|fitness).*(?:accident|safety|refund|contract|how)",
+    ],
+    "L59": [
+        r"(?:artificial\s*intelligence|AI|machine\s*learning).*(?:regulat|ethic|liable|harm|discriminat|how|law)",
+        r"(?:algorithm|automated\s*decision).*(?:discriminat|appeal|explain|transparen|how)",
+        r"(?:data|big\s*data).*(?:use|combine|regulat|protect|rights|how|consent)",
+        r"(?:autonomous\s*(?:vehicle|driving)|self-driving).*(?:accident|liable|insurance|regulat|how)",
+    ],
+    "L60": [
+        r"(?:multiple|complex|several).*(?:legal|law).*(?:issue|problem|dispute|area|matter)",
+        r"(?:which\s*law|what\s*law|where).*(?:consult|ask|report|how|apply|go)",
+    ],
+}
+
+_NLU_COMPILED_EN: Dict[str, List[re.Pattern]] = {
+    lid: [re.compile(p, re.IGNORECASE) for p in patterns]
+    for lid, patterns in _NLU_INTENT_PATTERNS_EN.items()
+}
+
 # 도메인 우선순위: 문맥 특정 도메인 > 일반 형사.
 # 값이 작을수록 우선순위 높음. "남편이 때려요" → L41(가사) 우선, L22(형사)가 아님.
 _NLU_PRIORITY: Dict[str, int] = {
@@ -567,19 +896,22 @@ _NLU_PRIORITY: Dict[str, int] = {
 }
 
 
-def _nlu_detect_intent(query: str) -> Optional[str]:
+def _nlu_detect_intent(query: str, lang: str = "") -> Optional[str]:
     """자연어 패턴 기반 법적 의도 감지 → 리더 ID 반환 (L01~L60).
 
     키워드 매칭과 달리, (상황+행위) 조합 정규식을 사용하여
     "친구한테 맞았어요" → L22, "보증금을 안 돌려줘요" → L08 등
     구어체 질문을 정확하게 분류합니다.
 
+    lang="en"이면 영문 패턴(_NLU_COMPILED_EN)을 사용합니다.
+
     여러 도메인이 매칭되면 (1) 매칭 패턴 수, (2) 우선순위로 결정.
     예: "남편이 때린 적 있어요" → L41(가사, 1매칭, 우선1) > L22(형사, 1매칭, 우선5)
     """
+    compiled = _NLU_COMPILED_EN if lang == "en" else _NLU_COMPILED
     matches: List[tuple] = []  # (leader_id, match_count)
 
-    for leader_id, compiled_patterns in _NLU_COMPILED.items():
+    for leader_id, compiled_patterns in compiled.items():
         match_count = sum(1 for p in compiled_patterns if p.search(query))
         if match_count > 0:
             matches.append((leader_id, match_count))
@@ -607,7 +939,70 @@ def _nlu_detect_intent(query: str) -> Optional[str]:
 # [L2 SWARM] 리더 라우팅
 # =============================================================
 
-def select_swarm_leader(query: str, leaders: Dict) -> Dict:
+_DOMAIN_MAP_EN = {
+    "L01_CIVIL": (["civil", "contract", "breach", "obligation", "claim", "lawsuit", "tort", "damages", "statute of limitations", "demand letter", "payment order", "small claims"], "L01"),
+    "L02_PROPERTY": (["real estate", "property", "land", "building", "apartment", "title", "registration", "deed"], "L02"),
+    "L03_CONSTRUCTION": (["construction", "building permit", "defect", "contractor", "architect"], "L03"),
+    "L04_REDEVEL": (["redevelopment", "reconstruction", "urban renewal", "association"], "L04"),
+    "L05_MEDICAL": (["medical", "malpractice", "hospital", "doctor", "surgery", "misdiagnosis", "negligence"], "L05"),
+    "L06_DAMAGES": (["damages", "compensation", "liability", "negligence", "tort", "settlement"], "L06"),
+    "L07_TRAFFIC": (["traffic accident", "car accident", "vehicle", "collision", "insurance claim", "fault"], "L07"),
+    "L08_LEASE": (["lease", "tenant", "landlord", "deposit", "rent", "jeonse", "wolse", "eviction", "rental", "security deposit"], "L08"),
+    "L09_GOVCONTRACT": (["government contract", "procurement", "bid", "tender"], "L09"),
+    "L10_EXECUTION": (["enforcement", "seizure", "garnishment", "attachment", "foreclosure"], "L10"),
+    "L11_COLLECTION": (["debt collection", "collection", "creditor", "bankruptcy", "insolvency", "debt restructuring", "credit recovery"], "L11"),
+    "L12_AUCTION": (["auction", "foreclosure", "registry", "registration"], "L12"),
+    "L13_COMMERCIAL": (["commercial law", "promissory note", "check", "merchant"], "L13"),
+    "L14_CORP_MA": (["corporate", "M&A", "merger", "acquisition", "shareholder", "board", "director", "fiduciary"], "L14"),
+    "L15_STARTUP": (["startup", "venture", "partnership", "entrepreneur", "business registration", "franchise", "small business"], "L15"),
+    "L16_INSURANCE": (["insurance", "insurance claim", "policy", "coverage", "insurer"], "L16"),
+    "L17_INTL_TRADE": (["international trade", "export", "import", "arbitration", "international contract"], "L17"),
+    "L18_ENERGY": (["energy", "power plant", "solar", "wind", "renewable"], "L18"),
+    "L19_MARINE_AIR": (["maritime", "aviation", "ship", "vessel", "airline", "cargo"], "L19"),
+    "L20_TAX_FIN": (["tax", "income tax", "capital gains", "VAT", "tax return", "filing", "deduction"], "L20"),
+    "L21_IT_SEC": (["IT", "cybersecurity", "hacking", "data breach", "cyber crime"], "L21"),
+    "L22_CRIMINAL": (["criminal", "prosecution", "assault", "fraud", "theft", "embezzlement", "arrest", "police", "charge", "DUI", "stalking", "harassment", "defamation"], "L22"),
+    "L23_ENTERTAIN": (["entertainment", "celebrity", "talent", "management", "exclusive contract"], "L23"),
+    "L24_TAX_APPEAL": (["tax appeal", "tax audit", "tax assessment", "tax tribunal"], "L24"),
+    "L25_MILITARY": (["military", "army", "soldier", "conscription", "service", "draft", "discharge"], "L25"),
+    "L26_IP": (["intellectual property", "patent", "trademark", "trade secret", "copyright"], "L26"),
+    "L27_ENVIRON": (["environment", "pollution", "noise", "waste", "contamination", "emission"], "L27"),
+    "L28_CUSTOMS": (["customs", "tariff", "import", "export", "FTA", "clearance"], "L28"),
+    "L29_GAME": (["game", "gaming", "digital content", "virtual item"], "L29"),
+    "L30_LABOR": (["labor", "employment", "fired", "dismissed", "wage", "salary", "overtime", "severance", "workplace", "harassment", "unfair dismissal", "termination"], "L30"),
+    "L31_ADMIN": (["administrative", "permit", "license", "fine", "penalty", "appeal", "tribunal"], "L31"),
+    "L32_FAIRTRADE": (["fair trade", "antitrust", "monopoly", "cartel", "collusion", "franchise"], "L32"),
+    "L33_SPACE": (["drone", "UAV", "satellite", "aerospace", "space"], "L33"),
+    "L34_PRIVACY": (["privacy", "personal data", "data protection", "GDPR", "CCTV", "surveillance"], "L34"),
+    "L35_CONSTITUTION": (["constitution", "constitutional", "fundamental rights", "unconstitutional", "judicial review"], "L35"),
+    "L36_CULTURE": (["cultural heritage", "cultural property", "monument", "artifact"], "L36"),
+    "L37_JUVENILE": (["juvenile", "school violence", "bullying", "minor", "youth"], "L37"),
+    "L38_CONSUMER": (["consumer", "refund", "return", "defective", "warranty", "product liability", "lemon"], "L38"),
+    "L39_TELECOM": (["telecom", "telecommunications", "broadcast", "carrier", "ISP"], "L39"),
+    "L40_HUMAN_RIGHTS": (["human rights", "discrimination", "equality", "hate speech"], "L40"),
+    "L41_DIVORCE": (["divorce", "family", "custody", "child support", "alimony", "property division", "domestic violence", "spouse", "marriage"], "L41"),
+    "L42_COPYRIGHT": (["copyright", "plagiarism", "piracy", "DMCA", "unauthorized use", "fair use"], "L42"),
+    "L43_INDUSTRIAL": (["industrial accident", "workers compensation", "workplace injury", "occupational", "safety"], "L43"),
+    "L44_WELFARE": (["welfare", "social security", "basic living", "public assistance"], "L44"),
+    "L45_EDUCATION": (["education", "school", "tuition", "academy", "student"], "L45"),
+    "L46_PENSION": (["pension", "national pension", "health insurance", "retirement fund"], "L46"),
+    "L47_VENTURE": (["regulatory sandbox", "new industry", "special zone"], "L47"),
+    "L48_ARTS": (["arts", "artist", "performance", "exhibition", "cultural arts"], "L48"),
+    "L49_FOOD": (["food", "food safety", "pharmaceutical", "drug", "hygiene", "HACCP"], "L49"),
+    "L50_MULTICUL": (["immigration", "visa", "foreigner", "residence permit", "refugee", "naturalization", "multicultural"], "L50"),
+    "L51_RELIGION": (["religion", "church", "temple", "faith", "religious"], "L51"),
+    "L52_MEDIA": (["media", "press", "online defamation", "SNS", "social media", "fake news", "hate comment"], "L52"),
+    "L53_AGRI": (["agriculture", "farmland", "livestock", "farming", "crop"], "L53"),
+    "L54_FISHERY": (["fishery", "fishing", "marine", "ocean", "aquaculture"], "L54"),
+    "L55_SCIENCE": (["R&D", "research", "technology transfer", "research ethics"], "L55"),
+    "L56_DISABILITY": (["disability", "disabled", "accessibility", "accommodation", "disability rights"], "L56"),
+    "L57_INHERITANCE": (["inheritance", "estate", "will", "probate", "heir", "bequest", "trust", "estate tax", "inheritance tax"], "L57"),
+    "L58_SPORTS": (["sports", "athlete", "doping", "sports facility", "player contract"], "L58"),
+    "L59_AI_ETHICS": (["AI", "artificial intelligence", "algorithm", "data", "autonomous", "machine learning"], "L59"),
+}
+
+
+def select_swarm_leader(query: str, leaders: Dict, lang: str = "") -> Dict:
     raw = leaders if leaders else _LEADER_REGISTRY
     # leaders.json 구조: {swarm_engine_config: {leader_registry: {L01:..., L08:...}}}
     registry = raw.get("swarm_engine_config", {}).get("leader_registry", {})
@@ -635,7 +1030,7 @@ def select_swarm_leader(query: str, leaders: Dict) -> Dict:
         return best_info
 
     # 2) NLU 패턴 기반 의도 감지 (키워드보다 정확한 문맥 매칭)
-    nlu_leader_id = _nlu_detect_intent(query)
+    nlu_leader_id = _nlu_detect_intent(query, lang=lang)
     if nlu_leader_id:
         nlu_leader = registry.get(nlu_leader_id)
         if nlu_leader:
@@ -643,7 +1038,10 @@ def select_swarm_leader(query: str, leaders: Dict) -> Dict:
             return nlu_leader
 
     # 3) 도메인 키워드 매칭 (전체 60 Leader 매핑)
-    domain_map = {
+    if lang == "en":
+        domain_map = _DOMAIN_MAP_EN
+    else:
+        domain_map = {
         # L01-L10
         "L01_CIVIL":        (["민법", "계약", "채권", "채무", "손해배상", "불법행위", "소유권", "물권", "용익물권", "담보물권",
                               "보증인", "위약금", "묘지", "분묘기지권", "시효",
