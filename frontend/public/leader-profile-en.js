@@ -7,7 +7,7 @@
     try {
         var [leadersRes, profilesRes] = await Promise.all([
             fetch('leaders.json'),
-            fetch('leader-profiles.json')
+            fetch('leader-profiles-en.json')
         ]);
 
         if (!leadersRes.ok || !profilesRes.ok) throw new Error('Data load failed');

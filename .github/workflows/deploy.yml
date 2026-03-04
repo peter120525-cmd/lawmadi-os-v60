@@ -43,6 +43,14 @@ jobs:
         run: |
           python -m pytest tests/test_unit_pure.py -v --tb=short
 
+      - name: Run NLU leader matching tests
+        run: |
+          python -m pytest tests/test_leader_matching.py -v --tb=short
+
+      - name: Run verifier parse tests
+        run: |
+          python -m pytest tests/test_verifier_parse.py -v --tb=short
+
       - name: Run system integrity tests
         run: |
           python -m pytest tests/test_system_integrity.py -v --tb=short
@@ -192,13 +200,13 @@ jobs:
         run: |
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
 
-      # 항목 #19: 롤백용 stable 태그 보존
-      - name: Tag previous stable for rollback
+      # 항목 #19: 롤백용 stable 태그 보존 (현재 프로덕션 이미지를 rollback으로 저장)
+      - name: Tag current production as rollback
         run: |
-          docker pull ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          docker tag ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-                     ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:stable
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:stable
+          docker pull ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:stable || true
+          docker tag ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:stable \
+                     ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:rollback 2>/dev/null || true
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:rollback 2>/dev/null || true
 
       - name: Deploy to Cloud Run (Production)
         run: |
@@ -230,6 +238,13 @@ jobs:
           sleep 10
           curl -f ${{ steps.deploy.outputs.url }}/health || exit 1
           echo "✅ Production health check passed"
+
+      - name: Tag verified image as stable
+        run: |
+          docker pull ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker tag ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+                     ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:stable
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}:stable
 
   deploy-frontend:
     name: Deploy to Firebase Hosting

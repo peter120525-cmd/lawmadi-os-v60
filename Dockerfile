@@ -40,6 +40,7 @@ COPY law_cache_4.json .
 COPY law_cache_5.json .
 COPY law_cache_6.json .
 COPY law_cache_7.json .
+COPY data/ ./data/
 COPY agents/ ./agents/
 COPY engines/ ./engines/
 COPY services/ ./services/

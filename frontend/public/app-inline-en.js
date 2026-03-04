@@ -1,26 +1,36 @@
 // XSS sanitizer helper — all API responses pass through this
 function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(html, {ADD_ATTR: ['target','data-tooltip'], ALLOW_DATA_ATTR: true}) : html.replace(/<[^>]*>/g, ''); }
 
-// In-app browser detection & viewport fix
+// Mobile & In-app browser viewport fix (모바일 전체 + 인앱 브라우저)
 (function() {
     var ua = navigator.userAgent || '';
-    var isInApp = /KAKAOTALK|FBAN|FBAV|Instagram|Line\/|NAVER|Snapchat|Twitter/i.test(ua);
-    if (isInApp) {
-        document.body.classList.add('is-inapp-browser');
-        // Fix viewport height for in-app browsers that miscalculate dvh/vh
-        function setVH() {
-            var vh = window.innerHeight;
-            document.documentElement.style.setProperty('--app-height', vh + 'px');
-            document.body.style.height = vh + 'px';
+    var isInApp = /KAKAOTALK|FBAN|FBAV|Instagram|Line\/|NAVER|Snapchat|Twitter|SamsungBrowser|Whale|DaumApps|MicroMessenger|Telegram/i.test(ua);
+    var isMobile = /Android|iPhone|iPad|iPod/i.test(ua) || window.innerWidth <= 768;
+
+    if (isInApp) document.body.classList.add('is-inapp-browser');
+
+    if (isInApp || isMobile) {
+        function setAppHeight() {
+            var h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+            document.documentElement.style.setProperty('--app-height', h + 'px');
+            document.body.style.height = h + 'px';
         }
-        setVH();
-        window.addEventListener('resize', setVH);
-        // Virtual keyboard detection
+        setAppHeight();
+        window.addEventListener('resize', setAppHeight);
+        window.addEventListener('orientationchange', function() {
+            setTimeout(setAppHeight, 150);
+        });
+
         if (window.visualViewport) {
+            var baseHeight = window.innerHeight;
             window.visualViewport.addEventListener('resize', function() {
-                var kbOpen = window.visualViewport.height < window.innerHeight * 0.75;
+                setAppHeight();
+                var kbOpen = window.visualViewport.height < baseHeight * 0.75;
                 document.body.classList.toggle('keyboard-open', kbOpen);
-                document.body.style.height = window.visualViewport.height + 'px';
+                if (kbOpen) {
+                    var cv = document.querySelector('.conversation-viewport');
+                    if (cv) cv.scrollTop = cv.scrollHeight;
+                }
             });
         }
     }
