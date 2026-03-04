@@ -159,3 +159,6 @@
   // 5초 후 fallback 전송
   setTimeout(sendVitals, 5000);
 })();
+
+// Disable right-click context menu
+document.addEventListener('contextmenu', function(e) { e.preventDefault(); });

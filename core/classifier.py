@@ -1561,7 +1561,7 @@ def _fallback_tier_classification(query: str) -> Dict[str, Any]:
         "tier": tier,
         "complexity": complexity,
         "is_document": is_document,
-        "leader_id": "L60",
+        "leader_id": leader.get("_id", "L60"),
         "leader_name": leader_name,
         "leader_specialty": leader_specialty,
         "summary": query[:50],

@@ -713,7 +713,7 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
 
 def _rate_limit_response(retry_at_kst: str = ""):
     """제한 초과 시 응답 — 다음 이용 가능 시각 안내"""
-    msg = "오늘 무료 이용 한도(10회)에 도달했습니다. 내일 00:00(한국시간) 이후 다시 이용 가능합니다." if retry_at_kst else "이용 한도에 도달했습니다. 잠시 후 다시 이용해주세요."
+    msg = "오늘 무료 이용 한도에 도달했습니다. 내일 00:00(한국시간) 이후 다시 이용 가능합니다." if retry_at_kst else "이용 한도에 도달했습니다. 잠시 후 다시 이용해주세요."
     return JSONResponse(
         status_code=429,
         content={"error": msg, "blocked": True, "retry_at_kst": retry_at_kst}

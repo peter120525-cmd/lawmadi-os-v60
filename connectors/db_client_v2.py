@@ -33,6 +33,7 @@ def execute(query: str, params=None, fetch="all"):
 
         if fetch == "one":
             data = cur.fetchone()
+            conn.commit()
         elif fetch == "all":
             data = cur.fetchall()
         else:

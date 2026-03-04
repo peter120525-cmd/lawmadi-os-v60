@@ -111,7 +111,7 @@ def generate_with_fallback(genai_client: Any, contents: Any,
             return resp
         except Exception as e:
             last_error = e
-            if is_quota_error(e) and attempt < len(MODEL_CHAIN) - 1:
+            if is_retryable_model_error(e) and attempt < len(MODEL_CHAIN) - 1:
                 on_quota_error()
                 logger.warning(
                     f"[ModelFallback] Retry #{attempt+2} with {get_model()} "

@@ -1,0 +1,2745 @@
+{
+  "CSO": {
+    "images": {
+      "profile": "images/clevel/cso-seoyeon.jpg",
+      "banner": "images/clevel/cso-seoyeon-banner.png"
+    },
+    "hero": "Strategy is not direction — it is structure. We design frameworks that do not waver.",
+    "identity": {
+      "what": "We design the long-term strategy and market positioning of Lawmadi OS, building an unshakable structure in the legal AI market.",
+      "why": "Even great technology drifts without direction. Strategy is the bridge connecting technology and the market."
+    },
+    "whatWeSolve": {
+      "problem": "Legal AI services cannot persuade the market with technology alone. Technology without strategy does not scale.",
+      "limit": "Existing legal AI focused on single functions, lacking a strategy that surveys the entire system.",
+      "approach": "We apply global strategic consulting methodologies to legal AI, weaving market, technology, and users into one cohesive structure."
+    },
+    "expertise": [
+      {
+        "icon": "strategy",
+        "label": "Strategic Design",
+        "desc": "Establishing long-term vision and execution roadmaps"
+      },
+      {
+        "icon": "analytics",
+        "label": "Market Analysis",
+        "desc": "Identifying structural opportunities in the legal AI market"
+      },
+      {
+        "icon": "hub",
+        "label": "Partnership Building",
+        "desc": "Strategic alliances for ecosystem expansion"
+      },
+      {
+        "icon": "monitoring",
+        "label": "Performance Management",
+        "desc": "Strategy execution monitoring based on key metrics"
+      },
+      {
+        "icon": "public",
+        "label": "Global Expansion",
+        "desc": "Formulating international market entry strategies"
+      }
+    ],
+    "philosophy": "Strategy is not prediction — it is preparation. The essence of strategy is building a structure that withstands any change. We do not fear market shifts, but we never let our guard down.",
+    "impact": "Positioned Lawmadi OS as a structural leader in the legal AI market. Through the design of the 60-leader system and multi-agent strategy, we built a differentiated system from competitors.",
+    "vision": "Our goal is to transform the paradigm of legal services. Until Lawmadi OS becomes the global standard for legal AI, we continue to sharpen our strategic precision."
+  },
+  "CTO": {
+    "images": {
+      "profile": "images/clevel/cto-jiyu.jpg",
+      "banner": "images/clevel/cto-jiyu-banner.png"
+    },
+    "hero": "Technology must be precise. Even more so for AI that handles law.",
+    "identity": {
+      "what": "We design and manage the entire technical architecture and AI system of Lawmadi OS.",
+      "why": "Legal AI cannot tolerate a single error. Technological integrity is where trust begins."
+    },
+    "whatWeSolve": {
+      "problem": "Hallucinations and inaccurate answers in legal AI can cause critical harm.",
+      "limit": "Existing AI could not guarantee accuracy, lacking verification systems optimized for the legal domain.",
+      "approach": "We verify the accuracy of legal information through multi-agent architecture and RAG systems."
+    },
+    "expertise": [
+      {
+        "icon": "memory",
+        "label": "AI Architecture",
+        "desc": "Designing and operating multi-agent systems"
+      },
+      {
+        "icon": "verified",
+        "label": "Integrity Verification",
+        "desc": "Accuracy assurance systems for legal AI responses"
+      },
+      {
+        "icon": "database",
+        "label": "RAG System",
+        "desc": "Retrieval-augmented generation based on legal knowledge"
+      },
+      {
+        "icon": "security",
+        "label": "System Security",
+        "desc": "Data protection and access control management"
+      },
+      {
+        "icon": "speed",
+        "label": "Performance Optimization",
+        "desc": "Large-scale concurrent processing and response speed optimization"
+      }
+    ],
+    "philosophy": "Technology is at its best when users don't notice it. The role of technology is to deliver complex systems as simple experiences.",
+    "impact": "Built a multi-agent system where 60 leaders collaborate simultaneously. Established a legal information accuracy verification system that structurally blocks hallucinations.",
+    "vision": "We set new standards for legal AI technology. Technology that every user can trust and rely on — that is Lawmadi OS's promise."
+  },
+  "CCO": {
+    "images": {
+      "profile": "images/clevel/cco-yuna.jpg",
+      "banner": "images/clevel/cco-yuna-banner.png"
+    },
+    "hero": "Making complex law understandable for everyone. Experience is trust.",
+    "identity": {
+      "what": "We oversee all user experience and content quality of Lawmadi OS.",
+      "why": "Even the best technology is meaningless if it cannot be communicated. User experience determines the value of technology."
+    },
+    "whatWeSolve": {
+      "problem": "Legal information is difficult and rigid. Its structure is hard for general users to understand.",
+      "limit": "Existing legal services were designed for professionals. The barrier to entry for non-experts was high.",
+      "approach": "We apply human-centered design principles, transforming complex legal information into intuitive experiences."
+    },
+    "expertise": [
+      {
+        "icon": "palette",
+        "label": "UX/UI Design",
+        "desc": "User experience design optimized for legal services"
+      },
+      {
+        "icon": "edit_note",
+        "label": "Content Strategy",
+        "desc": "Improving readability and accessibility of legal information"
+      },
+      {
+        "icon": "psychology",
+        "label": "User Research",
+        "desc": "Service improvement based on user behavior analysis"
+      },
+      {
+        "icon": "brand_awareness",
+        "label": "Brand Management",
+        "desc": "Maintaining consistent brand experience and tone"
+      },
+      {
+        "icon": "accessibility_new",
+        "label": "Accessibility",
+        "desc": "Inclusive design for all users"
+      }
+    ],
+    "philosophy": "Good design is invisible. When users naturally reach the information they need — that is the ultimate experience.",
+    "impact": "Redefined the user experience standard for legal AI services. Created a structure where non-experts can access desired legal information within 3 minutes.",
+    "vision": "We bring the distance between legal services and users to zero. A legal experience that anyone can access, anytime, with ease."
+  },
+  "L01": {
+    "images": {
+      "profile": "images/leaders/L01-hwiyul.jpg",
+      "banner": "images/leaders/L01-hwiyul-banner.jpg"
+    },
+    "hero": "We structure every issue in civil law. We focus on the essence of disputes.",
+    "identity": {
+      "what": "We oversee legal analysis and strategy development across all areas of civil law, including contracts, obligations, and property rights.",
+      "why": "Civil disputes are the most frequent in daily life. Accurate legal analysis is the starting point for fair resolution."
+    },
+    "whatWeSolve": {
+      "problem": "Civil disputes are complex and involve diverse stakeholders. Without proper legal frameworks, resolutions are delayed.",
+      "limit": "Existing services lacked systematic analysis for the full spectrum of civil law issues.",
+      "approach": "We structure every civil law issue with precise legal reasoning and strategic frameworks."
+    },
+    "expertise": [
+      {
+        "icon": "gavel",
+        "label": "Civil Litigation Strategy",
+        "desc": "Comprehensive strategies for civil court proceedings"
+      },
+      {
+        "icon": "description",
+        "label": "Contract Law Analysis",
+        "desc": "Contract interpretation, validity, and breach assessment"
+      },
+      {
+        "icon": "account_balance",
+        "label": "Obligations & Debts",
+        "desc": "Claims, obligations, and debt recovery analysis"
+      },
+      {
+        "icon": "home",
+        "label": "Property Law",
+        "desc": "Real property rights, possession, and ownership disputes"
+      },
+      {
+        "icon": "handshake",
+        "label": "Mediation & Settlement",
+        "desc": "Alternative dispute resolution and settlement strategies"
+      }
+    ],
+    "philosophy": "The foundation of civil law is fairness. We believe that structuring complexity into clarity is the first step toward just resolution.",
+    "impact": "Established a systematic approach to civil law analysis covering contracts, property, and obligations, enabling faster and more accurate dispute resolution.",
+    "vision": "We aim to make civil law accessible and navigable for everyone, ensuring that legal protection is not a privilege but a right."
+  },
+  "L02": {
+    "images": {
+      "profile": "images/leaders/L02-bonui.jpg",
+      "banner": "images/leaders/L02-bonui-banner.jpg"
+    },
+    "hero": "Real estate is not about numbers — it is about rights. Precise analysis protects property.",
+    "identity": {
+      "what": "We provide comprehensive legal analysis for real estate transactions, registrations, and property rights protection.",
+      "why": "Real estate involves the most significant assets in people's lives. Accurate legal guidance prevents irreversible losses."
+    },
+    "whatWeSolve": {
+      "problem": "Real estate transactions carry hidden legal risks that can lead to significant financial loss.",
+      "limit": "Traditional approaches often missed complex registration issues and encumbrance analysis.",
+      "approach": "We decode registry records and analyze property rights with precision, ensuring secure transactions."
+    },
+    "expertise": [
+      {
+        "icon": "real_estate_agent",
+        "label": "Real Estate Transactions",
+        "desc": "Purchase, sale, and transfer legal analysis"
+      },
+      {
+        "icon": "find_in_page",
+        "label": "Registry Analysis",
+        "desc": "Comprehensive property registry interpretation"
+      },
+      {
+        "icon": "trending_up",
+        "label": "Appraisal Review",
+        "desc": "Property valuation and assessment analysis"
+      },
+      {
+        "icon": "shield",
+        "label": "Rights Protection",
+        "desc": "Lien, mortgage, and encumbrance management"
+      },
+      {
+        "icon": "apartment",
+        "label": "Condominium Law",
+        "desc": "Multi-unit building legal issues and management"
+      }
+    ],
+    "philosophy": "In real estate, one overlooked detail can change everything. We believe thoroughness is the ultimate form of protection.",
+    "impact": "Provided accurate property rights analysis and registry decoding, helping users make informed decisions and avoid costly legal pitfalls.",
+    "vision": "A future where every property transaction is transparent, secure, and legally sound for all parties involved."
+  },
+  "L03": {
+    "images": {
+      "profile": "images/leaders/L03-damseul.jpg",
+      "banner": "images/leaders/L03-damseul-banner.jpg"
+    },
+    "hero": "We resolve construction site disputes through law. Building legal foundations as solid as structures.",
+    "identity": {
+      "what": "We handle all legal matters related to construction contracts, defect disputes, and construction regulations.",
+      "why": "Construction projects involve massive investments and complex stakeholder relationships. Legal precision prevents costly disputes."
+    },
+    "whatWeSolve": {
+      "problem": "Construction disputes involve enormous sums and intricate technical-legal intersections.",
+      "limit": "General legal approaches often lack the technical understanding required for construction disputes.",
+      "approach": "We combine construction industry expertise with legal analysis to resolve disputes efficiently."
+    },
+    "expertise": [
+      {
+        "icon": "engineering",
+        "label": "Construction Contracts",
+        "desc": "Contract drafting, review, and dispute resolution"
+      },
+      {
+        "icon": "build",
+        "label": "Defect Disputes",
+        "desc": "Construction defect identification and liability analysis"
+      },
+      {
+        "icon": "payments",
+        "label": "Payment Claims",
+        "desc": "Construction payment disputes and recovery"
+      },
+      {
+        "icon": "schedule",
+        "label": "Delay Claims",
+        "desc": "Schedule delay analysis and compensation claims"
+      },
+      {
+        "icon": "health_and_safety",
+        "label": "Safety Regulations",
+        "desc": "Construction safety compliance and regulatory analysis"
+      }
+    ],
+    "philosophy": "Like a well-engineered structure, legal arguments must be built on solid foundations. Precision in construction law prevents collapse.",
+    "impact": "Delivered specialized legal analysis for construction projects, reducing dispute resolution time and protecting stakeholder interests.",
+    "vision": "An industry where construction disputes are resolved swiftly and fairly, allowing projects to focus on building rather than battling."
+  },
+  "L04": {
+    "images": {
+      "profile": "images/leaders/L04-aki.jpg",
+      "banner": "images/leaders/L04-aki-banner.jpg"
+    },
+    "hero": "Cities keep evolving. We precisely protect redevelopment rights.",
+    "identity": {
+      "what": "We specialize in urban redevelopment and reconstruction projects, covering all legal procedures and stakeholder rights.",
+      "why": "Redevelopment affects the homes and assets of countless residents. Protecting their rights through precise legal guidance is essential."
+    },
+    "whatWeSolve": {
+      "problem": "Redevelopment projects involve complex procedures and frequent conflicts between associations, residents, and authorities.",
+      "limit": "The intricate web of regulations and procedures often leaves individual rights unprotected.",
+      "approach": "We navigate every stage of redevelopment with thorough legal analysis, protecting individual rights at every step."
+    },
+    "expertise": [
+      {
+        "icon": "domain",
+        "label": "Improvement Project Procedures",
+        "desc": "Full-cycle legal guidance for urban improvement projects"
+      },
+      {
+        "icon": "groups",
+        "label": "Association Management",
+        "desc": "Legal support for redevelopment association operations"
+      },
+      {
+        "icon": "calculate",
+        "label": "Cost Apportionment",
+        "desc": "Assessment of share burdens and contribution calculations"
+      },
+      {
+        "icon": "account_balance_wallet",
+        "label": "Expropriation & Compensation",
+        "desc": "Property acquisition and fair compensation analysis"
+      },
+      {
+        "icon": "balance",
+        "label": "Administrative Litigation",
+        "desc": "Challenging administrative decisions in redevelopment"
+      }
+    ],
+    "philosophy": "Redevelopment should create better communities, not leave anyone behind. Legal protection ensures that progress serves everyone.",
+    "impact": "Guided numerous stakeholders through complex redevelopment processes, ensuring fair treatment and proper compensation.",
+    "vision": "Urban renewal that respects both progress and individual rights, creating vibrant communities built on legal fairness."
+  },
+  "L05": {
+    "images": {
+      "profile": "images/leaders/L05-yeonwoo.jpg",
+      "banner": "images/leaders/L05-yeonwoo-banner.jpg"
+    },
+    "hero": "We stand at the intersection of medicine and law. Proving patient rights with science.",
+    "identity": {
+      "what": "We analyze medical malpractice, healthcare regulations, and patient rights with both legal and medical expertise.",
+      "why": "Medical disputes require understanding of both medicine and law. Bridging this gap is essential for justice."
+    },
+    "whatWeSolve": {
+      "problem": "Medical malpractice cases involve complex causation issues that are difficult to prove without specialized knowledge.",
+      "limit": "General legal practitioners often lack the medical expertise needed to effectively handle healthcare disputes.",
+      "approach": "We combine medical knowledge with legal analysis to scientifically prove causation and protect patient rights."
+    },
+    "expertise": [
+      {
+        "icon": "medical_services",
+        "label": "Malpractice Analysis",
+        "desc": "Medical negligence identification and evaluation"
+      },
+      {
+        "icon": "link",
+        "label": "Causation Proof",
+        "desc": "Scientific demonstration of medical causation"
+      },
+      {
+        "icon": "local_hospital",
+        "label": "Hospital Regulations",
+        "desc": "Healthcare facility compliance and regulatory analysis"
+      },
+      {
+        "icon": "biotech",
+        "label": "Expert Assessment",
+        "desc": "Medical expert opinion analysis and evaluation"
+      },
+      {
+        "icon": "medication",
+        "label": "Pharmaceutical Law",
+        "desc": "Drug regulation and pharmaceutical liability"
+      }
+    ],
+    "philosophy": "At the intersection of medicine and law, truth must be proven scientifically. Patient rights deserve the highest standard of evidence.",
+    "impact": "Established a systematic approach to medical malpractice analysis, enabling more effective proof of causation and better patient outcomes.",
+    "vision": "A healthcare system where patient rights are fully protected and medical accountability is achieved through rigorous legal-medical analysis."
+  },
+  "L06": {
+    "images": {
+      "profile": "images/leaders/L06-byeori.jpg",
+      "banner": "images/leaders/L06-byeori-banner.jpg"
+    },
+    "hero": "We calculate damages precisely. Designing compensation with logic, not emotion.",
+    "identity": {
+      "what": "We specialize in precise damage calculation, insurance claim analysis, and compensation structuring for all types of harm.",
+      "why": "Fair compensation requires accurate quantification. Without precise calculation, justice remains incomplete."
+    },
+    "whatWeSolve": {
+      "problem": "Damage assessment is often disputed due to subjective calculations and inconsistent methodologies.",
+      "limit": "Traditional approaches frequently underestimate or miscalculate complex damages across multiple categories.",
+      "approach": "We apply rigorous analytical methods to quantify every element of damage objectively and comprehensively."
+    },
+    "expertise": [
+      {
+        "icon": "calculate",
+        "label": "Damage Assessment",
+        "desc": "Precise quantification of all damage categories"
+      },
+      {
+        "icon": "policy",
+        "label": "Insurance Analysis",
+        "desc": "Insurance coverage evaluation and claim optimization"
+      },
+      {
+        "icon": "personal_injury",
+        "label": "Personal Injury",
+        "desc": "Bodily harm valuation and medical expense projection"
+      },
+      {
+        "icon": "account_balance_wallet",
+        "label": "Property Damage",
+        "desc": "Asset loss and diminished value calculation"
+      },
+      {
+        "icon": "balance",
+        "label": "Contributory Negligence",
+        "desc": "Comparative fault analysis and adjustment"
+      }
+    ],
+    "philosophy": "Compensation is not about sympathy — it is about accuracy. Only precise calculation delivers true justice to those who have suffered loss.",
+    "impact": "Developed comprehensive damage calculation frameworks that ensure fair and accurate compensation across diverse case types.",
+    "vision": "A legal system where every loss is measured with precision and every victim receives the compensation they rightfully deserve."
+  },
+  "L07": {
+    "images": {
+      "profile": "images/leaders/L07-hanui.jpg",
+      "banner": "images/leaders/L07-hanui-banner.jpg"
+    },
+    "hero": "We precisely analyze the legal issues of traffic accidents. Delivering the truth from the scene to the courtroom.",
+    "identity": {
+      "what": "We provide end-to-end legal analysis for traffic accidents — from fault determination to criminal defense and compensation.",
+      "why": "Traffic accidents can change lives in an instant. Accurate legal analysis ensures fair outcomes for all parties."
+    },
+    "whatWeSolve": {
+      "problem": "Traffic accident liability involves complex fault analysis and multi-layered legal procedures.",
+      "limit": "Victims and defendants alike often navigate confusing insurance and legal processes without adequate guidance.",
+      "approach": "We analyze accident scenes, determine fault precisely, and guide optimal compensation and defense strategies."
+    },
+    "expertise": [
+      {
+        "icon": "analytics",
+        "label": "Fault Analysis",
+        "desc": "Accident reconstruction and liability determination"
+      },
+      {
+        "icon": "gavel",
+        "label": "Criminal Defense",
+        "desc": "Traffic crime defense and prosecution response"
+      },
+      {
+        "icon": "calculate",
+        "label": "Compensation Assessment",
+        "desc": "Comprehensive damage and settlement calculation"
+      },
+      {
+        "icon": "receipt_long",
+        "label": "Insurance Claims",
+        "desc": "Insurance benefit filing and dispute resolution"
+      },
+      {
+        "icon": "handshake",
+        "label": "Settlement Strategy",
+        "desc": "Optimal negotiation and settlement approaches"
+      }
+    ],
+    "philosophy": "The truth of an accident is found at the scene. Precise analysis transforms chaos into clarity, ensuring fair resolution.",
+    "impact": "Provided precise fault analysis and compensation strategies for traffic accident cases, ensuring fair outcomes for victims and defendants.",
+    "vision": "A system where traffic accident victims receive prompt, fair compensation and legal processes are transparent and accessible."
+  },
+  "L08": {
+    "images": {
+      "profile": "images/leaders/L08-onyu.jpg",
+      "banner": "images/leaders/L08-onyu-banner.jpg"
+    },
+    "hero": "Lease law is the cornerstone of housing stability. We protect the rights of both tenants and landlords.",
+    "identity": {
+      "what": "We provide comprehensive legal guidance on residential and commercial lease agreements, deposits, and tenant protections.",
+      "why": "Housing is a fundamental right. Proper legal protection ensures stability for both tenants and property owners."
+    },
+    "whatWeSolve": {
+      "problem": "Lease disputes are among the most common legal issues, often involving deposit recovery and contract violations.",
+      "limit": "Many tenants and landlords lack awareness of their legal rights and obligations under lease protection laws.",
+      "approach": "We analyze lease agreements, protect security deposits, and guide proper exercise of legal rights for all parties."
+    },
+    "expertise": [
+      {
+        "icon": "home",
+        "label": "Residential Lease",
+        "desc": "Housing lease protection and tenant rights"
+      },
+      {
+        "icon": "storefront",
+        "label": "Commercial Lease",
+        "desc": "Commercial tenant protections and business lease law"
+      },
+      {
+        "icon": "savings",
+        "label": "Deposit Protection",
+        "desc": "Security deposit recovery and protection strategies"
+      },
+      {
+        "icon": "autorenew",
+        "label": "Renewal Rights",
+        "desc": "Lease renewal claims and contract extension rights"
+      },
+      {
+        "icon": "find_in_page",
+        "label": "Contract Review",
+        "desc": "Lease agreement analysis and risk assessment"
+      }
+    ],
+    "philosophy": "A home is more than a contract — it is where life happens. Protecting lease rights means protecting people's daily lives.",
+    "impact": "Helped countless tenants and landlords understand and exercise their lease rights, reducing disputes and protecting housing stability.",
+    "vision": "A rental market where both tenants and landlords operate with clarity, fairness, and mutual respect under the law."
+  },
+  "L09": {
+    "images": {
+      "profile": "images/leaders/L09-hanul.jpg",
+      "banner": "images/leaders/L09-hanul-banner.jpg"
+    },
+    "hero": "We decode the complex procedures of government contracts. Designing fair bidding environments.",
+    "identity": {
+      "what": "We specialize in government procurement, public bidding procedures, and national contract regulations.",
+      "why": "Government contracts involve taxpayer money and must be conducted with absolute transparency and legal compliance."
+    },
+    "whatWeSolve": {
+      "problem": "Government procurement procedures are complex and rigid, with severe penalties for non-compliance.",
+      "limit": "Many businesses struggle to navigate the intricate rules governing public procurement and bidding.",
+      "approach": "We decode procurement regulations, guide compliant bidding strategies, and resolve contract disputes efficiently."
+    },
+    "expertise": [
+      {
+        "icon": "ballot",
+        "label": "Bidding Procedures",
+        "desc": "Public procurement and bidding process guidance"
+      },
+      {
+        "icon": "verified",
+        "label": "Regulatory Compliance",
+        "desc": "Government contract regulation adherence"
+      },
+      {
+        "icon": "rate_review",
+        "label": "Protest & Appeals",
+        "desc": "Bid protest and administrative appeal procedures"
+      },
+      {
+        "icon": "payments",
+        "label": "Payment Claims",
+        "desc": "Government contract payment disputes and recovery"
+      },
+      {
+        "icon": "checklist",
+        "label": "Eligibility Review",
+        "desc": "Bidder qualification and eligibility assessment"
+      }
+    ],
+    "philosophy": "Public procurement must serve the public interest. Compliance is not a burden — it is the foundation of fair competition.",
+    "impact": "Guided businesses through complex government procurement processes, ensuring compliance and fair participation in public bidding.",
+    "vision": "A transparent and accessible government procurement system where compliance and competition drive better outcomes for all."
+  },
+  "L10": {
+    "images": {
+      "profile": "images/leaders/L10-gyeolhwi.jpg",
+      "banner": "images/leaders/L10-gyeolhwi-banner.jpg"
+    },
+    "hero": "A judgment is just the beginning. Completing actual enforcement is the real resolution.",
+    "identity": {
+      "what": "We handle all aspects of civil enforcement — from provisional remedies to asset seizure and final execution.",
+      "why": "A court victory means nothing without enforcement. We ensure that judgments translate into real-world results."
+    },
+    "whatWeSolve": {
+      "problem": "Many winning parties cannot collect what they are owed because enforcement procedures are complex and time-sensitive.",
+      "limit": "Traditional approaches often fail to identify assets or navigate the technical enforcement process effectively.",
+      "approach": "We execute comprehensive enforcement strategies, from asset discovery to seizure and distribution."
+    },
+    "expertise": [
+      {
+        "icon": "lock",
+        "label": "Provisional Remedies",
+        "desc": "Preliminary injunctions, attachments, and temporary restraining orders"
+      },
+      {
+        "icon": "account_balance_wallet",
+        "label": "Asset Seizure",
+        "desc": "Property and account seizure execution"
+      },
+      {
+        "icon": "search",
+        "label": "Asset Investigation",
+        "desc": "Debtor asset discovery and tracking"
+      },
+      {
+        "icon": "sell",
+        "label": "Forced Sale",
+        "desc": "Court-ordered sale and auction procedures"
+      },
+      {
+        "icon": "shield",
+        "label": "Enforcement Defense",
+        "desc": "Defending against improper enforcement actions"
+      }
+    ],
+    "philosophy": "Justice is not achieved at the judgment — it is achieved at enforcement. We do not stop until the right is realized.",
+    "impact": "Transformed judgments into tangible results through effective enforcement strategies, maximizing recovery for creditors.",
+    "vision": "A legal system where every legitimate judgment is efficiently and fully enforced, making justice a reality, not just a ruling."
+  },
+  "L11": {
+    "images": {
+      "profile": "images/leaders/L11-oreum.jpg",
+      "banner": "images/leaders/L11-oreum-banner.jpg"
+    },
+    "hero": "We track the flow of receivables. Systematic management determines recovery rates.",
+    "identity": {
+      "what": "We provide comprehensive debt collection, credit management, and receivable recovery solutions.",
+      "why": "Unpaid debts can cripple businesses and individuals. Systematic and lawful collection preserves financial health."
+    },
+    "whatWeSolve": {
+      "problem": "Debt recovery is often inefficient, with creditors losing valuable time and resources on unstructured collection efforts.",
+      "limit": "Many collection attempts fail due to poor strategy, expired statutes, or non-compliance with collection regulations.",
+      "approach": "We implement systematic, legally compliant collection strategies that maximize recovery while respecting debtor rights."
+    },
+    "expertise": [
+      {
+        "icon": "payments",
+        "label": "Debt Recovery",
+        "desc": "Strategic debt collection and recovery execution"
+      },
+      {
+        "icon": "credit_score",
+        "label": "Credit Management",
+        "desc": "Credit risk assessment and monitoring"
+      },
+      {
+        "icon": "verified_user",
+        "label": "Lawful Collection",
+        "desc": "Regulatory-compliant collection procedures"
+      },
+      {
+        "icon": "timer",
+        "label": "Statute Management",
+        "desc": "Limitations period monitoring and preservation"
+      },
+      {
+        "icon": "handshake",
+        "label": "Debt Restructuring",
+        "desc": "Negotiated debt adjustment and settlement"
+      }
+    ],
+    "philosophy": "Effective collection requires patience and precision. Every receivable has a path to recovery when approached systematically.",
+    "impact": "Improved debt recovery rates through structured collection processes and proactive statute management.",
+    "vision": "A financial ecosystem where legitimate debts are recovered efficiently and fairly, maintaining trust between creditors and debtors."
+  },
+  "L12": {
+    "images": {
+      "profile": "images/leaders/L12-aseul.jpg",
+      "banner": "images/leaders/L12-aseul-banner.jpg"
+    },
+    "hero": "We decode the truth in registry records. Precisely analyzing opportunities and risks in auctions.",
+    "identity": {
+      "what": "We specialize in property registration procedures and court auction analysis, covering bidding strategy and distribution priority.",
+      "why": "Registry records and auctions hide both opportunities and dangers. Expert analysis is essential for informed decisions."
+    },
+    "whatWeSolve": {
+      "problem": "Property registrations contain complex layers of rights, and court auctions carry significant hidden risks.",
+      "limit": "Without expert analysis, buyers may acquire properties with undisclosed encumbrances or lose at auction unnecessarily.",
+      "approach": "We decode registry records completely and analyze auction properties with comprehensive risk assessment."
+    },
+    "expertise": [
+      {
+        "icon": "description",
+        "label": "Registration Procedures",
+        "desc": "Property registration and transfer processes"
+      },
+      {
+        "icon": "analytics",
+        "label": "Auction Analysis",
+        "desc": "Court auction property evaluation and risk assessment"
+      },
+      {
+        "icon": "format_list_numbered",
+        "label": "Distribution Priority",
+        "desc": "Creditor priority ranking and distribution analysis"
+      },
+      {
+        "icon": "meeting_room",
+        "label": "Eviction Procedures",
+        "desc": "Post-auction occupant removal and possession transfer"
+      },
+      {
+        "icon": "warning",
+        "label": "Risk Diagnosis",
+        "desc": "Hidden encumbrance and rights conflict identification"
+      }
+    ],
+    "philosophy": "Every registry record tells a story. Those who can read it find opportunity; those who cannot find risk.",
+    "impact": "Provided accurate registry analysis and auction risk assessment, enabling clients to make confident property decisions.",
+    "vision": "A property market where registry transparency and informed auction participation protect every buyer and seller."
+  },
+  "L13": {
+    "images": {
+      "profile": "images/leaders/L13-nuri.jpg",
+      "banner": "images/leaders/L13-nuri-banner.jpg"
+    },
+    "hero": "We design commercial transactions through law. Building safety mechanisms for business.",
+    "identity": {
+      "what": "We handle commercial law disputes, negotiable instruments, and business transaction legal frameworks.",
+      "why": "Commerce drives the economy, and legal certainty in transactions is the foundation of business trust."
+    },
+    "whatWeSolve": {
+      "problem": "Commercial disputes involve complex transaction structures and multiple parties with conflicting interests.",
+      "limit": "Many businesses operate without proper legal safeguards, exposing themselves to avoidable commercial risks.",
+      "approach": "We structure commercial transactions with robust legal frameworks, preventing disputes before they arise."
+    },
+    "expertise": [
+      {
+        "icon": "storefront",
+        "label": "Commercial Disputes",
+        "desc": "Business transaction conflict resolution"
+      },
+      {
+        "icon": "receipt",
+        "label": "Negotiable Instruments",
+        "desc": "Bills, notes, and check legal issues"
+      },
+      {
+        "icon": "account_balance",
+        "label": "Accounting & Audit",
+        "desc": "Financial reporting compliance and audit disputes"
+      },
+      {
+        "icon": "local_shipping",
+        "label": "Logistics & Transport",
+        "desc": "Commercial transportation and warehousing law"
+      }
+    ],
+    "philosophy": "Sound commerce is built on sound law. Every transaction deserves a legal framework that protects all parties.",
+    "impact": "Strengthened business transaction security through comprehensive commercial law analysis and dispute resolution.",
+    "vision": "A commercial ecosystem where businesses operate with confidence, backed by clear and enforceable legal frameworks."
+  },
+  "L14": {
+    "images": {
+      "profile": "images/leaders/L14-dasom.jpg",
+      "banner": "images/leaders/L14-dasom-banner.jpg"
+    },
+    "hero": "We design the combination and separation of companies. Completing the legal structure of M&A.",
+    "identity": {
+      "what": "We specialize in corporate law, mergers and acquisitions, due diligence, and corporate restructuring.",
+      "why": "Corporate transactions reshape entire industries. Legal precision in M&A protects stakeholders and creates lasting value."
+    },
+    "whatWeSolve": {
+      "problem": "M&A transactions involve enormous complexity with regulatory, financial, and legal risks at every stage.",
+      "limit": "Without comprehensive legal analysis, critical risks are missed during due diligence, leading to post-merger disputes.",
+      "approach": "We provide end-to-end legal support for corporate transactions, from initial structuring through post-merger integration."
+    },
+    "expertise": [
+      {
+        "icon": "business",
+        "label": "Corporate Law",
+        "desc": "Corporate governance and compliance advisory"
+      },
+      {
+        "icon": "merge",
+        "label": "M&A Structuring",
+        "desc": "Merger, acquisition, and deal structure design"
+      },
+      {
+        "icon": "find_in_page",
+        "label": "Due Diligence",
+        "desc": "Comprehensive legal and regulatory due diligence"
+      },
+      {
+        "icon": "groups",
+        "label": "Shareholder Disputes",
+        "desc": "Shareholder rights, conflicts, and derivative actions"
+      },
+      {
+        "icon": "settings_suggest",
+        "label": "Restructuring",
+        "desc": "Corporate rehabilitation and reorganization"
+      }
+    ],
+    "philosophy": "Every corporate transaction is a transformation. Getting the legal structure right determines whether it creates or destroys value.",
+    "impact": "Guided complex M&A transactions with thorough due diligence and precise deal structuring, protecting all stakeholders.",
+    "vision": "A corporate landscape where transactions are structured to create sustainable value and protect every stakeholder's interests."
+  },
+  "L15": {
+    "images": {
+      "profile": "images/leaders/L15-byeolha.jpg",
+      "banner": "images/leaders/L15-byeolha-banner.jpg"
+    },
+    "hero": "We support startup growth through law. Building structures that stand firm through rapid scaling.",
+    "identity": {
+      "what": "We provide legal support tailored to startups — from incorporation through investment rounds to exit strategies.",
+      "why": "Startups move fast, but legal oversights in early stages can become fatal obstacles later. Prevention is key."
+    },
+    "whatWeSolve": {
+      "problem": "Startups often prioritize speed over legal structure, creating vulnerabilities that surface during funding or exits.",
+      "limit": "Traditional legal services are not designed for the pace and unique needs of the startup ecosystem.",
+      "approach": "We provide agile, startup-friendly legal frameworks that scale with growth while maintaining legal integrity."
+    },
+    "expertise": [
+      {
+        "icon": "rocket_launch",
+        "label": "Incorporation",
+        "desc": "Company formation and corporate structure setup"
+      },
+      {
+        "icon": "trending_up",
+        "label": "Fundraising",
+        "desc": "Investment round legal structuring and documentation"
+      },
+      {
+        "icon": "loyalty",
+        "label": "Stock Options",
+        "desc": "Employee equity incentive plan design"
+      },
+      {
+        "icon": "group_add",
+        "label": "Co-founding",
+        "desc": "Co-founder agreements and equity splits"
+      },
+      {
+        "icon": "exit_to_app",
+        "label": "Exit Strategy",
+        "desc": "IPO, acquisition, and exit legal planning"
+      }
+    ],
+    "philosophy": "Startups change the world. Our job is to make sure legal gaps don't stop them. Speed and structure can coexist.",
+    "impact": "Supported startups from incorporation to exit with scalable legal frameworks, preventing costly restructuring later.",
+    "vision": "An entrepreneurial ecosystem where every startup has access to the legal infrastructure needed to grow fearlessly."
+  },
+  "L16": {
+    "images": {
+      "profile": "images/leaders/L16-seula.jpg",
+      "banner": "images/leaders/L16-seula-banner.jpg"
+    },
+    "hero": "We decode insurance policy language. Protecting the right to fair compensation.",
+    "identity": {
+      "what": "We specialize in insurance disputes, policy interpretation, and claim optimization across all insurance types.",
+      "why": "Insurance is meant to protect, but complex policy language often works against policyholders when they need help most."
+    },
+    "whatWeSolve": {
+      "problem": "Insurance claim disputes often arise from ambiguous policy terms and unfair claim denial practices.",
+      "limit": "Policyholders lack the expertise to challenge insurers' interpretations, resulting in underpayment or denial.",
+      "approach": "We decode policy language, identify coverage entitlements, and advocate for fair claim resolution."
+    },
+    "expertise": [
+      {
+        "icon": "gavel",
+        "label": "Insurance Disputes",
+        "desc": "Claim denial challenges and coverage litigation"
+      },
+      {
+        "icon": "find_in_page",
+        "label": "Policy Interpretation",
+        "desc": "Insurance contract and terms analysis"
+      },
+      {
+        "icon": "calculate",
+        "label": "Actuarial Analysis",
+        "desc": "Insurance mathematics and premium evaluation"
+      },
+      {
+        "icon": "favorite",
+        "label": "Life & Casualty",
+        "desc": "Life insurance and property-casualty coverage"
+      },
+      {
+        "icon": "handshake",
+        "label": "Dispute Mediation",
+        "desc": "Insurance dispute resolution and arbitration"
+      }
+    ],
+    "philosophy": "Insurance exists to provide security. When it fails to do so, rigorous legal analysis restores the balance.",
+    "impact": "Successfully challenged unfair claim denials and decoded complex policy language, securing fair compensation for policyholders.",
+    "vision": "An insurance market where policy language is transparent and every legitimate claim receives fair and prompt payment."
+  },
+  "L17": {
+    "images": {
+      "profile": "images/leaders/L17-mir.jpg",
+      "banner": "images/leaders/L17-mir-banner.jpg"
+    },
+    "hero": "We connect cross-border transactions through law. Building legal bridges for global business.",
+    "identity": {
+      "what": "We handle international contracts, cross-border arbitration, and overseas investment legal frameworks.",
+      "why": "Global business requires navigating multiple legal systems simultaneously. Expert guidance prevents costly missteps."
+    },
+    "whatWeSolve": {
+      "problem": "Cross-border transactions face jurisdictional conflicts, regulatory differences, and enforcement challenges.",
+      "limit": "Domestic legal expertise alone is insufficient for the complexities of international business law.",
+      "approach": "We provide multi-jurisdictional legal analysis, harmonizing different legal systems for seamless international transactions."
+    },
+    "expertise": [
+      {
+        "icon": "description",
+        "label": "International Contracts",
+        "desc": "Cross-border agreement drafting and negotiation"
+      },
+      {
+        "icon": "gavel",
+        "label": "International Arbitration",
+        "desc": "Cross-border dispute resolution and arbitration"
+      },
+      {
+        "icon": "public",
+        "label": "Overseas Investment",
+        "desc": "Foreign investment legal structuring and compliance"
+      },
+      {
+        "icon": "compare",
+        "label": "Comparative Law",
+        "desc": "Multi-jurisdiction legal system analysis"
+      },
+      {
+        "icon": "policy",
+        "label": "Trade Regulations",
+        "desc": "International trade compliance and sanctions"
+      }
+    ],
+    "philosophy": "The world's legal systems are different, but the principles of fairness are universal. We bridge jurisdictions with expertise.",
+    "impact": "Facilitated secure international transactions by providing comprehensive multi-jurisdictional legal analysis and risk management.",
+    "vision": "A world where cross-border business operates with legal certainty, regardless of jurisdictional complexity."
+  },
+  "L18": {
+    "images": {
+      "profile": "images/leaders/L18-daon.jpg",
+      "banner": "images/leaders/L18-daon-banner.jpg"
+    },
+    "hero": "Energy is the foundation of the future. We analyze the intersection of resources and regulations.",
+    "identity": {
+      "what": "We specialize in energy law, natural resource development, and renewable energy regulatory frameworks.",
+      "why": "The energy transition is reshaping industries. Navigating its legal landscape is critical for sustainable growth."
+    },
+    "whatWeSolve": {
+      "problem": "Energy projects face complex regulatory requirements, licensing challenges, and evolving environmental standards.",
+      "limit": "The rapidly changing energy regulatory landscape creates uncertainty for project developers and investors.",
+      "approach": "We provide comprehensive legal analysis for energy projects, from licensing through operation to regulatory compliance."
+    },
+    "expertise": [
+      {
+        "icon": "bolt",
+        "label": "Power Industry",
+        "desc": "Electricity generation, transmission, and distribution law"
+      },
+      {
+        "icon": "oil_barrel",
+        "label": "Resource Development",
+        "desc": "Mining, oil, and gas project legal frameworks"
+      },
+      {
+        "icon": "solar_power",
+        "label": "Renewable Energy",
+        "desc": "Solar, wind, and clean energy regulations"
+      },
+      {
+        "icon": "description",
+        "label": "PPA Contracts",
+        "desc": "Power purchase agreement structuring and negotiation"
+      }
+    ],
+    "philosophy": "Energy powers civilization. The legal frameworks governing it must balance innovation, sustainability, and security.",
+    "impact": "Guided energy projects through complex regulatory processes, enabling compliant development and sustainable operations.",
+    "vision": "A future where clean energy thrives within clear, fair, and innovation-friendly legal frameworks."
+  },
+  "L19": {
+    "images": {
+      "profile": "images/leaders/L19-selong.jpg",
+      "banner": "images/leaders/L19-selong-banner.jpg"
+    },
+    "hero": "We handle the laws of sea and sky. Designing legal safe passages for logistics.",
+    "identity": {
+      "what": "We provide legal expertise for maritime shipping, aviation transport, and multimodal logistics operations.",
+      "why": "Global logistics depends on maritime and aviation law. Legal certainty keeps goods and people moving safely."
+    },
+    "whatWeSolve": {
+      "problem": "Maritime and aviation incidents involve complex international conventions and multi-party liability issues.",
+      "limit": "Transport law requires specialized knowledge of international conventions that general practitioners rarely possess.",
+      "approach": "We apply deep expertise in maritime and aviation conventions to resolve disputes and structure compliant operations."
+    },
+    "expertise": [
+      {
+        "icon": "directions_boat",
+        "label": "Maritime Transport",
+        "desc": "Shipping law, bills of lading, and carriage disputes"
+      },
+      {
+        "icon": "flight",
+        "label": "Aviation Transport",
+        "desc": "Air cargo liability and passenger rights"
+      },
+      {
+        "icon": "local_shipping",
+        "label": "Multimodal Transport",
+        "desc": "Combined transport legal frameworks"
+      },
+      {
+        "icon": "warning",
+        "label": "Maritime Accidents",
+        "desc": "Collision, salvage, and maritime casualty response"
+      }
+    ],
+    "philosophy": "The sea and sky follow their own rules. Understanding maritime and aviation law means understanding the lifelines of global commerce.",
+    "impact": "Resolved complex maritime and aviation disputes, ensuring fair liability allocation and regulatory compliance.",
+    "vision": "A logistics industry where maritime and aviation operations are supported by clear, predictable legal frameworks."
+  },
+  "L20": {
+    "images": {
+      "profile": "images/leaders/L20-chansol.jpg",
+      "banner": "images/leaders/L20-chansol-banner.jpg"
+    },
+    "hero": "Taxation is structure. Lawful tax planning and accurate filing protect wealth.",
+    "identity": {
+      "what": "We provide comprehensive tax planning, financial regulatory compliance, and wealth protection strategies.",
+      "why": "Tax obligations affect every person and business. Strategic, lawful planning preserves wealth and ensures compliance."
+    },
+    "whatWeSolve": {
+      "problem": "Tax laws are complex and constantly changing, creating risks of overpayment, penalties, or missed deductions.",
+      "limit": "Many taxpayers lack access to strategic tax planning, relying on reactive compliance rather than proactive optimization.",
+      "approach": "We design lawful tax strategies that minimize burden while ensuring full compliance with all tax obligations."
+    },
+    "expertise": [
+      {
+        "icon": "savings",
+        "label": "Tax Planning",
+        "desc": "Strategic tax optimization within legal bounds"
+      },
+      {
+        "icon": "account_balance",
+        "label": "Financial Regulations",
+        "desc": "Banking, securities, and financial compliance"
+      },
+      {
+        "icon": "description",
+        "label": "Tax Filing",
+        "desc": "Accurate tax return preparation and submission"
+      },
+      {
+        "icon": "search",
+        "label": "Tax Audit Response",
+        "desc": "Tax investigation defense and response strategy"
+      },
+      {
+        "icon": "swap_horiz",
+        "label": "Transfer & Inheritance Tax",
+        "desc": "Capital gains, gift, and estate tax planning"
+      }
+    ],
+    "philosophy": "Tax is not a penalty — it is a system. Understanding its structure reveals lawful opportunities to protect what you have earned.",
+    "impact": "Delivered strategic tax planning that preserved wealth while maintaining full compliance, reducing unnecessary tax exposure.",
+    "vision": "A tax environment where every taxpayer has access to strategic planning that is both lawful and effective."
+  },
+  "L21": {
+    "images": {
+      "profile": "images/leaders/L21-sebin.jpg",
+      "banner": "images/leaders/L21-sebin-banner.jpg"
+    },
+    "hero": "The legal shield of the digital age. Precisely analyzing IT and security regulations.",
+    "identity": {
+      "what": "We specialize in information security law, cybercrime response, and digital technology regulations.",
+      "why": "Digital threats evolve constantly. Legal preparedness is the first line of defense in cybersecurity."
+    },
+    "whatWeSolve": {
+      "problem": "Cyberattacks, data breaches, and IT regulatory non-compliance expose organizations to massive liability.",
+      "limit": "The gap between technology advancement and legal regulation creates compliance uncertainty for digital businesses.",
+      "approach": "We provide comprehensive IT security legal analysis, bridging the gap between technology and regulation."
+    },
+    "expertise": [
+      {
+        "icon": "security",
+        "label": "Information Security Law",
+        "desc": "Cybersecurity regulations and compliance frameworks"
+      },
+      {
+        "icon": "gpp_bad",
+        "label": "Cybercrime",
+        "desc": "Cybercrime investigation and legal response"
+      },
+      {
+        "icon": "cloud",
+        "label": "Cloud Regulations",
+        "desc": "Cloud computing legal and data sovereignty issues"
+      },
+      {
+        "icon": "shopping_cart",
+        "label": "E-Commerce",
+        "desc": "Electronic transaction and digital marketplace law"
+      },
+      {
+        "icon": "lock",
+        "label": "Authentication & Security",
+        "desc": "Digital authentication and encryption regulations"
+      }
+    ],
+    "philosophy": "In the digital world, security is not optional — it is existential. Legal compliance is the foundation of digital trust.",
+    "impact": "Established comprehensive IT security legal frameworks, helping organizations navigate cybersecurity regulations with confidence.",
+    "vision": "A digital ecosystem where robust security law protects businesses and individuals alike from evolving cyber threats."
+  },
+  "L22": {
+    "images": {
+      "profile": "images/leaders/L22-gaon.jpg",
+      "banner": "images/leaders/L22-gaon-banner.jpg"
+    },
+    "hero": "Defending rights with the precision of criminal law. Upholding the presumption of innocence.",
+    "identity": {
+      "what": "We provide criminal defense, investigation response, and prosecution strategies across all criminal matters.",
+      "why": "Criminal proceedings carry the most severe consequences. Every person deserves a rigorous and precise defense."
+    },
+    "whatWeSolve": {
+      "problem": "Criminal cases involve high stakes — freedom, reputation, and livelihood are all at risk.",
+      "limit": "The complexity of criminal procedure and investigation tactics requires specialized legal expertise to navigate effectively.",
+      "approach": "We mount precise, evidence-based defenses and strategic responses at every stage of criminal proceedings."
+    },
+    "expertise": [
+      {
+        "icon": "gavel",
+        "label": "Criminal Defense",
+        "desc": "Trial defense strategy and courtroom advocacy"
+      },
+      {
+        "icon": "search",
+        "label": "Investigation Response",
+        "desc": "Police and prosecution investigation strategies"
+      },
+      {
+        "icon": "description",
+        "label": "Complaints & Reports",
+        "desc": "Criminal complaint filing and prosecution requests"
+      },
+      {
+        "icon": "lock_open",
+        "label": "Bail & Detention",
+        "desc": "Bail applications and detention review"
+      },
+      {
+        "icon": "warning",
+        "label": "Special Crimes",
+        "desc": "White-collar, financial, and organized crime defense"
+      }
+    ],
+    "philosophy": "Every person is innocent until proven guilty. The precision of criminal defense protects not just individuals, but the integrity of justice itself.",
+    "impact": "Delivered rigorous criminal defense through evidence-based strategies, protecting the rights and freedom of the accused.",
+    "vision": "A justice system where the presumption of innocence is truly upheld and every accused person receives a fair defense."
+  },
+  "L23": {
+    "images": {
+      "profile": "images/leaders/L23-seoun.jpg",
+      "banner": "images/leaders/L23-seoun-banner.jpg"
+    },
+    "hero": "We protect the rights of the entertainment industry. Safeguarding creators' value through law.",
+    "identity": {
+      "what": "We handle entertainment law matters including talent contracts, content agreements, and creator rights protection.",
+      "why": "The entertainment industry creates immense value, but creators often lack the legal protection they deserve."
+    },
+    "whatWeSolve": {
+      "problem": "Entertainment contracts are often one-sided, and creators' rights are frequently undervalued or exploited.",
+      "limit": "Many entertainment professionals sign contracts without understanding the long-term legal implications.",
+      "approach": "We analyze and structure entertainment agreements to protect creators' rights and ensure fair value distribution."
+    },
+    "expertise": [
+      {
+        "icon": "badge",
+        "label": "Exclusive Contracts",
+        "desc": "Talent management and exclusive representation agreements"
+      },
+      {
+        "icon": "movie",
+        "label": "Content Agreements",
+        "desc": "Production, distribution, and licensing contracts"
+      },
+      {
+        "icon": "face",
+        "label": "Publicity Rights",
+        "desc": "Image rights, likeness, and personality protection"
+      },
+      {
+        "icon": "payments",
+        "label": "Revenue Sharing",
+        "desc": "Profit distribution and royalty structures"
+      }
+    ],
+    "philosophy": "Creators deserve to be valued. Fair contracts are not obstacles to creativity — they are its foundation.",
+    "impact": "Protected entertainment professionals with fair contract structures, ensuring proper recognition and compensation for their work.",
+    "vision": "An entertainment industry where every creator's rights are respected and their contributions are fairly rewarded."
+  },
+  "L24": {
+    "images": {
+      "profile": "images/leaders/L24-doul.jpg",
+      "banner": "images/leaders/L24-doul-banner.jpg"
+    },
+    "hero": "We challenge unjust taxation. Protecting taxpayer rights through tax procedures.",
+    "identity": {
+      "what": "We specialize in tax dispute resolution, audit defense, and administrative tax litigation.",
+      "why": "Taxpayers have the right to challenge unjust assessments. Effective dispute resolution restores fiscal justice."
+    },
+    "whatWeSolve": {
+      "problem": "Tax authorities sometimes impose incorrect assessments, and taxpayers lack the expertise to challenge them.",
+      "limit": "Tax dispute procedures are technically complex and time-sensitive, requiring specialized procedural knowledge.",
+      "approach": "We navigate tax dispute procedures strategically, challenging unjust assessments through administrative and judicial channels."
+    },
+    "expertise": [
+      {
+        "icon": "gavel",
+        "label": "Tax Appeals",
+        "desc": "Administrative appeals and tax tribunal proceedings"
+      },
+      {
+        "icon": "shield",
+        "label": "Audit Defense",
+        "desc": "Tax investigation response and defense strategy"
+      },
+      {
+        "icon": "balance",
+        "label": "Tax Litigation",
+        "desc": "Tax court proceedings and judicial review"
+      },
+      {
+        "icon": "analytics",
+        "label": "Assessment Analysis",
+        "desc": "Tax assessment review and error identification"
+      },
+      {
+        "icon": "verified_user",
+        "label": "Taxpayer Rights",
+        "desc": "Constitutional and statutory taxpayer protections"
+      }
+    ],
+    "philosophy": "Taxation must be lawful and fair. When it is not, challenging it is not defiance — it is the exercise of a fundamental right.",
+    "impact": "Successfully challenged unjust tax assessments, recovering overpaid taxes and establishing favorable precedents.",
+    "vision": "A tax system where taxpayer rights are robust, assessments are fair, and dispute resolution is accessible to all."
+  },
+  "L25": {
+    "images": {
+      "profile": "images/leaders/L25-damwoo.jpg",
+      "banner": "images/leaders/L25-damwoo-banner.jpg"
+    },
+    "hero": "We precisely analyze the special nature of military criminal law. Protecting the legal rights of service members.",
+    "identity": {
+      "what": "We specialize in military justice, court-martial proceedings, and the legal rights of military personnel.",
+      "why": "Service members face a unique legal system. Their rights deserve the same protection as those of any citizen."
+    },
+    "whatWeSolve": {
+      "problem": "Military justice operates under distinct rules that can disadvantage service members unfamiliar with the system.",
+      "limit": "Civilian legal expertise often falls short in the specialized context of military tribunals and regulations.",
+      "approach": "We provide specialized military legal analysis, ensuring service members' rights are fully protected."
+    },
+    "expertise": [
+      {
+        "icon": "military_tech",
+        "label": "Military Criminal Law",
+        "desc": "Military criminal code analysis and defense"
+      },
+      {
+        "icon": "gavel",
+        "label": "Court-Martial",
+        "desc": "Military tribunal proceedings and defense"
+      },
+      {
+        "icon": "shield",
+        "label": "Military Human Rights",
+        "desc": "Service member rights and welfare protection"
+      },
+      {
+        "icon": "report",
+        "label": "Disciplinary Actions",
+        "desc": "Military disciplinary proceeding response"
+      }
+    ],
+    "philosophy": "Those who serve their country deserve the full protection of the law. Military justice must be both disciplined and fair.",
+    "impact": "Provided specialized military legal defense, ensuring fair treatment and due process for service members.",
+    "vision": "A military justice system that upholds both discipline and the fundamental rights of every service member."
+  },
+  "L26": {
+    "images": {
+      "profile": "images/leaders/L26-jinu.jpg",
+      "banner": "images/leaders/L26-jinu-banner.jpg"
+    },
+    "hero": "We turn ideas into legal assets. Protecting the value of intellectual property.",
+    "identity": {
+      "what": "We handle all aspects of intellectual property — patents, trademarks, designs, trade secrets, and IP litigation.",
+      "why": "Innovation drives progress, but without legal protection, ideas can be stolen or lost. IP law safeguards creativity."
+    },
+    "whatWeSolve": {
+      "problem": "Intellectual property theft and infringement cause billions in losses annually, threatening innovation incentives.",
+      "limit": "Many innovators fail to secure proper IP protection, leaving their creations vulnerable to misappropriation.",
+      "approach": "We provide comprehensive IP protection strategies — from registration through enforcement and litigation."
+    },
+    "expertise": [
+      {
+        "icon": "lightbulb",
+        "label": "Patents",
+        "desc": "Patent prosecution, analysis, and portfolio management"
+      },
+      {
+        "icon": "verified",
+        "label": "Trademarks",
+        "desc": "Trademark registration, opposition, and brand protection"
+      },
+      {
+        "icon": "palette",
+        "label": "Designs",
+        "desc": "Industrial design protection and enforcement"
+      },
+      {
+        "icon": "lock",
+        "label": "Trade Secrets",
+        "desc": "Confidential information protection strategies"
+      },
+      {
+        "icon": "gavel",
+        "label": "IP Litigation",
+        "desc": "Infringement actions and IP dispute resolution"
+      }
+    ],
+    "philosophy": "Ideas are the seeds of progress. IP law ensures that those who plant them reap the rewards.",
+    "impact": "Secured robust IP protection for innovators, from patent filings to successful infringement enforcement.",
+    "vision": "An innovation ecosystem where every idea is protected and every creator is empowered to build on their inventions."
+  },
+  "L27": {
+    "images": {
+      "profile": "images/leaders/L27-ruda.jpg",
+      "banner": "images/leaders/L27-ruda-banner.jpg"
+    },
+    "hero": "We find the balance between environment and law. Designing a sustainable future through legal frameworks.",
+    "identity": {
+      "what": "We specialize in environmental law — impact assessments, pollution liability, and conservation regulations.",
+      "why": "Environmental protection is not optional. Legal frameworks must balance economic activity with ecological preservation."
+    },
+    "whatWeSolve": {
+      "problem": "Environmental damage is often irreversible, and regulatory non-compliance can result in severe penalties.",
+      "limit": "Environmental regulations are complex, spanning multiple agencies and evolving scientific standards.",
+      "approach": "We navigate environmental regulatory frameworks, ensuring compliance while supporting sustainable development."
+    },
+    "expertise": [
+      {
+        "icon": "eco",
+        "label": "Environmental Impact Assessment",
+        "desc": "EIA review, compliance, and mitigation strategies"
+      },
+      {
+        "icon": "warning",
+        "label": "Pollution Liability",
+        "desc": "Contamination responsibility and remediation obligations"
+      },
+      {
+        "icon": "delete",
+        "label": "Waste Regulations",
+        "desc": "Waste management law and hazardous material compliance"
+      },
+      {
+        "icon": "park",
+        "label": "Nature Conservation",
+        "desc": "Biodiversity and habitat protection regulations"
+      }
+    ],
+    "philosophy": "The environment has no voice in court. We speak for it through law, ensuring that development and preservation coexist.",
+    "impact": "Guided organizations through complex environmental compliance, preventing violations and supporting sustainable practices.",
+    "vision": "A world where economic development and environmental protection work hand in hand through effective legal frameworks."
+  },
+  "L28": {
+    "images": {
+      "profile": "images/leaders/L28-haeseul.jpg",
+      "banner": "images/leaders/L28-haeseul-banner.jpg"
+    },
+    "hero": "We handle the law of goods crossing borders. Designing optimal paths for trade and customs.",
+    "identity": {
+      "what": "We provide legal expertise in customs procedures, tariff classification, and international trade compliance.",
+      "why": "International trade requires navigating complex customs rules. Proper compliance prevents costly delays and penalties."
+    },
+    "whatWeSolve": {
+      "problem": "Customs errors lead to shipment delays, financial penalties, and potential criminal liability.",
+      "limit": "Tariff classifications and origin determinations are technically complex, requiring specialized knowledge.",
+      "approach": "We optimize customs compliance, from tariff classification to origin determination and dispute resolution."
+    },
+    "expertise": [
+      {
+        "icon": "inventory",
+        "label": "Customs Clearance",
+        "desc": "Import/export procedures and documentation"
+      },
+      {
+        "icon": "category",
+        "label": "Tariff Classification",
+        "desc": "HS code determination and tariff optimization"
+      },
+      {
+        "icon": "public",
+        "label": "Rules of Origin",
+        "desc": "Origin determination and FTA utilization"
+      },
+      {
+        "icon": "gavel",
+        "label": "Customs Appeals",
+        "desc": "Customs assessment challenges and administrative appeals"
+      }
+    ],
+    "philosophy": "Trade moves the world. Clear customs compliance removes barriers, enabling goods and growth to flow freely.",
+    "impact": "Optimized customs processes and tariff strategies, reducing costs and preventing compliance issues for importers and exporters.",
+    "vision": "A trading environment where customs procedures are efficient, transparent, and supportive of global commerce."
+  },
+  "L29": {
+    "images": {
+      "profile": "images/leaders/L29-raon.jpg",
+      "banner": "images/leaders/L29-raon-banner.jpg"
+    },
+    "hero": "We design the legal structure of games and content. Protecting virtual world rights in reality.",
+    "identity": {
+      "what": "We specialize in game regulations, digital content law, virtual assets, and online platform legal issues.",
+      "why": "The digital content economy is booming, but regulation is still catching up. Legal foresight protects this new frontier."
+    },
+    "whatWeSolve": {
+      "problem": "Game and content platforms face evolving regulations on virtual assets, loot boxes, and user protection.",
+      "limit": "Existing legal frameworks struggle to keep pace with rapidly evolving digital content and gaming industries.",
+      "approach": "We provide forward-looking legal analysis for the digital content industry, bridging regulatory gaps."
+    },
+    "expertise": [
+      {
+        "icon": "sports_esports",
+        "label": "Game Regulations",
+        "desc": "Game rating, age restriction, and compliance"
+      },
+      {
+        "icon": "casino",
+        "label": "Loot Box Mechanics",
+        "desc": "Probability-based item regulations and disclosures"
+      },
+      {
+        "icon": "currency_bitcoin",
+        "label": "Virtual Assets",
+        "desc": "Digital asset classification and regulatory compliance"
+      },
+      {
+        "icon": "live_tv",
+        "label": "Streaming",
+        "desc": "Content streaming platform legal frameworks"
+      }
+    ],
+    "philosophy": "Virtual worlds create real value. The law must protect both the creators and users of digital experiences.",
+    "impact": "Helped digital content companies navigate complex and evolving regulations, ensuring compliant and innovative business models.",
+    "vision": "A digital content ecosystem where clear regulations foster innovation while protecting users and creators."
+  },
+  "L30": {
+    "images": {
+      "profile": "images/leaders/L30-damwoo.jpg",
+      "banner": "images/leaders/L30-damwoo-banner.jpg"
+    },
+    "hero": "We connect worker rights with employer obligations. Designing balanced labor relations.",
+    "identity": {
+      "what": "We handle all aspects of labor law — employment relationships, termination, wages, and workplace issues.",
+      "why": "Fair labor relations are the foundation of a healthy economy. Both workers and employers deserve legal clarity."
+    },
+    "whatWeSolve": {
+      "problem": "Labor disputes disrupt businesses and threaten workers' livelihoods, often due to unclear rights and obligations.",
+      "limit": "The complexity of labor regulations creates confusion for both employers and employees about their respective rights.",
+      "approach": "We provide clear legal analysis of labor issues, promoting balanced and compliant workplace relationships."
+    },
+    "expertise": [
+      {
+        "icon": "work",
+        "label": "Employment Relations",
+        "desc": "Employment contract and working condition analysis"
+      },
+      {
+        "icon": "person_off",
+        "label": "Termination & Discipline",
+        "desc": "Dismissal legality and disciplinary action review"
+      },
+      {
+        "icon": "payments",
+        "label": "Wages & Severance",
+        "desc": "Wage claims and retirement benefit calculations"
+      },
+      {
+        "icon": "groups",
+        "label": "Labor-Management Relations",
+        "desc": "Collective bargaining and union legal issues"
+      },
+      {
+        "icon": "report_problem",
+        "label": "Workplace Harassment",
+        "desc": "Workplace bullying prevention and response"
+      }
+    ],
+    "philosophy": "Labor law is not about choosing sides — it is about finding balance. Fair rules benefit everyone in the workplace.",
+    "impact": "Resolved labor disputes with balanced, legally sound solutions that respected both worker rights and employer interests.",
+    "vision": "Workplaces where clear, fair labor laws create environments of mutual respect, productivity, and shared prosperity."
+  },
+  "L31": {
+    "images": {
+      "profile": "images/leaders/L31-roun.jpg",
+      "banner": "images/leaders/L31-roun-banner.jpg"
+    },
+    "hero": "We correct administrative errors. Maintaining the legal balance between the state and citizens.",
+    "identity": {
+      "what": "We specialize in administrative litigation, permit and license issues, and government accountability.",
+      "why": "When the government acts unlawfully, citizens need effective legal remedies. Administrative law provides that check."
+    },
+    "whatWeSolve": {
+      "problem": "Administrative actions can unjustly affect citizens' rights and livelihoods without proper legal review.",
+      "limit": "Challenging government decisions requires specialized procedural knowledge that most citizens lack.",
+      "approach": "We navigate administrative dispute procedures, challenging unlawful government actions through litigation and appeals."
+    },
+    "expertise": [
+      {
+        "icon": "gavel",
+        "label": "Administrative Litigation",
+        "desc": "Judicial review of government decisions"
+      },
+      {
+        "icon": "rate_review",
+        "label": "Administrative Appeals",
+        "desc": "Pre-litigation administrative remedy procedures"
+      },
+      {
+        "icon": "badge",
+        "label": "Permits & Licenses",
+        "desc": "Permit applications, denials, and revocation challenges"
+      },
+      {
+        "icon": "account_balance",
+        "label": "State Compensation",
+        "desc": "Government liability and damage claims"
+      },
+      {
+        "icon": "analytics",
+        "label": "Regulatory Analysis",
+        "desc": "Government regulation review and compliance"
+      }
+    ],
+    "philosophy": "Government power must be exercised lawfully. When it is not, administrative law is the citizen's shield.",
+    "impact": "Successfully challenged unlawful administrative actions, restoring citizen rights and holding government accountable.",
+    "vision": "An administrative system where government acts transparently and citizens have effective recourse against unjust decisions."
+  },
+  "L32": {
+    "images": {
+      "profile": "images/leaders/L32-bareum.jpg",
+      "banner": "images/leaders/L32-bareum-banner.jpg"
+    },
+    "hero": "We protect fair market order. Analyzing monopolies and unfair practices.",
+    "identity": {
+      "what": "We specialize in antitrust law, fair trade regulations, and competition policy enforcement.",
+      "why": "Fair competition drives innovation and protects consumers. Antitrust enforcement keeps markets healthy."
+    },
+    "whatWeSolve": {
+      "problem": "Market dominance abuse, cartels, and unfair trade practices distort competition and harm consumers.",
+      "limit": "Antitrust cases require complex economic analysis combined with legal expertise that few possess.",
+      "approach": "We combine legal analysis with economic reasoning to identify and address anticompetitive behavior."
+    },
+    "expertise": [
+      {
+        "icon": "trending_up",
+        "label": "Market Dominance",
+        "desc": "Market power analysis and abuse of dominance"
+      },
+      {
+        "icon": "group_work",
+        "label": "Cartels & Collusion",
+        "desc": "Cartel detection, compliance, and leniency programs"
+      },
+      {
+        "icon": "block",
+        "label": "Unfair Trade Practices",
+        "desc": "Deceptive and unfair business conduct analysis"
+      },
+      {
+        "icon": "handshake",
+        "label": "Subcontracting",
+        "desc": "Fair subcontracting and supply chain compliance"
+      }
+    ],
+    "philosophy": "Competition is the engine of innovation. Protecting fair markets means protecting the future of industry and consumers alike.",
+    "impact": "Identified and addressed anticompetitive practices, promoting fair competition and protecting market integrity.",
+    "vision": "Markets where fair competition thrives, innovation is rewarded, and consumers benefit from choice and quality."
+  },
+  "L33": {
+    "images": {
+      "profile": "images/leaders/L33-byeoli.jpg",
+      "banner": "images/leaders/L33-byeoli-banner.jpg"
+    },
+    "hero": "Pioneering the new legal frontier of space and aviation.",
+    "identity": {
+      "what": "We specialize in space law, aviation regulations, satellite licensing, and emerging aerospace legal frameworks.",
+      "why": "As humanity reaches for the stars, legal frameworks must keep pace. Space and aviation law shapes our aerial and orbital future."
+    },
+    "whatWeSolve": {
+      "problem": "Space and aviation activities face regulatory gaps and jurisdictional uncertainties in rapidly evolving domains.",
+      "limit": "Traditional legal frameworks were not designed for commercial space activities and advanced drone operations.",
+      "approach": "We develop and apply cutting-edge aerospace legal analysis, bridging regulatory gaps in this emerging field."
+    },
+    "expertise": [
+      {
+        "icon": "rocket",
+        "label": "Space Development Law",
+        "desc": "Space activity licensing and liability frameworks"
+      },
+      {
+        "icon": "flight",
+        "label": "Aviation Regulations",
+        "desc": "Air traffic and aircraft operation compliance"
+      },
+      {
+        "icon": "satellite",
+        "label": "Satellite & Spectrum",
+        "desc": "Satellite licensing and frequency allocation"
+      },
+      {
+        "icon": "flight_takeoff",
+        "label": "Drone Regulations",
+        "desc": "Unmanned aircraft systems (UAS) compliance"
+      }
+    ],
+    "philosophy": "The sky is not the limit — it is just the beginning. Legal frameworks must expand as fast as human ambition reaches.",
+    "impact": "Provided pioneering legal analysis for aerospace projects, helping navigate emerging regulatory frameworks with confidence.",
+    "vision": "A future where space and aviation activities thrive within clear, fair, and forward-looking legal frameworks."
+  },
+  "L34": {
+    "images": {
+      "profile": "images/leaders/L34-jinu.jpg",
+      "banner": "images/leaders/L34-jinu-banner.jpg"
+    },
+    "hero": "Personal data is the personality right of the digital age. We protect data subjects' rights.",
+    "identity": {
+      "what": "We specialize in data privacy law, GDPR compliance, breach response, and cross-border data transfer regulations.",
+      "why": "In the data economy, privacy is power. Protecting personal data is protecting human dignity."
+    },
+    "whatWeSolve": {
+      "problem": "Data breaches and privacy violations erode public trust and expose organizations to massive liability.",
+      "limit": "Privacy regulations differ across jurisdictions, creating compliance challenges for global organizations.",
+      "approach": "We provide comprehensive privacy compliance strategies, from consent management to breach response and cross-border transfers."
+    },
+    "expertise": [
+      {
+        "icon": "shield",
+        "label": "Data Protection",
+        "desc": "Personal data processing compliance and safeguards"
+      },
+      {
+        "icon": "public",
+        "label": "GDPR Compliance",
+        "desc": "European data protection regulation adherence"
+      },
+      {
+        "icon": "warning",
+        "label": "Breach Response",
+        "desc": "Data breach notification and crisis management"
+      },
+      {
+        "icon": "verified_user",
+        "label": "Consent Management",
+        "desc": "Lawful basis and consent framework design"
+      },
+      {
+        "icon": "swap_horiz",
+        "label": "Cross-border Transfer",
+        "desc": "International data transfer mechanisms and adequacy"
+      }
+    ],
+    "philosophy": "Privacy is not a feature — it is a fundamental right. In the digital age, data protection is human rights protection.",
+    "impact": "Implemented comprehensive privacy compliance frameworks, protecting organizations from breaches and building user trust.",
+    "vision": "A digital world where personal data is respected, protected, and handled with the dignity it deserves."
+  },
+  "L35": {
+    "images": {
+      "profile": "images/leaders/L35-maru.jpg",
+      "banner": "images/leaders/L35-maru-banner.jpg"
+    },
+    "hero": "The constitution is the foundation of all law. We guard the last bastion of fundamental rights.",
+    "identity": {
+      "what": "We specialize in constitutional law — constitutional petitions, constitutionality review, and fundamental rights protection.",
+      "why": "The constitution is the supreme law. When fundamental rights are threatened, constitutional law is the ultimate remedy."
+    },
+    "whatWeSolve": {
+      "problem": "Legislation and government actions sometimes violate constitutional rights, requiring judicial review.",
+      "limit": "Constitutional litigation requires deep understanding of constitutional principles and the Constitutional Court's jurisprudence.",
+      "approach": "We provide expert constitutional analysis, advocating for fundamental rights through constitutional court proceedings."
+    },
+    "expertise": [
+      {
+        "icon": "description",
+        "label": "Constitutional Petitions",
+        "desc": "Constitutional complaint filing and advocacy"
+      },
+      {
+        "icon": "gavel",
+        "label": "Constitutionality Review",
+        "desc": "Challenging unconstitutional laws and regulations"
+      },
+      {
+        "icon": "shield",
+        "label": "Fundamental Rights",
+        "desc": "Core rights protection and advocacy"
+      },
+      {
+        "icon": "balance",
+        "label": "Competence Disputes",
+        "desc": "Inter-branch authority and jurisdictional conflicts"
+      }
+    ],
+    "philosophy": "The constitution is the promise a nation makes to its people. Our work is to ensure that promise is kept.",
+    "impact": "Advocated for fundamental rights through constitutional proceedings, contributing to the protection of core democratic values.",
+    "vision": "A society where constitutional rights are robustly protected and every person can claim their fundamental freedoms."
+  },
+  "L36": {
+    "images": {
+      "profile": "images/leaders/L36-dana.jpg",
+      "banner": "images/leaders/L36-dana-banner.jpg"
+    },
+    "hero": "We protect the value of cultural heritage and religion through law.",
+    "identity": {
+      "what": "We handle legal matters related to cultural heritage protection, religious organizations, and historical preservation.",
+      "why": "Cultural heritage and religious freedom are cornerstones of identity. Legal protection preserves them for future generations."
+    },
+    "whatWeSolve": {
+      "problem": "Cultural heritage faces threats from development, neglect, and regulatory gaps. Religious organizations face unique legal challenges.",
+      "limit": "This niche intersection of culture, religion, and law requires specialized expertise rarely available.",
+      "approach": "We provide dedicated legal analysis for cultural preservation and religious organization governance."
+    },
+    "expertise": [
+      {
+        "icon": "museum",
+        "label": "Cultural Heritage Protection",
+        "desc": "Heritage designation, preservation, and legal compliance"
+      },
+      {
+        "icon": "church",
+        "label": "Religious Organizations",
+        "desc": "Religious entity formation and governance law"
+      },
+      {
+        "icon": "castle",
+        "label": "Cultural Heritage",
+        "desc": "Historical site and artifact protection"
+      },
+      {
+        "icon": "landscape",
+        "label": "Historical Environment",
+        "desc": "Heritage zone development and conservation law"
+      }
+    ],
+    "philosophy": "Culture and faith are the soul of a society. Protecting them through law preserves our collective identity for generations.",
+    "impact": "Provided specialized legal support for cultural preservation and religious organizations, safeguarding heritage and faith.",
+    "vision": "A world where cultural heritage and religious freedom are fully protected and cherished through effective legal frameworks."
+  },
+  "L37": {
+    "images": {
+      "profile": "images/leaders/L37-yesol.jpg",
+      "banner": "images/leaders/L37-yesol-banner.jpg"
+    },
+    "hero": "We protect the future of juveniles. Providing legal support for growth, not punishment.",
+    "identity": {
+      "what": "We specialize in juvenile law — protection proceedings, school violence, and child welfare legal matters.",
+      "why": "Young people deserve a second chance. Juvenile law should rehabilitate and protect, not merely punish."
+    },
+    "whatWeSolve": {
+      "problem": "Juveniles in the legal system face stigmatization and procedures that may hinder their development and rehabilitation.",
+      "limit": "The juvenile justice system often lacks the resources and legal frameworks focused on rehabilitation over punishment.",
+      "approach": "We advocate for juvenile-centered legal approaches that prioritize rehabilitation, education, and reintegration."
+    },
+    "expertise": [
+      {
+        "icon": "child_care",
+        "label": "Juvenile Protection",
+        "desc": "Juvenile protection proceedings and advocacy"
+      },
+      {
+        "icon": "school",
+        "label": "School Violence",
+        "desc": "School bullying and violence response and prevention"
+      },
+      {
+        "icon": "family_restroom",
+        "label": "Child Protection",
+        "desc": "Child welfare and abuse prevention law"
+      },
+      {
+        "icon": "psychology",
+        "label": "Correctional Treatment",
+        "desc": "Juvenile rehabilitation and reintegration programs"
+      }
+    ],
+    "philosophy": "Every young person deserves a future. Juvenile law should build bridges to that future, not walls against it.",
+    "impact": "Advocated for rehabilitative approaches in juvenile cases, helping young people reintegrate and build positive futures.",
+    "vision": "A juvenile justice system that truly rehabilitates, educates, and empowers young people to become contributing members of society."
+  },
+  "L38": {
+    "images": {
+      "profile": "images/leaders/L38-seulbi.jpg",
+      "banner": "images/leaders/L38-seulbi-banner.jpg"
+    },
+    "hero": "We protect consumer rights. Creating fair balance between businesses and consumers.",
+    "identity": {
+      "what": "We handle consumer protection law — product liability, e-commerce disputes, and consumer rights enforcement.",
+      "why": "Consumers are the backbone of the economy. Their protection ensures market trust and fair business practices."
+    },
+    "whatWeSolve": {
+      "problem": "Consumers face information asymmetry, defective products, and unfair business practices.",
+      "limit": "Individual consumers often lack the resources and expertise to effectively enforce their rights against businesses.",
+      "approach": "We empower consumers with legal analysis and advocacy, leveling the playing field against powerful business entities."
+    },
+    "expertise": [
+      {
+        "icon": "verified_user",
+        "label": "Consumer Protection",
+        "desc": "Consumer rights enforcement and advocacy"
+      },
+      {
+        "icon": "report_problem",
+        "label": "Product Liability",
+        "desc": "Defective product claims and manufacturer responsibility"
+      },
+      {
+        "icon": "shopping_cart",
+        "label": "E-Commerce",
+        "desc": "Online transaction and digital consumer protection"
+      },
+      {
+        "icon": "handshake",
+        "label": "Dispute Resolution",
+        "desc": "Consumer mediation and alternative dispute resolution"
+      }
+    ],
+    "philosophy": "A strong consumer is a strong market. Protecting consumer rights is not anti-business — it is pro-trust.",
+    "impact": "Strengthened consumer rights enforcement, helping individuals resolve disputes and hold businesses accountable.",
+    "vision": "A marketplace where consumers are informed, protected, and empowered, and businesses compete on quality and trust."
+  },
+  "L39": {
+    "images": {
+      "profile": "images/leaders/L39-gaon.jpg",
+      "banner": "images/leaders/L39-gaon-banner.jpg"
+    },
+    "hero": "We design the legal infrastructure of telecommunications. Finding regulatory balance in the connected age.",
+    "identity": {
+      "what": "We specialize in telecommunications law, broadcasting regulations, and internet governance legal frameworks.",
+      "why": "Communications infrastructure underpins modern society. Proper regulation ensures fair access and innovation."
+    },
+    "whatWeSolve": {
+      "problem": "Telecommunications regulation must balance innovation, competition, consumer protection, and national security.",
+      "limit": "Rapidly evolving technology outpaces regulatory frameworks, creating gaps and uncertainties.",
+      "approach": "We analyze telecommunications regulations comprehensively, ensuring compliance while supporting innovation."
+    },
+    "expertise": [
+      {
+        "icon": "cell_tower",
+        "label": "Telecom Regulations",
+        "desc": "Telecommunications licensing and compliance"
+      },
+      {
+        "icon": "tv",
+        "label": "Broadcasting Law",
+        "desc": "Broadcasting content and licensing regulations"
+      },
+      {
+        "icon": "language",
+        "label": "Internet Regulation",
+        "desc": "Online platform governance and content moderation"
+      },
+      {
+        "icon": "swap_vert",
+        "label": "Net Neutrality",
+        "desc": "Network neutrality policy and enforcement"
+      }
+    ],
+    "philosophy": "Connectivity is the nervous system of modern society. Telecommunications law must ensure it serves everyone fairly.",
+    "impact": "Guided telecommunications operators through complex regulatory landscapes, ensuring compliance and supporting service innovation.",
+    "vision": "A connected world where telecommunications regulation promotes innovation, competition, and universal access."
+  },
+  "L40": {
+    "images": {
+      "profile": "images/leaders/L40-hangyeol.jpg",
+      "banner": "images/leaders/L40-hangyeol-banner.jpg"
+    },
+    "hero": "Human rights are the starting point of all law. Realizing a society free of discrimination through law.",
+    "identity": {
+      "what": "We specialize in human rights law — anti-discrimination, minority rights, and freedom of expression protections.",
+      "why": "Human rights are universal and inalienable. Legal advocacy is the most powerful tool for their realization."
+    },
+    "whatWeSolve": {
+      "problem": "Discrimination and human rights violations persist in many forms, affecting vulnerable and marginalized communities.",
+      "limit": "Victims of discrimination often lack the resources and legal knowledge to effectively seek justice.",
+      "approach": "We provide dedicated human rights legal analysis and advocacy, amplifying the voices of the marginalized."
+    },
+    "expertise": [
+      {
+        "icon": "block",
+        "label": "Anti-Discrimination",
+        "desc": "Discrimination prevention and equality enforcement"
+      },
+      {
+        "icon": "support",
+        "label": "Human Rights Remedies",
+        "desc": "Human rights complaint procedures and relief"
+      },
+      {
+        "icon": "diversity_3",
+        "label": "Minority Rights",
+        "desc": "Protection of vulnerable and marginalized groups"
+      },
+      {
+        "icon": "record_voice_over",
+        "label": "Freedom of Expression",
+        "desc": "Speech, press, and assembly rights protection"
+      }
+    ],
+    "philosophy": "Human rights are not granted by law — they are recognized by it. Our work is to ensure that recognition is complete.",
+    "impact": "Advanced human rights protections through legal advocacy, addressing discrimination and promoting equality.",
+    "vision": "A society where every person's dignity is respected and their fundamental rights are fully protected by law."
+  },
+  "L41": {
+    "images": {
+      "profile": "images/leaders/L41-sandeul.jpg",
+      "banner": "images/leaders/L41-sandeul-banner.jpg"
+    },
+    "hero": "We resolve family conflicts through law. Minimizing the wounds of relationships.",
+    "identity": {
+      "what": "We handle family law matters including divorce, custody, property division, and domestic protection orders.",
+      "why": "Family disputes are deeply personal and emotionally charged. Compassionate legal guidance minimizes lasting harm."
+    },
+    "whatWeSolve": {
+      "problem": "Family disputes affect the most intimate aspects of life, with children often caught in the crossfire.",
+      "limit": "Emotional complexity in family cases often overshadows legal rights, leading to unfair outcomes.",
+      "approach": "We combine legal precision with human sensitivity, focusing on children's welfare and fair resolution for all parties."
+    },
+    "expertise": [
+      {
+        "icon": "description",
+        "label": "Divorce Proceedings",
+        "desc": "Contested and uncontested divorce legal guidance"
+      },
+      {
+        "icon": "child_care",
+        "label": "Custody Rights",
+        "desc": "Child custody and visitation arrangement analysis"
+      },
+      {
+        "icon": "account_balance_wallet",
+        "label": "Property Division",
+        "desc": "Marital property distribution and asset analysis"
+      },
+      {
+        "icon": "payments",
+        "label": "Alimony",
+        "desc": "Spousal support and compensatory damages"
+      },
+      {
+        "icon": "shield",
+        "label": "Protection Orders",
+        "desc": "Domestic violence protection and restraining orders"
+      }
+    ],
+    "philosophy": "Family law is where law meets humanity. Resolution should heal, not deepen, the wounds that brought people to court.",
+    "impact": "Guided families through difficult legal transitions with compassion, prioritizing children's welfare and fair outcomes.",
+    "vision": "A family law system that resolves disputes with dignity, protects the vulnerable, and supports healthy new beginnings."
+  },
+  "L42": {
+    "images": {
+      "profile": "images/leaders/L42-haram.jpg",
+      "banner": "images/leaders/L42-haram-banner.jpg"
+    },
+    "hero": "We protect the value of creative works. Precisely analyzing the boundaries of copyright.",
+    "identity": {
+      "what": "We specialize in copyright law — registration, infringement response, licensing, and fair use analysis.",
+      "why": "In the digital age, creative works are replicated instantly. Copyright law is the creator's essential shield."
+    },
+    "whatWeSolve": {
+      "problem": "Digital reproduction makes copyright infringement rampant, undermining creators' economic rights.",
+      "limit": "The line between fair use and infringement is often unclear, creating uncertainty for creators and users alike.",
+      "approach": "We provide precise copyright analysis, protecting creators' rights while respecting legitimate use."
+    },
+    "expertise": [
+      {
+        "icon": "app_registration",
+        "label": "Copyright Registration",
+        "desc": "Work registration and rights documentation"
+      },
+      {
+        "icon": "gavel",
+        "label": "Infringement Response",
+        "desc": "Copyright violation detection and enforcement"
+      },
+      {
+        "icon": "description",
+        "label": "Licensing",
+        "desc": "Usage rights agreements and royalty structures"
+      },
+      {
+        "icon": "balance",
+        "label": "Fair Use",
+        "desc": "Fair use analysis and defense strategies"
+      }
+    ],
+    "philosophy": "Every creative work carries a piece of its creator. Copyright law ensures that piece is respected and valued.",
+    "impact": "Protected creators' rights through effective copyright enforcement and clear licensing frameworks.",
+    "vision": "A creative ecosystem where copyright law balances protection and access, fostering both creation and culture."
+  },
+  "L43": {
+    "images": {
+      "profile": "images/leaders/L43-haena.jpg",
+      "banner": "images/leaders/L43-haena-banner.jpg"
+    },
+    "hero": "We protect industrial workplace safety through law. Defending the rights of accident victims.",
+    "identity": {
+      "what": "We handle industrial accident claims, workers' compensation, and occupational safety and health regulations.",
+      "why": "Workplace safety is a fundamental right. When accidents happen, victims deserve proper compensation and support."
+    },
+    "whatWeSolve": {
+      "problem": "Industrial accidents cause devastating injuries and deaths, with victims often struggling to receive proper compensation.",
+      "limit": "Proving occupational causation and navigating compensation procedures requires specialized legal-medical knowledge.",
+      "approach": "We combine occupational health knowledge with legal expertise to secure proper recognition and compensation."
+    },
+    "expertise": [
+      {
+        "icon": "verified",
+        "label": "Accident Recognition",
+        "desc": "Industrial accident and occupational disease approval"
+      },
+      {
+        "icon": "payments",
+        "label": "Compensation Claims",
+        "desc": "Workers' compensation benefit calculations and claims"
+      },
+      {
+        "icon": "health_and_safety",
+        "label": "Safety Regulations",
+        "desc": "Occupational safety and health compliance"
+      },
+      {
+        "icon": "business",
+        "label": "Employer Liability",
+        "desc": "Employer responsibility and negligence analysis"
+      },
+      {
+        "icon": "medical_services",
+        "label": "Occupational Disease",
+        "desc": "Work-related illness causation and recognition"
+      }
+    ],
+    "philosophy": "Every worker deserves to return home safely. When they cannot, the law must ensure they and their families are protected.",
+    "impact": "Secured proper compensation and recognition for industrial accident victims, advancing workplace safety standards.",
+    "vision": "Workplaces where safety is the highest priority and every injury is met with swift, fair compensation and systemic improvement."
+  },
+  "L44": {
+    "images": {
+      "profile": "images/leaders/L44-boram.jpg",
+      "banner": "images/leaders/L44-boram-banner.jpg"
+    },
+    "hero": "We fill the blind spots of welfare through law. Protecting the rights of the socially vulnerable.",
+    "identity": {
+      "what": "We specialize in social welfare law — basic livelihood security, eldercare, child welfare, and disability benefits.",
+      "why": "Social safety nets should leave no one behind. Legal advocacy ensures that vulnerable populations receive their rightful benefits."
+    },
+    "whatWeSolve": {
+      "problem": "Many eligible individuals are denied welfare benefits due to complex procedures and lack of legal awareness.",
+      "limit": "Welfare regulations are intricate, and those who need help most often have the least capacity to navigate them.",
+      "approach": "We guide vulnerable populations through welfare procedures, ensuring they receive every benefit they are entitled to."
+    },
+    "expertise": [
+      {
+        "icon": "home",
+        "label": "Basic Livelihood Security",
+        "desc": "Minimum living standard benefits and eligibility"
+      },
+      {
+        "icon": "elderly",
+        "label": "Elder Welfare",
+        "desc": "Senior care, long-term care, and pension rights"
+      },
+      {
+        "icon": "child_care",
+        "label": "Child Welfare",
+        "desc": "Child protection, foster care, and adoption law"
+      },
+      {
+        "icon": "gavel",
+        "label": "Rights Remedies",
+        "desc": "Welfare benefit appeal and dispute resolution"
+      }
+    ],
+    "philosophy": "A society is judged by how it treats its most vulnerable. Welfare law is the instrument through which justice reaches everyone.",
+    "impact": "Helped vulnerable individuals access welfare benefits and challenge unfair denials, strengthening the social safety net.",
+    "vision": "A welfare system where no eligible person is left without support, and every right is accessible regardless of circumstance."
+  },
+  "L45": {
+    "images": {
+      "profile": "images/leaders/L45-ireum.jpg",
+      "banner": "images/leaders/L45-ireum-banner.jpg"
+    },
+    "hero": "We resolve legal issues in education. Protecting student rights and safety.",
+    "identity": {
+      "what": "We handle education law matters — school violence, student rights, teacher protections, and education regulations.",
+      "why": "Education shapes the future. Legal frameworks must protect students, support teachers, and ensure safe learning environments."
+    },
+    "whatWeSolve": {
+      "problem": "Schools face complex legal challenges from bullying, student rights conflicts, and evolving education regulations.",
+      "limit": "Education legal issues require understanding of both administrative law and the unique dynamics of school environments.",
+      "approach": "We provide specialized education legal analysis, balancing student rights, teacher protections, and institutional needs."
+    },
+    "expertise": [
+      {
+        "icon": "report_problem",
+        "label": "School Violence",
+        "desc": "Bullying response, mediation, and legal proceedings"
+      },
+      {
+        "icon": "person",
+        "label": "Student Rights",
+        "desc": "Student disciplinary appeals and rights protection"
+      },
+      {
+        "icon": "school",
+        "label": "Teacher Protections",
+        "desc": "Teaching rights and professional protection"
+      },
+      {
+        "icon": "policy",
+        "label": "Education Regulations",
+        "desc": "Education policy compliance and regulatory analysis"
+      }
+    ],
+    "philosophy": "Schools should be havens for growth. When legal issues arise, they must be resolved with the students' futures in mind.",
+    "impact": "Resolved education disputes with a focus on student welfare, contributing to safer and fairer school environments.",
+    "vision": "An education system where every student learns in a safe environment and every teacher is supported by clear, fair legal frameworks."
+  },
+  "L46": {
+    "images": {
+      "profile": "images/leaders/L46-daol.jpg",
+      "banner": "images/leaders/L46-daol-banner.jpg"
+    },
+    "hero": "We design future safety nets through law. Protecting insurance and pension rights.",
+    "identity": {
+      "what": "We specialize in social insurance law — national pension, health insurance, retirement pensions, and benefit disputes.",
+      "why": "Insurance and pensions are the promises society makes for the future. Legal protection ensures those promises are kept."
+    },
+    "whatWeSolve": {
+      "problem": "Complex insurance and pension rules leave many people unaware of their entitlements or unable to claim them.",
+      "limit": "Benefit determination processes are opaque, and denial appeals require specialized procedural knowledge.",
+      "approach": "We analyze social insurance entitlements comprehensively and advocate effectively for benefit claims and appeals."
+    },
+    "expertise": [
+      {
+        "icon": "savings",
+        "label": "National Pension",
+        "desc": "Pension eligibility, calculation, and claims"
+      },
+      {
+        "icon": "local_hospital",
+        "label": "Health Insurance",
+        "desc": "National health insurance coverage and disputes"
+      },
+      {
+        "icon": "account_balance",
+        "label": "Retirement Pension",
+        "desc": "Workplace retirement benefit analysis and claims"
+      },
+      {
+        "icon": "gavel",
+        "label": "Benefit Appeals",
+        "desc": "Social insurance denial challenges and appeals"
+      }
+    ],
+    "philosophy": "Social insurance is a collective promise. Our role is to ensure that promise delivers when it matters most.",
+    "impact": "Secured rightful insurance and pension benefits for individuals, navigating complex claims and successfully appealing denials.",
+    "vision": "A social insurance system that is transparent, fair, and delivers on its promises to every contributor."
+  },
+  "L47": {
+    "images": {
+      "profile": "images/leaders/L47-saeron.jpg",
+      "banner": "images/leaders/L47-saeron-banner.jpg"
+    },
+    "hero": "We lay the legal foundation for new industries. Designing the balance between regulation and innovation.",
+    "identity": {
+      "what": "We specialize in emerging industry regulations — regulatory sandboxes, fintech, biotech, and AI governance.",
+      "why": "New industries need new rules. Forward-looking legal frameworks enable innovation while protecting the public."
+    },
+    "whatWeSolve": {
+      "problem": "Emerging industries operate in regulatory gray areas, facing uncertainty that can stifle innovation or harm consumers.",
+      "limit": "Existing regulations were not designed for breakthrough technologies, creating compliance gaps and legal risks.",
+      "approach": "We navigate and shape emerging regulatory frameworks, helping innovators operate safely within evolving rules."
+    },
+    "expertise": [
+      {
+        "icon": "science",
+        "label": "Regulatory Sandbox",
+        "desc": "Sandbox application and experimental regulation guidance"
+      },
+      {
+        "icon": "account_balance",
+        "label": "Fintech Regulations",
+        "desc": "Financial technology compliance and licensing"
+      },
+      {
+        "icon": "biotech",
+        "label": "Biotech Regulations",
+        "desc": "Biotechnology and life science regulatory frameworks"
+      },
+      {
+        "icon": "smart_toy",
+        "label": "AI Regulations",
+        "desc": "Artificial intelligence governance and compliance"
+      }
+    ],
+    "philosophy": "Innovation should not be caged by outdated rules, nor should it run unchecked. Smart regulation enables responsible progress.",
+    "impact": "Guided innovators through emerging regulatory landscapes, enabling compliant deployment of breakthrough technologies.",
+    "vision": "A regulatory environment that nurtures innovation, protects the public, and adapts as fast as technology evolves."
+  },
+  "L48": {
+    "images": {
+      "profile": "images/leaders/L48-narae.jpg",
+      "banner": "images/leaders/L48-narae-banner.jpg"
+    },
+    "hero": "We protect artists' rights through law. Realizing creative freedom and protection simultaneously.",
+    "identity": {
+      "what": "We handle arts and culture law — artist welfare, performance contracts, art transactions, and music copyright.",
+      "why": "Artists enrich our world. They deserve legal protections that honor their contributions and sustain their livelihoods."
+    },
+    "whatWeSolve": {
+      "problem": "Artists often face exploitative contracts, unclear rights, and insufficient welfare protections.",
+      "limit": "The intersection of art and law requires unique sensitivity that standard legal approaches lack.",
+      "approach": "We provide artist-centered legal support, combining cultural understanding with rigorous legal analysis."
+    },
+    "expertise": [
+      {
+        "icon": "volunteer_activism",
+        "label": "Artist Welfare",
+        "desc": "Artist status recognition and social protections"
+      },
+      {
+        "icon": "theater_comedy",
+        "label": "Performance Contracts",
+        "desc": "Live performance and engagement agreements"
+      },
+      {
+        "icon": "palette",
+        "label": "Art Transactions",
+        "desc": "Artwork sale, consignment, and authentication law"
+      },
+      {
+        "icon": "music_note",
+        "label": "Music Copyright",
+        "desc": "Music rights management and royalty collection"
+      }
+    ],
+    "philosophy": "Art gives life meaning. The law should make sure artists can create freely while being fairly compensated.",
+    "impact": "Strengthened artist protections through fair contract advocacy and welfare rights support, empowering creative professionals.",
+    "vision": "A cultural landscape where every artist creates with confidence, backed by strong legal protections and fair compensation."
+  },
+  "L49": {
+    "images": {
+      "profile": "images/leaders/L49-garam.jpg",
+      "banner": "images/leaders/L49-garam-banner.jpg"
+    },
+    "hero": "We protect food and public health safety through law. The legal guardian of national health.",
+    "identity": {
+      "what": "We specialize in food safety, pharmaceutical regulations, health supplements, and medical device compliance.",
+      "why": "Public health depends on safe food and medicine. Regulatory compliance protects lives."
+    },
+    "whatWeSolve": {
+      "problem": "Food contamination and pharmaceutical non-compliance pose serious public health risks.",
+      "limit": "Food and health regulations are technically complex, requiring both scientific and legal expertise.",
+      "approach": "We provide integrated food safety and health regulatory analysis, ensuring compliance and protecting public health."
+    },
+    "expertise": [
+      {
+        "icon": "restaurant",
+        "label": "Food Safety",
+        "desc": "Food safety regulations and compliance"
+      },
+      {
+        "icon": "medication",
+        "label": "Pharmaceutical Regulations",
+        "desc": "Drug approval, manufacturing, and distribution law"
+      },
+      {
+        "icon": "local_pharmacy",
+        "label": "Health Supplements",
+        "desc": "Functional food and supplement regulatory compliance"
+      },
+      {
+        "icon": "medical_services",
+        "label": "Medical Devices",
+        "desc": "Medical device approval and safety regulations"
+      }
+    ],
+    "philosophy": "What we consume defines our health. Food and pharmaceutical law is the invisible shield protecting every citizen.",
+    "impact": "Ensured regulatory compliance for food and health products, protecting public health and supporting responsible businesses.",
+    "vision": "A society where every food product and medicine meets the highest safety standards, backed by rigorous legal oversight."
+  },
+  "L50": {
+    "images": {
+      "profile": "images/leaders/L50-bitna.jpg",
+      "banner": "images/leaders/L50-bitna-banner.jpg"
+    },
+    "hero": "We build legal bridges for a multicultural society. Protecting immigrant rights.",
+    "identity": {
+      "what": "We handle immigration law — visas, naturalization, refugee protection, and multicultural family legal matters.",
+      "why": "Migrants and multicultural families face unique legal challenges. Inclusive legal support builds a cohesive society."
+    },
+    "whatWeSolve": {
+      "problem": "Immigrants face language barriers, complex procedures, and discrimination in accessing legal protections.",
+      "limit": "Immigration law is technically complex and frequently changing, creating confusion for both applicants and practitioners.",
+      "approach": "We provide comprehensive immigration legal support, guiding individuals through every stage of their journey."
+    },
+    "expertise": [
+      {
+        "icon": "badge",
+        "label": "Residency & Visas",
+        "desc": "Visa applications, extensions, and status changes"
+      },
+      {
+        "icon": "how_to_reg",
+        "label": "Naturalization",
+        "desc": "Citizenship application and eligibility assessment"
+      },
+      {
+        "icon": "shield",
+        "label": "Refugee Protection",
+        "desc": "Asylum applications and refugee status determination"
+      },
+      {
+        "icon": "family_restroom",
+        "label": "Multicultural Families",
+        "desc": "Cross-cultural family legal support and rights"
+      }
+    ],
+    "philosophy": "Diversity strengthens society. Immigration law should be a bridge, not a barrier, to building inclusive communities.",
+    "impact": "Guided immigrants and multicultural families through complex legal processes, securing rights and facilitating integration.",
+    "vision": "A society where every immigrant is treated with dignity and has full access to legal protections and opportunities."
+  },
+  "L51": {
+    "images": {
+      "profile": "images/leaders/L51-soul.jpg",
+      "banner": "images/leaders/L51-soul-banner.jpg"
+    },
+    "hero": "We protect the values of religion and tradition through law. Safeguarding freedom of faith.",
+    "identity": {
+      "what": "We specialize in religious organization law, religious property management, and freedom of religion protections.",
+      "why": "Religious freedom is a fundamental right. Legal frameworks must protect faith communities while maintaining public order."
+    },
+    "whatWeSolve": {
+      "problem": "Religious organizations face unique governance, property, and regulatory challenges distinct from secular entities.",
+      "limit": "The intersection of religious freedom and secular law requires nuanced legal analysis rarely available.",
+      "approach": "We provide specialized legal support for religious communities, respecting both spiritual values and legal requirements."
+    },
+    "expertise": [
+      {
+        "icon": "church",
+        "label": "Religious Organizations",
+        "desc": "Religious entity governance and legal compliance"
+      },
+      {
+        "icon": "home",
+        "label": "Religious Property",
+        "desc": "Sacred property management and dispute resolution"
+      },
+      {
+        "icon": "favorite",
+        "label": "Freedom of Faith",
+        "desc": "Religious freedom protections and advocacy"
+      },
+      {
+        "icon": "history_edu",
+        "label": "Tradition Preservation",
+        "desc": "Traditional practice protection and cultural continuity"
+      }
+    ],
+    "philosophy": "Faith is deeply personal, yet religious communities need legal structures. We protect the sacred within the framework of law.",
+    "impact": "Supported religious organizations with governance and property matters, protecting religious freedom and institutional stability.",
+    "vision": "A society where religious freedom flourishes and faith communities operate with legal clarity and protection."
+  },
+  "L52": {
+    "images": {
+      "profile": "images/leaders/L52-miso.jpg",
+      "banner": "images/leaders/L52-miso-banner.jpg"
+    },
+    "hero": "We analyze the legal boundaries of advertising and media. Finding the balance between expression and responsibility.",
+    "identity": {
+      "what": "We handle advertising regulations, media disputes, defamation law, and privacy protection in media.",
+      "why": "Media shapes public opinion and commercial markets. Legal oversight ensures truthful, responsible communication."
+    },
+    "whatWeSolve": {
+      "problem": "Misleading advertising, defamation, and privacy violations in media cause real harm to individuals and businesses.",
+      "limit": "The balance between freedom of expression and protection from harm requires careful, nuanced legal analysis.",
+      "approach": "We analyze media and advertising legal issues with precision, balancing free expression with accountability."
+    },
+    "expertise": [
+      {
+        "icon": "campaign",
+        "label": "Advertising Regulations",
+        "desc": "Ad content compliance and false advertising claims"
+      },
+      {
+        "icon": "newspaper",
+        "label": "Media Disputes",
+        "desc": "Press law, corrections, and media liability"
+      },
+      {
+        "icon": "gavel",
+        "label": "Defamation",
+        "desc": "Reputation protection and defamation defense"
+      },
+      {
+        "icon": "visibility_off",
+        "label": "Privacy Protection",
+        "desc": "Media privacy rights and intrusion claims"
+      }
+    ],
+    "philosophy": "Free expression is vital, but it carries responsibility. Balancing these is the art of media and advertising law.",
+    "impact": "Resolved media and advertising disputes with balanced legal analysis, protecting both expression and individual rights.",
+    "vision": "A media landscape where free expression thrives responsibly and every individual's reputation and privacy are protected."
+  },
+  "L53": {
+    "images": {
+      "profile": "images/leaders/L53-neulsol.jpg",
+      "banner": "images/leaders/L53-neulsol-banner.jpg"
+    },
+    "hero": "We strengthen the legal foundation of agriculture and livestock. Protecting primary industry rights.",
+    "identity": {
+      "what": "We specialize in agricultural law — farmland regulations, livestock law, subsidies, and organic certification.",
+      "why": "Agriculture feeds the nation. Legal support for the primary sector sustains food security and rural communities."
+    },
+    "whatWeSolve": {
+      "problem": "Farmers and livestock producers face complex regulations, subsidy procedures, and land use restrictions.",
+      "limit": "Agricultural law is a niche specialty, leaving many in the primary sector without adequate legal guidance.",
+      "approach": "We provide dedicated legal support for the agricultural sector, from farmland issues to subsidy compliance."
+    },
+    "expertise": [
+      {
+        "icon": "grass",
+        "label": "Farmland Law",
+        "desc": "Agricultural land use, acquisition, and conversion regulations"
+      },
+      {
+        "icon": "pets",
+        "label": "Livestock Law",
+        "desc": "Animal husbandry regulations and disease response"
+      },
+      {
+        "icon": "payments",
+        "label": "Agricultural Subsidies",
+        "desc": "Farm subsidy programs and compliance"
+      },
+      {
+        "icon": "eco",
+        "label": "Organic Certification",
+        "desc": "Eco-friendly certification and labeling regulations"
+      }
+    ],
+    "philosophy": "Those who feed the nation deserve strong legal protection. Agricultural law sustains the foundation of our food supply.",
+    "impact": "Supported agricultural producers with specialized legal guidance, helping them navigate regulations and secure rightful benefits.",
+    "vision": "A thriving agricultural sector supported by clear, fair legal frameworks that protect farmers and ensure food security."
+  },
+  "L54": {
+    "images": {
+      "profile": "images/leaders/L54-iseo.jpg",
+      "banner": "images/leaders/L54-iseo-banner.jpg"
+    },
+    "hero": "We handle the laws of the sea. Protecting marine resources and fisheries rights.",
+    "identity": {
+      "what": "We specialize in maritime law, fisheries rights, marine environmental protection, and maritime accident response.",
+      "why": "The ocean is a vital resource and ecosystem. Legal frameworks must protect both its bounty and its health."
+    },
+    "whatWeSolve": {
+      "problem": "Marine activities face complex jurisdictional, environmental, and resource management challenges.",
+      "limit": "Maritime law requires specialized knowledge of both international conventions and domestic marine regulations.",
+      "approach": "We provide comprehensive maritime legal analysis, covering fisheries rights, environmental compliance, and accident response."
+    },
+    "expertise": [
+      {
+        "icon": "water",
+        "label": "Maritime Law",
+        "desc": "Ocean governance and maritime jurisdiction"
+      },
+      {
+        "icon": "set_meal",
+        "label": "Fisheries Rights",
+        "desc": "Fishing license, quota, and resource management"
+      },
+      {
+        "icon": "eco",
+        "label": "Marine Environment",
+        "desc": "Ocean pollution prevention and marine ecosystem protection"
+      },
+      {
+        "icon": "warning",
+        "label": "Maritime Accidents",
+        "desc": "Marine casualty investigation and liability"
+      }
+    ],
+    "philosophy": "The ocean connects nations and sustains life. Maritime law must protect this shared resource for present and future generations.",
+    "impact": "Provided specialized maritime legal guidance, protecting fisheries rights and advancing marine environmental compliance.",
+    "vision": "Oceans that are sustainably managed and legally protected, with fair access to marine resources for all."
+  },
+  "L55": {
+    "images": {
+      "profile": "images/leaders/L55-yunbit.jpg",
+      "banner": "images/leaders/L55-yunbit-banner.jpg"
+    },
+    "hero": "We design legal frameworks for science and technology. Supporting research innovation through law.",
+    "identity": {
+      "what": "We handle science and technology law — R&D regulations, technology transfer, research ethics, and employee inventions.",
+      "why": "Scientific progress depends on clear legal frameworks. Protecting research and innovation drives societal advancement."
+    },
+    "whatWeSolve": {
+      "problem": "Research institutions and technology companies face complex regulations governing R&D, IP ownership, and ethics.",
+      "limit": "The intersection of science, technology, and law requires interdisciplinary expertise rarely found in one place.",
+      "approach": "We provide integrated science and technology legal analysis, from R&D compliance to technology commercialization."
+    },
+    "expertise": [
+      {
+        "icon": "science",
+        "label": "R&D Law",
+        "desc": "Research and development regulatory frameworks"
+      },
+      {
+        "icon": "swap_horiz",
+        "label": "Technology Transfer",
+        "desc": "Technology licensing and commercialization agreements"
+      },
+      {
+        "icon": "psychology",
+        "label": "Research Ethics",
+        "desc": "Research integrity and ethical compliance"
+      },
+      {
+        "icon": "lightbulb",
+        "label": "Employee Inventions",
+        "desc": "Workplace invention rights and compensation"
+      }
+    ],
+    "philosophy": "Science opens doors; law ensures they stay open. Legal frameworks should accelerate discovery, not hinder it.",
+    "impact": "Supported research institutions with comprehensive legal guidance, enabling compliant and productive R&D operations.",
+    "vision": "A research ecosystem where clear legal frameworks empower scientists and technologists to innovate fearlessly."
+  },
+  "L56": {
+    "images": {
+      "profile": "images/leaders/L56-dain.jpg",
+      "banner": "images/leaders/L56-dain-banner.jpg"
+    },
+    "hero": "We fully realize the legal rights of persons with disabilities. Accessibility is an obligation, not an option.",
+    "identity": {
+      "what": "We specialize in disability rights law — anti-discrimination, reasonable accommodation, welfare benefits, and employment mandates.",
+      "why": "Persons with disabilities deserve full legal equality. Accessibility and inclusion must be mandated, not merely encouraged."
+    },
+    "whatWeSolve": {
+      "problem": "Persons with disabilities face systemic barriers in employment, public access, and social participation.",
+      "limit": "Disability rights enforcement often lacks the specialized legal attention needed to achieve meaningful change.",
+      "approach": "We advocate for disability rights through legal enforcement, ensuring accessibility and inclusion across all areas of life."
+    },
+    "expertise": [
+      {
+        "icon": "block",
+        "label": "Anti-Discrimination",
+        "desc": "Disability discrimination prevention and enforcement"
+      },
+      {
+        "icon": "accessibility",
+        "label": "Reasonable Accommodation",
+        "desc": "Accessibility requirements and accommodation mandates"
+      },
+      {
+        "icon": "payments",
+        "label": "Welfare Benefits",
+        "desc": "Disability benefits and support program access"
+      },
+      {
+        "icon": "work",
+        "label": "Employment Mandates",
+        "desc": "Disability employment quota and workplace accommodation"
+      }
+    ],
+    "philosophy": "Accessibility is not charity — it is justice. True equality means designing a world where everyone can participate fully.",
+    "impact": "Advanced disability rights through legal advocacy, securing accommodations, benefits, and employment protections.",
+    "vision": "A fully inclusive society where persons with disabilities enjoy complete legal equality and meaningful participation."
+  },
+  "L57": {
+    "images": {
+      "profile": "images/leaders/L57-seum.jpg",
+      "banner": "images/leaders/L57-seum-banner.jpg"
+    },
+    "hero": "We design cross-generational asset transfers. Completing the legal structure of inheritance and trusts.",
+    "identity": {
+      "what": "We specialize in inheritance law, wills, trusts, estate tax planning, and succession dispute prevention.",
+      "why": "Wealth transfer is one of life's most important legal events. Proper planning prevents family conflict and preserves legacies."
+    },
+    "whatWeSolve": {
+      "problem": "Poorly planned successions lead to family disputes, tax inefficiency, and unintended asset distribution.",
+      "limit": "Inheritance law is technically complex and emotionally charged, requiring both legal expertise and human sensitivity.",
+      "approach": "We design comprehensive succession plans that reflect the testator's wishes, minimize tax burden, and prevent disputes."
+    },
+    "expertise": [
+      {
+        "icon": "family_restroom",
+        "label": "Inheritance",
+        "desc": "Succession rights, statutory shares, and estate distribution"
+      },
+      {
+        "icon": "description",
+        "label": "Wills",
+        "desc": "Will drafting, validity, and execution"
+      },
+      {
+        "icon": "account_balance",
+        "label": "Trusts",
+        "desc": "Trust formation, management, and beneficiary rights"
+      },
+      {
+        "icon": "calculate",
+        "label": "Estate Tax",
+        "desc": "Inheritance and gift tax planning and optimization"
+      },
+      {
+        "icon": "shield",
+        "label": "Dispute Prevention",
+        "desc": "Succession conflict prevention and mediation"
+      }
+    ],
+    "philosophy": "A legacy is more than wealth — it is a family's story. Proper legal planning ensures that story continues as intended.",
+    "impact": "Designed comprehensive succession plans that preserved family wealth, minimized tax exposure, and prevented costly disputes.",
+    "vision": "A world where every family can plan their legacy with confidence, supported by clear and fair inheritance law."
+  },
+  "L58": {
+    "images": {
+      "profile": "images/leaders/L58-yeon.jpg",
+      "banner": "images/leaders/L58-yeon-banner.jpg"
+    },
+    "hero": "We protect the fair rules of sports through law. Defending athlete rights.",
+    "identity": {
+      "what": "We handle sports law — athlete contracts, anti-doping regulations, facility management, and athlete protection.",
+      "why": "Sports inspire millions. Fair legal frameworks ensure that competition remains clean and athletes are protected."
+    },
+    "whatWeSolve": {
+      "problem": "Athletes face contract exploitation, doping allegations, and inadequate welfare protections.",
+      "limit": "Sports law requires understanding of both international sporting regulations and domestic legal frameworks.",
+      "approach": "We provide specialized sports legal analysis, protecting athlete rights and ensuring fair sporting governance."
+    },
+    "expertise": [
+      {
+        "icon": "description",
+        "label": "Athlete Contracts",
+        "desc": "Player agreements, transfers, and representation"
+      },
+      {
+        "icon": "science",
+        "label": "Anti-Doping",
+        "desc": "Doping regulations, testing, and disciplinary defense"
+      },
+      {
+        "icon": "stadium",
+        "label": "Sports Facilities",
+        "desc": "Facility management, safety, and liability law"
+      },
+      {
+        "icon": "shield",
+        "label": "Athlete Protection",
+        "desc": "Athlete welfare, harassment prevention, and rights advocacy"
+      }
+    ],
+    "philosophy": "Sports should be a level playing field. Fair rules, enforced by law, protect the integrity of competition and its athletes.",
+    "impact": "Protected athlete rights through fair contract advocacy and anti-doping defense, promoting clean and equitable sports.",
+    "vision": "A sporting world where competition is fair, athletes are protected, and the spirit of sport is upheld by law."
+  },
+  "L59": {
+    "images": {
+      "profile": "images/leaders/L59-hanbit.jpg",
+      "banner": "images/leaders/L59-hanbit-banner.jpg"
+    },
+    "hero": "We establish ethical standards for the AI era through law. Verifying algorithm fairness.",
+    "identity": {
+      "what": "We specialize in AI ethics and governance — AI regulations, algorithmic fairness, data governance, and AI accountability.",
+      "why": "As AI reshapes society, legal frameworks must ensure it serves humanity fairly and transparently."
+    },
+    "whatWeSolve": {
+      "problem": "AI systems can perpetuate bias, lack transparency, and cause harm without clear accountability mechanisms.",
+      "limit": "AI governance is a nascent field where regulation, technology, and ethics intersect in unprecedented ways.",
+      "approach": "We develop and apply AI governance frameworks, ensuring algorithms are fair, transparent, and accountable."
+    },
+    "expertise": [
+      {
+        "icon": "smart_toy",
+        "label": "AI Regulations",
+        "desc": "AI governance frameworks and compliance requirements"
+      },
+      {
+        "icon": "balance",
+        "label": "Algorithmic Fairness",
+        "desc": "Bias detection, fairness audits, and remediation"
+      },
+      {
+        "icon": "storage",
+        "label": "Data Governance",
+        "desc": "Data quality, lineage, and management frameworks"
+      },
+      {
+        "icon": "visibility",
+        "label": "Transparency Obligations",
+        "desc": "Explainability requirements and disclosure mandates"
+      },
+      {
+        "icon": "gavel",
+        "label": "AI Accountability",
+        "desc": "Liability frameworks for AI-caused harm"
+      }
+    ],
+    "philosophy": "AI should amplify human potential, not undermine it. Legal guardrails ensure that AI remains a tool for good.",
+    "impact": "Developed AI governance frameworks that ensure algorithmic fairness and accountability, building public trust in AI systems.",
+    "vision": "An AI ecosystem where every algorithm is fair, every decision is explainable, and every harm has a clear path to accountability."
+  },
+  "L60": {
+    "images": {
+      "profile": "images/leaders/L60-madi.jpg",
+      "banner": "images/leaders/L60-madi-banner.jpg"
+    },
+    "hero": "We weave the capabilities of 60 leaders into one. Overseeing the completeness of the system.",
+    "identity": {
+      "what": "We coordinate the entire Lawmadi OS leadership system, ensuring seamless collaboration and system integrity.",
+      "why": "60 specialized leaders need a unifying force. System orchestration ensures that every query reaches the right expert."
+    },
+    "whatWeSolve": {
+      "problem": "Complex legal queries span multiple domains, requiring coordination across specialized leaders.",
+      "limit": "Without orchestration, cross-domain queries could receive fragmented or inconsistent responses.",
+      "approach": "We coordinate leader assignments, monitor quality, and ensure comprehensive responses across all legal domains."
+    },
+    "expertise": [
+      {
+        "icon": "hub",
+        "label": "System Orchestration",
+        "desc": "Multi-agent coordination and workflow management"
+      },
+      {
+        "icon": "tune",
+        "label": "Leader Coordination",
+        "desc": "Expert leader assignment and collaboration facilitation"
+      },
+      {
+        "icon": "verified",
+        "label": "Quality Management",
+        "desc": "Response quality assurance and consistency monitoring"
+      },
+      {
+        "icon": "alt_route",
+        "label": "Query Routing",
+        "desc": "Intelligent query classification and leader matching"
+      },
+      {
+        "icon": "analytics",
+        "label": "Performance Analysis",
+        "desc": "System performance monitoring and optimization"
+      }
+    ],
+    "philosophy": "The whole is greater than the sum of its parts. Orchestrating 60 leaders into one seamless system is the ultimate legal AI achievement.",
+    "impact": "Unified 60 specialized leaders into a cohesive system, ensuring accurate query routing and comprehensive legal coverage.",
+    "vision": "A perfectly orchestrated legal AI system where every question finds the right expert and every response meets the highest standard."
+  }
+}

@@ -45,11 +45,11 @@ def drf_connector():
 
 # ─── 1. 환경변수 검증 ───────────────────────────────────────────────────────
 
-@pytest.mark.skipif(not os.getenv("GEMINI_API_KEY"), reason="CI 환경: 환경변수 미설정")
+@pytest.mark.skipif(not os.getenv("GEMINI_KEY"), reason="CI 환경: 환경변수 미설정")
 class TestEnvironmentVariables:
     def test_gemini_api_key(self):
-        key = os.getenv("GEMINI_API_KEY", "")
-        assert key, "GEMINI_API_KEY 미설정"
+        key = os.getenv("GEMINI_KEY", "")
+        assert key, "GEMINI_KEY 미설정"
 
     def test_lawgo_drf_oc(self):
         key = os.getenv("LAWGO_DRF_OC", "")
@@ -165,23 +165,23 @@ class TestSearchService:
 
 # ─── 6. Gemini API 검증 ─────────────────────────────────────────────────────
 
-@pytest.mark.skipif(not os.getenv("GEMINI_API_KEY"), reason="CI 환경: GEMINI_API_KEY 미설정")
+@pytest.mark.skipif(not os.getenv("GEMINI_KEY"), reason="CI 환경: GEMINI_KEY 미설정")
 class TestGeminiAPI:
     def test_api_key_set(self):
-        assert os.getenv("GEMINI_API_KEY", ""), "GEMINI_API_KEY 미설정"
+        assert os.getenv("GEMINI_KEY", ""), "GEMINI_KEY 미설정"
 
     def test_client_init(self):
-        key = os.getenv("GEMINI_API_KEY", "")
+        key = os.getenv("GEMINI_KEY", "")
         if not key:
-            pytest.skip("GEMINI_API_KEY 미설정")
+            pytest.skip("GEMINI_KEY 미설정")
         from google import genai as genai_sdk
         client = genai_sdk.Client(api_key=key)
         assert client is not None
 
     def test_api_call(self):
-        key = os.getenv("GEMINI_API_KEY", "")
+        key = os.getenv("GEMINI_KEY", "")
         if not key:
-            pytest.skip("GEMINI_API_KEY 미설정")
+            pytest.skip("GEMINI_KEY 미설정")
         from google import genai as genai_sdk
         client = genai_sdk.Client(api_key=key)
         try:

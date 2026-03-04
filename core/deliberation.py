@@ -466,8 +466,8 @@ async def generate_handoff(
 
     try:
         results = await asyncio.gather(
-            _single_leader_call(gc, cur_persona, t1_prompt),
-            _single_leader_call(gc, new_persona, t2_prompt),
+            asyncio.wait_for(_single_leader_call(gc, cur_persona, t1_prompt), timeout=_TURN_TIMEOUT),
+            asyncio.wait_for(_single_leader_call(gc, new_persona, t2_prompt), timeout=_TURN_TIMEOUT),
             return_exceptions=True,
         )
 

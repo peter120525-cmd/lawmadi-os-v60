@@ -627,7 +627,7 @@ class SwarmOrchestrator:
             logger.info("⚠️ 미등록 리더 이름 호출 → 유나(CCO) 안내")
             return [{"name": "유나", "role": "Chief Content Officer", "specialty": "콘텐츠 설계", "_clevel": "CCO", "_unknown_name": True}]
         if named_leader_id:
-            leader_info = self.leaders.get(named_leader_id, {})
+            leader_info = dict(self.leaders.get(named_leader_id, {}))
             leader_info["_id"] = named_leader_id
             leader_info["_score"] = 100  # 이름 호출은 최고 우선순위
             logger.info(f"✅ 이름 호출 리더 단독 선택: {leader_info.get('name', '?')}({named_leader_id})")
@@ -640,7 +640,7 @@ class SwarmOrchestrator:
             # 도메인 미탐지 → Gemini 1차 분류 시도
             gemini_leader_id = self.classify_domain_with_gemini(query)
             if gemini_leader_id:
-                leader_info = self.leaders.get(gemini_leader_id, {})
+                leader_info = dict(self.leaders.get(gemini_leader_id, {}))
                 leader_info["_id"] = gemini_leader_id
                 leader_info["_score"] = 50  # Gemini 분류
                 logger.info(f"✅ Gemini 분류 리더 선택: {leader_info.get('name', '?')}({gemini_leader_id})")
@@ -654,7 +654,7 @@ class SwarmOrchestrator:
             gemini_leader_id = self.classify_domain_with_gemini(query)
             if gemini_leader_id:
                 # Gemini가 선택한 리더를 최상위로
-                leader_info = self.leaders.get(gemini_leader_id, {})
+                leader_info = dict(self.leaders.get(gemini_leader_id, {}))
                 leader_info["_id"] = gemini_leader_id
                 leader_info["_score"] = detected_domains[0][1] + 5  # 동점 해소
                 logger.info(f"✅ Gemini 동점 해소: {leader_info.get('name', '?')}({gemini_leader_id})")
@@ -673,7 +673,7 @@ class SwarmOrchestrator:
         # 상위 N개 도메인의 Leader 선택
         selected_leaders = []
         for leader_id, score in detected_domains[:self.max_leaders]:
-            leader_info = self.leaders.get(leader_id, {})
+            leader_info = dict(self.leaders.get(leader_id, {}))
             leader_info["_id"] = leader_id
             leader_info["_score"] = score
             selected_leaders.append(leader_info)

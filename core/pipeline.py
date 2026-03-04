@@ -852,8 +852,10 @@ async def _stage1_rag_search(query: str, top_k: int = 10) -> RAGContext:
         try:
             # 병렬 호출: 시맨틱 검색 + 컨텍스트 생성
             search_task = _vertex_search_fn(query, top_k=8)
-            context_task = _vertex_context_fn(query, top_k=30) if _vertex_context_fn else asyncio.coroutine(lambda: "")()
-            cache_ctx_task = _vertex_cache_context_fn(query, top_k=30) if _vertex_cache_context_fn else asyncio.coroutine(lambda: "")()
+            async def _noop_coro():
+                return ""
+            context_task = _vertex_context_fn(query, top_k=30) if _vertex_context_fn else _noop_coro()
+            cache_ctx_task = _vertex_cache_context_fn(query, top_k=30) if _vertex_cache_context_fn else _noop_coro()
 
             matched, context_text, cache_context = await asyncio.gather(
                 search_task, context_task, cache_ctx_task,

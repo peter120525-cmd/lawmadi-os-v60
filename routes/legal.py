@@ -1337,7 +1337,10 @@ async def ask_stream(request: Request):
             ref = datetime.datetime.now().strftime("%H%M%S")
             logger.error(f"💥 스트리밍 에러 (trace={trace}, ref={ref}): {type(e).__name__}: {e}")
             logger.error(traceback.format_exc())
-            user_msg = _classify_gemini_error_fn(e, ref)
+            if lang == "en":
+                user_msg = f"An error occurred while processing your request. (Ref: {ref})"
+            else:
+                user_msg = _classify_gemini_error_fn(e, ref)
             yield _sse("error", {"message": user_msg})
 
     return StreamingResponse(
@@ -1372,10 +1375,13 @@ async def ask_expert(request: Request):
             "response": "전문가 모드는 프리미엄 이용자만 사용할 수 있습니다. 업그레이드 후 이용해 주세요.",
         }
 
-    trace = str(uuid.uuid4())[:8]
+    trace = str(uuid.uuid4())
     start = time.time()
 
     try:
+        raw_body = await request.body()
+        if len(raw_body) > 128 * 1024:
+            return {"trace_id": trace, "status": "ERROR", "response": "요청이 너무 큽니다."}
         body = await request.json()
         query = str(body.get("query", "")).strip()
         original_response = str(body.get("original_response", "")).strip()
@@ -1385,6 +1391,12 @@ async def ask_expert(request: Request):
 
         if not query:
             return {"trace_id": trace, "status": "ERROR", "response": "query가 필요합니다."}
+
+        # Query 길이 제한 + IP PII 보호
+        if len(query) > 2000:
+            query = query[:2000]
+        _raw_ip = _get_client_ip_fn(request)
+        visitor_id = hashlib.sha256(_raw_ip.encode()).hexdigest()
 
         # 질문 분석 (Stage 1)
         analysis = await _gemini_analyze_query(query)
