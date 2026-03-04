@@ -2041,7 +2041,7 @@
 
             /* ── 입력창 ── */
             .input-pipeline-wrapper {
-                padding: 6px 10px;
+                padding: 4px 8px;
             }
 
             .input-container {
@@ -2060,7 +2060,7 @@
 
             #userInput {
                 font-size: 1rem;
-                padding: 10px 0;
+                padding: 8px 0;
                 max-height: 100px;
             }
 
@@ -2183,7 +2183,7 @@
 
             /* ── safe area padding (노치 폰) ── */
             .input-pipeline-wrapper {
-                padding-bottom: max(10px, env(safe-area-inset-bottom));
+                padding-bottom: max(4px, env(safe-area-inset-bottom));
             }
         }
 
@@ -2231,21 +2231,22 @@
             }
 
             .input-pipeline-wrapper {
-                padding: 8px;
+                padding: 4px 6px;
             }
 
             .input-container {
-                padding: 6px 8px 6px 13px;
-                border-radius: 16px;
+                padding: 4px 6px 4px 12px;
+                border-radius: 14px;
             }
 
             #userInput {
                 font-size: 16px;
+                padding: 6px 0;
             }
 
             .send-action {
-                width: 48px;
-                height: 48px;
+                width: 42px;
+                height: 42px;
                 border-radius: 11px;
             }
 
@@ -5756,7 +5757,7 @@
                     <span class="material-symbols-outlined" style="font-size: 1.4rem;" aria-hidden="true">upload_file</span>
                 </button>
 
-                <textarea id="userInput" placeholder="법률 질문을 입력하세요..." rows="1" aria-label="법률 질문 입력"></textarea>
+                <textarea id="userInput" placeholder="질문 입력" rows="1" aria-label="법률 질문 입력"></textarea>
 
                 <button id="sendBtn" class="send-action" aria-label="질문 전송">
                     <span class="material-symbols-outlined" style="font-size: 1.4rem;" aria-hidden="true">arrow_upward</span>

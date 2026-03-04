@@ -679,6 +679,10 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
 
             this.hideTypingIndicator();
 
+            // 협의/인수인계 렌더링
+            if (data.deliberation) this._renderDeliberation(data.deliberation);
+            if (data.handoff) this._renderHandoff(data.handoff);
+
             // 현재 리더 상태 업데이트
             if (data.current_leader) {
                 this.currentLeader = data.current_leader;
@@ -726,6 +730,12 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                 return;
             }
             if (!response.ok) throw new Error(`Server error (${response.status})`);
+
+            // 협의/인수인계 임시 상태 초기화
+            this._delibContainer = null;
+            this._delibTurnIndex = 0;
+            this._handoffContainer = null;
+            this._handoffTurnIndex = 0;
 
             // Streaming message container (고유 ID로 충돌 방지)
             // 첫 chunk 도착 시에만 DOM에 추가하여 이중 박스 방지
@@ -793,7 +803,22 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                             continue;
                         }
 
-                        if (eventType === 'status') {
+                        if (eventType === 'deliberation_start') {
+                            this.hideTypingIndicator();
+                            this._renderDeliberationStart(payload);
+
+                        } else if (eventType === 'deliberation_turn') {
+                            this._renderDeliberationTurn(payload);
+
+                        } else if (eventType === 'deliberation_end') {
+                            this._renderDeliberationEnd(payload);
+                            this.showTypingIndicator();
+
+                        } else if (eventType === 'handoff') {
+                            this.hideTypingIndicator();
+                            this._renderHandoffTurn(payload);
+
+                        } else if (eventType === 'status') {
                             const stepKey = payload.step || '';
                             const statusText = _statusLabels[stepKey] || stepKey;
                             const leaderInfo = payload.leader ? ` (${leaderRomanNames[payload.leader] || payload.leader})` : '';
@@ -880,6 +905,221 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
             const _elapsed = ((performance.now() - _startTime) / 1000).toFixed(1);
             const formattedHtml = this.formatReport(finalText);
             this.appendMessage('ai', formattedHtml, null, query, finalText, leaderName, leaderSpecialty, _elapsed);
+        },
+
+        // ═══ Leader Deliberation Rendering — Premium UI ═══
+        _getLeaderAvatar(name) {
+            return leaderProfileImages[name] || 'images/leaders/L60-madi.jpg';
+        },
+
+        _getTimeStamp() {
+            const now = new Date();
+            return String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+        },
+
+        _buildAvatarHTML(name, context) {
+            return `<div class="delib-avatar-wrap"><img class="delib-avatar" src="${this._getLeaderAvatar(name)}" alt="${this.escapeHtml(name)}"></div>`;
+        },
+
+        _buildBubbleBody(name, role, text) {
+            const ts = this._getTimeStamp();
+            return `<div class="delib-body">` +
+                `<div class="delib-meta-row"><span class="delib-name">${this.escapeHtml(name)}</span>` +
+                `<span class="delib-role">${this.escapeHtml(role)}</span>` +
+                `<span class="delib-time">${ts}</span></div>` +
+                `<div class="delib-text">${this.escapeHtml(text)}</div></div>`;
+        },
+
+        _buildHandoffArrow() {
+            return '<div class="handoff-arrow">' +
+                '<div class="handoff-arrow-line"></div>' +
+                '<svg class="handoff-arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>' +
+                '<div class="handoff-arrow-line"></div>' +
+                '</div>';
+        },
+
+        // Streaming: deliberation_start event
+        _renderDeliberationStart(payload) {
+            const container = document.createElement('div');
+            container.className = 'deliberation-container';
+            container.id = 'delib-live-' + Date.now();
+            const leaders = payload.leaders || [];
+            const count = leaders.filter(l => l.name !== 'Seoyeon' && l.name !== '서연').length;
+            container.innerHTML = _sanitize(
+                `<div class="delib-header">` +
+                `<span class="delib-header-dot"></span>` +
+                `<span>Meeting in progress — Seoyeon (CSO) presiding</span>` +
+                (count > 1 ? `<span class="delib-header-count">${count} attending</span>` : ``) +
+                `</div>`
+            );
+            this._appendDelibTypingIndicator(container, 'Seoyeon');
+            this.convArea.appendChild(container);
+            this._smartScroll(false);
+            this._delibContainer = container;
+            this._delibTurnIndex = 0;
+        },
+
+        // Streaming: deliberation_turn event
+        _renderDeliberationTurn(payload) {
+            const container = this._delibContainer;
+            if (!container) return;
+            const name = payload.speaker || '?';
+            const role = payload.role || '';
+            const text = payload.text || '';
+            const isFinal = payload.is_final || false;
+            const isMod = (name === 'Seoyeon' || name === '서연');
+
+            this._removeDelibTypingIndicator(container);
+
+            const bubble = document.createElement('div');
+            bubble.className = 'deliberation-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
+            bubble.innerHTML = _sanitize(
+                this._buildAvatarHTML(name, 'deliberation') +
+                this._buildBubbleBody(name, role, text)
+            );
+            container.appendChild(bubble);
+            this._delibTurnIndex = (this._delibTurnIndex || 0) + 1;
+
+            if (!isFinal) {
+                const nextSpeaker = isMod ? '' : 'Seoyeon';
+                this._appendDelibTypingIndicator(container, nextSpeaker);
+            }
+            this._smartScroll(false);
+        },
+
+        // Streaming: deliberation_end event
+        _renderDeliberationEnd(payload) {
+            const container = this._delibContainer;
+            if (!container) return;
+            this._removeDelibTypingIndicator(container);
+            const selected = payload.selected_leader || '?';
+            const specialty = payload.selected_leader_specialty || '';
+            const summary = document.createElement('div');
+            summary.className = 'delib-conclusion';
+            summary.textContent = `${selected} (${specialty}) has been assigned as your leader`;
+            container.appendChild(summary);
+            this._smartScroll(false);
+            this._delibContainer = null;
+        },
+
+        // Streaming: handoff event (per turn)
+        _renderHandoffTurn(payload) {
+            if (!this._handoffContainer) {
+                const container = document.createElement('div');
+                container.className = 'handoff-container';
+                container.innerHTML = _sanitize(
+                    '<div class="handoff-header">' +
+                    '<span class="delib-header-dot"></span>' +
+                    '<span>Leader Handoff</span>' +
+                    '</div>'
+                );
+                this.convArea.appendChild(container);
+                this._handoffContainer = container;
+                this._handoffTurnIndex = 0;
+            }
+            const container = this._handoffContainer;
+            const name = payload.speaker || '?';
+            const role = payload.role || '';
+            const text = payload.text || '';
+            const idx = this._handoffTurnIndex || 0;
+
+            this._removeDelibTypingIndicator(container);
+
+            if (idx === 1) {
+                const arrow = document.createElement('div');
+                arrow.innerHTML = this._buildHandoffArrow();
+                container.appendChild(arrow.firstChild);
+            }
+
+            const bubble = document.createElement('div');
+            bubble.className = 'handoff-bubble';
+            bubble.innerHTML = _sanitize(
+                this._buildAvatarHTML(name, 'handoff') +
+                this._buildBubbleBody(name, role, text)
+            );
+            container.appendChild(bubble);
+            this._handoffTurnIndex = idx + 1;
+
+            if (idx === 0) {
+                this._appendDelibTypingIndicator(container, '');
+            }
+            this._smartScroll(false);
+        },
+
+        // Classic (/ask) deliberation rendering
+        _renderDeliberation(turns) {
+            if (!turns || !turns.length) return;
+            const container = document.createElement('div');
+            container.className = 'deliberation-container';
+            const names = [...new Set(turns.map(t => t.speaker))].filter(n => n !== 'Seoyeon' && n !== '서연');
+            container.innerHTML = _sanitize(
+                `<div class="delib-header">` +
+                `<span class="delib-header-dot"></span>` +
+                `<span>Meeting in progress — Seoyeon (CSO) presiding</span>` +
+                (names.length > 1 ? `<span class="delib-header-count">${names.length} attending</span>` : ``) +
+                `</div>`
+            );
+            turns.forEach((turn, idx) => {
+                const isMod = (turn.speaker === 'Seoyeon' || turn.speaker === '서연');
+                const isFinal = turn.is_final || false;
+                const bubble = document.createElement('div');
+                bubble.className = 'deliberation-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
+                bubble.style.animationDelay = (idx * 0.25) + 's';
+                bubble.innerHTML = _sanitize(
+                    this._buildAvatarHTML(turn.speaker, 'deliberation') +
+                    this._buildBubbleBody(turn.speaker, turn.role || '', turn.text || '')
+                );
+                container.appendChild(bubble);
+            });
+            this.convArea.appendChild(container);
+            this._smartScroll(false);
+        },
+
+        // Classic (/ask) handoff rendering
+        _renderHandoff(turns) {
+            if (!turns || !turns.length) return;
+            const container = document.createElement('div');
+            container.className = 'handoff-container';
+            container.innerHTML = _sanitize(
+                '<div class="handoff-header">' +
+                '<span class="delib-header-dot"></span>' +
+                '<span>Leader Handoff</span>' +
+                '</div>'
+            );
+            turns.forEach((turn, idx) => {
+                if (idx === 1) {
+                    const arrow = document.createElement('div');
+                    arrow.innerHTML = this._buildHandoffArrow();
+                    container.appendChild(arrow.firstChild);
+                }
+                const bubble = document.createElement('div');
+                bubble.className = 'handoff-bubble';
+                bubble.style.animationDelay = (idx * 0.25) + 's';
+                bubble.innerHTML = _sanitize(
+                    this._buildAvatarHTML(turn.speaker, 'handoff') +
+                    this._buildBubbleBody(turn.speaker, turn.role || '', turn.text || '')
+                );
+                container.appendChild(bubble);
+            });
+            this.convArea.appendChild(container);
+            this._smartScroll(false);
+        },
+
+        // Deliberation typing indicator helpers
+        _appendDelibTypingIndicator(container, speakerHint) {
+            const indicator = document.createElement('div');
+            indicator.className = 'delib-typing-indicator';
+            const label = speakerHint ? `${speakerHint} is typing` : 'typing';
+            indicator.innerHTML = _sanitize(
+                `<div class="delib-typing-dots"><span></span><span></span><span></span></div>` +
+                `<span>${label}</span>`
+            );
+            container.appendChild(indicator);
+            this._smartScroll(false);
+        },
+        _removeDelibTypingIndicator(container) {
+            const existing = container.querySelector('.delib-typing-indicator');
+            if (existing) existing.remove();
         },
 
         // ═══ 스트리밍 텍스트 실시간 렌더링 (경량) ═══
@@ -1530,6 +1770,19 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
             }
             tsDiv.textContent = tsText;
             msgDiv.appendChild(tsDiv);
+
+            // 협의/인수인계 컨테이너를 AI 메시지 안으로 이동
+            if (sender === 'ai') {
+                const delibEls = Array.from(this.convArea.querySelectorAll(':scope > .deliberation-container, :scope > .handoff-container'));
+                if (delibEls.length) {
+                    const headerEl = msgDiv.querySelector('.leader-response-header');
+                    const summaryEl = msgDiv.querySelector('.response-summary-card');
+                    const insertRef = summaryEl ? summaryEl.nextSibling : (headerEl ? headerEl.nextSibling : msgDiv.firstChild);
+                    for (let i = delibEls.length - 1; i >= 0; i--) {
+                        msgDiv.insertBefore(delibEls[i], insertRef);
+                    }
+                }
+            }
 
             this.convArea.appendChild(msgDiv);
             this._smartScroll(sender === 'user');
