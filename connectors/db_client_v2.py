@@ -309,6 +309,7 @@ def init_chat_history_table():
         logger.info("✅ [ChatHistory] 테이블 초기화 완료")
     except Exception as e:
         logger.error(f"⚠️ [ChatHistory] 테이블 생성 실패: {e}")
+        raise
     finally:
         if cur: cur.close()
         if conn: release_connection(conn)
@@ -355,6 +356,7 @@ def init_visitor_stats_table():
         logger.info("✅ [Visitor] 통계 테이블 초기화 완료")
     except Exception as e:
         logger.error(f"⚠️ [Visitor] 테이블 생성 실패: {e}")
+        raise
     finally:
         if cur: cur.close()
         if conn: release_connection(conn)
@@ -402,9 +404,53 @@ def init_admin_tables():
         logger.info("✅ [Admin] lawyer_inquiries, feedback 테이블 초기화 완료")
     except Exception as e:
         logger.error(f"⚠️ [Admin] 테이블 생성 실패: {e}")
+        raise
     finally:
         if cur: cur.close()
         if conn: release_connection(conn)
+
+
+def init_all_tables(max_retries=3, retry_delay=2.0):
+    """
+    모든 DB 테이블을 순차 초기화 (개별 재시도 포함).
+    각 init 함수가 실패 시 지수 백오프로 재시도합니다.
+    """
+    import time as _time
+    from .db_client import init_tables as _init_core
+
+    _table_inits = [
+        ("core", _init_core),
+        ("chat_history", init_chat_history_table),
+        ("visitor_stats", init_visitor_stats_table),
+        ("admin", init_admin_tables),
+        ("verification", init_verification_table),
+        ("frontend_logs", init_frontend_logs_table),
+    ]
+
+    failed = []
+    for name, fn in _table_inits:
+        for attempt in range(1, max_retries + 1):
+            try:
+                fn()
+                break
+            except Exception as e:
+                if attempt < max_retries:
+                    delay = retry_delay * (2 ** (attempt - 1))
+                    logger.warning(
+                        f"⚠️ [init_all_tables] {name} 실패 (시도 {attempt}/{max_retries}), "
+                        f"{delay:.1f}초 후 재시도: {e}"
+                    )
+                    _time.sleep(delay)
+                else:
+                    logger.error(f"❌ [init_all_tables] {name} 최종 실패 ({max_retries}회): {e}")
+                    failed.append(name)
+
+    if failed:
+        logger.error(f"❌ [init_all_tables] 실패 테이블: {failed}")
+    else:
+        logger.info("✅ [init_all_tables] 전체 테이블 초기화 완료")
+
+    return failed
 
 
 def record_visit(visitor_id: str) -> Dict[str, Any]:
@@ -770,6 +816,7 @@ def init_verification_table():
         logger.info("✅ [Verification] 테이블 초기화 완료")
     except Exception as e:
         logger.error(f"⚠️ [Verification] 테이블 생성 실패: {e}")
+        raise
     finally:
         if cur: cur.close()
         if conn: release_connection(conn)
@@ -1287,7 +1334,8 @@ def init_frontend_logs_table():
 
         logger.info("✅ [DB] frontend_errors + frontend_perf 테이블 초기화 완료")
     except Exception as e:
-        logger.warning(f"⚠️ [DB] frontend logs 테이블 생성 실패 (무시): {e}")
+        logger.warning(f"⚠️ [DB] frontend logs 테이블 생성 실패: {e}")
+        raise
 
 
 def save_frontend_error(

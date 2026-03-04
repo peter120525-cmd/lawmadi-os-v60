@@ -9,6 +9,7 @@ import json
 import uuid
 import time
 import asyncio
+import hashlib
 import logging
 import datetime
 import traceback
@@ -261,10 +262,10 @@ async def ask(request: Request):
             elif role == "assistant" and content:
                 gemini_history.append({"role": "model", "parts": [{"text": content[:2000]}]})
 
-        # IP 주소를 사용자 ID로 사용 (자동 추출)
-        visitor_id = _get_client_ip_fn(request)
-        import hashlib
-        _masked_ip = hashlib.sha256(visitor_id.encode()).hexdigest()[:12]
+        # IP → SHA-256 해시 (PII 보호)
+        _raw_ip = _get_client_ip_fn(request)
+        visitor_id = hashlib.sha256(_raw_ip.encode()).hexdigest()
+        _masked_ip = visitor_id[:12]
         logger.info(f"🔍 Request from visitor: {_masked_ip}")
 
         config = _RUNTIME.get("config", {})
@@ -662,57 +663,61 @@ async def ask(request: Request):
         # -------------------------------------------------
         async def _background_verify_and_save():
             """백그라운드에서 SSOT 검증 + DB 저장 수행"""
+            _leader_id = analysis.get("leader_id", "")
             try:
-                # DRF Stage 4 결과를 tool_results 형식으로 변환
-                _tools_used = []
-                _tool_results = []
-                if drf_result and drf_result.total_refs > 0:
-                    _tools_used = [{"name": "DRF_Stage4_전수검증", "args": {"total": drf_result.total_refs}}]
-                    for ref in drf_result.verified_refs:
-                        entry = {"result": "FOUND", "source": "DRF", "ref": ref.get("ref", ""), "verified": True}
-                        if ref.get("article_text"):
-                            entry["article_text"] = ref["article_text"][:800]
-                        if ref.get("drf_summary"):
-                            entry["drf_summary"] = ref["drf_summary"][:800]
-                        _tool_results.append(entry)
-                    for ref in drf_result.unverified_refs:
-                        entry = {"result": "NO_DATA", "source": "DRF", "ref": ref.get("ref", ""), "verified": False, "reason": ref.get("reason", "")}
-                        if ref.get("drf_summary"):
-                            entry["drf_summary"] = ref["drf_summary"][:800]
-                        _tool_results.append(entry)
+                if _leader_id == "L60":
+                    logger.info("[Verification] L60 → SSOT 검증 스킵")
+                else:
+                    # DRF Stage 4 결과를 tool_results 형식으로 변환
+                    _tools_used = []
+                    _tool_results = []
+                    if drf_result and drf_result.total_refs > 0:
+                        _tools_used = [{"name": "DRF_Stage4_전수검증", "args": {"total": drf_result.total_refs}}]
+                        for ref in drf_result.verified_refs:
+                            entry = {"result": "FOUND", "source": "DRF", "ref": ref.get("ref", ""), "verified": True}
+                            if ref.get("article_text"):
+                                entry["article_text"] = ref["article_text"][:800]
+                            if ref.get("drf_summary"):
+                                entry["drf_summary"] = ref["drf_summary"][:800]
+                            _tool_results.append(entry)
+                        for ref in drf_result.unverified_refs:
+                            entry = {"result": "NO_DATA", "source": "DRF", "ref": ref.get("ref", ""), "verified": False, "reason": ref.get("reason", "")}
+                            if ref.get("drf_summary"):
+                                entry["drf_summary"] = ref["drf_summary"][:800]
+                            _tool_results.append(entry)
 
-                verifier_module = _optional_import_fn("engines.response_verifier")
-                if verifier_module:
-                    verifier = verifier_module.get_verifier()
-                    loop = asyncio.get_event_loop()
-                    verification_result = await loop.run_in_executor(
-                        None,
-                        lambda: verifier.verify_response(
-                            user_query=query,
-                            gemini_response=final_text,
-                            tools_used=_tools_used,
-                            tool_results=_tool_results
-                        )
-                    )
-                    v_result = verification_result.get("result", "SKIP")
-                    v_score = verification_result.get("ssot_compliance_score", 0)
-                    v_issues = verification_result.get("issues", [])
-                    if v_result == "FAIL":
-                        logger.warning(f"🚨 [SSOT 검증 실패] 점수: {v_score}, 문제: {v_issues}")
-                    else:
-                        logger.info(f"✅ [SSOT 검증 통과] 점수: {v_score}")
-
-                    db_client_v2 = _optional_import_fn("connectors.db_client_v2")
-                    if db_client_v2 and hasattr(db_client_v2, "save_verification_result"):
-                        await loop.run_in_executor(
+                    verifier_module = _optional_import_fn("engines.response_verifier")
+                    if verifier_module:
+                        verifier = verifier_module.get_verifier()
+                        loop = asyncio.get_event_loop()
+                        verification_result = await loop.run_in_executor(
                             None,
-                            lambda: db_client_v2.save_verification_result(
-                                session_id=trace, user_query=query, gemini_response=final_text,
-                                tools_used=_tools_used, tool_results=_tool_results,
-                                verification_result=v_result, ssot_compliance_score=v_score,
-                                issues_found=v_issues, verification_feedback=verification_result.get("feedback", "")
+                            lambda: verifier.verify_response(
+                                user_query=query,
+                                gemini_response=final_text,
+                                tools_used=_tools_used,
+                                tool_results=_tool_results
                             )
                         )
+                        v_result = verification_result.get("result", "SKIP")
+                        v_score = verification_result.get("ssot_compliance_score", 0)
+                        v_issues = verification_result.get("issues", [])
+                        if v_result == "FAIL":
+                            logger.warning(f"🚨 [SSOT 검증 실패] 점수: {v_score}, 문제: {v_issues}")
+                        else:
+                            logger.info(f"✅ [SSOT 검증 통과] 점수: {v_score}")
+
+                        db_client_v2 = _optional_import_fn("connectors.db_client_v2")
+                        if db_client_v2 and hasattr(db_client_v2, "save_verification_result"):
+                            await loop.run_in_executor(
+                                None,
+                                lambda: db_client_v2.save_verification_result(
+                                    session_id=trace, user_query=query, gemini_response=final_text,
+                                    tools_used=_tools_used, tool_results=_tool_results,
+                                    verification_result=v_result, ssot_compliance_score=v_score,
+                                    issues_found=v_issues, verification_feedback=verification_result.get("feedback", "")
+                                )
+                            )
             except Exception as verify_error:
                 logger.warning(f"⚠️ [Verification] 백그라운드 검증 실패 (무시): {verify_error}")
 
@@ -846,7 +851,8 @@ async def ask_stream(request: Request):
             elif role == "assistant" and content:
                 gemini_history.append({"role": "model", "parts": [{"text": content[:2000]}]})
 
-        visitor_id = _get_client_ip_fn(request)
+        _raw_ip = _get_client_ip_fn(request)
+        visitor_id = hashlib.sha256(_raw_ip.encode()).hexdigest()
         config = _RUNTIME.get("config", {})
 
     except Exception as parse_err:
@@ -1250,38 +1256,42 @@ async def ask_stream(request: Request):
 
             # 백그라운드 검증/저장
             async def _bg_verify():
+                _leader_id = analysis.get("leader_id", "")
                 try:
-                    # DRF 검증 결과를 tool_results 형식으로 변환
-                    _bg_tools_used = []
-                    _bg_tool_results = []
-                    if drf_verification and drf_verification.total_refs > 0:
-                        _bg_tools_used = [{"name": "DRF_Stage4_전수검증", "args": {"total": drf_verification.total_refs}}]
-                        for ref in drf_verification.verified_refs:
-                            entry = {"result": "FOUND", "source": "DRF", "ref": ref.get("ref", ""), "verified": True}
-                            if ref.get("article_text"):
-                                entry["article_text"] = ref["article_text"][:800]
-                            if ref.get("drf_summary"):
-                                entry["drf_summary"] = ref["drf_summary"][:800]
-                            _bg_tool_results.append(entry)
-                        for ref in drf_verification.unverified_refs:
-                            entry = {"result": "NO_DATA", "source": "DRF", "ref": ref.get("ref", ""), "verified": False, "reason": ref.get("reason", "")}
-                            if ref.get("drf_summary"):
-                                entry["drf_summary"] = ref["drf_summary"][:800]
-                            _bg_tool_results.append(entry)
+                    if _leader_id == "L60":
+                        logger.info("[Stream Verification] L60 → SSOT 검증 스킵")
+                    else:
+                        # DRF 검증 결과를 tool_results 형식으로 변환
+                        _bg_tools_used = []
+                        _bg_tool_results = []
+                        if drf_verification and drf_verification.total_refs > 0:
+                            _bg_tools_used = [{"name": "DRF_Stage4_전수검증", "args": {"total": drf_verification.total_refs}}]
+                            for ref in drf_verification.verified_refs:
+                                entry = {"result": "FOUND", "source": "DRF", "ref": ref.get("ref", ""), "verified": True}
+                                if ref.get("article_text"):
+                                    entry["article_text"] = ref["article_text"][:800]
+                                if ref.get("drf_summary"):
+                                    entry["drf_summary"] = ref["drf_summary"][:800]
+                                _bg_tool_results.append(entry)
+                            for ref in drf_verification.unverified_refs:
+                                entry = {"result": "NO_DATA", "source": "DRF", "ref": ref.get("ref", ""), "verified": False, "reason": ref.get("reason", "")}
+                                if ref.get("drf_summary"):
+                                    entry["drf_summary"] = ref["drf_summary"][:800]
+                                _bg_tool_results.append(entry)
 
-                    verifier_module = _optional_import_fn("engines.response_verifier")
-                    if verifier_module:
-                        verifier = verifier_module.get_verifier()
-                        _loop = asyncio.get_event_loop()
-                        await _loop.run_in_executor(
-                            None,
-                            lambda: verifier.verify_response(
-                                user_query=query,
-                                gemini_response=final_text_clean,
-                                tools_used=_bg_tools_used,
-                                tool_results=_bg_tool_results
+                        verifier_module = _optional_import_fn("engines.response_verifier")
+                        if verifier_module:
+                            verifier = verifier_module.get_verifier()
+                            _loop = asyncio.get_event_loop()
+                            await _loop.run_in_executor(
+                                None,
+                                lambda: verifier.verify_response(
+                                    user_query=query,
+                                    gemini_response=final_text_clean,
+                                    tools_used=_bg_tools_used,
+                                    tool_results=_bg_tool_results
+                                )
                             )
-                        )
                 except Exception as e:
                     logger.warning(f"⚠️ [Stream Verification] 실패 (무시): {e}")
                 try:

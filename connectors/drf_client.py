@@ -124,14 +124,14 @@ class DRFConnector:
     # -------------------------------------------------
     # DRF 호출
     # -------------------------------------------------
-    def _call_drf(self, query, target="law", _retries=3):
+    def _call_drf(self, query, target="law", _retries=2):
         """
         DRF API 호출 (target 파라미터 지원, 지수 백오프 재시도)
 
         Args:
             query: 검색어
             target: DRF target (law, prec, admrul, expc, adrule, edulaw, etc.)
-            _retries: 재시도 횟수 (기본 3)
+            _retries: 재시도 횟수 (기본 2)
         """
         if not self.drf_key or not self.drf_url:
             raise RuntimeError("DRF not available")
@@ -587,7 +587,7 @@ class DRFConnector:
     # 기존 동기 메서드 유지 + _async 비동기 메서드 병행
     # -------------------------------------------------
 
-    async def _call_drf_async(self, query, target="law", _retries=3):
+    async def _call_drf_async(self, query, target="law", _retries=2):
         """DRF API 비동기 호출 (httpx.AsyncClient, 지수 백오프 재시도)"""
         if not _HTTPX_AVAILABLE:
             raise RuntimeError("httpx not available for async DRF call")
