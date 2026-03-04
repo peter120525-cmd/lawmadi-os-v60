@@ -605,7 +605,7 @@ def _now_iso() -> str:
 # 🕐 플랜별 요청 제한 (IP당, KST 기준)
 # =============================================================
 PLAN_CONFIG = {
-    "free":    {"window_limit": 10, "daily": True, "max_tokens": 3000, "expert_access": True},
+    "free":    {"window_limit": 100, "daily": True, "max_tokens": 3000, "expert_access": True},
     "premium": {"window_limit": 200, "daily": True, "max_tokens": 5000, "expert_access": True},
 }
 
@@ -991,10 +991,13 @@ def _remove_separator_lines(text: str) -> str:
 
 def _compute_quality_meta(text: str, matched_sources: list) -> dict:
     """응답 품질 메타데이터 계산"""
-    has_law_name = bool(re.search(r'[가-힣]+법', text))
-    has_article = bool(re.search(r'제\d+조', text))
-    has_action_guide = any(kw in text for kw in ["즉시", "1단계", "▶", "□", "체크리스트", "준비물"])
-    has_precedent = bool(re.search(r'(대법원|헌법재판소|판결|선고)\s*\d', text))
+    has_law_name = bool(re.search(r'[가-힣]+법', text)) or bool(re.search(r'\b[A-Z][a-z]+ Act\b', text))
+    has_article = bool(re.search(r'제\d+조', text)) or bool(re.search(r'Article \d+', text))
+    has_action_guide = any(kw in text for kw in [
+        "즉시", "1단계", "▶", "□", "체크리스트", "준비물",
+        "immediately", "step 1", "Step 1", "checklist", "right now", "action",
+    ])
+    has_precedent = bool(re.search(r'(대법원|헌법재판소|판결|선고)\s*\d', text)) or bool(re.search(r'(Supreme Court|Constitutional Court|Case No\.|Decision)\s*\d', text, re.IGNORECASE))
     ssot_verified = len(matched_sources) > 0
 
     score = sum([has_law_name, has_article, has_action_guide, has_precedent, ssot_verified])
