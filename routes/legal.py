@@ -98,6 +98,17 @@ _optional_import_fn: Optional[Callable] = None
 _check_expert_access_fn: Optional[Callable] = None
 
 
+def _detect_lang(query: str) -> str:
+    """ASCII 알파벳 비율로 영어 질의 자동 감지. >60% → 'en', 그 외 → '' (한국어 기본값)"""
+    if not query:
+        return ""
+    alpha_count = sum(1 for c in query if c.isascii() and c.isalpha())
+    total = len(query.replace(" ", ""))
+    if total == 0:
+        return ""
+    return "en" if alpha_count / total > 0.6 else ""
+
+
 def set_dependencies(
     runtime: Dict[str, Any],
     metrics: Dict[str, Any],
@@ -237,6 +248,8 @@ async def ask(request: Request):
         query = (data.get("query", "") or "").strip()
         raw_history = data.get("history", [])
         lang = (data.get("lang", "") or "").strip().lower()
+        if not lang:
+            lang = _detect_lang(query)
 
         # 리더 협의/인수인계 상태
         ask_current_leader = data.get("current_leader")  # {"name": ..., "specialty": ...} or None
@@ -828,6 +841,8 @@ async def ask_stream(request: Request):
         query = (data.get("query", "") or "").strip()
         raw_history = data.get("history", [])
         lang = (data.get("lang", "") or "").strip().lower()
+        if not lang:
+            lang = _detect_lang(query)
         stream_mode = (data.get("mode", "") or "").strip().lower() or "general"
 
         # 리더 협의/인수인계 상태
@@ -1365,6 +1380,8 @@ async def ask_expert(request: Request):
         query = str(body.get("query", "")).strip()
         original_response = str(body.get("original_response", "")).strip()
         lang = str(body.get("lang", "")).strip().lower()
+        if not lang:
+            lang = _detect_lang(query)
 
         if not query:
             return {"trace_id": trace, "status": "ERROR", "response": "query가 필요합니다."}
