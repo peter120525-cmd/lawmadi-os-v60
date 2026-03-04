@@ -440,7 +440,7 @@ async def ask(request: Request):
         swarm_mode = False
 
         # NLU 검증/보정: Gemini 분류가 빈값이거나 NLU가 더 정확한 경우 보정
-        nlu_leader_id = _nlu_detect_intent(query)
+        nlu_leader_id = _nlu_detect_intent(query, lang=lang)
         if nlu_leader_id:
             is_legal = True  # NLU 매칭되면 무조건 법률 질문
             if not leader_name or leader_name == "마디":
@@ -1029,7 +1029,7 @@ async def ask_stream(request: Request):
             is_legal = analysis.get("is_legal", True)
 
             # NLU 검증/보정 (스트리밍)
-            _nlu_lid = _nlu_detect_intent(query)
+            _nlu_lid = _nlu_detect_intent(query, lang=lang)
             if _nlu_lid:
                 is_legal = True
                 _s_name = analysis.get("leader_name", "")
@@ -1395,7 +1395,7 @@ async def ask_expert(request: Request):
         leader_specialty = analysis.get("leader_specialty", "통합")
 
         # NLU 검증/보정 (expert)
-        _nlu_lid = _nlu_detect_intent(query)
+        _nlu_lid = _nlu_detect_intent(query, lang=lang)
         if _nlu_lid and (not leader_name or leader_name == "마디"):
             _reg = _LEADER_REGISTRY.get("swarm_engine_config", {}).get("leader_registry", {})
             _nlu_l = _reg.get(_nlu_lid, {})
