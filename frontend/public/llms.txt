@@ -14,7 +14,7 @@
 - **License**: LAWMADI OS COMPREHENSIVE PROPRIETARY LICENSE v2.0.0 (비공개 독점 라이선스)
 - **Governing Law**: Republic of Korea (대한민국 법)
 - **Contact**: choepeter@outlook.kr
-- **Production URL**: https://lawmadi.com
+- **Production URL**: https://lawmadi-db.web.app
 - **Frontend Hosting**: https://lawmadi-db.web.app (Firebase Hosting)
 - **Languages**: Korean (default `/`), English (`/en`)
 - **Multilingual API**: Pass `lang: "en"` in `/ask` and `/ask-stream` body for English responses
@@ -60,7 +60,7 @@ L7 RENDERER    → Legal vs Reference Output Segregation (Section Divider, Discl
 |-----------|-----------|
 | Backend Framework | FastAPI 0.128.0 + Uvicorn 0.40.0 |
 | Runtime | Python 3.10+ |
-| Primary LLM | Google Gemini 3 Flash (gemini-3-flash-preview) |
+| Primary LLM | Google Gemini 2.5 Flash (gemini-2.5-flash) |
 | Constitutional Verifier | Anthropic Claude (claude-sonnet series) |
 | Legal Draft LLM | LawmadiLM v4.0 (Qwen3-1.7B QLoRA, GGUF Q4_K_M ~1.19GB) |
 | LLM Serving | llama.cpp (OpenAI-compatible /v1/chat/completions) |
@@ -79,7 +79,7 @@ L7 RENDERER    → Legal vs Reference Output Segregation (Section Divider, Discl
 ```
 OS_VERSION   = "v60.0.0"
 SOFT_MODE    = true (default)
-GEMINI_MODEL = "gemini-3-flash-preview"
+GEMINI_MODEL = "gemini-2.5-flash"
 USE_SWARM    = controlled via environment variable
 ```
 
@@ -344,7 +344,7 @@ Usage: Query keywords matched against reverse index → top matching articles se
 
 ## API ENDPOINTS
 
-**Base URL (Production)**: https://lawmadi.com (via GCP Cloud Run, asia-northeast3)
+**Base URL (Production)**: https://lawmadi-db.web.app (via GCP Cloud Run, asia-northeast3)
 
 ### Public Endpoints
 
@@ -399,8 +399,7 @@ When `lang: "en"` is passed in `/ask` or `/ask-stream` request body:
 ### CORS Restriction
 ```
 Allowed Origins:
-  - https://lawmadi.com
-  - https://www.lawmadi.com
+  - https://lawmadi-db.web.app
   - https://lawmadi-os.web.app
   - https://lawmadi-db.web.app
 

@@ -14,7 +14,8 @@
     try {
       var payload = JSON.stringify(data);
       if (navigator.sendBeacon) {
-        navigator.sendBeacon(API_BASE + endpoint, payload);
+        var blob = new Blob([payload], {type: 'application/json'});
+        navigator.sendBeacon(API_BASE + endpoint, blob);
       } else {
         fetch(API_BASE + endpoint, {
           method: "POST",
@@ -62,17 +63,27 @@
   // ══════════════════════════════════════════
 
   function reportPageLoad() {
-    var timing = performance.timing || {};
-    var nav = timing.navigationStart || 0;
-    if (!nav) return;
-
-    post("/api/perf", {
-      ttfb: timing.responseStart ? timing.responseStart - nav : null,
-      domLoad: timing.domContentLoadedEventEnd ? timing.domContentLoadedEventEnd - nav : null,
-      fullLoad: timing.loadEventEnd ? timing.loadEventEnd - nav : null,
-      url: location.href.slice(0, 500),
-      userAgent: navigator.userAgent.slice(0, 300),
-    });
+    var navEntry = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+    if (navEntry) {
+      post("/api/perf", {
+        ttfb: navEntry.responseStart ? Math.round(navEntry.responseStart) : null,
+        domLoad: navEntry.domContentLoadedEventEnd ? Math.round(navEntry.domContentLoadedEventEnd) : null,
+        fullLoad: navEntry.loadEventEnd ? Math.round(navEntry.loadEventEnd) : null,
+        url: location.href.slice(0, 500),
+        userAgent: navigator.userAgent.slice(0, 300),
+      });
+    } else if (performance.timing) {
+      var timing = performance.timing;
+      var nav = timing.navigationStart || 0;
+      if (!nav) return;
+      post("/api/perf", {
+        ttfb: timing.responseStart ? timing.responseStart - nav : null,
+        domLoad: timing.domContentLoadedEventEnd ? timing.domContentLoadedEventEnd - nav : null,
+        fullLoad: timing.loadEventEnd ? timing.loadEventEnd - nav : null,
+        url: location.href.slice(0, 500),
+        userAgent: navigator.userAgent.slice(0, 300),
+      });
+    }
   }
 
   // loadEventEnd가 설정된 후 보고

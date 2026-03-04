@@ -108,6 +108,30 @@
       {
         "source": "/leader",
         "destination": "/leader-profile.html"
+      },
+      {
+        "source": "/clevel",
+        "destination": "/clevel.html"
+      },
+      {
+        "source": "/leader-en",
+        "destination": "/leader-profile-en.html"
+      },
+      {
+        "source": "/privacy",
+        "destination": "/privacy.html"
+      },
+      {
+        "source": "/privacy-en",
+        "destination": "/privacy-en.html"
+      },
+      {
+        "source": "/terms",
+        "destination": "/terms.html"
+      },
+      {
+        "source": "/terms-en",
+        "destination": "/terms-en.html"
       }
     ]
   }
