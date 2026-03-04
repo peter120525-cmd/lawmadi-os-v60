@@ -1,5 +1,5 @@
 // XSS sanitizer helper — all API responses pass through this
-function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(html, {ADD_ATTR: ['target','data-tooltip'], ALLOW_DATA_ATTR: true}) : html; }
+function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(html, {ADD_ATTR: ['target','data-tooltip'], ALLOW_DATA_ATTR: true}) : html.replace(/<[^>]*>/g, ''); }
 
 // Mobile & In-app browser viewport fix (모바일 전체 + 인앱 브라우저)
 (function() {
@@ -267,6 +267,22 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
 
             // 전송 버튼 초기 상태
             this.updateSendBtnState();
+
+            // CSP 호환 이벤트 리스너 (inline handler 대체)
+            var favCloseBtn = document.getElementById('favoritesCloseBtn');
+            if (favCloseBtn) favCloseBtn.addEventListener('click', () => this.toggleFavorites());
+            var premiumCta = document.getElementById('premiumCta');
+            if (premiumCta) premiumCta.addEventListener('click', () => alert('프리미엄 서비스 준비 중입니다. 곧 오픈 예정입니다!'));
+            var lawyerCta = document.getElementById('lawyerCtaLanding');
+            if (lawyerCta) lawyerCta.addEventListener('click', () => alert('변호사 연결 서비스 준비 중입니다. 곧 오픈 예정입니다!'));
+            var modalClose = document.getElementById('modalCloseBtn');
+            if (modalClose) modalClose.addEventListener('click', () => this.closeLawyerModal());
+            var lawyerForm = document.getElementById('lawyerForm');
+            if (lawyerForm) lawyerForm.addEventListener('submit', (e) => this.submitLawyerInquiry(e));
+            var successClose = document.getElementById('lawyerSuccessCloseBtn');
+            if (successClose) successClose.addEventListener('click', () => this.closeLawyerModal());
+            var moreOverlay = document.getElementById('moreSheetOverlay');
+            if (moreOverlay) moreOverlay.addEventListener('click', function() { this.classList.remove('active'); var sheet = document.getElementById('moreSheet'); if (sheet) sheet.classList.remove('active'); });
 
             // Hover effects for menu toggle
             this.menuToggle.onmouseenter = () => {
@@ -594,7 +610,7 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
 
                 // 사용자 취소 또는 타임아웃 (AbortError)
                 if (error.name === 'AbortError') {
-                    console.log('요청이 취소되었습니다.');
+                    // 요청이 취소되었습니다
                     return;
                 }
 

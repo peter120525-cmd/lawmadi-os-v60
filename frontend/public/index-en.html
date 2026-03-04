@@ -11,7 +11,7 @@
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Lawmadi OS - Legal Decision Support System" />
     <meta property="og:description" content="60 expert leaders collaborate to turn your legal issues into concrete action plans." />
-    <meta property="og:url" content="https://lawmadi-db.web.app" />
+    <meta property="og:url" content="https://lawmadi-db.web.app/en" />
     <meta property="og:image" content="https://lawmadi-db.web.app/og-image.png" />
     <meta property="og:locale" content="en_US" />
     <!-- SEO: Twitter Card -->
@@ -19,7 +19,7 @@
     <meta name="twitter:title" content="Lawmadi OS - Legal Decision Support System" />
     <meta name="twitter:description" content="60 expert leaders collaborate to turn your legal issues into concrete action plans." />
     <!-- SEO: Canonical -->
-    <link rel="canonical" href="https://lawmadi-db.web.app" />
+    <link rel="canonical" href="https://lawmadi-db.web.app/en" />
     <!-- PWA (항목 #10) -->
     <meta name="theme-color" content="#2563eb" />
     <link rel="manifest" href="/manifest.json" />
@@ -2103,8 +2103,8 @@
             }
 
             .dark-toggle {
-                min-width: 32px !important;
-                min-height: 32px !important;
+                min-width: 44px !important;
+                min-height: 44px !important;
                 padding: 4px !important;
                 flex-shrink: 0;
             }
@@ -2233,11 +2233,11 @@
             }
 
             #userInput {
-                font-size: 0.9rem;
+                font-size: 16px;
             }
 
             .send-action {
-                width: 40px;
+                width: 44px;
                 height: 40px;
                 border-radius: 11px;
             }
@@ -4749,7 +4749,7 @@
 <div id="favoritesPanel" class="favorites-panel" role="dialog" aria-label="Saved Answers" aria-modal="true">
     <div class="favorites-header">
         <h3>&#11088; Saved Answers</h3>
-        <button onclick="UI.toggleFavorites()" style="background:none; border:none; cursor:pointer; color:var(--text-muted); padding:4px;" aria-label="Close favorites panel">
+        <button id="favoritesCloseBtn" style="background:none; border:none; cursor:pointer; color:var(--text-muted); padding:4px;" aria-label="Close favorites panel">
             <span class="material-symbols-outlined" aria-hidden="true">close</span>
         </button>
     </div>
@@ -5024,7 +5024,7 @@
                             <li>Consultation history management</li>
                             <li>Professional attorney connection</li>
                         </ul>
-                        <button class="plan-cta premium-cta" onclick="alert('Premium service is coming soon!')">Start Premium</button>
+                        <button class="plan-cta premium-cta" id="premiumCta">Start Premium</button>
                     </div>
                 </div>
             </div>
@@ -5033,7 +5033,7 @@
             <div class="lawyer-section">
                 <h3>Lawmadi OS provides initial analysis, professional attorneys finalize</h3>
                 <p>Based on Lawmadi OS analysis results, professional attorneys provide final consultation</p>
-                <button class="lawyer-cta-landing" onclick="alert('Attorney connection service is coming soon!')">
+                <button class="lawyer-cta-landing" id="lawyerCtaLanding">
                     <span class="material-symbols-outlined" style="font-size: 1.1rem; vertical-align: middle;">gavel</span>
                     Request Attorney Consultation
                 </button>
@@ -5099,13 +5099,13 @@
 <!-- Lawyer Consultation Modal -->
 <div class="lawyer-modal-overlay" id="lawyerModalOverlay">
     <div class="lawyer-modal">
-        <button class="modal-close" onclick="UI.closeLawyerModal()" aria-label="Close">
+        <button class="modal-close" id="modalCloseBtn" aria-label="Close">
             <span class="material-symbols-outlined">close</span>
         </button>
         <div id="lawyerFormView">
             <h3>Request Attorney Consultation</h3>
             <p class="modal-desc">A professional attorney will contact you based on Lawmadi OS analysis results</p>
-            <form id="lawyerForm" onsubmit="return UI.submitLawyerInquiry(event)">
+            <form id="lawyerForm">
                 <div class="form-group">
                     <label for="lawyerName">Name *</label>
                     <input type="text" id="lawyerName" required maxlength="50" placeholder="John Doe">
@@ -5127,7 +5127,7 @@
                 <div class="success-icon">&#9989;</div>
                 <p>Your attorney consultation request has been received</p>
                 <p style="font-size: 0.78rem; color: var(--text-muted, #64748b); margin-top: 8px;">We will contact you shortly</p>
-                <button class="modal-submit" style="margin-top: 16px;" onclick="UI.closeLawyerModal()">OK</button>
+                <button class="modal-submit" style="margin-top: 16px;" id="lawyerSuccessCloseBtn">OK</button>
             </div>
         </div>
     </div>
@@ -5136,7 +5136,7 @@
 
 <!-- Mobile Bottom Tab Bar -->
 <!-- More Bottom Sheet -->
-<div id="moreSheetOverlay" class="more-sheet-overlay" onclick="this.classList.remove('active');document.getElementById('moreSheet').classList.remove('active');"></div>
+<div id="moreSheetOverlay" class="more-sheet-overlay"></div>
 <div id="moreSheet" class="more-sheet" role="dialog" aria-label="More menu">
     <div class="more-sheet-handle"></div>
     <a href="about-en.html" class="more-sheet-item">

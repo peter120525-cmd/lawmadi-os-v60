@@ -1,5 +1,5 @@
 // XSS sanitizer helper — all API responses pass through this
-function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(html, {ADD_ATTR: ['target','data-tooltip'], ALLOW_DATA_ATTR: true}) : html; }
+function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(html, {ADD_ATTR: ['target','data-tooltip'], ALLOW_DATA_ATTR: true}) : html.replace(/<[^>]*>/g, ''); }
 
 // In-app browser detection & viewport fix
 (function() {
@@ -165,6 +165,8 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
         darkMode: false,
         MAX_RETRY: 2,
         currentAbortController: null,  // AbortController (항목 #12)
+        currentLeader: null,  // {name, specialty} — current assigned leader
+        isFirstQuestion: true,  // first question flag
 
         init() {
             this.menuToggle.onclick = (e) => {
@@ -246,6 +248,15 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                 if (saved) this.conversationHistory = JSON.parse(saved);
             } catch(e) {}
 
+            // 현재 리더 상태 복원
+            try {
+                const savedLeader = localStorage.getItem('lawmadi-current-leader');
+                if (savedLeader) {
+                    this.currentLeader = JSON.parse(savedLeader);
+                    this.isFirstQuestion = false;
+                }
+            } catch(e) {}
+
             // 즐겨찾기 초기화
             const favToggle = document.getElementById('favToggle');
             if (favToggle) favToggle.onclick = () => this.toggleFavorites();
@@ -264,6 +275,22 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
 
             // 전송 버튼 초기 상태
             this.updateSendBtnState();
+
+            // CSP 호환 이벤트 리스너 (inline handler 대체)
+            var favCloseBtn = document.getElementById('favoritesCloseBtn');
+            if (favCloseBtn) favCloseBtn.addEventListener('click', () => this.toggleFavorites());
+            var premiumCta = document.getElementById('premiumCta');
+            if (premiumCta) premiumCta.addEventListener('click', () => alert('Premium service is coming soon!'));
+            var lawyerCta = document.getElementById('lawyerCtaLanding');
+            if (lawyerCta) lawyerCta.addEventListener('click', () => alert('Attorney connection service is coming soon!'));
+            var modalClose = document.getElementById('modalCloseBtn');
+            if (modalClose) modalClose.addEventListener('click', () => this.closeLawyerModal());
+            var lawyerForm = document.getElementById('lawyerForm');
+            if (lawyerForm) lawyerForm.addEventListener('submit', (e) => this.submitLawyerInquiry(e));
+            var successClose = document.getElementById('lawyerSuccessCloseBtn');
+            if (successClose) successClose.addEventListener('click', () => this.closeLawyerModal());
+            var moreOverlay = document.getElementById('moreSheetOverlay');
+            if (moreOverlay) moreOverlay.addEventListener('click', function() { this.classList.remove('active'); var sheet = document.getElementById('moreSheet'); if (sheet) sheet.classList.remove('active'); });
 
             // Hover effects for menu toggle
             this.menuToggle.onmouseenter = () => {
@@ -562,7 +589,7 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
 
                 // 사용자 취소 또는 타임아웃 (AbortError)
                 if (error.name === 'AbortError') {
-                    console.log('Request was cancelled.');
+                    // Request was cancelled
                     return;
                 }
 
@@ -621,7 +648,9 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                 body: JSON.stringify({
                     query: query,
                     history: this.conversationHistory.slice(-10),
-                    lang: 'en'
+                    lang: 'en',
+                    current_leader: this.currentLeader,
+                    is_first_question: this.isFirstQuestion
                 }),
                 signal: this.currentAbortController.signal
             });
@@ -639,6 +668,13 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
             const data = await response.json();
 
             this.hideTypingIndicator();
+
+            // 현재 리더 상태 업데이트
+            if (data.current_leader) {
+                this.currentLeader = data.current_leader;
+                this.isFirstQuestion = false;
+                try { localStorage.setItem('lawmadi-current-leader', JSON.stringify(data.current_leader)); } catch(e) {}
+            }
 
             this.conversationHistory.push(
                 { role: 'user', content: query },
@@ -663,7 +699,9 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                 body: JSON.stringify({
                     query: query,
                     history: this.conversationHistory.slice(-10),
-                    lang: 'en'
+                    lang: 'en',
+                    current_leader: this.currentLeader,
+                    is_first_question: this.isFirstQuestion
                 }),
                 signal: this.currentAbortController.signal
             });
@@ -768,6 +806,11 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                             leaderName = payload.leader || '';
                             leaderSpecialty = payload.leader_specialty || payload.specialty || '';
                             fullTextFromServer = payload.response || payload.full_text || accumulatedText;
+                            if (payload.current_leader) {
+                                this.currentLeader = payload.current_leader;
+                                this.isFirstQuestion = false;
+                                try { localStorage.setItem('lawmadi-current-leader', JSON.stringify(payload.current_leader)); } catch(e) {}
+                            }
 
                         } else if (eventType === 'error') {
                             this.hideTypingIndicator();
@@ -880,7 +923,7 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                 const lastStep = steps[steps.length - 1];
                 lastStep.classList.remove('done');
                 lastStep.classList.add('active');
-                lastStep.innerHTML = statusText;
+                lastStep.textContent = statusText;
             }
         },
 
@@ -1610,7 +1653,10 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
             this.convArea.innerHTML = '';
             this.lastQuery = null;
             this.lastRawResponse = null;
+            this.currentLeader = null;
+            this.isFirstQuestion = true;
             try { localStorage.removeItem('lawmadi-chat-history'); } catch(e) {}
+            try { localStorage.removeItem('lawmadi-current-leader'); } catch(e) {}
             // 랜딩 화면으로 복귀
             this.convArea.classList.add('hidden');
             this.landingContent.classList.remove('hidden');
