@@ -80,8 +80,9 @@ async def record_visitor(request: Request):
     Returns whether visitor is new.
     """
     try:
-        # Use injected _get_client_ip_fn
-        visitor_id = _get_client_ip_fn(request) if _get_client_ip_fn else "unknown"
+        # Use injected _get_client_ip_fn — IP → SHA-256 해시 (PII 보호)
+        _raw_ip = _get_client_ip_fn(request) if _get_client_ip_fn else "unknown"
+        visitor_id = hashlib.sha256(_raw_ip.encode()).hexdigest() if _raw_ip != "unknown" else "unknown"
 
         if not visitor_id or visitor_id == "unknown":
             return JSONResponse(

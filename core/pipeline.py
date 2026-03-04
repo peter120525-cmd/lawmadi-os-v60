@@ -1109,10 +1109,10 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
         try:
             all_fetch_results = await asyncio.wait_for(
                 asyncio.gather(*law_tasks, *prec_tasks, return_exceptions=True),
-                timeout=25.0,
+                timeout=15.0,
             )
         except asyncio.TimeoutError:
-            logger.warning(f"[Stage 4] DRF fetch 타임아웃 (25초) — 법률 {len(law_tasks)}건, 판례 {len(prec_tasks)}건")
+            logger.warning(f"[Stage 4] DRF fetch 타임아웃 (15초) — 법률 {len(law_tasks)}건, 판례 {len(prec_tasks)}건")
             result.all_passed = False
             result.drf_failed = True
             return result
@@ -1867,13 +1867,13 @@ async def _run_legal_pipeline(
                 final_text = final_text.rstrip() + basis_section
                 logger.info(f"[Stage 3.9] '## 법률 근거' 자동 부착 ({len(selected)}개 조문)")
 
-    # -- Stage 4: DRF 실시간 전수 검증 (30초 타임아웃) --
+    # -- Stage 4: DRF 실시간 전수 검증 (20초 타임아웃) --
     logger.info("[Stage 4/4] DRF 전수 검증")
     drf_verification = None
     _s4_start = asyncio.get_event_loop().time()
     try:
         drf_verification = await asyncio.wait_for(
-            _drf_verify_law_refs(final_text), timeout=30.0,
+            _drf_verify_law_refs(final_text), timeout=20.0,
         )
     except asyncio.TimeoutError:
         _s4_elapsed = asyncio.get_event_loop().time() - _s4_start
@@ -1934,7 +1934,7 @@ async def _run_legal_pipeline(
             )
             if retry_text and len(retry_text.strip()) >= 30:
                 retry_drf = await asyncio.wait_for(
-                    _drf_verify_law_refs(retry_text), timeout=30.0,
+                    _drf_verify_law_refs(retry_text), timeout=20.0,
                 )
                 retry_result = _apply_fail_closed(retry_text, retry_drf)
                 if retry_result != FAIL_CLOSED_RESPONSE:
@@ -2036,13 +2036,13 @@ async def run_pipeline_stage2(
 
 
 async def run_pipeline_stage3(text: str) -> VerificationResult:
-    """스트리밍용: Stage 3만 실행 (30초 타임아웃)"""
+    """스트리밍용: Stage 3만 실행 (20초 타임아웃)"""
     if not text:
         return VerificationResult()
     try:
-        return await asyncio.wait_for(_drf_verify_law_refs(text), timeout=30.0)
+        return await asyncio.wait_for(_drf_verify_law_refs(text), timeout=20.0)
     except asyncio.TimeoutError:
-        logger.warning("[Stream Stage 3] DRF 검증 타임아웃 (30초) → 검증 스킵")
+        logger.warning("[Stream Stage 3] DRF 검증 타임아웃 (20초) → 검증 스킵")
         return VerificationResult(drf_failed=True)
     except Exception as e:
         logger.error(f"[Stream Stage 3] DRF 검증 실패: {e} → 검증 스킵")

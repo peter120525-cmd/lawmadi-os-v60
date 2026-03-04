@@ -1204,31 +1204,22 @@ async def startup():
     # 1️⃣ DB 초기화 (Fail-Soft)
     # --------------------------------------------------
     if not db_disabled:
-        if db_client:
+        db_client_v2 = optional_import("connectors.db_client_v2")
+        if db_client_v2 and hasattr(db_client_v2, "init_all_tables"):
+            try:
+                failed = db_client_v2.init_all_tables()
+                if failed and not soft_mode:
+                    raise RuntimeError(f"DB init failed for: {failed}")
+            except Exception as e:
+                logger.warning(f"🟡 DB init failed: {e}")
+                if not soft_mode:
+                    raise
+        elif db_client:
             try:
                 init_fn = getattr(db_client, "init_tables", None)
                 if init_fn:
                     init_fn()
-                    logger.info("✅ DB init complete")
-
-                # 채팅 기록 테이블 초기화
-                db_client_v2 = optional_import("connectors.db_client_v2")
-                if db_client_v2 and hasattr(db_client_v2, "init_chat_history_table"):
-                    db_client_v2.init_chat_history_table()
-
-                # 방문자 통계 테이블 초기화
-                if db_client_v2 and hasattr(db_client_v2, "init_visitor_stats_table"):
-                    db_client_v2.init_visitor_stats_table()
-
-                # 응답 검증 테이블 초기화
-                if db_client_v2 and hasattr(db_client_v2, "init_verification_table"):
-                    db_client_v2.init_verification_table()
-                    logger.info("✅ [Verification] 검증 시스템 활성화")
-
-                # 프론트엔드 로그 테이블 초기화
-                if db_client_v2 and hasattr(db_client_v2, "init_frontend_logs_table"):
-                    db_client_v2.init_frontend_logs_table()
-
+                    logger.info("✅ DB init complete (legacy)")
             except Exception as e:
                 logger.warning(f"🟡 DB init failed: {e}")
                 if not soft_mode:
@@ -1496,14 +1487,6 @@ async def startup():
     )
     _set_files_deps(RUNTIME, rate_limiter=limiter)
     _set_user_deps(RUNTIME, rate_limiter=limiter, ask_fn=_legal_ask, search_fn=_legal_search)
-
-    # Admin tables init
-    db_v2 = optional_import("connectors.db_client_v2")
-    if db_v2 and hasattr(db_v2, "init_admin_tables"):
-        try:
-            db_v2.init_admin_tables()
-        except Exception as e:
-            logger.warning(f"🟡 Admin tables init failed: {e}")
 
     METRICS["boot_time"] = _now_iso()
     logger.info(f"✅ Lawmadi OS {OS_VERSION} Online")
