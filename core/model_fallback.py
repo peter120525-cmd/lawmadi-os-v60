@@ -19,7 +19,6 @@ logger = logging.getLogger("LawmadiOS.ModelFallback")
 MODEL_CHAIN = [
     os.getenv("GEMINI_MODEL_1", "gemini-2.5-flash"),
     os.getenv("GEMINI_MODEL_2", "gemini-2.5-pro"),
-    os.getenv("GEMINI_MODEL_3", "gemini-2.5-flash-lite"),
 ]
 
 # ─── 상태 관리 ───
