@@ -751,3 +751,167 @@ class DRFConnector:
                     await _aio.sleep(wait)
         logger.warning(f"⚠️ lawService async 3회 실패: {law_name}: {last_err}")
         return None
+
+    # -------------------------------------------------
+    # elaw (영문 법령) 조문 조회
+    # -------------------------------------------------
+    def get_elaw_articles(self, law_name_en: str) -> Optional[Any]:
+        """
+        영문 법령명으로 elaw 검색 → MST 추출 → lawService로 조문 상세 조회
+
+        Args:
+            law_name_en: 영문 법령명 (예: "CIVIL ACT", "CRIMINAL ACT")
+
+        Returns:
+            lawService.do elaw JSON 응답 (Jo 배열 포함) 또는 None
+        """
+        _init_cache()
+
+        cache_key = f"drf:v2:elawsvc:{hashlib.md5(law_name_en.upper().encode('utf-8')).hexdigest()}"
+        try:
+            cached = _cache_get(cache_key)
+            if cached and cached.get("data"):
+                cached_at = cached.get("_cached_at", 0)
+                if not cached_at or (_time.time() - cached_at) <= 21600:
+                    logger.info(f"🎯 [Cache HIT] elawService, query={law_name_en[:30]}")
+                    return cached["data"]
+        except Exception:
+            pass
+
+        # Step 1: lawSearch.do?target=elaw 로 영문 법령 검색 → MST 추출
+        search_result = self.search_by_target(law_name_en, target="elaw")
+        if not search_result:
+            return None
+
+        mst = None
+        try:
+            law_list = search_result.get("LawSearch", {}).get("law", [])
+            if isinstance(law_list, dict):
+                law_list = [law_list]
+            name_upper = law_name_en.upper()
+            # 1순위: 법령명영문 정확 일치 (대소문자 무시)
+            for law in law_list:
+                en_name = (law.get("법령명영문") or "").upper()
+                if en_name == name_upper:
+                    mst = law.get("법령일련번호") or law.get("MST")
+                    break
+            # 2순위: 부분 포함
+            if not mst:
+                for law in law_list:
+                    en_name = (law.get("법령명영문") or "").upper()
+                    if name_upper in en_name or en_name in name_upper:
+                        mst = law.get("법령일련번호") or law.get("MST")
+                        break
+        except Exception as e:
+            logger.warning(f"⚠️ elaw MST 추출 실패: {e}")
+            return None
+
+        if not mst:
+            logger.warning(f"⚠️ [elawService] MST 미발견: {law_name_en}")
+            return None
+
+        logger.info(f"🔍 [elawService] {law_name_en} → MST={mst}")
+
+        # Step 2: lawService.do?target=elaw&MST={mst} 조문 조회 (2회 재시도)
+        last_err = None
+        for attempt in range(2):
+            try:
+                params = {
+                    "OC": self.drf_key,
+                    "target": "elaw",
+                    "MST": mst,
+                    "type": "JSON",
+                }
+                r = self._session.get(_LAW_SERVICE_URL, params=params, timeout=max(self.timeout_sec, 15))
+                if r.status_code != 200:
+                    raise RuntimeError(f"HTTP {r.status_code}")
+                data = r.json()
+                try:
+                    _cache_set(cache_key, {"data": data, "law_name_en": law_name_en, "mst": mst, "_cached_at": _time.time()}, ttl_seconds=21600)
+                except Exception:
+                    pass
+                return data
+            except Exception as e:
+                last_err = e
+                if attempt < 1:
+                    wait = 0.5 + _random.uniform(0, 0.3)
+                    logger.warning(f"⚠️ elawService 재시도 {attempt+1}/2: {law_name_en} MST={mst}: {e}")
+                    _time.sleep(wait)
+        logger.warning(f"⚠️ elawService 2회 실패: {law_name_en}: {last_err}")
+        return None
+
+    async def get_elaw_articles_async(self, law_name_en: str) -> Optional[Any]:
+        """비동기 영문 법령 조문 상세 조회 (elaw target)"""
+        import asyncio as _aio
+        if not _HTTPX_AVAILABLE:
+            return await _aio.to_thread(self.get_elaw_articles, law_name_en)
+
+        await _aio.to_thread(_init_cache)
+
+        cache_key = f"drf:v2:elawsvc:{hashlib.md5(law_name_en.upper().encode('utf-8')).hexdigest()}"
+        try:
+            cached = await _aio.to_thread(_cache_get, cache_key)
+            if cached and cached.get("data"):
+                cached_at = cached.get("_cached_at", 0)
+                if not cached_at or (_time.time() - cached_at) <= 21600:
+                    return cached["data"]
+        except Exception:
+            pass
+
+        # Step 1: elaw 검색으로 MST 조회 (async)
+        search_result = await self.search_by_target_async(law_name_en, target="elaw")
+        if not search_result:
+            return None
+
+        mst = None
+        try:
+            law_list = search_result.get("LawSearch", {}).get("law", [])
+            if isinstance(law_list, dict):
+                law_list = [law_list]
+            name_upper = law_name_en.upper()
+            for law in law_list:
+                en_name = (law.get("법령명영문") or "").upper()
+                if en_name == name_upper:
+                    mst = law.get("법령일련번호") or law.get("MST")
+                    break
+            if not mst:
+                for law in law_list:
+                    en_name = (law.get("법령명영문") or "").upper()
+                    if name_upper in en_name or en_name in name_upper:
+                        mst = law.get("법령일련번호") or law.get("MST")
+                        break
+        except Exception as e:
+            logger.warning(f"⚠️ elaw MST 추출 실패 (async): {e}")
+            return None
+
+        if not mst:
+            return None
+
+        # Step 2: lawService.do elaw 비동기 조회 (2회 재시도)
+        last_err = None
+        client = await self._get_async_client()
+        for attempt in range(2):
+            try:
+                params = {
+                    "OC": self.drf_key,
+                    "target": "elaw",
+                    "MST": mst,
+                    "type": "JSON",
+                }
+                r = await client.get(_LAW_SERVICE_URL, params=params, timeout=max(float(self.timeout_sec), 15.0))
+                if r.status_code != 200:
+                    raise RuntimeError(f"HTTP {r.status_code}")
+                data = r.json()
+                try:
+                    await _aio.to_thread(_cache_set, cache_key, {"data": data, "law_name_en": law_name_en, "mst": mst, "_cached_at": _time.time()}, 21600)
+                except Exception:
+                    pass
+                return data
+            except Exception as e:
+                last_err = e
+                if attempt < 1:
+                    wait = 0.5 + _random.uniform(0, 0.3)
+                    logger.warning(f"⚠️ elawService async 재시도 {attempt+1}/2: {law_name_en} MST={mst}: {e}")
+                    await _aio.sleep(wait)
+        logger.warning(f"⚠️ elawService async 2회 실패: {law_name_en}: {last_err}")
+        return None

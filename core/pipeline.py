@@ -733,6 +733,17 @@ if _ELAW_CACHE:
             _LEADER_LAW_BOOST_EN[_lid] = "\n".join(_en_lines)
     logger.info(f"[elaw] 영문 LAW_BOOST 생성: {len(_LEADER_LAW_BOOST_EN)}개 리더")
 
+# ---------------------------------------------------------------------------
+# 영문→한글 법령명 역매핑 (elaw_cache.json 기반, Stage 4 영문 검증용)
+# ---------------------------------------------------------------------------
+_EN_TO_KR_LAW_MAP: Dict[str, str] = {}  # "CIVIL ACT" → "민법"
+if _ELAW_CACHE:
+    for _kr_name, _v in _ELAW_CACHE.items():
+        _en = _v.get("name_en", "")
+        if _en:
+            _EN_TO_KR_LAW_MAP[_en.upper()] = _kr_name
+    logger.info(f"[elaw] 영문→한글 법명 매핑: {len(_EN_TO_KR_LAW_MAP)}개")
+
 
 def _get_leader_law_boost(leader_id: str, lang: str = "") -> str:
     """리더별 핵심 법률 텍스트 반환 (RAG 컨텍스트 보강용, 영문 지원)"""
@@ -1118,9 +1129,66 @@ def _get_article_text(articles: List[Dict], article_num: int, suffix: str = "") 
     return None
 
 
-async def _drf_verify_law_refs(text: str) -> VerificationResult:
+def _extract_articles_from_elaw(raw_response) -> List[Dict]:
+    """elaw lawService.do 응답에서 영문 조문 목록 추출
+
+    elaw 응답 구조: {"Law": {"JoSection": {"Jo": [{"joNo": "0015", "joCts": "...", "joYn": "Y"}, ...]}}}
+    joNo: 4자리 조문번호 (예: "0015" → 15조)
+    joCts: 조문 영문 내용
+    joYn: "Y"=실제 조문, "N"=삭제 조문
+
+    Returns:
+        [{"article_num": 15, "content": "..."}, ...] (joYn=="Y"인 것만)
+    """
+    if not raw_response:
+        return []
+
+    articles = []
+    try:
+        if isinstance(raw_response, dict):
+            law_root = raw_response.get("Law", raw_response)
+            if isinstance(law_root, dict):
+                jo_section = law_root.get("JoSection", {})
+                if isinstance(jo_section, dict):
+                    jo_list = jo_section.get("Jo", [])
+                    if isinstance(jo_list, dict):
+                        jo_list = [jo_list]
+                    if isinstance(jo_list, list):
+                        for jo in jo_list:
+                            if not isinstance(jo, dict):
+                                continue
+                            if jo.get("joYn", "Y") != "Y":
+                                continue
+                            jo_no = jo.get("joNo", "")
+                            try:
+                                art_num = int(jo_no.lstrip("0") or "0")
+                            except (ValueError, TypeError):
+                                continue
+                            if art_num <= 0:
+                                continue
+                            content = jo.get("joCts", "") or ""
+                            articles.append({
+                                "article_num": art_num,
+                                "content": content,
+                            })
+    except Exception as e:
+        logger.debug(f"[elaw Parse] 조문 추출 실패: {e}")
+
+    return articles
+
+
+# 영문 법률 참조 regex (모듈 레벨 컴파일)
+_EN_LAW_REF_RE = re.compile(
+    r'([\w][\w\s]*(?:ACT|CODE|DECREE|LAW|RULE|REGULATION))\s*'
+    r'(?:Article|Art\.?)\s*(\d+)',
+    re.IGNORECASE,
+)
+
+
+async def _drf_verify_law_refs(text: str, lang: str = "") -> VerificationResult:
     """Stage 4: 응답에서 인용된 모든 법률+판례 참조를 DRF API로 전수 검증.
     법률 fetch와 판례 fetch를 동시 실행하여 0.5~1.5초 절약.
+    lang="en" 시 영문 법률 참조도 추출하여 검증.
     """
     result = VerificationResult()
 
@@ -1150,15 +1218,20 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
     else:
         prec_refs_simple = [p[3] for p in prec_refs]
 
-    if not refs and not prec_refs_simple:
+    # ── 1-b) 영문 법률 참조 추출 (lang="en" 시) ──
+    en_refs = []
+    if lang == "en":
+        en_refs = _EN_LAW_REF_RE.findall(text)
+
+    if not refs and not prec_refs_simple and not en_refs:
         result.all_passed = True
         return result
 
     svc = _RUNTIME.get("search_service")
-    if not svc and not refs:
+    if not svc and not refs and not en_refs:
         # 법률 없고 서비스도 없으면 판례만 검증 가능 여부 확인
         pass
-    elif not svc:
+    elif not svc and not en_refs:
         logger.warning("[Stage 4] SearchService 없음 -> 검증 스킵")
         result.all_passed = True
         return result
@@ -1183,6 +1256,26 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
         seen.add(key)
         ref_items.append((law_name, article_num, suffix, key))
         unique_laws.add(law_name)
+
+    # ── 2-b) 영문 법률 고유 목록 추출 ──
+    en_ref_items = []         # (en_name, article_num, key, kr_name_or_None)
+    en_kr_laws = set()        # 한글 변환 성공 → 기존 한글 DRF 플로우 사용
+    en_elaw_laws = set()      # 변환 실패 → elaw API 직접 검증
+    for en_name_raw, art_num_str in en_refs:
+        en_name = en_name_raw.strip()
+        article_num = int(art_num_str)
+        key = f"{en_name} Article {article_num}"
+        if key in seen:
+            continue
+        seen.add(key)
+        # _EN_TO_KR_LAW_MAP으로 한글 법명 변환 시도
+        kr_name = _EN_TO_KR_LAW_MAP.get(en_name.upper())
+        en_ref_items.append((en_name, article_num, key, kr_name))
+        if kr_name:
+            en_kr_laws.add(kr_name)
+            unique_laws.add(kr_name)  # 한글 DRF fetch 대상에 추가
+        else:
+            en_elaw_laws.add(en_name)
 
     prec_seen = set()
     unique_cases = []
@@ -1217,19 +1310,31 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
         except Exception as e:
             return cn, None, e
 
-    # 법률 + 판례 fetch를 하나의 gather로 동시 실행
+    # 영문 elaw 법령 fetch (한글 변환 실패한 것만)
+    async def _fetch_elaw(en_name: str):
+        try:
+            if drf_inst and hasattr(drf_inst, "get_elaw_articles"):
+                raw = await asyncio.to_thread(drf_inst.get_elaw_articles, en_name)
+                return en_name, raw
+            return en_name, None
+        except Exception as e:
+            logger.warning(f"[Stage 4] {en_name} elaw 조회 실패: {e}")
+            return en_name, _FETCH_ERROR
+
+    # 법률 + 판례 + elaw fetch를 하나의 gather로 동시 실행
     law_tasks = [_fetch_law(ln) for ln in unique_laws] if unique_laws and svc else []
     prec_tasks = [_fetch_prec(cn) for cn in unique_cases] if unique_cases and drf_inst else []
+    elaw_tasks = [_fetch_elaw(en) for en in en_elaw_laws] if en_elaw_laws and drf_inst else []
 
     all_fetch_results = []
-    if law_tasks or prec_tasks:
+    if law_tasks or prec_tasks or elaw_tasks:
         try:
             all_fetch_results = await asyncio.wait_for(
-                asyncio.gather(*law_tasks, *prec_tasks, return_exceptions=True),
+                asyncio.gather(*law_tasks, *prec_tasks, *elaw_tasks, return_exceptions=True),
                 timeout=15.0,
             )
         except asyncio.TimeoutError:
-            logger.warning(f"[Stage 4] DRF fetch 타임아웃 (15초) — 법률 {len(law_tasks)}건, 판례 {len(prec_tasks)}건")
+            logger.warning(f"[Stage 4] DRF fetch 타임아웃 (15초) — 법률 {len(law_tasks)}건, 판례 {len(prec_tasks)}건, elaw {len(elaw_tasks)}건")
             result.all_passed = False
             result.drf_failed = True
             return result
@@ -1237,6 +1342,9 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
     # 결과 분리 (return_exceptions=True: exception은 결과로 반환됨)
     law_articles_cache: Dict[str, Any] = {}
     law_result_count = len(law_tasks)
+    prec_result_count = len(prec_tasks)
+    elaw_result_count = len(elaw_tasks)
+
     for i, res in enumerate(all_fetch_results[:law_result_count]):
         if isinstance(res, BaseException):
             logger.warning(f"[Stage 4] 법률 fetch 예외: {res}")
@@ -1248,7 +1356,9 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
             logger.warning(f"[Stage 4] 법률 결과 파싱 오류: {e}")
 
     prec_results_raw = []
-    for res in all_fetch_results[law_result_count:]:
+    prec_start = law_result_count
+    prec_end = prec_start + prec_result_count
+    for res in all_fetch_results[prec_start:prec_end]:
         if isinstance(res, BaseException):
             logger.warning(f"[Stage 4] 판례 fetch 예외: {res}")
             continue
@@ -1256,6 +1366,19 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
     if unique_cases and not drf_inst:
         logger.debug("[Stage 4] 판례 DRF 미사용 (drf 인스턴스 없음)")
         prec_results_raw = [(cn, None, None) for cn in unique_cases]
+
+    # elaw 결과 분리
+    elaw_articles_cache: Dict[str, Any] = {}
+    elaw_start = prec_end
+    for res in all_fetch_results[elaw_start:]:
+        if isinstance(res, BaseException):
+            logger.warning(f"[Stage 4] elaw fetch 예외: {res}")
+            continue
+        try:
+            en_name, raw = res
+            elaw_articles_cache[en_name] = raw
+        except (ValueError, TypeError) as e:
+            logger.warning(f"[Stage 4] elaw 결과 파싱 오류: {e}")
 
     # ── 4) 법률 조문별 검증 ──
     for law_name, article_num, suffix, key in ref_items:
@@ -1309,6 +1432,77 @@ async def _drf_verify_law_refs(text: str) -> VerificationResult:
                 "article_exists": False,
                 "article_text": None,
                 "verified": False,
+                "reason": f"검증 오류: {type(e).__name__}",
+            })
+
+    # ── 4-b) 영문 법률 조문별 검증 ──
+    for en_name, article_num, key, kr_name in en_ref_items:
+        try:
+            law_exists = False
+            article_exists = False
+            article_text = None
+
+            if kr_name:
+                # 한글 변환 성공 → 기존 한글 DRF 데이터로 검증
+                raw = law_articles_cache.get(kr_name)
+                if raw == _FETCH_ERROR:
+                    logger.warning(f"[Stage 4] ⚠️ {key}: DRF 조회 실패 → 검증 스킵")
+                    continue
+                law_exists = bool(raw)
+                if raw:
+                    articles = _extract_articles_from_drf(raw)
+                    if articles:
+                        article_exists = any(
+                            _match_article_num(a, article_num, "") for a in articles
+                        )
+                        article_text = _get_article_text(articles, article_num, "")
+            else:
+                # 한글 변환 실패 → elaw API 응답으로 직접 검증
+                raw = elaw_articles_cache.get(en_name)
+                if raw == _FETCH_ERROR:
+                    logger.warning(f"[Stage 4] ⚠️ {key}: elaw 조회 실패 → 검증 스킵")
+                    continue
+                law_exists = bool(raw)
+                if raw:
+                    elaw_arts = _extract_articles_from_elaw(raw)
+                    if elaw_arts:
+                        for ea in elaw_arts:
+                            if ea.get("article_num") == article_num:
+                                article_exists = True
+                                article_text = f"Article {article_num}: {ea.get('content', '')[:200]}"
+                                break
+
+            ref_entry = {
+                "ref": key,
+                "law_name": en_name,
+                "article_num": article_num,
+                "law_exists": law_exists,
+                "article_exists": article_exists,
+                "article_text": article_text,
+                "verified": law_exists and article_exists,
+                "type": "en_law",
+            }
+
+            if ref_entry["verified"]:
+                result.verified_refs.append(ref_entry)
+                logger.info(f"[Stage 4] ✅ {key}: 영문 검증 통과 (via {'KR DRF' if kr_name else 'elaw'})")
+            else:
+                reason = "법령 미존재" if not law_exists else f"Article {article_num} 미존재"
+                ref_entry["reason"] = reason
+                result.unverified_refs.append(ref_entry)
+                logger.warning(f"[Stage 4] ❌ {key}: {reason}")
+
+        except Exception as e:
+            logger.warning(f"[Stage 4] {key} 영문 검증 실패: {e}")
+            result.unverified_refs.append({
+                "ref": key,
+                "law_name": en_name,
+                "article_num": article_num,
+                "law_exists": False,
+                "article_exists": False,
+                "article_text": None,
+                "verified": False,
+                "type": "en_law",
                 "reason": f"검증 오류: {type(e).__name__}",
             })
 
@@ -2008,7 +2202,7 @@ async def _run_legal_pipeline(
     _s4_start = asyncio.get_event_loop().time()
     try:
         drf_verification = await asyncio.wait_for(
-            _drf_verify_law_refs(final_text), timeout=20.0,
+            _drf_verify_law_refs(final_text, lang=lang), timeout=20.0,
         )
     except asyncio.TimeoutError:
         _s4_elapsed = asyncio.get_event_loop().time() - _s4_start
@@ -2069,7 +2263,7 @@ async def _run_legal_pipeline(
             )
             if retry_text and len(retry_text.strip()) >= 30:
                 retry_drf = await asyncio.wait_for(
-                    _drf_verify_law_refs(retry_text), timeout=20.0,
+                    _drf_verify_law_refs(retry_text, lang=lang), timeout=20.0,
                 )
                 retry_result = _apply_fail_closed(retry_text, retry_drf)
                 if retry_result != FAIL_CLOSED_RESPONSE:
@@ -2170,12 +2364,12 @@ async def run_pipeline_stage2(
         return ""
 
 
-async def run_pipeline_stage3(text: str) -> VerificationResult:
+async def run_pipeline_stage3(text: str, lang: str = "") -> VerificationResult:
     """스트리밍용: Stage 3만 실행 (20초 타임아웃)"""
     if not text:
         return VerificationResult()
     try:
-        return await asyncio.wait_for(_drf_verify_law_refs(text), timeout=20.0)
+        return await asyncio.wait_for(_drf_verify_law_refs(text, lang=lang), timeout=20.0)
     except asyncio.TimeoutError:
         logger.warning("[Stream Stage 3] DRF 검증 타임아웃 (20초) → 검증 스킵")
         return VerificationResult(drf_failed=True)
