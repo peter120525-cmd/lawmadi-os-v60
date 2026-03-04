@@ -241,20 +241,22 @@ async def generate_deliberation(
         if _en:
             t1_prompt = (
                 f"[This is an external client's question — NOT your case or any leader's case.]\nClient question: {query[:300]}\n"
-                f"Leaders present: {_leaders_str}\n\n"
+                f"Designated leader: {selected_name} ({selected_specialty})\n\n"
                 f"You are CSO Seoyeon. Summarize the core of this question, "
-                f"explain why an expert in this field is needed, "
+                f"explain why an expert in {selected_specialty} is needed, "
                 f"then ask {selected_name} for their input. "
+                f"IMPORTANT: You MUST address {selected_name} by name — do NOT mention or refer to any other leader. "
                 f"Write 2-3 complete sentences. Professional, warm, and natural tone. "
                 f"Respond entirely in English. Use 'leader' or 'expert', never 'lawyer'."
             )
         else:
             t1_prompt = (
                 f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
-                f"참석 리더: {_leaders_str}\n\n"
+                f"지정 리더: {selected_name} ({selected_specialty})\n\n"
                 f"당신은 CSO 서연입니다. 이 질문의 핵심을 요약하고, "
-                f"왜 이 분야의 전문가가 필요한지 설명한 뒤, "
+                f"왜 {selected_specialty} 분야의 전문가가 필요한지 설명한 뒤, "
                 f"{selected_name}님에게 의견을 요청하세요. "
+                f"중요: 반드시 {selected_name}님만 언급하세요. 다른 리더 이름을 절대 언급하지 마세요. "
                 f"반드시 100자 이상 150자 이내로 작성하세요. "
                 f"존댓말, 따뜻하고 전문적인 톤으로 자연스럽게 말하세요. "
                 f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
@@ -294,7 +296,8 @@ async def generate_deliberation(
             t3_prompt = (
                 f"{selected_name} has offered to help from the {selected_specialty} perspective.\n\n"
                 f"You are CSO Seoyeon. Acknowledge {selected_name}'s expertise "
-                f"and officially designate them as the assigned leader for this question. "
+                f"and officially designate {selected_name} as the assigned leader for this question. "
+                f"IMPORTANT: You MUST designate {selected_name} only — do NOT mention any other leader name. "
                 f"Add a reassuring note to the user. "
                 f"Write 2-3 complete sentences. Warm, trustworthy, and professional tone. "
                 f"Respond entirely in English. Use 'leader' or 'expert', never 'lawyer'."
@@ -316,6 +319,7 @@ async def generate_deliberation(
                 f"{selected_name}님이 {selected_specialty} 분야에서 돕겠다고 했습니다.\n\n"
                 f"당신은 CSO 서연입니다. {selected_name}님의 전문성을 인정하며 "
                 f"이 질문의 담당 리더로 공식 지명하세요. "
+                f"중요: 반드시 {selected_name}님만 지명하세요. 다른 리더 이름을 절대 언급하지 마세요. "
                 f"사용자에게 안심하라는 말도 덧붙이세요. "
                 f"반드시 100자 이상 150자 이내로 작성하세요. "
                 f"존댓말, 따뜻하고 신뢰감 있는 톤으로 자연스럽게 말하세요. "
@@ -546,20 +550,22 @@ async def generate_deliberation_stream(
     if _en:
         t1_prompt = (
             f"[This is an external client's question — NOT your case or any leader's case.]\nClient question: {query[:300]}\n"
-            f"Leaders present: {_leaders_str}\n\n"
+            f"Designated leader: {selected_name} ({selected_specialty})\n\n"
             f"You are CSO Seoyeon. Summarize the core of this question, "
-            f"explain why an expert in this field is needed, "
+            f"explain why an expert in {selected_specialty} is needed, "
             f"then ask {selected_name} for their input. "
+            f"IMPORTANT: You MUST address {selected_name} by name — do NOT mention or refer to any other leader. "
             f"Write 2-3 complete sentences. Professional, warm, and natural tone. "
             f"Respond entirely in English. Use 'leader' or 'expert', never 'lawyer'."
         )
     else:
         t1_prompt = (
             f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
-            f"참석 리더: {_leaders_str}\n\n"
+            f"지정 리더: {selected_name} ({selected_specialty})\n\n"
             f"당신은 CSO 서연입니다. 이 질문의 핵심을 요약하고, "
-            f"왜 이 분야의 전문가가 필요한지 설명한 뒤, "
+            f"왜 {selected_specialty} 분야의 전문가가 필요한지 설명한 뒤, "
             f"{selected_name}님에게 의견을 요청하세요. "
+            f"중요: 반드시 {selected_name}님만 언급하세요. 다른 리더 이름을 절대 언급하지 마세요. "
             f"반드시 100자 이상 150자 이내로 작성하세요. "
             f"존댓말, 따뜻하고 전문적인 톤으로 자연스럽게 말하세요. "
             f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
@@ -641,7 +647,8 @@ async def generate_deliberation_stream(
         t3_prompt = (
             f"{selected_name} has offered to help from the {selected_specialty} perspective.\n\n"
             f"You are CSO Seoyeon. Acknowledge {selected_name}'s expertise "
-            f"and officially designate them as the assigned leader for this question. "
+            f"and officially designate {selected_name} as the assigned leader for this question. "
+            f"IMPORTANT: You MUST designate {selected_name} only — do NOT mention any other leader name. "
             f"Add a reassuring note to the user. "
             f"Write 2-3 complete sentences. Warm, trustworthy, and professional tone. "
             f"Respond entirely in English. Use 'leader' or 'expert', never 'lawyer'."
@@ -651,6 +658,7 @@ async def generate_deliberation_stream(
             f"{selected_name}님이 {selected_specialty} 분야에서 돕겠다고 했습니다.\n\n"
             f"당신은 CSO 서연입니다. {selected_name}님의 전문성을 인정하며 "
             f"이 질문의 담당 리더로 공식 지명하세요. "
+            f"중요: 반드시 {selected_name}님만 지명하세요. 다른 리더 이름을 절대 언급하지 마세요. "
             f"사용자에게 안심하라는 말도 덧붙이세요. "
             f"반드시 100자 이상 150자 이내로 작성하세요. "
             f"존댓말, 따뜻하고 신뢰감 있는 톤으로 자연스럽게 말하세요. "
