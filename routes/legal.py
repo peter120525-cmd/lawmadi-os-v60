@@ -577,7 +577,7 @@ async def ask(request: Request):
             leader_name = clevel.executives.get(exec_id, {}).get("name", exec_id)
             leader_specialty = clevel.executives.get(exec_id, {}).get("role", exec_id)
             # C-Level DRF 검증 추가
-            drf_result = await run_pipeline_stage3(final_text)
+            drf_result = await run_pipeline_stage3(final_text, lang=lang)
             final_text = _apply_fail_closed(final_text, drf_result)
 
         # -------------------------------------------------
@@ -1155,7 +1155,7 @@ async def ask_stream(request: Request):
 
                 # DRF 검증 + FAIL_CLOSED 적용
                 yield _sse("status", {"step": "verifying", "leader": leader_name})
-                drf_verification = await run_pipeline_stage3(accumulated)
+                drf_verification = await run_pipeline_stage3(accumulated, lang=lang)
                 accumulated = _apply_fail_closed(accumulated, drf_verification)
 
                 _is_fc = (FAIL_CLOSED_RESPONSE in accumulated) or (accumulated.strip() == FAIL_CLOSED_RESPONSE.strip())
