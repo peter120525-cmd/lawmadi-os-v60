@@ -1,12 +1,12 @@
 """
-Gemini 모델 자동 전환 체인: Pro → Flash → Flash-lite.
+Gemini 모델 자동 전환 체인 + 429 재시도.
 
-429/ResourceExhausted 에러 감지 시 자동으로 다음 모델로 전환.
-일정 시간(1시간) 경과 후 상위 모델로 복귀 시도.
+429/ResourceExhausted 에러 감지 시 지수 백오프로 재시도.
 
 사용법:
     from core.model_fallback import get_model, on_quota_error, generate_with_fallback
 """
+import asyncio
 import os
 import time
 import logging
@@ -15,10 +15,9 @@ from typing import Any, Optional
 
 logger = logging.getLogger("LawmadiOS.ModelFallback")
 
-# ─── 모델 체인 (우선순위 순) ───
+# ─── 모델 체인 (리전에서 사용 가능한 모델만) ───
 MODEL_CHAIN = [
     os.getenv("GEMINI_MODEL_1", "gemini-2.5-flash"),
-    os.getenv("GEMINI_MODEL_2", "gemini-2.5-pro"),
 ]
 
 # ─── 상태 관리 ───
@@ -26,6 +25,8 @@ _lock = threading.Lock()
 _current_index = 0
 _downgrade_time: float = 0
 _UPGRADE_INTERVAL = int(os.getenv("MODEL_UPGRADE_INTERVAL", "3600"))  # 기본 1시간
+_MAX_RETRIES = int(os.getenv("GEMINI_MAX_RETRIES", "3"))
+_RETRY_BASE_SEC = float(os.getenv("GEMINI_RETRY_BASE_SEC", "2.0"))
 
 
 def get_model() -> str:
@@ -93,14 +94,14 @@ def get_status() -> dict:
 
 def generate_with_fallback(genai_client: Any, contents: Any,
                            config: Any = None, **kwargs) -> Any:
-    """generate_content + 자동 모델 전환 래퍼.
+    """generate_content + 429 지수 백오프 재시도 래퍼.
 
-    429 에러 발생 시 다음 모델로 전환하여 재시도.
-    최대 len(MODEL_CHAIN)회 시도.
+    429 에러 발생 시 지수 백오프(2, 4, 8초)로 재시도.
+    최대 _MAX_RETRIES회 재시도.
     """
+    model = get_model()
     last_error: Optional[Exception] = None
-    for attempt in range(len(MODEL_CHAIN)):
-        model = get_model()
+    for attempt in range(_MAX_RETRIES + 1):
         try:
             resp = genai_client.models.generate_content(
                 model=model,
@@ -111,12 +112,45 @@ def generate_with_fallback(genai_client: Any, contents: Any,
             return resp
         except Exception as e:
             last_error = e
-            if is_retryable_model_error(e) and attempt < len(MODEL_CHAIN) - 1:
-                on_quota_error()
+            if is_quota_error(e) and attempt < _MAX_RETRIES:
+                wait = _RETRY_BASE_SEC * (2 ** attempt)
                 logger.warning(
-                    f"[ModelFallback] Retry #{attempt+2} with {get_model()} "
-                    f"(이전 모델 {model} 할당량 초과)"
+                    f"[ModelFallback] 429 재시도 #{attempt+1}/{_MAX_RETRIES} "
+                    f"({wait:.1f}초 대기, model={model})"
                 )
+                time.sleep(wait)
                 continue
+            if is_model_unavailable(e):
+                on_quota_error()
             raise
-    raise last_error  # 모든 모델 실패
+    raise last_error
+
+
+async def generate_with_fallback_async(genai_client: Any, contents: Any,
+                                       config: Any = None, **kwargs) -> Any:
+    """비동기 generate_content + 429 지수 백오프 재시도 래퍼."""
+    model = get_model()
+    last_error: Optional[Exception] = None
+    for attempt in range(_MAX_RETRIES + 1):
+        try:
+            resp = genai_client.models.generate_content(
+                model=model,
+                contents=contents,
+                config=config,
+                **kwargs,
+            )
+            return resp
+        except Exception as e:
+            last_error = e
+            if is_quota_error(e) and attempt < _MAX_RETRIES:
+                wait = _RETRY_BASE_SEC * (2 ** attempt)
+                logger.warning(
+                    f"[ModelFallback] 429 async 재시도 #{attempt+1}/{_MAX_RETRIES} "
+                    f"({wait:.1f}초 대기, model={model})"
+                )
+                await asyncio.sleep(wait)
+                continue
+            if is_model_unavailable(e):
+                on_quota_error()
+            raise
+    raise last_error

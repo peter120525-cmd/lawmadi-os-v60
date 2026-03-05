@@ -32,7 +32,7 @@ from core.constants import (
     USE_VERTEX_AI,
     USE_VERTEX_SEARCH,
 )
-from core.model_fallback import get_model, on_quota_error, is_quota_error
+from core.model_fallback import get_model, on_quota_error, is_quota_error, _RETRY_BASE_SEC
 from utils.helpers import _remove_think_blocks, _safe_extract_gemini_text
 from prompts.system_instructions import build_lawmadilm_prompt, build_system_instruction
 
@@ -1972,8 +1972,9 @@ async def _gemini_fallback_compose(
             return text
         except Exception as e:
             if is_quota_error(e) and _attempt < 2:
-                model_name = on_quota_error()
-                logger.warning(f"[Gemini] 할당량 초과 → {model_name} 으로 재시도 (attempt {_attempt+2})")
+                wait = _RETRY_BASE_SEC * (2 ** _attempt)
+                logger.warning(f"[Gemini] 429 재시도 #{_attempt+1}/3 ({wait:.1f}초 대기, model={model_name})")
+                await asyncio.sleep(wait)
                 continue
             raise
 
