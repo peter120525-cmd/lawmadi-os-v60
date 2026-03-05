@@ -138,6 +138,22 @@
       {
         "source": "/terms-en",
         "destination": "/terms-en.html"
+      },
+      {
+        "source": "/pricing",
+        "destination": "/pricing.html"
+      },
+      {
+        "source": "/refund",
+        "destination": "/refund.html"
+      },
+      {
+        "source": "/pricing-en",
+        "destination": "/pricing-en.html"
+      },
+      {
+        "source": "/refund-en",
+        "destination": "/refund-en.html"
       }
     ]
   }
