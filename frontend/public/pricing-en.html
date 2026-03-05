@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Pricing - Lawmadi OS</title>
+    <meta name="description" content="Lawmadi OS credit pricing. Use the legal AI analysis service with credits.">
+    <link rel="canonical" href="https://lawmadi-db.web.app/pricing-en" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Pricing - Lawmadi OS" />
+    <meta property="og:description" content="Lawmadi OS credit pricing. Use the legal AI analysis service with credits." />
+    <meta property="og:url" content="https://lawmadi-db.web.app/pricing-en" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content="https://lawmadi-db.web.app/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#0f172a">
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #2563eb; --gold: #f59e0b; --purple: #8b5cf6;
+            --green: #10b981; --red: #ef4444;
+            --bg-dark: #0f172a; --bg-card: #1e293b;
+            --text-primary: #f1f5f9; --text-secondary: #cbd5e1;
+        }
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            min-height: 100vh; color: var(--text-primary); overflow-x: hidden;
+        }
+        .animated-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; overflow: hidden; pointer-events: none; }
+        .grid-pattern { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px); background-size: 50px 50px; animation: gridMove 20s linear infinite; }
+        @keyframes gridMove { 0% { transform: translate(0,0); } 100% { transform: translate(50px,50px); } }
+        .floating-shape { position: absolute; border-radius: 50%; opacity: 0.04; animation: float 25s infinite ease-in-out; }
+        .shape1 { width: 400px; height: 400px; background: #3b82f6; top: 5%; left: 5%; }
+        .shape2 { width: 300px; height: 300px; background: #f59e0b; top: 50%; right: 5%; animation-delay: 8s; }
+        .shape3 { width: 350px; height: 350px; background: #8b5cf6; bottom: 5%; left: 40%; animation-delay: 16s; }
+        @keyframes float { 0%,100% { transform: translate(0,0) rotate(0deg); } 25% { transform: translate(40px,-40px) rotate(90deg); } 50% { transform: translate(-30px,30px) rotate(180deg); } 75% { transform: translate(30px,40px) rotate(270deg); } }
+
+        .container { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding: 40px 20px 80px; }
+        .back-button { position: absolute; top: 40px; left: 20px; display: flex; align-items: center; gap: 8px; padding: 12px 24px; background: rgba(255,255,255,0.1); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; color: white; text-decoration: none; font-weight: 600; transition: all 0.3s; z-index: 10; }
+        .back-button:hover { background: rgba(255,255,255,0.2); transform: translateX(-5px); }
+        .header { text-align: center; margin-bottom: 60px; animation: fadeInDown 0.8s ease; }
+        .header-badge { display: inline-block; padding: 8px 20px; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); border-radius: 20px; font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(59,130,246,0.3); }
+        .header h1 { font-size: 3rem; font-weight: 900; background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 16px; letter-spacing: -1px; }
+        .header p { font-size: 1.2rem; color: var(--text-secondary); max-width: 600px; margin: 0 auto; line-height: 1.6; }
+
+        /* Free Section */
+        .free-section { background: rgba(30,41,59,0.7); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 36px 32px; margin-bottom: 40px; text-align: center; animation: fadeInUp 0.6s ease; }
+        .free-section h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 12px; }
+        .free-section .free-badge { display: inline-block; padding: 6px 16px; background: rgba(16,185,129,0.2); border: 1px solid rgba(16,185,129,0.4); border-radius: 20px; color: #6ee7b7; font-weight: 700; font-size: 0.9rem; margin-bottom: 16px; }
+        .free-section p { color: var(--text-secondary); line-height: 1.8; }
+        .free-section .limit { font-size: 2.5rem; font-weight: 900; color: var(--green); margin: 16px 0 8px; }
+        .free-section .limit-label { color: var(--text-secondary); font-size: 1rem; }
+
+        /* Pricing Cards */
+        .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 40px; }
+        .price-card { background: rgba(30,41,59,0.7); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 32px 24px; text-align: center; transition: all 0.3s; animation: fadeInUp 0.8s ease; position: relative; }
+        .price-card:hover { border-color: rgba(59,130,246,0.4); transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+        .price-card.popular { border-color: rgba(245,158,11,0.5); }
+        .price-card.popular::before { content: 'BEST'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); padding: 4px 16px; background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); border-radius: 12px; font-size: 0.75rem; font-weight: 900; letter-spacing: 1px; }
+        .price-card:nth-child(2) { animation-delay: 0.1s; }
+        .price-card:nth-child(3) { animation-delay: 0.2s; }
+        .price-card .pack-name { font-size: 1.1rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px; }
+        .price-card .credits { font-size: 3rem; font-weight: 900; color: white; line-height: 1; }
+        .price-card .credits small { font-size: 1rem; font-weight: 600; color: var(--text-secondary); }
+        .price-card .price { font-size: 1.8rem; font-weight: 800; margin: 16px 0; }
+        .price-card .price .currency { font-size: 1rem; font-weight: 600; vertical-align: super; }
+        .price-card .per-unit { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px; }
+        .price-card .discount { display: inline-block; padding: 4px 12px; background: rgba(245,158,11,0.2); border-radius: 12px; color: #fcd34d; font-size: 0.8rem; font-weight: 700; margin-bottom: 16px; }
+        .price-card .buy-btn { display: block; width: 100%; padding: 14px; background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%); border: none; border-radius: 12px; color: white; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.3s; }
+        .price-card .buy-btn:hover { transform: scale(1.02); box-shadow: 0 4px 20px rgba(59,130,246,0.4); }
+        .price-card .buy-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* How It Works */
+        .how-section { background: rgba(30,41,59,0.7); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 36px 32px; margin-bottom: 40px; animation: fadeInUp 0.8s ease; }
+        .how-section h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: 24px; text-align: center; }
+        .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        .step { text-align: center; }
+        .step .step-num { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%); display: flex; align-items: center; justify-content: center; font-weight: 900; margin: 0 auto 12px; }
+        .step .step-title { font-weight: 700; margin-bottom: 6px; font-size: 0.95rem; }
+        .step .step-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; }
+
+        /* Info */
+        .info-card { background: rgba(30,41,59,0.7); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 36px 32px; margin-bottom: 24px; animation: fadeInUp 0.8s ease; }
+        .info-card h3 { font-size: 1.1rem; font-weight: 800; margin-bottom: 16px; }
+        .info-card ul { list-style: none; padding: 0; }
+        .info-card ul li { font-size: 0.95rem; color: var(--text-secondary); line-height: 1.8; padding-left: 20px; position: relative; }
+        .info-card ul li::before { content: ''; position: absolute; left: 0; top: 11px; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
+
+        /* Footer */
+        .footer-nav { display: flex; justify-content: center; gap: 24px; padding: 40px 20px 0; animation: fadeInUp 0.8s ease; flex-wrap: wrap; }
+        .footer-link { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: rgba(255,255,255,0.08); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15); border-radius: 14px; color: white; text-decoration: none; font-weight: 700; font-size: 0.95rem; transition: all 0.3s; }
+        .footer-link:hover { background: rgba(37,99,235,0.2); border-color: var(--primary); transform: translateY(-3px); }
+
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 768px) {
+            .container { padding: 20px 16px 60px; }
+            .back-button { top: 12px; left: 12px; padding: 8px 14px; font-size: 0.85rem; min-height: 44px; }
+            .header { margin-top: 40px; margin-bottom: 40px; }
+            .header h1 { font-size: 2rem; }
+            .pricing-grid { grid-template-columns: 1fr; max-width: 360px; margin: 0 auto 40px; }
+            .steps { grid-template-columns: repeat(2, 1fr); }
+            .footer-nav { flex-direction: column; align-items: center; gap: 12px; }
+            .footer-link { width: 100%; max-width: 300px; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <a href="/pricing" style="position:fixed;top:16px;right:16px;background:rgba(255,255,255,0.15);color:#fff;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;z-index:1000;backdrop-filter:blur(8px);">KO</a>
+    <div class="animated-bg">
+        <div class="grid-pattern"></div>
+        <div class="floating-shape shape1"></div>
+        <div class="floating-shape shape2"></div>
+        <div class="floating-shape shape3"></div>
+    </div>
+
+    <a href="index-en.html" class="back-button">
+        <span class="material-symbols-outlined">arrow_back</span>
+        Home
+    </a>
+
+    <div class="container">
+        <header class="header">
+            <div class="header-badge">PRICING</div>
+            <h1>Pricing</h1>
+            <p>Start free, and purchase credits when you need more</p>
+        </header>
+
+        <!-- Free Plan -->
+        <div class="free-section">
+            <div class="free-badge">FREE</div>
+            <h2>Free Plan</h2>
+            <div class="limit">2</div>
+            <div class="limit-label">Free queries per day (resets at 00:00 KST)</div>
+            <p>No sign-up required. Experience 60 expert legal leaders and real-time verification with the Korea National Law Information Center for free.</p>
+        </div>
+
+        <!-- Credit Packs -->
+        <div class="pricing-grid">
+            <div class="price-card">
+                <div class="pack-name">Starter</div>
+                <div class="credits">20 <small>credits</small></div>
+                <div class="price"><span class="currency">$</span>1.50</div>
+                <div class="per-unit">$0.075 per query</div>
+                <button class="buy-btn" disabled>Coming Soon</button>
+            </div>
+            <div class="price-card popular">
+                <div class="pack-name">Standard</div>
+                <div class="credits">100 <small>credits</small></div>
+                <div class="price"><span class="currency">$</span>4.99</div>
+                <div class="per-unit">$0.050 per query</div>
+                <div class="discount">33% OFF</div>
+                <button class="buy-btn" disabled>Coming Soon</button>
+            </div>
+            <div class="price-card">
+                <div class="pack-name">Pro</div>
+                <div class="credits">300 <small>credits</small></div>
+                <div class="price"><span class="currency">$</span>9.99</div>
+                <div class="per-unit">$0.033 per query</div>
+                <div class="discount">56% OFF</div>
+                <button class="buy-btn" disabled>Coming Soon</button>
+            </div>
+        </div>
+
+        <!-- How It Works -->
+        <div class="how-section">
+            <h2>How It Works</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div class="step-title">Buy Credits</div>
+                    <div class="step-desc">Choose a pack and complete payment</div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div class="step-title">Check Email</div>
+                    <div class="step-desc">Credits are added to the email used at checkout</div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div class="step-title">Ask Questions</div>
+                    <div class="step-desc">Standard query: 1 credit, Expert answer: 2 credits</div>
+                </div>
+                <div class="step">
+                    <div class="step-num">4</div>
+                    <div class="step-title">Unlimited Use</div>
+                    <div class="step-desc">No daily limit until credits run out</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div class="info-card">
+            <h3>Important Notes</h3>
+            <ul>
+                <li>Credits never expire once purchased</li>
+                <li>Credits are used separately from the free daily limit (2 queries)</li>
+                <li>1 credit per standard query, 2 credits per expert answer</li>
+                <li>Payment is in USD; local currency conversion is automatic</li>
+                <li>For unused credits, see our <a href="/refund-en" style="color:#93c5fd;text-decoration:underline;">Refund Policy</a></li>
+            </ul>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer-nav">
+            <a href="index-en.html" class="footer-link">
+                <span class="material-symbols-outlined">home</span>
+                Home
+            </a>
+            <a href="/terms-en" class="footer-link">
+                <span class="material-symbols-outlined">description</span>
+                Terms of Service
+            </a>
+            <a href="/privacy-en" class="footer-link">
+                <span class="material-symbols-outlined">shield</span>
+                Privacy Policy
+            </a>
+            <a href="/refund-en" class="footer-link">
+                <span class="material-symbols-outlined">receipt_long</span>
+                Refund Policy
+            </a>
+        </div>
+    </div>
+
+    <script src="/page-common.js"></script>
+    <script src="/lawmadi-monitor.js" defer></script>
+</body>
+</html>
