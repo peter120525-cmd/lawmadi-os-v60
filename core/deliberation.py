@@ -14,7 +14,7 @@ import os
 import re
 from typing import AsyncGenerator, Dict, List, Optional
 
-from core.model_fallback import get_model, on_quota_error, is_quota_error
+from core.model_fallback import get_model, on_quota_error, is_quota_error, _RETRY_BASE_SEC
 from core.pipeline import _build_leader_persona, _load_leader_profiles
 from utils.helpers import _safe_extract_gemini_text, _remove_think_blocks
 
@@ -126,7 +126,8 @@ async def _single_leader_call(
         ]
 
     def _sync_call():
-        for _attempt in range(2):
+        import time as _time
+        for _attempt in range(3):
             try:
                 return gc.models.generate_content(
                     model=model_name,
@@ -141,8 +142,9 @@ async def _single_leader_call(
                     ),
                 )
             except Exception as e:
-                if is_quota_error(e) and _attempt < 1:
-                    on_quota_error()
+                if is_quota_error(e) and _attempt < 2:
+                    wait = _RETRY_BASE_SEC * (2 ** _attempt)
+                    _time.sleep(wait)
                     continue
                 raise
 
