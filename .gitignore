@@ -51,6 +51,10 @@ static/leaders/images/thumbnails/*.jpg
 static/leaders/videos/**/*.mp4
 static/leaders/videos/**/*.webm
 
+# Law cache (614MB) — Vertex AI Search 전환 완료, Git에서 제거
+law_cache_*.json
+law_cache.json
+
 # Cache files
 cache/
 *.cache
