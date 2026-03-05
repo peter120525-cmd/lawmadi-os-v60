@@ -130,7 +130,8 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
 
         # 4. Save metadata to DB (optional)
         file_id = file_hash[:16]  # 16-char ID
-        user_ip = request.client.host if request else "unknown"
+        _raw_ip = request.client.host if request else "unknown"
+        user_ip = hashlib.sha256(_raw_ip.encode()).hexdigest() if _raw_ip != "unknown" else "unknown"
 
         db_client_v2 = _optional_import("connectors.db_client_v2")
         if db_client_v2 and hasattr(db_client_v2, "execute"):

@@ -7,13 +7,16 @@ import hmac
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from core.auth import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = logging.getLogger("LawmadiOS.Auth")
+limiter = Limiter(key_func=get_remote_address)
 
 
 class TokenRequest(BaseModel):
@@ -29,7 +32,8 @@ class TokenResponse(BaseModel):
 
 
 @router.post("/token", response_model=TokenResponse)
-async def create_token(req: TokenRequest):
+@limiter.limit("5/minute")
+async def create_token(request: Request, req: TokenRequest):
     """API 키를 검증하고 JWT 액세스 토큰을 발급."""
     internal_key = os.getenv("INTERNAL_API_KEY", "").strip()
     mcp_key = os.getenv("MCP_API_KEY", "").strip()

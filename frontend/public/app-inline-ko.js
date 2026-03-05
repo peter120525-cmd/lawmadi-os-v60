@@ -1,5 +1,5 @@
 // XSS sanitizer helper — all API responses pass through this
-function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(html, {ADD_ATTR: ['target','data-tooltip'], ALLOW_DATA_ATTR: true}) : html.replace(/<[^>]*>/g, ''); }
+function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurify.sanitize(html, {ADD_ATTR: ['target','data-tooltip']}); var d = document.createElement('div'); d.textContent = html; return d.innerHTML; }
 
 // Mobile & In-app browser viewport fix (모바일 전체 + 인앱 브라우저)
 (function() {
@@ -265,6 +265,12 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                 });
             }
 
+            // retry 버튼 이벤트 위임 (CSP: inline onclick 제거)
+            this.convArea.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-action="retry"]');
+                if (btn) UI.retryLastQuery();
+            });
+
             // 전송 버튼 초기 상태
             this.updateSendBtnState();
 
@@ -377,12 +383,19 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
             }
             list.innerHTML = favs.map(f => `
                 <div class="fav-item" data-id="${f.id}">
-                    <button class="fav-delete" onclick="event.stopPropagation(); UI.deleteFavorite(${f.id})" aria-label="삭제: ${this.escapeHtml(f.query).substring(0, 30)}">삭제</button>
+                    <button class="fav-delete" data-fav-id="${f.id}" aria-label="삭제: ${this.escapeHtml(f.query).substring(0, 30)}">삭제</button>
                     <div class="fav-query">${this.escapeHtml(f.query)}</div>
                     <div class="fav-preview">${this.escapeHtml(f.response).substring(0, 100)}...</div>
                     <div class="fav-date">${f.date}</div>
                 </div>
             `).join('');
+
+            list.querySelectorAll('.fav-delete').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    UI.deleteFavorite(parseInt(btn.dataset.favId));
+                });
+            });
 
             list.querySelectorAll('.fav-item').forEach(item => {
                 item.onclick = () => {
@@ -429,21 +442,6 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
             this.uploadedFile = null;
             this.fileInput.value = '';
             this.uploadedFilePreview.style.display = 'none';
-        },
-
-        showPdfComingSoon() {
-            const existing = document.getElementById('pdf-coming-soon');
-            if (existing) existing.remove();
-            const toast = document.createElement('div');
-            toast.id = 'pdf-coming-soon';
-            toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#1e293b,#334155);color:#f1f5f9;padding:16px 28px;border-radius:14px;border:1px solid rgba(37,99,235,0.4);box-shadow:0 8px 32px rgba(0,0,0,0.3);z-index:9999;display:flex;align-items:center;gap:12px;font-size:0.95rem;font-weight:600;animation:expertFadeIn 0.3s ease;max-width:90vw;';
-            toast.innerHTML = '<span class="material-symbols-outlined" style="color:#3b82f6;font-size:1.5rem;">picture_as_pdf</span><div><div>PDF 다운로드 — <span style="color:#f59e0b;">서비스 예정</span></div><div style="font-size:0.8rem;font-weight:400;color:#94a3b8;margin-top:4px;">법률 분석 결과를 PDF로 저장하는 기능이 곧 제공됩니다</div></div>';
-            document.body.appendChild(toast);
-            setTimeout(() => {
-                toast.style.transition = 'opacity 0.4s';
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 400);
-            }, 3000);
         },
 
         showUploadComingSoon() {
@@ -619,7 +617,7 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                     this.appendMessage('ai', `
                         <div style="color: #ef4444;">
                             <p><strong>${this.escapeHtml(error.message)}</strong></p>
-                            <button class="retry-btn" onclick="UI.retryLastQuery()">
+                            <button class="retry-btn" data-action="retry">
                                 <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
                                 다시 시도
                             </button>
@@ -644,7 +642,7 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                 this.appendMessage('ai', `
                     <div style="color: #ef4444;">
                         <p><strong>${this.escapeHtml(friendlyMsg)}</strong></p>
-                        <button class="retry-btn" onclick="UI.retryLastQuery()">
+                        <button class="retry-btn" data-action="retry">
                             <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
                             다시 시도
                         </button>
@@ -1388,8 +1386,35 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                     });
                     g1.appendChild(shareBtn);
 
-                    const exportBtn = this._createToolbarBtn('picture_as_pdf', 'PDF 저장 (서비스 예정)', () => {
-                        this.showPdfComingSoon();
+                    const exportBtn = this._createToolbarBtn('picture_as_pdf', 'PDF 저장', async () => {
+                        const icon = exportBtn.querySelector('.material-symbols-outlined');
+                        icon.textContent = 'hourglass_top';
+                        exportBtn.disabled = true;
+                        try {
+                            let pdfTitle = '법률 분석';
+                            if (leaderName) pdfTitle = `${leaderName} 분석`;
+                            let pdfContent = `[질문]\n${originalQuery}\n\n`;
+                            if (leaderName) pdfContent += `[담당] ${leaderName}${leaderSpecialtyFromServer ? ' (' + leaderSpecialtyFromServer + ')' : ''}\n\n`;
+                            pdfContent += `[답변]\n${rawResponse}`;
+                            const pdfRes = await fetch(`${this.BASE_URL}/export-pdf`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ title: pdfTitle, content: pdfContent })
+                            });
+                            if (!pdfRes.ok) throw new Error('PDF 생성 실패');
+                            const blob = await pdfRes.blob();
+                            const url = URL.createObjectURL(blob);
+                            const now = new Date();
+                            const pad = n => String(n).padStart(2, '0');
+                            const fname = `lawmadi-분석-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}.pdf`;
+                            const a = document.createElement('a'); a.href = url; a.download = fname; a.click();
+                            URL.revokeObjectURL(url);
+                            icon.textContent = 'check';
+                            setTimeout(() => { icon.textContent = 'picture_as_pdf'; exportBtn.disabled = false; }, 2000);
+                        } catch (e) {
+                            icon.textContent = 'error';
+                            setTimeout(() => { icon.textContent = 'picture_as_pdf'; exportBtn.disabled = false; }, 2000);
+                        }
                     });
                     g1.appendChild(exportBtn);
                     toolbar.appendChild(g1);
@@ -1544,8 +1569,28 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
 
                             const pdfBtn = document.createElement('button');
                             pdfBtn.className = 'pdf-download-btn';
-                            pdfBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">picture_as_pdf</span> PDF 다운로드 <span style="font-size:0.75em;opacity:0.7;">(서비스 예정)</span>';
-                            pdfBtn.onclick = () => this.showPdfComingSoon();
+                            pdfBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">picture_as_pdf</span> PDF 다운로드';
+                            pdfBtn.onclick = async () => {
+                                pdfBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">hourglass_top</span> 생성 중...';
+                                pdfBtn.disabled = true;
+                                try {
+                                    const pdfRes = await fetch(`${this.BASE_URL}/export-pdf`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ title: docTitle, content: docContent })
+                                    });
+                                    if (!pdfRes.ok) throw new Error('PDF 생성 실패');
+                                    const blob = await pdfRes.blob();
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement('a'); a.href = url; a.download = `${docTitle}.pdf`; a.click();
+                                    URL.revokeObjectURL(url);
+                                    pdfBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">check_circle</span> 완료';
+                                    setTimeout(() => { pdfBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">picture_as_pdf</span> PDF 다운로드'; pdfBtn.disabled = false; }, 2000);
+                                } catch (e) {
+                                    pdfBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">error</span> 실패 - 재시도';
+                                    pdfBtn.disabled = false;
+                                }
+                            };
                             msgDiv.appendChild(pdfBtn);
                         }
                     }

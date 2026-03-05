@@ -264,7 +264,11 @@ async def body_size_limit_middleware(request: Request, call_next):
     else:
         max_size = _MAX_BODY_SIZE
     content_length = request.headers.get("content-length")
-    if content_length and int(content_length) > max_size:
+    try:
+        cl_int = int(content_length) if content_length else 0
+    except (ValueError, TypeError):
+        cl_int = 0
+    if cl_int > max_size:
         return JSONResponse(
             status_code=413,
             content={"error": f"Request body too large (max {max_size // (1024*1024)}MB)"}
@@ -305,8 +309,7 @@ async def security_headers_middleware(request: Request, call_next):
     if req_path.startswith("/ask") or req_path.startswith("/api/") or req_path.startswith("/upload") or req_path.startswith("/export") or req_path.startswith("/search"):
         response.headers["Cache-Control"] = "no-store, no-cache, private, max-age=0"
         response.headers["Pragma"] = "no-cache"
-    if request.url.scheme == "https":
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
 # =============================================================
