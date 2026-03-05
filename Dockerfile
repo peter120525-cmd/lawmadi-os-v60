@@ -31,15 +31,8 @@ COPY tools/ ./tools/
 COPY main.py .
 COPY config.json .
 COPY leaders.json .
-# law_cache 다중 파일 (952K QA, 10 SSOT types, 7 files)
-# TODO: USE_VERTEX_SEARCH=true 안정화 후 아래 7줄 삭제 (이미지 ~614MB 절감)
-COPY law_cache_1.json .
-COPY law_cache_2.json .
-COPY law_cache_3.json .
-COPY law_cache_4.json .
-COPY law_cache_5.json .
-COPY law_cache_6.json .
-COPY law_cache_7.json .
+# law_cache: Vertex AI Search 전환 완료 → Docker 이미지에서 제거 (614MB 절감)
+# 로컬 개발 시 필요하면 GCS에서 다운로드: gs://lawmadi-db-law-cache/
 COPY data/ ./data/
 COPY agents/ ./agents/
 COPY engines/ ./engines/
