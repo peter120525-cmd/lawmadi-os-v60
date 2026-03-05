@@ -1,3 +1,6 @@
+// Update lang toggle with validated query string (CSP compliant)
+(function(){var p=new URLSearchParams(window.location.search);var id=p.get('id');if(id&&/^[A-Za-z0-9]+$/.test(id)){var el=document.getElementById('langToggle');if(el)el.href='/leader-en?id='+encodeURIComponent(id);}})();
+
 (async function() {
     var params = new URLSearchParams(window.location.search);
     var id = params.get('id');

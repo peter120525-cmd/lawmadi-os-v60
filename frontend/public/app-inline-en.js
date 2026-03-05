@@ -1,5 +1,5 @@
 // XSS sanitizer helper — all API responses pass through this
-function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify.sanitize(html, {ADD_ATTR: ['target','data-tooltip'], ALLOW_DATA_ATTR: true}) : html.replace(/<[^>]*>/g, ''); }
+function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurify.sanitize(html, {ADD_ATTR: ['target','data-tooltip']}); var d = document.createElement('div'); d.textContent = html; return d.innerHTML; }
 
 // Mobile & In-app browser viewport fix (모바일 전체 + 인앱 브라우저)
 (function() {
@@ -283,6 +283,12 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                 });
             }
 
+            // retry 버튼 이벤트 위임 (CSP: inline onclick 제거)
+            this.convArea.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-action="retry"]');
+                if (btn) UI.retryLastQuery();
+            });
+
             // 전송 버튼 초기 상태
             this.updateSendBtnState();
 
@@ -396,12 +402,19 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
             }
             list.innerHTML = favs.map(f => `
                 <div class="fav-item" data-id="${f.id}">
-                    <button class="fav-delete" onclick="event.stopPropagation(); UI.deleteFavorite(${f.id})" aria-label="Delete: ${this.escapeHtml(f.query).substring(0, 30)}">Delete</button>
+                    <button class="fav-delete" data-fav-id="${f.id}" aria-label="Delete: ${this.escapeHtml(f.query).substring(0, 30)}">Delete</button>
                     <div class="fav-query">${this.escapeHtml(f.query)}</div>
                     <div class="fav-preview">${this.escapeHtml(f.response).substring(0, 100)}...</div>
                     <div class="fav-date">${f.date}</div>
                 </div>
             `).join('');
+
+            list.querySelectorAll('.fav-delete').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    UI.deleteFavorite(parseInt(btn.dataset.favId));
+                });
+            });
 
             list.querySelectorAll('.fav-item').forEach(item => {
                 item.onclick = () => {
@@ -608,7 +621,7 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                     this.appendMessage('ai', `
                         <div style="color: #ef4444;">
                             <p><strong>${this.escapeHtml(error.message)}</strong></p>
-                            <button class="retry-btn" onclick="UI.retryLastQuery()">
+                            <button class="retry-btn" data-action="retry">
                                 <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
                                 Retry
                             </button>
@@ -633,7 +646,7 @@ function _sanitize(html) { return (typeof DOMPurify !== 'undefined') ? DOMPurify
                 this.appendMessage('ai', `
                     <div style="color: #ef4444;">
                         <p><strong>${this.escapeHtml(friendlyMsg)}</strong></p>
-                        <button class="retry-btn" onclick="UI.retryLastQuery()">
+                        <button class="retry-btn" data-action="retry">
                             <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
                             Retry
                         </button>
