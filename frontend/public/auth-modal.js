@@ -136,6 +136,7 @@
 
     function showOtpModal() {
         modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
         step1.style.display = 'block';
         step2.style.display = 'none';
         step3.style.display = 'none';
@@ -146,11 +147,14 @@
         emailInput.focus();
     }
 
-    function hideOtpModal() { modal.style.display = 'none'; }
+    function hideOtpModal() { modal.style.display = 'none'; document.body.style.overflow = ''; }
 
     document.getElementById('authOtpClose').addEventListener('click', hideOtpModal);
     modal.addEventListener('click', function(e) {
         if (e.target === modal) hideOtpModal();
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal.style.display === 'flex') hideOtpModal();
     });
 
     // Send OTP
