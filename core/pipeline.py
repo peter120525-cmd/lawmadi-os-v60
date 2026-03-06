@@ -787,6 +787,7 @@ def _build_leader_persona(leader_id: str) -> str:
 _vertex_search_fn = None          # search_legal_documents (async)
 _vertex_context_fn = None         # build_vertex_context (async)
 _vertex_cache_context_fn = None   # build_vertex_cache_context (async)
+_vertex_check_grounding_fn = None # check_grounding (async)
 
 
 # ---------------------------------------------------------------------------
@@ -813,12 +814,13 @@ def set_law_cache(
     _build_ssot_context_fn = build_ssot_context_fn
 
 
-def set_vertex_search_fns(search_fn=None, context_fn=None, cache_context_fn=None) -> None:
+def set_vertex_search_fns(search_fn=None, context_fn=None, cache_context_fn=None, check_grounding_fn=None) -> None:
     """Vertex AI Search 비동기 함수들을 주입."""
-    global _vertex_search_fn, _vertex_context_fn, _vertex_cache_context_fn
+    global _vertex_search_fn, _vertex_context_fn, _vertex_cache_context_fn, _vertex_check_grounding_fn
     _vertex_search_fn = search_fn
     _vertex_context_fn = context_fn
     _vertex_cache_context_fn = cache_context_fn
+    _vertex_check_grounding_fn = check_grounding_fn
     logger.info("🔍 Vertex AI Search functions injected into pipeline")
 
 
@@ -2202,10 +2204,18 @@ async def _run_legal_pipeline(
                 final_text = final_text.rstrip() + basis_section
                 logger.info(f"[Stage 3.9] 법률 근거 자동 부착 ({len(selected)}개 조문, lang={lang})")
 
-    # -- Stage 4: DRF 실시간 전수 검증 (20초 타임아웃) --
-    logger.info("[Stage 4/4] DRF 전수 검증")
+    # -- Stage 4: DRF 전수 검증 + Check Grounding 병렬 실행 (20초 타임아웃) --
+    logger.info("[Stage 4/4] DRF 전수 검증 + Check Grounding")
     drf_verification = None
     _s4_start = asyncio.get_event_loop().time()
+
+    # Check Grounding 태스크 (Vertex Search 모드에서만)
+    grounding_task = None
+    if USE_VERTEX_SEARCH and _vertex_check_grounding_fn and rag_context and rag_context.matched_laws:
+        grounding_task = asyncio.create_task(
+            _vertex_check_grounding_fn(final_text, rag_context.matched_laws)
+        )
+
     try:
         drf_verification = await asyncio.wait_for(
             _drf_verify_law_refs(final_text, lang=lang), timeout=20.0,
@@ -2217,6 +2227,23 @@ async def _run_legal_pipeline(
     except Exception as e:
         logger.error(f"[Stage 4] DRF 검증 실패: {e} → 검증 스킵")
         drf_verification = VerificationResult(drf_failed=True)
+
+    # Check Grounding 결과 수집 (DRF와 병렬 실행된 결과)
+    if grounding_task:
+        try:
+            grounding_result = await asyncio.wait_for(grounding_task, timeout=5.0)
+            support_score = grounding_result.get("support_score", -1)
+            if support_score >= 0:
+                logger.info(
+                    f"[CheckGrounding] score={support_score:.2f}, "
+                    f"grounded={grounding_result.get('grounded_claims',0)}/{grounding_result.get('total_claims',0)}"
+                )
+                if support_score < 0.4 and drf_verification and drf_verification.all_passed:
+                    logger.warning(
+                        f"[CheckGrounding] 낮은 근거 점수({support_score:.2f}) — DRF 통과했으나 근거 부족 가능"
+                    )
+        except Exception as e:
+            logger.warning(f"[CheckGrounding] 결과 수집 실패 (무시): {e}")
 
     # FAIL_CLOSED 적용 (0.1% 초과 미검증 또는 DRF 오류 시 차단)
     fail_closed_result = _apply_fail_closed(final_text, drf_verification)

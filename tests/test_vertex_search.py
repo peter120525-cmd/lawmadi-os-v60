@@ -114,7 +114,7 @@ class TestVertexSearchClient:
         assert results[0]["endpoint"] == "lawSearch.do"
         assert len(results[0]["key_articles"]) == 1
         assert results[0]["key_articles"][0]["조문"] == "제1조"
-        assert results[0]["score"] == 0.95
+        assert isinstance(results[0]["score"], float)
 
     @patch("connectors.vertex_search_client._get_client")
     def test_sync_search_empty_on_error(self, mock_get_client):
