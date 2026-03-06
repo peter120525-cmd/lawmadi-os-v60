@@ -677,10 +677,16 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             clearTimeout(timeoutId);
             if (response.status === 429) {
                 this.hideTypingIndicator();
+                var limitMsg = '<p>일일 무료 이용 한도에 도달했습니다.</p>'
+                    + '<p style="margin-top:8px;"><a href="/pricing.html" style="color:#2563eb;font-weight:700;text-decoration:underline;">크레딧 구매</a>하시면 계속 이용 가능합니다.</p>';
+                if (window.__lawmadiAuth && !window.__lawmadiAuth.authenticated) {
+                    limitMsg += '<p style="margin-top:4px;font-size:0.9em;color:#64748b;">이미 크레딧을 구매하셨다면 헤더의 <strong>Login</strong> 버튼으로 로그인하세요.</p>';
+                }
                 try {
                     const errData = await response.json();
-                    this.appendMessage('ai', `<p>${this.escapeHtml(errData.error || '이용 한도에 도달했습니다.')}</p>`);
-                } catch { this.appendMessage('ai', '<p>이용 한도에 도달했습니다. 잠시 후 다시 이용해주세요.</p>'); }
+                    if (errData.error) limitMsg = `<p>${this.escapeHtml(errData.error)}</p>`;
+                } catch {}
+                this.appendMessage('ai', limitMsg);
                 return;
             }
             if (!response.ok) throw new Error(`서버 오류 (${response.status})`);
@@ -732,10 +738,16 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             clearTimeout(timeoutId);
             if (response.status === 429) {
                 this.hideTypingIndicator();
+                var limitMsg = '<p>일일 무료 이용 한도에 도달했습니다.</p>'
+                    + '<p style="margin-top:8px;"><a href="/pricing.html" style="color:#2563eb;font-weight:700;text-decoration:underline;">크레딧 구매</a>하시면 계속 이용 가능합니다.</p>';
+                if (window.__lawmadiAuth && !window.__lawmadiAuth.authenticated) {
+                    limitMsg += '<p style="margin-top:4px;font-size:0.9em;color:#64748b;">이미 크레딧을 구매하셨다면 헤더의 <strong>Login</strong> 버튼으로 로그인하세요.</p>';
+                }
                 try {
                     const errData = await response.json();
-                    this.appendMessage('ai', `<p>${this.escapeHtml(errData.error || '이용 한도에 도달했습니다.')}</p>`);
-                } catch { this.appendMessage('ai', '<p>이용 한도에 도달했습니다. 잠시 후 다시 이용해주세요.</p>'); }
+                    if (errData.error) limitMsg = `<p>${this.escapeHtml(errData.error)}</p>`;
+                } catch {}
+                this.appendMessage('ai', limitMsg);
                 return;
             }
             if (!response.ok) throw new Error(`서버 오류 (${response.status})`);
