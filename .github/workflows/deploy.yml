@@ -37,7 +37,11 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install pytest httpx
+          pip install pytest httpx pip-audit
+
+      - name: Audit dependencies for vulnerabilities
+        run: |
+          pip-audit --strict --desc 2>&1 || echo "⚠️ pip-audit found issues (non-blocking)"
 
       - name: Run unit tests (pure functions)
         run: |
@@ -139,8 +143,8 @@ jobs:
             --concurrency=15 \
             --min-instances=0 \
             --max-instances=2 \
-            --set-env-vars="ENABLE_LAWMADILM=false,LAWMADILM_TIMEOUT=3,USE_VERTEX_AI=true,VERTEX_PROJECT=lawmadi-db,VERTEX_LOCATION=asia-northeast3,USE_VERTEX_SEARCH=true,GCP_PROJECT_ID=lawmadi-db,VERTEX_SEARCH_DATA_STORE_ID=lawmadi-legal-cache,VERTEX_SEARCH_ENGINE_ID=lawmadi-search-engine" \
-            --set-secrets="GEMINI_KEY=GEMINI_KEY:latest,LAWGO_DRF_OC=LAWGO_DRF_OC:latest,CLOUD_SQL_INSTANCE=CLOUD_SQL_INSTANCE:latest,DB_USER=DB_USER:latest,DB_PASS=DB_PASS:latest,DB_NAME=DB_NAME:latest,MCP_API_KEY=MCP_API_KEY:latest,API_KEYS=API_KEYS:latest,DATABASE_URL=DATABASE_URL:latest,INTERNAL_API_KEY=INTERNAL_API_KEY:latest,PREMIUM_KEYS=PREMIUM_KEYS:latest"
+            --set-env-vars="ENABLE_LAWMADILM=false,LAWMADILM_TIMEOUT=3,USE_VERTEX_AI=true,VERTEX_PROJECT=lawmadi-db,VERTEX_LOCATION=asia-northeast3,USE_VERTEX_SEARCH=true,GCP_PROJECT_ID=lawmadi-db,VERTEX_SEARCH_DATA_STORE_ID=lawmadi-legal-cache,VERTEX_SEARCH_ENGINE_ID=lawmadi-search-engine,SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,SMTP_USER=peter120525@gmail.com,SMTP_FROM=peter120525@gmail.com,PADDLE_ENVIRONMENT=sandbox,PADDLE_CLIENT_TOKEN=test_f28d927d810d5df8c5cfeca8513,DAILY_FREE_LIMIT=2,SESSION_EXPIRY_DAYS=30" \
+            --set-secrets="GEMINI_KEY=GEMINI_KEY:latest,LAWGO_DRF_OC=LAWGO_DRF_OC:latest,CLOUD_SQL_INSTANCE=CLOUD_SQL_INSTANCE:latest,DB_USER=DB_USER:latest,DB_PASS=DB_PASS:latest,DB_NAME=DB_NAME:latest,MCP_API_KEY=MCP_API_KEY:latest,API_KEYS=API_KEYS:latest,DATABASE_URL=DATABASE_URL:latest,INTERNAL_API_KEY=INTERNAL_API_KEY:latest,PREMIUM_KEYS=PREMIUM_KEYS:latest,SMTP_PASSWORD=SMTP_PASSWORD:latest"
 
       - name: Get Staging URL
         id: staging
@@ -221,8 +225,8 @@ jobs:
             --concurrency=15 \
             --min-instances=0 \
             --max-instances=5 \
-            --set-env-vars="ENABLE_LAWMADILM=false,LAWMADILM_TIMEOUT=3,USE_VERTEX_AI=true,VERTEX_PROJECT=lawmadi-db,VERTEX_LOCATION=asia-northeast3,USE_VERTEX_SEARCH=true,GCP_PROJECT_ID=lawmadi-db,VERTEX_SEARCH_DATA_STORE_ID=lawmadi-legal-cache,VERTEX_SEARCH_ENGINE_ID=lawmadi-search-engine" \
-            --set-secrets="GEMINI_KEY=GEMINI_KEY:latest,LAWGO_DRF_OC=LAWGO_DRF_OC:latest,CLOUD_SQL_INSTANCE=CLOUD_SQL_INSTANCE:latest,DB_USER=DB_USER:latest,DB_PASS=DB_PASS:latest,DB_NAME=DB_NAME:latest,MCP_API_KEY=MCP_API_KEY:latest,API_KEYS=API_KEYS:latest,DATABASE_URL=DATABASE_URL:latest,INTERNAL_API_KEY=INTERNAL_API_KEY:latest,PREMIUM_KEYS=PREMIUM_KEYS:latest"
+            --set-env-vars="ENABLE_LAWMADILM=false,LAWMADILM_TIMEOUT=3,USE_VERTEX_AI=true,VERTEX_PROJECT=lawmadi-db,VERTEX_LOCATION=asia-northeast3,USE_VERTEX_SEARCH=true,GCP_PROJECT_ID=lawmadi-db,VERTEX_SEARCH_DATA_STORE_ID=lawmadi-legal-cache,VERTEX_SEARCH_ENGINE_ID=lawmadi-search-engine,SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,SMTP_USER=peter120525@gmail.com,SMTP_FROM=peter120525@gmail.com,PADDLE_ENVIRONMENT=sandbox,PADDLE_CLIENT_TOKEN=test_f28d927d810d5df8c5cfeca8513,DAILY_FREE_LIMIT=2,SESSION_EXPIRY_DAYS=30" \
+            --set-secrets="GEMINI_KEY=GEMINI_KEY:latest,LAWGO_DRF_OC=LAWGO_DRF_OC:latest,CLOUD_SQL_INSTANCE=CLOUD_SQL_INSTANCE:latest,DB_USER=DB_USER:latest,DB_PASS=DB_PASS:latest,DB_NAME=DB_NAME:latest,MCP_API_KEY=MCP_API_KEY:latest,API_KEYS=API_KEYS:latest,DATABASE_URL=DATABASE_URL:latest,INTERNAL_API_KEY=INTERNAL_API_KEY:latest,PREMIUM_KEYS=PREMIUM_KEYS:latest,SMTP_PASSWORD=SMTP_PASSWORD:latest"
 
       - name: Get Cloud Run URL
         id: deploy
