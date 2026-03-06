@@ -315,11 +315,13 @@ async def security_headers_middleware(request: Request, call_next):
         "block-all-mixed-content; "
         "upgrade-insecure-requests"
     )
-    # API 응답 캐시 방지 — 법률 분석 내용이 프록시/브라우저에 캐시되지 않도록
+    # 캐시 정책: API → no-cache, 정적 파일 → 1시간 캐시
     req_path = request.url.path
     if req_path.startswith("/ask") or req_path.startswith("/api/") or req_path.startswith("/upload") or req_path.startswith("/export") or req_path.startswith("/search"):
         response.headers["Cache-Control"] = "no-store, no-cache, private, max-age=0"
         response.headers["Pragma"] = "no-cache"
+    elif req_path.endswith((".js", ".css", ".json", ".png", ".jpg", ".svg", ".ico", ".woff2")):
+        response.headers["Cache-Control"] = "public, max-age=3600, stale-while-revalidate=86400"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 

@@ -128,12 +128,16 @@ def generate_with_fallback(genai_client: Any, contents: Any,
 
 async def generate_with_fallback_async(genai_client: Any, contents: Any,
                                        config: Any = None, **kwargs) -> Any:
-    """비동기 generate_content + 429 지수 백오프 재시도 래퍼."""
+    """비동기 generate_content + 429 지수 백오프 재시도 래퍼.
+
+    sync SDK 호출을 asyncio.to_thread()로 감싸 이벤트 루프 블로킹 방지.
+    """
     model = get_model()
     last_error: Optional[Exception] = None
     for attempt in range(_MAX_RETRIES + 1):
         try:
-            resp = genai_client.models.generate_content(
+            resp = await asyncio.to_thread(
+                genai_client.models.generate_content,
                 model=model,
                 contents=contents,
                 config=config,
