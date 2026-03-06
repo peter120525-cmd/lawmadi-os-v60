@@ -298,7 +298,7 @@ async def send_otp(request: Request):
     if not sent:
         logger.warning(f"[OTP] Email send failed for {email[:3]}***")
         if PADDLE_ENVIRONMENT == "sandbox":
-            logger.info(f"[OTP-SANDBOX] code={code} for {email[:3]}***")
+            logger.info(f"[OTP-SANDBOX] code={code[:2]}**** for {email[:3]}***")
             return {"ok": True, "message": "OTP sent (sandbox mode)", "ttl": _OTP_TTL_SEC}
         raise HTTPException(
             status_code=500,
@@ -464,7 +464,7 @@ async def verify_otp_endpoint(request: Request):
         max_age=SESSION_EXPIRY_DAYS * 86400,
         httponly=True,
         secure=True,
-        samesite="lax",
+        samesite="strict",
         path="/",
     )
     return response

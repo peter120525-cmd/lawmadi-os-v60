@@ -4,7 +4,7 @@ import json
 import logging
 import hashlib
 from typing import Any, Dict
-from fastapi import APIRouter, Request, Header, HTTPException
+from fastapi import APIRouter, Request, Header, HTTPException, Query
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -196,7 +196,7 @@ async def get_category_stats_api(days: int = 30, authorization: str = Header(def
 @router.get("/api/admin/leader-queries/{leader_code}")
 async def get_leader_queries_api(
     leader_code: str,
-    limit: int = 10,
+    limit: int = Query(default=10, ge=1, le=100),
     authorization: str = Header(default="")
 ):
     """

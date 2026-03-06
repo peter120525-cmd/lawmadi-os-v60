@@ -16,7 +16,7 @@ import traceback
 import threading
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from google.genai import types as genai_types
 from core.metrics import record_request, record_event, record_error
@@ -1502,7 +1502,7 @@ async def ask_expert(request: Request):
 # =============================================================
 
 @router.get("/search")
-async def search(q: str, limit: int = 10, request: Request = None):
+async def search(q: str, limit: int = Query(default=10, ge=1, le=100), request: Request = None):
     svc = _RUNTIME.get("search_service")
     if not svc:
         return {"status": "ERROR", "message": "SearchService not ready"}
@@ -1518,7 +1518,7 @@ async def search(q: str, limit: int = 10, request: Request = None):
 
 
 @router.get("/trending")
-async def trending(limit: int = 10, request: Request = None):
+async def trending(limit: int = Query(default=10, ge=1, le=100), request: Request = None):
     svc = _RUNTIME.get("search_service")
     if not svc:
         return {"status": "ERROR", "message": "SearchService not ready"}

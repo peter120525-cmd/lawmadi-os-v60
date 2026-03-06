@@ -249,13 +249,19 @@ def add_audit_log(
             )
         """)
 
+        # Truncate query/response to prevent unbounded storage growth
+        _MAX_AUDIT_QUERY = 2000
+        _MAX_AUDIT_RESPONSE = 10000
+        truncated_query = query[:_MAX_AUDIT_QUERY] if query else ""
+        truncated_response = response[:_MAX_AUDIT_RESPONSE] if response else ""
+
         cur.execute("""
             INSERT INTO audit_logs
             (query, response, leader, status, latency_ms, env_version)
             VALUES (%s, %s, %s, %s, %s, %s)
         """, (
-            query,
-            response,
+            truncated_query,
+            truncated_response,
             leader,
             status,
             latency_ms,

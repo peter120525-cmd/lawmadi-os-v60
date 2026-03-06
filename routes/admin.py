@@ -5,12 +5,15 @@ Lawmadi OS v60 — Admin Dashboard API routes.
 import os
 import logging
 from typing import Any, Dict
-from fastapi import APIRouter, Header, HTTPException, Query
+from fastapi import APIRouter, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from core.auth import verify_mcp_key as _verify_admin_auth
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 logger = logging.getLogger("LawmadiOS.Admin")
+limiter = Limiter(key_func=get_remote_address)
 
 
 def _optional_import(module_path, attr=None):
@@ -23,7 +26,8 @@ def _optional_import(module_path, attr=None):
 
 
 @router.get("/dashboard")
-async def admin_dashboard(days: int = Query(default=7, ge=1, le=90), authorization: str = Header(default="")):
+@limiter.limit("10/minute")
+async def admin_dashboard(request: Request, days: int = Query(default=7, ge=1, le=90), authorization: str = Header(default="")):
     """대시보드 메트릭: DAU, 쿼리 수, 평균 latency, 에러율, 상위 법률 카테고리"""
     _verify_admin_auth(authorization)
     try:
@@ -37,7 +41,8 @@ async def admin_dashboard(days: int = Query(default=7, ge=1, le=90), authorizati
 
 
 @router.get("/conversion")
-async def admin_conversion(days: int = Query(default=30, ge=1, le=365), authorization: str = Header(default="")):
+@limiter.limit("10/minute")
+async def admin_conversion(request: Request, days: int = Query(default=30, ge=1, le=90), authorization: str = Header(default="")):
     """전환 메트릭: 총 쿼리 수, 변호사 문의 수, 피드백 수, 전환율"""
     _verify_admin_auth(authorization)
     try:
@@ -51,7 +56,8 @@ async def admin_conversion(days: int = Query(default=30, ge=1, le=365), authoriz
 
 
 @router.get("/retention")
-async def admin_retention(authorization: str = Header(default="")):
+@limiter.limit("10/minute")
+async def admin_retention(request: Request, authorization: str = Header(default="")):
     """리텐션 메트릭: 재방문율, 평균 방문 횟수, 사용자 분포"""
     _verify_admin_auth(authorization)
     try:
@@ -65,7 +71,8 @@ async def admin_retention(authorization: str = Header(default="")):
 
 
 @router.get("/cost-estimate")
-async def admin_cost_estimate(days: int = Query(default=7, ge=1, le=90), authorization: str = Header(default="")):
+@limiter.limit("10/minute")
+async def admin_cost_estimate(request: Request, days: int = Query(default=7, ge=1, le=90), authorization: str = Header(default="")):
     """비용 추정: Gemini/Claude API 호출 수, 추정 비용"""
     _verify_admin_auth(authorization)
     try:
@@ -79,7 +86,8 @@ async def admin_cost_estimate(days: int = Query(default=7, ge=1, le=90), authori
 
 
 @router.get("/feedback-summary")
-async def admin_feedback_summary(days: int = Query(default=30, ge=1, le=365), authorization: str = Header(default="")):
+@limiter.limit("10/minute")
+async def admin_feedback_summary(request: Request, days: int = Query(default=30, ge=1, le=90), authorization: str = Header(default="")):
     """피드백 요약: 총 피드백, 긍정/부정 비율, 리더별 분포"""
     _verify_admin_auth(authorization)
     try:
