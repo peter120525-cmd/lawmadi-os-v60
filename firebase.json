@@ -62,6 +62,12 @@
         ]
       },
       {
+        "source": "/cookie-consent.js",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
+        ]
+      },
+      {
         "source": "/lawmadi-monitor.js",
         "headers": [
           { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
