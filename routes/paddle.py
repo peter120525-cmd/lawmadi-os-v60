@@ -92,9 +92,10 @@ def _validate_email(email: str) -> bool:
     return bool(re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email))
 
 
-def _hash_otp(code: str) -> str:
-    """Hash OTP code with SHA-256 for secure storage."""
-    return hashlib.sha256(code.encode()).hexdigest()
+def _hash_otp(code: str, email: str = "") -> str:
+    """Hash OTP code with HMAC-SHA256, using email as salt to prevent rainbow tables."""
+    key = (email or "lawmadi-otp-salt").encode()
+    return hmac.new(key, code.encode(), hashlib.sha256).hexdigest()
 
 
 def _cleanup_otp_store():
@@ -191,12 +192,27 @@ def get_user_by_id(user_id: str) -> Optional[dict]:
 
 # ─── DB Session Management ───
 
+_MAX_SESSIONS_PER_USER = 5
+
 def _create_db_session(user_id: str) -> str:
     """Create DB session token (secure random, 30-day TTL). Returns token."""
     token = secrets.token_hex(32)  # 64-char hex string
     expires_days = SESSION_EXPIRY_DAYS
     try:
         from connectors.db_client_v2 import execute
+        # Remove expired sessions for this user + enforce max sessions
+        execute(
+            "DELETE FROM sessions WHERE user_id = %s AND expires_at < NOW()",
+            (user_id,), fetch="none"
+        )
+        execute(
+            """DELETE FROM sessions WHERE session_token IN (
+                SELECT session_token FROM sessions
+                WHERE user_id = %s ORDER BY created_at DESC
+                OFFSET %s
+            )""",
+            (user_id, _MAX_SESSIONS_PER_USER - 1), fetch="none"
+        )
         execute(
             """INSERT INTO sessions (session_token, user_id, expires_at)
                VALUES (%s, %s, NOW() + INTERVAL '%s days')""",
@@ -294,26 +310,33 @@ async def send_otp(request: Request):
 
 
 def _store_otp(email: str, code: str, expires: float):
-    """Store OTP (hashed) in DB or in-memory fallback."""
-    code_hash = _hash_otp(code)
+    """Store OTP (hashed) in DB (single transaction) or in-memory fallback."""
+    code_hash = _hash_otp(code, email)
     try:
-        from connectors.db_client_v2 import execute
-        # Invalidate all previous unused OTPs for this email before inserting new one
-        execute(
-            "UPDATE otp_codes SET used = TRUE WHERE email = %s AND used = FALSE",
-            (email,), fetch="none"
-        )
-        execute(
-            """INSERT INTO otp_codes (id, email, code_hash, expires_at, used)
-               VALUES (%s, %s, %s, TO_TIMESTAMP(%s), FALSE)""",
-            (str(uuid.uuid4()), email, code_hash, expires),
-            fetch="none"
-        )
-        # Clean old OTPs for this email (expired or already used)
-        execute(
-            "DELETE FROM otp_codes WHERE email = %s AND (used = TRUE OR expires_at < NOW())",
-            (email,), fetch="none"
-        )
+        from connectors.db_client import get_connection, release_connection
+        conn = get_connection()
+        if conn is None:
+            raise RuntimeError("DB connection unavailable")
+        cur = conn.cursor()
+        try:
+            # Single transaction: invalidate old + insert new + cleanup
+            cur.execute("UPDATE otp_codes SET used = TRUE WHERE email = %s AND used = FALSE", (email,))
+            cur.execute(
+                """INSERT INTO otp_codes (id, email, code_hash, expires_at, used)
+                   VALUES (%s, %s, %s, TO_TIMESTAMP(%s), FALSE)""",
+                (str(uuid.uuid4()), email, code_hash, expires)
+            )
+            cur.execute(
+                "DELETE FROM otp_codes WHERE email = %s AND (used = TRUE OR expires_at < NOW())",
+                (email,)
+            )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            cur.close()
+            release_connection(conn)
     except Exception as e:
         logger.warning(f"[OTP] DB store failed, using memory: {e}")
         _cleanup_otp_store()
@@ -405,10 +428,9 @@ async def verify_otp_endpoint(request: Request):
         return JSONResponse(status_code=410, content={"ok": False, "error": "OTP expired"})
     if result == "max_attempts":
         return JSONResponse(status_code=429, content={"ok": False, "error": "Too many attempts"})
-    if result == "invalid":
+    if result in ("invalid", "not_found"):
+        # Unified response to prevent email enumeration
         return JSONResponse(status_code=401, content={"ok": False, "error": "Invalid OTP"})
-    if result == "not_found":
-        return JSONResponse(status_code=404, content={"ok": False, "error": "No OTP found for this email"})
 
     # Get or create user
     user = _get_or_create_user(email)
@@ -429,7 +451,6 @@ async def verify_otp_endpoint(request: Request):
 
     response = JSONResponse(content={
         "ok": True,
-        "token": token,
         "user": {
             "email": user["email"],
             "credit_balance": user["credit_balance"],
@@ -451,7 +472,7 @@ async def verify_otp_endpoint(request: Request):
 
 def _verify_otp_code(email: str, code: str) -> str:
     """Verify OTP code. Returns: 'ok', 'invalid', 'expired', 'max_attempts', 'not_found'."""
-    code_hash = _hash_otp(code)
+    code_hash = _hash_otp(code, email)
 
     # Try DB first
     try:
@@ -985,7 +1006,7 @@ async def _handle_transaction_completed(event_data: dict):
         add_credits(user["user_id"], total_credits, reason="purchase", reference_id=reference_id)
         logger.info(f"[Paddle] Credited {total_credits} to user={user['user_id'][:8]}")
     else:
-        logger.warning(f"[Paddle] Could not determine credits for transaction {transaction_id}")
+        logger.error(f"[Paddle] CRITICAL: Could not determine credits for transaction {transaction_id}, email={customer_email[:3]}***. Manual review required.")
 
 
 # ─── Paddle Client Config ───
@@ -1111,8 +1132,12 @@ def init_paddle_tables():
             END $$
         """)
 
+        # Cleanup expired sessions and OTPs on startup
+        cur.execute("DELETE FROM sessions WHERE expires_at < NOW()")
+        cur.execute("DELETE FROM otp_codes WHERE expires_at < NOW() OR used = TRUE")
+
         conn.commit()
-        logger.info("[Paddle] v2 tables initialized")
+        logger.info("[Paddle] v2 tables initialized + expired sessions/OTPs cleaned")
     except Exception as e:
         logger.error(f"[Paddle] Table init failed: {e}")
         raise
