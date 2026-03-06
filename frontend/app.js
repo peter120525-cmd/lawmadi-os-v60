@@ -13,7 +13,8 @@ const netStatus = document.getElementById('netStatus');
 
 // [IT 인프라: 백엔드 API 게이트웨이 설정]
 // Cloud Run 서비스의 고유 엔드포인트입니다.
-const API_BASE = 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app';
+const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    ? '' : '';  // same-origin via Firebase rewrite → Cloud Run proxy
 const API_URL = `${API_BASE}/ask`;
 const PDF_URL = `${API_BASE}/export-pdf`;
 const SYSTEM_VERSION = 'v60.0.0';
@@ -107,6 +108,7 @@ const execute = async () => {
         const res = await fetch(API_URL, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
+            credentials: 'include',
             body: JSON.stringify({ query: q })
         });
         
@@ -165,6 +167,7 @@ const execute = async () => {
                             const pdfRes = await fetch(PDF_URL, {
                                 method: 'POST',
                                 headers: {'Content-Type': 'application/json'},
+                                credentials: 'include',
                                 body: JSON.stringify({ title: docTitle, content: docContent })
                             });
                             if (!pdfRes.ok) throw new Error('PDF 생성 실패');
