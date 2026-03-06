@@ -19,9 +19,13 @@ const PDF_URL = `${API_BASE}/export-pdf`;
 const SYSTEM_VERSION = 'v60.0.0';
 
 // XSS 방어: DOMPurify sanitize wrapper
-const _sanitize = (html) => (typeof DOMPurify !== 'undefined')
-    ? DOMPurify.sanitize(html, {ADD_ATTR: ['target','data-tooltip'], ALLOW_DATA_ATTR: true})
-    : html;
+const _sanitize = (html) => {
+    if (typeof DOMPurify !== 'undefined')
+        return DOMPurify.sanitize(html, {ADD_ATTR: ['target','data-tooltip'], ALLOW_DATA_ATTR: true});
+    const d = document.createElement('div');
+    d.textContent = html;
+    return d.innerHTML;
+};
 
 /**
  * L7 RENDERER: 시스템 로그 터미널 출력 함수

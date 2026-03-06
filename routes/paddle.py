@@ -238,8 +238,8 @@ def _delete_session(token: str):
 
 
 def _get_session_token(request: Request) -> str:
-    """Extract session token from cookie (preferred) or header (legacy)."""
-    return request.cookies.get("lm_session", "") or request.headers.get("X-Session-Token", "").strip()
+    """Extract session token from HttpOnly cookie only (no header fallback — CSRF safe)."""
+    return request.cookies.get("lm_session", "")
 
 
 # ─── Auth Dependency: get_current_user ───
@@ -810,14 +810,14 @@ async def paddle_webhook(request: Request):
     """Handle Paddle webhook events."""
     raw_body = await request.body()
 
-    # Verify webhook signature (skip if no secret — sandbox mode)
-    if PADDLE_WEBHOOK_SECRET:
-        sig_header = request.headers.get("Paddle-Signature", "")
-        if not _verify_paddle_signature(raw_body, sig_header):
-            logger.warning("[Paddle] Webhook signature verification failed")
-            raise HTTPException(status_code=403, detail="Invalid signature")
-    else:
-        logger.info("[Paddle] Webhook signature skip (no secret — sandbox)")
+    # Verify webhook signature (mandatory — reject if no secret configured)
+    if not PADDLE_WEBHOOK_SECRET:
+        logger.error("[Paddle] PADDLE_WEBHOOK_SECRET not set — rejecting webhook")
+        raise HTTPException(status_code=500, detail="Webhook secret not configured")
+    sig_header = request.headers.get("Paddle-Signature", "")
+    if not _verify_paddle_signature(raw_body, sig_header):
+        logger.warning("[Paddle] Webhook signature verification failed")
+        raise HTTPException(status_code=403, detail="Invalid signature")
 
     try:
         data = json.loads(raw_body)

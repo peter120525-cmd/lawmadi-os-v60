@@ -5,11 +5,12 @@ Lawmadi OS v60 — 접근 권한 + 스트리밍 검증 테스트
 3. /ask-stream 기본 응답 품질 확인
 """
 import json
+import os
 import time
 import requests
 
 BASE = "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app"
-ADMIN_KEY = "eGjMr9jAKKNzwfLjzlTmyPo5HVklyZ1BlrzJ_139jDw"
+ADMIN_KEY = os.getenv("TEST_ADMIN_KEY", "")
 
 print("=" * 60)
 print("접근 권한 + 스트리밍 검증 테스트")

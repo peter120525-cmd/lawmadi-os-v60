@@ -18,6 +18,7 @@ env/
 .idea/
 
 # 테스트 및 문서
+tests/
 test_*.py
 *_test.py
 *.md
@@ -30,10 +31,12 @@ temp/
 logs/
 *.log
 
-# 배포 관련
+# CI/CD 및 배포 관련
+.github/
 .firebase/
 .gcloudignore
 cloudbuild.yaml
+scripts/
 
 # 백업 및 임시
 *.bak

@@ -2,11 +2,12 @@
 import asyncio
 import aiohttp
 import json
+import os
 import time
 import sys
 
 BASE_URL = "http://localhost:8080"
-ADMIN_KEY = "eGjMr9jAKKNzwfLjzlTmyPo5HVklyZ1BlrzJ_139jDw"  # rate limit bypass
+ADMIN_KEY = os.getenv("TEST_ADMIN_KEY", "")  # rate limit bypass
 
 # 100가지 법률질문 (20개 카테고리 × 5개씩)
 QUESTIONS = [
