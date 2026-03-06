@@ -682,10 +682,16 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             clearTimeout(timeoutId);
             if (response.status === 429) {
                 this.hideTypingIndicator();
+                var limitMsg = '<p>Daily free limit reached.</p>'
+                    + '<p style="margin-top:8px;"><a href="/pricing-en.html" style="color:#2563eb;font-weight:700;text-decoration:underline;">Buy credits</a> to continue using Lawmadi OS.</p>';
+                if (window.__lawmadiAuth && !window.__lawmadiAuth.authenticated) {
+                    limitMsg += '<p style="margin-top:4px;font-size:0.9em;color:#64748b;">Already purchased? Click <strong>Login</strong> in the header.</p>';
+                }
                 try {
                     const errData = await response.json();
-                    this.appendMessage('ai', `<p>${this.escapeHtml(errData.error || 'Usage limit reached.')}</p>`);
-                } catch { this.appendMessage('ai', '<p>Usage limit reached. Please try again later.</p>'); }
+                    if (errData.error) limitMsg = `<p>${this.escapeHtml(errData.error)}</p>`;
+                } catch {}
+                this.appendMessage('ai', limitMsg);
                 return;
             }
             if (!response.ok) throw new Error(`Server error (${response.status})`);
@@ -738,10 +744,16 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             clearTimeout(timeoutId);
             if (response.status === 429) {
                 this.hideTypingIndicator();
+                var limitMsg = '<p>Daily free limit reached.</p>'
+                    + '<p style="margin-top:8px;"><a href="/pricing-en.html" style="color:#2563eb;font-weight:700;text-decoration:underline;">Buy credits</a> to continue using Lawmadi OS.</p>';
+                if (window.__lawmadiAuth && !window.__lawmadiAuth.authenticated) {
+                    limitMsg += '<p style="margin-top:4px;font-size:0.9em;color:#64748b;">Already purchased? Click <strong>Login</strong> in the header.</p>';
+                }
                 try {
                     const errData = await response.json();
-                    this.appendMessage('ai', `<p>${this.escapeHtml(errData.error || 'Usage limit reached.')}</p>`);
-                } catch { this.appendMessage('ai', '<p>Usage limit reached. Please try again later.</p>'); }
+                    if (errData.error) limitMsg = `<p>${this.escapeHtml(errData.error)}</p>`;
+                } catch {}
+                this.appendMessage('ai', limitMsg);
                 return;
             }
             if (!response.ok) throw new Error(`Server error (${response.status})`);
