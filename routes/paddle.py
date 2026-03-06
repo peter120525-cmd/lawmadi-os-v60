@@ -810,14 +810,17 @@ async def paddle_webhook(request: Request):
     """Handle Paddle webhook events."""
     raw_body = await request.body()
 
-    # Verify webhook signature (mandatory — reject if no secret configured)
-    if not PADDLE_WEBHOOK_SECRET:
-        logger.error("[Paddle] PADDLE_WEBHOOK_SECRET not set — rejecting webhook")
+    # Verify webhook signature: mandatory in production, skip in sandbox if no secret
+    if PADDLE_WEBHOOK_SECRET:
+        sig_header = request.headers.get("Paddle-Signature", "")
+        if not _verify_paddle_signature(raw_body, sig_header):
+            logger.warning("[Paddle] Webhook signature verification failed")
+            raise HTTPException(status_code=403, detail="Invalid signature")
+    elif PADDLE_ENVIRONMENT == "production":
+        logger.error("[Paddle] PADDLE_WEBHOOK_SECRET not set in production — rejecting")
         raise HTTPException(status_code=500, detail="Webhook secret not configured")
-    sig_header = request.headers.get("Paddle-Signature", "")
-    if not _verify_paddle_signature(raw_body, sig_header):
-        logger.warning("[Paddle] Webhook signature verification failed")
-        raise HTTPException(status_code=403, detail="Invalid signature")
+    else:
+        logger.warning("[Paddle] Webhook signature skip (sandbox, no secret)")
 
     try:
         data = json.loads(raw_body)
