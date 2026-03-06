@@ -57,40 +57,50 @@ _build_ssot_context_fn = None
 # ---------------------------------------------------------------------------
 _CB_THRESHOLD = int(os.getenv("LAWMADILM_CB_THRESHOLD", "5"))
 _CB_OPEN_SEC = float(os.getenv("LAWMADILM_CB_OPEN_SEC", "60"))
+
+# Timeout 설정 (환경변수로 조정 가능, 기본값 유지)
+_DRF_VERIFY_TIMEOUT = float(os.getenv("DRF_VERIFY_TIMEOUT", "20"))
+_DRF_FETCH_TIMEOUT = float(os.getenv("DRF_FETCH_TIMEOUT", "15"))
+_RAG_API_TIMEOUT = float(os.getenv("RAG_API_TIMEOUT", "10"))
 _cb_consecutive_failures: int = 0
 _cb_open_since: float = 0.0  # time.monotonic() when circuit opened
 
 import time as _time
+import threading as _threading
+
+_cb_lock = _threading.Lock()
 
 
 def _cb_state() -> str:
     """Circuit breaker state: 'closed' / 'open' / 'half_open'"""
-    global _cb_consecutive_failures, _cb_open_since
-    if _cb_consecutive_failures < _CB_THRESHOLD:
-        return "closed"
-    elapsed = _time.monotonic() - _cb_open_since
-    if elapsed < _CB_OPEN_SEC:
-        return "open"
-    return "half_open"
+    with _cb_lock:
+        if _cb_consecutive_failures < _CB_THRESHOLD:
+            return "closed"
+        elapsed = _time.monotonic() - _cb_open_since
+        if elapsed < _CB_OPEN_SEC:
+            return "open"
+        return "half_open"
 
 
 def _cb_record_success() -> None:
     global _cb_consecutive_failures, _cb_open_since
-    if _cb_consecutive_failures > 0:
-        logger.info(f"[CB] LawmadiLM 복구 (연속실패 {_cb_consecutive_failures}→0)")
-    _cb_consecutive_failures = 0
-    _cb_open_since = 0.0
+    with _cb_lock:
+        if _cb_consecutive_failures > 0:
+            logger.info(f"[CB] LawmadiLM 복구 (연속실패 {_cb_consecutive_failures}→0)")
+        _cb_consecutive_failures = 0
+        _cb_open_since = 0.0
 
 
 def _cb_record_failure() -> None:
     global _cb_consecutive_failures, _cb_open_since
-    _cb_consecutive_failures += 1
-    if _cb_consecutive_failures >= _CB_THRESHOLD and _cb_open_since == 0.0:
-        _cb_open_since = _time.monotonic()
-        logger.warning(
-            f"[CB] LawmadiLM 서킷 OPEN (연속실패 {_cb_consecutive_failures}회, "
-            f"{_CB_OPEN_SEC}초 대기)"
-        )
+    with _cb_lock:
+        _cb_consecutive_failures += 1
+        if _cb_consecutive_failures >= _CB_THRESHOLD and _cb_open_since == 0.0:
+            _cb_open_since = _time.monotonic()
+            logger.warning(
+                f"[CB] LawmadiLM 서킷 OPEN (연속실패 {_cb_consecutive_failures}회, "
+                f"{_CB_OPEN_SEC}초 대기)"
+            )
 
 
 def _load_leader_profiles() -> Dict[str, Any]:
@@ -893,7 +903,19 @@ async def _stage1_rag_search(query: str, top_k: int = 10) -> RAGContext:
             return ctx
 
         except Exception as e:
-            logger.warning(f"[Stage 1] Vertex AI Search 전체 실패, law_cache 폴백: {e}")
+            logger.warning(f"[Stage 1] Vertex AI Search 1차 실패, 1초 후 재시도: {e}")
+            await asyncio.sleep(1.0)
+            try:
+                matched = await _vertex_search_fn(query, top_k=8)
+                ctx.matched_laws = matched or []
+                if _vertex_context_fn:
+                    ctx.context_text = await _vertex_context_fn(query, top_k=30)
+                if _vertex_cache_context_fn:
+                    ctx.cache_context = await _vertex_cache_context_fn(query, top_k=30)
+                logger.info(f"[Stage 1] Vertex AI Search 재시도 성공: {len(ctx.matched_laws)}건")
+                return ctx
+            except Exception as e2:
+                logger.warning(f"[Stage 1] Vertex AI Search 재시도 실패, law_cache 폴백: {e2}")
             # 폴백: 기존 law_cache 로직으로 계속
 
     # ─── 기존 law_cache 모드 (또는 Vertex 실패 시 폴백) ───
@@ -902,7 +924,7 @@ async def _stage1_rag_search(query: str, top_k: int = 10) -> RAGContext:
     rag_url = LAWMADILM_RAG_URL
     if rag_url:
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=_RAG_API_TIMEOUT) as client:
                 resp = await client.get(
                     f"{rag_url}/search",
                     params={"query": query, "top_k": top_k},
@@ -1333,10 +1355,10 @@ async def _drf_verify_law_refs(text: str, lang: str = "") -> VerificationResult:
         try:
             all_fetch_results = await asyncio.wait_for(
                 asyncio.gather(*law_tasks, *prec_tasks, *elaw_tasks, return_exceptions=True),
-                timeout=15.0,
+                timeout=_DRF_FETCH_TIMEOUT,
             )
         except asyncio.TimeoutError:
-            logger.warning(f"[Stage 4] DRF fetch 타임아웃 (15초) — 법률 {len(law_tasks)}건, 판례 {len(prec_tasks)}건, elaw {len(elaw_tasks)}건")
+            logger.warning(f"[Stage 4] DRF fetch 타임아웃 ({_DRF_FETCH_TIMEOUT}초) — 법률 {len(law_tasks)}건, 판례 {len(prec_tasks)}건, elaw {len(elaw_tasks)}건")
             result.all_passed = False
             result.drf_failed = True
             return result
@@ -2218,7 +2240,7 @@ async def _run_legal_pipeline(
 
     try:
         drf_verification = await asyncio.wait_for(
-            _drf_verify_law_refs(final_text, lang=lang), timeout=20.0,
+            _drf_verify_law_refs(final_text, lang=lang), timeout=_DRF_VERIFY_TIMEOUT,
         )
     except asyncio.TimeoutError:
         _s4_elapsed = asyncio.get_event_loop().time() - _s4_start
@@ -2242,6 +2264,12 @@ async def _run_legal_pipeline(
                     logger.warning(
                         f"[CheckGrounding] 낮은 근거 점수({support_score:.2f}) — DRF 통과했으나 근거 부족 가능"
                     )
+                    grounding_disclaimer = (
+                        "\n\n---\n"
+                        "※ 이 답변의 일부 내용은 법률 데이터 근거 검증에서 낮은 점수를 받았습니다. "
+                        "정확한 내용은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
+                    )
+                    final_text = final_text.rstrip() + grounding_disclaimer
         except Exception as e:
             logger.warning(f"[CheckGrounding] 결과 수집 실패 (무시): {e}")
 
@@ -2296,7 +2324,7 @@ async def _run_legal_pipeline(
             )
             if retry_text and len(retry_text.strip()) >= 30:
                 retry_drf = await asyncio.wait_for(
-                    _drf_verify_law_refs(retry_text, lang=lang), timeout=20.0,
+                    _drf_verify_law_refs(retry_text, lang=lang), timeout=_DRF_VERIFY_TIMEOUT,
                 )
                 retry_result = _apply_fail_closed(retry_text, retry_drf)
                 if retry_result != FAIL_CLOSED_RESPONSE:
@@ -2402,9 +2430,9 @@ async def run_pipeline_stage3(text: str, lang: str = "") -> VerificationResult:
     if not text:
         return VerificationResult()
     try:
-        return await asyncio.wait_for(_drf_verify_law_refs(text, lang=lang), timeout=20.0)
+        return await asyncio.wait_for(_drf_verify_law_refs(text, lang=lang), timeout=_DRF_VERIFY_TIMEOUT)
     except asyncio.TimeoutError:
-        logger.warning("[Stream Stage 3] DRF 검증 타임아웃 (20초) → 검증 스킵")
+        logger.warning(f"[Stream Stage 3] DRF 검증 타임아웃 ({_DRF_VERIFY_TIMEOUT}초) → 검증 스킵")
         return VerificationResult(drf_failed=True)
     except Exception as e:
         logger.error(f"[Stream Stage 3] DRF 검증 실패: {e} → 검증 스킵")
