@@ -1,5 +1,5 @@
 # Lawmadi OS — LLM System Specification
-> Version: v60.0.0 | Last Updated: 2026-02-28 | Format: llms.txt/1.0
+> Version: v60.0.0 | Last Updated: 2026-02-25 | Format: llms.txt/1.0
 
 ---
 
@@ -60,19 +60,19 @@ L7 RENDERER    → Legal vs Reference Output Segregation (Section Divider, Discl
 |-----------|-----------|
 | Backend Framework | FastAPI 0.128.0 + Uvicorn 0.40.0 |
 | Runtime | Python 3.10+ |
-| Primary LLM | Google Gemini 2.5 Flash (`gemini-2.5-flash`) |
-| Model Fallback Chain | Flash → Pro → Lite (auto-switch on quota error) |
+| Primary LLM | Google Gemini 2.5 Flash (gemini-2.5-flash) |
 | Constitutional Verifier | Gemini Flash (DRF cross-verification) |
-| Legal Draft LLM | LawmadiLM v4.0 — **DISABLED** (`ENABLE_LAWMADILM=false`, services deleted) |
-| Deliberation System | CSO-led leader meeting + handoff (core/deliberation.py) |
+| Legal Draft LLM | LawmadiLM v4.0 (Qwen3-1.7B QLoRA, GGUF Q4_K_M ~1.19GB) |
+| LLM Serving | llama.cpp (OpenAI-compatible /v1/chat/completions) |
+| RAG Engine | ChromaDB + intfloat/multilingual-e5-large |
 | Cloud Platform | GCP Cloud Run (asia-northeast3) |
-| Cloud Resources | 2 vCPU / 4 GiB RAM / max 10 instances / concurrency 15 / timeout 300s |
+| Cloud Resources | 2 vCPU / 2 GiB RAM / min 1 / max 10 instances / concurrency 80 / timeout 300s |
 | Frontend | Firebase Hosting (Static HTML/CSS/JS — Korean + English) |
 | Splash Screen | Premium: Aurora gradient + 20 particles + glow icon + letter animation + progress bar |
 | PWA Icons | Custom PNG icons: 192x192 + 512x512 (resized from 1024x1024 source) |
 | Database | Cloud SQL (PostgreSQL) via cloud-sql-python-connector |
 | Secret Management | GCP Secret Manager |
-| CI/CD | GitHub Actions (3-job pipeline: Backend → Frontend → Notify) |
+| CI/CD | GitHub Actions (5-job pipeline: Test → Staging → Backend → Frontend → Notify) |
 
 ### Runtime Constants
 
@@ -173,8 +173,6 @@ USE_SWARM    = controlled via environment variable
 
 ## LAWMADILM — LEGAL DOMAIN LLM
 
-> **STATUS: DISABLED** — LawmadiLM is disabled (`ENABLE_LAWMADILM=false`) due to n_ctx=4096 overflow errors and persistent timeouts. All Cloud Run services (lawmadilm-llm, lawmadilm-rag, lawmadilm-api) have been deleted (2026-02-28). Stage 2 is skipped; Gemini Flash handles composition directly. Circuit breaker built-in (5 consecutive failures → 60s open).
-
 LawmadiLM is a fine-tuned Korean legal language model that generates Stage 2 legal drafts.
 
 ### Model Specifications
@@ -185,7 +183,7 @@ Training Data:    85,909 Q&A pairs (126 Korean laws)
 Inference Format: GGUF Q4_K_M (~1.19GB)
 Serving Engine:   llama.cpp (llama-server)
 API:              OpenAI-compatible /v1/chat/completions
-Max Tokens:       150 (draft), Context: 4096
+Max Tokens:       60 (general) / 100 (expert), Context: 4096
 ```
 
 ### Training Data Composition (v4.0)
@@ -199,12 +197,11 @@ Max Tokens:       150 (draft), Context: 4096
 | C-Level CCO (Simple Explanation) | 1,141 | 1.3% |
 | **Total** | **85,909** | **100%** |
 
-### Cloud Run Services — DELETED
-| Service | CPU | Memory | Instances | Role | Status |
-|---------|-----|--------|-----------|------|--------|
-| lawmadilm-llm | 4 vCPU | 16 GiB | 1–2 | LLM inference (llama.cpp) | ❌ Deleted 2026-02-28 |
-| lawmadilm-rag | 2 vCPU | 8 GiB | 0–3 | RAG vector search (ChromaDB) | ❌ Deleted 2026-02-28 |
-| lawmadilm-api | 4 vCPU | 16 GiB | 0–1 | API gateway (GPU) | ❌ Deleted 2026-02-28 |
+### Cloud Run Services
+| Service | CPU | Memory | Instances | Role |
+|---------|-----|--------|-----------|------|
+| lawmadilm-llm | 4 vCPU | 16 GiB | 1–2 | LLM inference (llama.cpp) |
+| lawmadilm-rag | 2 vCPU | 8 GiB | 0–3 | RAG vector search (ChromaDB) |
 
 ### Data Pipeline
 ```
@@ -225,7 +222,7 @@ Every `/ask` and `/ask-stream` request flows through this pipeline:
 
 ```
 Stage 1: SECURITY & PRE-PROCESSING
-  ├─ Rate limiting (Free: 5/4h, Premium: 200/4h, Admin: 1000/4h)
+  ├─ Rate limiting (Free: 100/4h, Premium: 200/4h)
   ├─ Low Signal → 3-tier routing:
   │     greeting → system intro
   │     non-legal → local response
@@ -234,12 +231,11 @@ Stage 1: SECURITY & PRE-PROCESSING
   ├─ Gemini Flash analysis → tier (1-3), leader (L01-L60), specialty
   └─ SSOT availability check (Gemini key, DRF connectivity)
 
-Stage 2: LAWMADILM DRAFT (⚠️ CURRENTLY DISABLED)
-  ├─ ENABLE_LAWMADILM=false — Stage 2 is skipped entirely
-  ├─ Circuit breaker: 5 consecutive failures → 60s open
-  ├─ n_ctx=4096 overflow protection (system_prompt auto-truncate)
-  ├─ When enabled: Async call to LawmadiLM API (max 150 tokens, timeout 15s)
-  └─ Fallback: Gemini Flash compose (currently the active path)
+Stage 2: LAWMADILM DRAFT
+  ├─ Async call to LawmadiLM API (max 60 tokens, timeout 5s)
+  ├─ Draft: law name, key articles, precedent references, conclusion
+  ├─ Fallback: skip if unavailable (pipeline continues without draft)
+  └─ Fallback: Gemini Flash compose if LawmadiLM unavailable
 
 Stage 3: GEMINI FLASH COMPOSITION + ENHANCEMENT
   ├─ System instruction = SYSTEM_INSTRUCTION_BASE + leader persona + law_cache context
@@ -253,70 +249,9 @@ Stage 4: DRF FULL VERIFICATION + CONSTITUTIONAL CHECK
   ├─ Extract law references + precedent numbers + constitutional court decision numbers
   ├─ DRF real-time cross-verification
   ├─ Constitutional compliance validation (6 principles)
-  ├─ Any unverified law reference (>0.1%) → Fail-Closed
-  │     1. Try removing unverified sentences from original (keep if >300 chars)
-  │     2. If <300 chars remaining, regenerate without unverified references
-  │     3. Append disclaimer if sentences were removed
+  ├─ 0.1%+ unverified → Fail-Closed (block response, 1 retry with regeneration)
   ├─ Warning/correction injection if violation detected
   └─ Audit logging to Cloud SQL
-```
-
----
-
-## DELIBERATION & HANDOFF SYSTEM
-
-CSO 서연 (Chief Strategy Officer) leads structured leader meetings before each response.
-
-### Deliberation Types
-```
-Full Deliberation  — First question (is_first_question=true)
-                     CSO 서연 + 2 relevant leaders, 3 turns
-                     Turn 1 sequential, Turn 2+3 parallel (asyncio.gather)
-                     Additional latency: +2–4 seconds
-
-Handoff            — Leader change detected (current_leader ≠ new_leader)
-                     Previous leader ↔ New leader, 2 turns (parallel)
-                     Additional latency: +1–2 seconds
-
-None               — Same specialty follow-up question
-                     Skip meeting, retain current leader
-                     Additional latency: 0 seconds
-```
-
-### Technical Details
-```
-Module:              core/deliberation.py
-Gemini calls:        Per-turn individual calls with real leader personas
-Max output tokens:   300 per turn
-Thinking budget:     0 (no thinking for meeting dialogue)
-Per-turn timeout:    5 seconds (asyncio.wait_for)
-External timeout:    8 seconds
-Failure mode:        Graceful fallback (skip meeting, use standard routing)
-Pipeline parallel:   Deliberation runs via asyncio.gather with main pipeline
-```
-
-### Model Fallback Chain
-```
-gemini-2.5-flash (default) → gemini-2.5-pro → gemini-2.0-flash-lite
-Module: core/model_fallback.py (MODEL_CHAIN, get_model(), on_quota_error())
-Trigger: Quota exceeded error → automatic switch to next model
-```
-
-### API Response Fields
-```json
-{
-  "deliberation": [{"speaker": "CSO 서연", "message": "..."}, ...],
-  "handoff": [{"speaker": "전임리더", "message": "..."}, ...] or null,
-  "current_leader": "L08"
-}
-```
-
-### SSE Stream Events (for /ask-stream)
-```
-deliberation_start  — Meeting begins
-deliberation_turn   — Each turn's dialogue
-deliberation_end    — Meeting concludes
-handoff             — Leader handoff dialogue
 ```
 
 ---
@@ -362,16 +297,17 @@ handoff             — Leader handoff dialogue
 | SSOT_09 | 조약 | trty | lawService.do | Active (ID parameter required; e.g. ID=983) |
 | SSOT_10 | 법령용어 | lstrm | lawSearch.do | Active |
 
-### Law Cache (law_cache.json)
+### Law Cache (law_cache_1~7.json — Multi-file Split)
 
-Zero-cost keyword matching cache loaded into server memory at startup.
+Zero-cost keyword matching cache loaded into server memory at startup. Split into 7 files for large-scale Q&A coverage.
 
 ```
 Total SSOT Types:  10
 Total Entries:     548
 Total Keywords:    14,088
 Total Articles:    20,798
-File Size:         4.12 MB
+File Count:        7 (law_cache_1.json ~ law_cache_7.json)
+Total Size:        ~603 MB
 ```
 
 | Type | Label | Entries | Keywords | Articles |
@@ -420,13 +356,26 @@ Usage: Query keywords matched against reverse index → top matching articles se
 | GET | `/en` | Static frontend — English (index-en.html) |
 | GET | `/health` | Health check: `{"status": "online", "os_version": "v60.0.0"}` |
 | GET | `/leaders` | 60 리더 전체 목록 반환 |
+| GET | `/leaders-en` | 60 리더 전체 목록 (영어) |
+| GET | `/about` | 소개 페이지 — 한국어 |
+| GET | `/about-en` | 소개 페이지 — 영어 |
+| GET | `/clevel-en` | C-Level 페이지 (영어) |
+| GET | `/terms` | 이용약관 |
+| GET | `/privacy` | 개인정보처리방침 |
 | GET | `/metrics` | 시스템 메트릭 (요청 수, 평균 레이턴시) |
 | GET | `/diagnostics` | 시스템 진단 정보 |
 | POST | `/ask` | 법률 질의 처리 (메인 AI 엔드포인트). `lang: "en"` 파라미터로 영어 응답 |
 | POST | `/ask-stream` | SSE 스트리밍 법률 답변. `lang: "en"` 파라미터로 영어 응답 |
 | POST | `/ask-expert` | 전문가용 답변 (Gemini 재생성 + DRF SSOT 검증) |
 | POST | `/upload` | 법률 문서 파일 업로드 |
-| GET | `/analyze-document/{file_id}` | 업로드된 문서 분석 |
+| POST | `/analyze-document/{file_id}` | 업로드된 문서 분석 |
+| POST | `/export-pdf` | 법률문서 PDF 내보내기 |
+| GET | `/search` | 법령 검색 |
+| GET | `/trending` | 인기 질문 트렌드 |
+| GET | `/plans` | 요금제 정보 조회 |
+| POST | `/feedback` | 사용자 피드백 제출 |
+| POST | `/suggest-questions` | AI 추천 질문 생성 |
+| POST | `/lawyer-inquiry` | 변호사 상담 문의 |
 | POST | `/api/visit` | 방문자 카운터 업데이트 |
 | GET | `/api/visitor-stats` | 방문자 통계 조회 (`today_visitors`, `total_visitors`) |
 
@@ -434,7 +383,15 @@ Usage: Query keywords matched against reverse index → top matching articles se
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/admin/*` | 관리자 전용 엔드포인트 (인증 필요) |
+| GET | `/api/verification/stats` | 헌법 검증 통계 |
+| GET | `/api/admin/leader-stats` | 리더별 질문 통계 |
+| GET | `/api/admin/category-stats` | 법률 분야별 통계 |
+| GET | `/api/admin/leader-queries/{leader_code}` | 특정 리더 질문 이력 |
+| GET | `/dashboard` | 관리자 대시보드 |
+| GET | `/conversion` | 전환율 분석 |
+| GET | `/retention` | 리텐션 분석 |
+| GET | `/cost-estimate` | 비용 추정 |
+| GET | `/feedback-summary` | 피드백 요약 |
 
 ---
 
@@ -539,43 +496,18 @@ Response on violation: 요청을 처리할 수 없음을 통지하고 로그 기
 
 ## DEPLOYMENT CONFIGURATION
 
-### Database
-```
-Engine:     Cloud SQL PostgreSQL 17 Enterprise
-Instance:   db-f1-micro (~$8/month)
-Storage:    HDD 10GB, auto-resize enabled
-Region:     asia-northeast3
-Tables:     12+ (auto-created via init_tables() chain)
-            audit_logs, chat_history, visitor_stats, daily_visitors,
-            drf_cache, rate_limit_tracker, response_verification,
-            frontend_errors, frontend_perf, lawyer_inquiries, feedback
-Fail-soft:  DB_DISABLED=1 environment variable
-```
-
-### Security Enhancements
-```
-Authentication:    core/auth.py (Bearer parsing, hmac.compare_digest, token hash logging)
-Rate Limits:       Free: 5/4h, Premium: 200/4h, Admin: 1000/4h
-Body Size Limit:   2MB default, 10MB for uploads
-CSP Headers:       form-action, upgrade-insecure-requests (Firebase hosting)
-XSS Prevention:    DOMPurify 3.2.4 (6 critical innerHTML sanitization points)
-Frontend Monitor:  lawmadi-monitor.js (JS errors + Core Web Vitals)
-```
-
-### GCP Secret Manager (12 Secrets)
+### GCP Secret Manager (10 Secrets)
 ```
 GEMINI_API_KEY      — Google Gemini API key
-GEMINI_KEY          — Gemini API key (alternative)
+GEMINI_KEY          — Google Gemini API key (alias)
 LAWGO_DRF_OC        — 법제처 DRF API OC (Open API Client key)
 ANTHROPIC_API_KEY   — Anthropic Claude API key
-DATABASE_URL        — Database connection URL
 CLOUD_SQL_INSTANCE  — Cloud SQL connection name
-DB_USER             — Database username
-DB_PASS             — Database password
-DB_NAME             — Database name
+DB_USER             — Cloud SQL database user
+DB_PASS             — Cloud SQL database password
+DB_NAME             — Cloud SQL database name
 MCP_API_KEY         — MCP 서버 Bearer 토큰 인증 키
-INTERNAL_API_KEY    — Internal admin API key
-PREMIUM_KEYS        — Premium tier API keys
+API_KEYS            — Zapier/외부 API 인증 키
 ```
 
 ### Required Environment Variables
@@ -589,40 +521,28 @@ ANTHROPIC_API_KEY   (Claude API key)
 ```
 Region: asia-northeast3 (Seoul)
 CPU: 2 vCPU
-Memory: 4 GiB
+Memory: 2 GiB
 Max Instances: 10
-Min Instances: 0
-Concurrency: 15
+Min Instances: 1
+Concurrency: 80
 Request Timeout: 300s
-Env: ENABLE_LAWMADILM=false, LAWMADILM_TIMEOUT=3
 ```
 
-### Cloud Run Services (1 Active)
+### Cloud Run Services (4 Total)
 ```
-lawmadi-os-v60    — Main API (FastAPI)          | 2 vCPU, 4 GiB  | 0–10 instances
-
-# DELETED (2026-02-28):
-# lawmadilm-llm   — LLM inference (llama.cpp)   | 4 vCPU, 16 GiB | DELETED
-# lawmadilm-rag   — RAG search (ChromaDB)        | 2 vCPU, 8 GiB  | DELETED
-# lawmadilm-api   — Legacy API gateway           | 4 vCPU, 16 GiB | DELETED
+lawmadi-os-v60    — Main API (FastAPI)          | 2 vCPU, 2 GiB  | 1–10 instances
+lawmadilm-llm     — LLM inference (llama.cpp)   | 4 vCPU, 16 GiB | 1–2 instances
+lawmadilm-rag     — RAG search (ChromaDB)        | 2 vCPU, 8 GiB  | 0–3 instances
+lawmadilm-api     — Legacy API gateway           | 1 vCPU, 512 MiB | 0–1 instances
 ```
 
-### CI/CD Pipeline (GitHub Actions)
+### CI/CD Pipeline (GitHub Actions — 5-Job)
 ```
-Job 1: Backend  — Docker build → GCR push → Cloud Run deploy (~2m 32s)
-Job 2: Frontend — Firebase Hosting deploy (~57s)
-Job 3: Notify   — Deployment notification (~4s)
-```
-
----
-
-## TEST SUITE
-
-```
-Total Tests:          282 (all passing)
-NLU Routing Tests:    264 (test_leader_matching.py)
-Verifier Parse Tests:  18 (test_verifier_parse.py)
-Run Command:          pytest tests/ -v
+Job 1: Test     — Unit tests + system integrity + critical file validation
+Job 2: Staging  — Docker build → Cloud Run staging deploy → smoke tests (/health + /diagnostics)
+Job 3: Backend  — Production deploy (manual approval gate) → health verification
+Job 4: Frontend — Firebase Hosting deploy → lawmadi-db.web.app verification
+Job 5: Notify   — Deployment summary notification
 ```
 
 ---
@@ -675,4 +595,4 @@ engines.response_verifier  → ResponseVerifier (Gemini SSOT 검증)
 ---
 
 *This llms.txt file conforms to the llms.txt/1.0 specification for machine-readable AI system documentation.*
-*Generated: 2026-02-28 | Lawmadi OS v60.0.0*
+*Generated: 2026-02-25 | Lawmadi OS v60.0.0*
