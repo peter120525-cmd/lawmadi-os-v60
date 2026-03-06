@@ -81,3 +81,6 @@ tests/test_40_results.json
 # Node.js (not part of core project)
 package.json
 package-lock.json
+vertex_expansion/
+law_cache_vertex.jsonl
+.build_version

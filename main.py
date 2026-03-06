@@ -1157,6 +1157,7 @@ async def startup():
             search_legal_documents as _vertex_search,
             build_vertex_context as _vertex_ctx,
             build_vertex_cache_context as _vertex_cache_ctx,
+            check_grounding as _vertex_check_grounding,
         )
         _set_pipeline_law_cache(
             LAW_CACHE,
@@ -1165,7 +1166,7 @@ async def startup():
             build_ssot_context_fn=None,
         )
         from core.pipeline import set_vertex_search_fns as _set_vertex_fns
-        _set_vertex_fns(_vertex_search, _vertex_ctx, _vertex_cache_ctx)
+        _set_vertex_fns(_vertex_search, _vertex_ctx, _vertex_cache_ctx, _vertex_check_grounding)
         logger.info("🔍 Pipeline wired with Vertex AI Search functions")
     else:
         _set_pipeline_law_cache(LAW_CACHE, build_cache_context, match_ssot_sources, build_ssot_context)
