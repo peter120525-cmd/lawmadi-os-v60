@@ -284,7 +284,10 @@ async def send_otp(request: Request):
         if PADDLE_ENVIRONMENT == "sandbox":
             logger.info(f"[OTP-SANDBOX] code={code} for {email[:3]}***")
             return {"ok": True, "message": "OTP sent (sandbox mode)", "ttl": _OTP_TTL_SEC}
-        raise HTTPException(status_code=500, detail="Failed to send OTP email")
+        raise HTTPException(
+            status_code=500,
+            detail="Email delivery failed. Please try again shortly or contact support."
+        )
 
     logger.info(f"[OTP] Sent to {email[:3]}***")
     return {"ok": True, "message": "OTP sent", "ttl": _OTP_TTL_SEC}
@@ -295,13 +298,18 @@ def _store_otp(email: str, code: str, expires: float):
     code_hash = _hash_otp(code)
     try:
         from connectors.db_client_v2 import execute
+        # Invalidate all previous unused OTPs for this email before inserting new one
+        execute(
+            "UPDATE otp_codes SET used = TRUE WHERE email = %s AND used = FALSE",
+            (email,), fetch="none"
+        )
         execute(
             """INSERT INTO otp_codes (id, email, code_hash, expires_at, used)
                VALUES (%s, %s, %s, TO_TIMESTAMP(%s), FALSE)""",
             (str(uuid.uuid4()), email, code_hash, expires),
             fetch="none"
         )
-        # Clean old OTPs for this email
+        # Clean old OTPs for this email (expired or already used)
         execute(
             "DELETE FROM otp_codes WHERE email = %s AND (used = TRUE OR expires_at < NOW())",
             (email,), fetch="none"
@@ -321,6 +329,7 @@ async def _send_otp_email(email: str, code: str) -> bool:
     smtp_from = os.getenv("SMTP_FROM", "") or smtp_user
 
     if not smtp_user or not smtp_pass:
+        logger.error("[OTP] SMTP_USER or SMTP_PASSWORD not configured — cannot send OTP email")
         return False
 
     try:
@@ -448,15 +457,9 @@ def _verify_otp_code(email: str, code: str) -> str:
     try:
         from connectors.db_client_v2 import execute
 
-        # Count recent failed attempts for this email (brute force protection)
-        attempt_result = execute(
-            "SELECT COUNT(*) FROM otp_codes WHERE email = %s AND used = FALSE AND expires_at > NOW()",
-            (email,), fetch="one"
-        )
-
         # Get latest unused OTP
         result = execute(
-            """SELECT id, code_hash, expires_at FROM otp_codes
+            """SELECT id, code_hash, expires_at, attempts FROM otp_codes
                WHERE email = %s AND used = FALSE
                ORDER BY created_at DESC LIMIT 1""",
             (email,), fetch="one"
@@ -464,6 +467,11 @@ def _verify_otp_code(email: str, code: str) -> str:
         if result.get("ok") and result.get("data"):
             row = result["data"]
             otp_id, stored_hash, expires_at = str(row[0]), row[1], row[2]
+            db_attempts = row[3] if len(row) > 3 else 0
+
+            # Brute force protection: max attempts per OTP
+            if db_attempts >= _MAX_OTP_ATTEMPTS:
+                return "max_attempts"
 
             from datetime import datetime, timezone
             now = datetime.now(timezone.utc)
@@ -474,6 +482,12 @@ def _verify_otp_code(email: str, code: str) -> str:
                 # Mark as used
                 execute("UPDATE otp_codes SET used = TRUE WHERE id = %s", (otp_id,), fetch="none")
                 return "ok"
+
+            # Increment attempts on wrong code
+            execute(
+                "UPDATE otp_codes SET attempts = attempts + 1 WHERE id = %s",
+                (otp_id,), fetch="none"
+            )
             return "invalid"
         # No OTP found in DB — fall through to memory check
     except Exception as e:
@@ -1031,6 +1045,7 @@ def init_paddle_tables():
                 code_hash    VARCHAR(64) NOT NULL,
                 expires_at   TIMESTAMPTZ NOT NULL,
                 used         BOOLEAN NOT NULL DEFAULT FALSE,
+                attempts     INTEGER NOT NULL DEFAULT 0,
                 created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
         """)
@@ -1038,6 +1053,11 @@ def init_paddle_tables():
             CREATE INDEX IF NOT EXISTS idx_otp_email_expires
             ON otp_codes (email, expires_at DESC)
         """)
+        # Migrate: add attempts column if missing (safe for existing tables)
+        try:
+            cur.execute("ALTER TABLE otp_codes ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0")
+        except Exception:
+            pass  # Column already exists or DB doesn't support IF NOT EXISTS
 
         # Sessions table (DB-backed, 30-day TTL)
         cur.execute("""
