@@ -689,6 +689,16 @@
                         <td>결제 시 이용자 입력</td>
                     </tr>
                     <tr>
+                        <td>이메일 인증(OTP)</td>
+                        <td>이메일 주소, 인증코드(SHA-256 해시)</td>
+                        <td>이용자 입력 / 시스템 생성</td>
+                    </tr>
+                    <tr>
+                        <td>세션 관리</td>
+                        <td>세션 토큰(암호화), 만료 일시</td>
+                        <td>인증 완료 시 자동 생성</td>
+                    </tr>
+                    <tr>
                         <td>자동 수집</td>
                         <td>브라우저 정보, 접속 로그</td>
                         <td>시스템 자동 생성</td>
@@ -737,12 +747,63 @@
                         <td>전자상거래법 제6조</td>
                     </tr>
                     <tr>
+                        <td>OTP 인증코드</td>
+                        <td>발급 후 5분 (만료 시 자동 삭제)</td>
+                        <td>인증 목적 달성</td>
+                    </tr>
+                    <tr>
+                        <td>세션 토큰</td>
+                        <td>30일 (로그아웃 시 즉시 삭제)</td>
+                        <td>로그인 상태 유지</td>
+                    </tr>
+                    <tr>
                         <td>변호사 문의 정보</td>
                         <td>연결 완료 후 즉시 삭제</td>
                         <td>목적 달성 시 삭제</td>
                     </tr>
                 </tbody>
             </table>
+        </div>
+
+        <!-- 쿠키 및 자동 수집 장치 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="icon-wrap">
+                    <span class="material-symbols-outlined">cookie</span>
+                </div>
+                <h2>쿠키 및 자동 수집 장치</h2>
+                <span class="law-tag">정보통신망법 §22</span>
+            </div>
+            <p>서비스는 다음과 같은 쿠키를 사용합니다.</p>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>쿠키명</th>
+                        <th>유형</th>
+                        <th>목적</th>
+                        <th>만료</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>lm_session</td>
+                        <td>필수 쿠키</td>
+                        <td>이메일 인증 후 로그인 상태 유지, 크레딧 사용</td>
+                        <td>30일</td>
+                    </tr>
+                    <tr>
+                        <td>_ga, _ga_*</td>
+                        <td>분석 쿠키 (선택)</td>
+                        <td>Google Analytics를 통한 서비스 이용 통계 분석</td>
+                        <td>2년</td>
+                    </tr>
+                </tbody>
+            </table>
+            <ul>
+                <li><strong>필수 쿠키(lm_session)</strong>는 이용자가 이메일 인증(OTP)을 완료한 경우에만 생성되며, HttpOnly 속성으로 보호됩니다. 로그아웃 시 즉시 삭제됩니다.</li>
+                <li><strong>분석 쿠키(Google Analytics)</strong>는 이용자의 명시적 동의가 있는 경우에만 활성화됩니다. 페이지 하단의 쿠키 동의 배너에서 수락 또는 거부할 수 있습니다.</li>
+                <li>브라우저 설정에서 쿠키를 차단할 수 있으나, 필수 쿠키 차단 시 크레딧 기반 서비스 이용이 제한될 수 있습니다.</li>
+            </ul>
         </div>
 
         <!-- 제4조 제3자 제공 -->
@@ -771,8 +832,12 @@
                     <div class="service-name">Paddle</div>
                     <div class="service-desc">크레딧 결제 처리 (Merchant of Record)</div>
                 </div>
+                <div class="third-party-item">
+                    <div class="service-name">Google Analytics (GA4)</div>
+                    <div class="service-desc">서비스 이용 통계 분석 (이용자 동의 시에만 활성화)</div>
+                </div>
             </div>
-            <p>각 외부 서비스 제공자는 자체 개인정보처리방침에 따라 데이터를 처리하며, 전송되는 데이터는 질문 텍스트에 한정됩니다.</p>
+            <p>각 외부 서비스 제공자는 자체 개인정보처리방침에 따라 데이터를 처리합니다. Gemini API에는 질문 텍스트만, Paddle에는 결제 이메일만, Google Analytics에는 익명화된 이용 통계만 전송됩니다.</p>
         </div>
 
         <!-- 제5조 정보주체 권리 -->
