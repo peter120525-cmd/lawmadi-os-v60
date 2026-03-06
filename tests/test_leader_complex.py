@@ -2,11 +2,12 @@
 import asyncio
 import aiohttp
 import json
+import os
 import time
 import sys
 
 BASE_URL = "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app"
-ADMIN_KEY = "eGjMr9jAKKNzwfLjzlTmyPo5HVklyZ1BlrzJ_139jDw"
+ADMIN_KEY = os.getenv("TEST_ADMIN_KEY", "")
 
 TESTS = [
     # L02 보늬 (부동산법)

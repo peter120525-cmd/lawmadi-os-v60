@@ -5,11 +5,12 @@ L31 로운(행정법), L35 마루(헌법), L42 하람(저작권)
 import asyncio
 import aiohttp
 import json
+import os
 import time
 import re
 
 BASE_URL = "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app"
-ADMIN_KEY = "eGjMr9jAKKNzwfLjzlTmyPo5HVklyZ1BlrzJ_139jDw"
+ADMIN_KEY = os.getenv("TEST_ADMIN_KEY", "")
 
 GENERAL_TESTS = [
     # L05 연우 (의료법)

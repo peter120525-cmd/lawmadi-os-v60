@@ -5,10 +5,11 @@ L26 루다(지식재산권), L30 담우(노동법), L41 산들(이혼·가족)
 import asyncio
 import aiohttp
 import json
+import os
 import time
 
 BASE_URL = "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app"
-ADMIN_KEY = "eGjMr9jAKKNzwfLjzlTmyPo5HVklyZ1BlrzJ_139jDw"
+ADMIN_KEY = os.getenv("TEST_ADMIN_KEY", "")
 
 TESTS = [
     # L01 휘율 (민사법)
