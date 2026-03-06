@@ -50,6 +50,7 @@ async def create_token(request: Request, req: TokenRequest):
     try:
         token = create_access_token(user_id=user_id, role=req.role, expires_hours=24)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.warning(f"[Auth] Token creation failed: {e}")
+        raise HTTPException(status_code=400, detail="Invalid token request parameters")
 
     return TokenResponse(access_token=token, token_type="bearer", expires_in=86400)

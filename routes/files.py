@@ -80,22 +80,33 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
         if not file.filename:
             raise HTTPException(status_code=400, detail="파일명이 없습니다.")
 
-        # Allowed file types (extension + MIME double-check)
-        allowed_extensions = {'.jpg', '.jpeg', '.png', '.webp', '.pdf'}
+        # Allowed file types (extension + MIME cross-validation)
+        _ext_to_mime = {
+            '.jpg': {'image/jpeg'},
+            '.jpeg': {'image/jpeg'},
+            '.png': {'image/png'},
+            '.webp': {'image/webp'},
+            '.pdf': {'application/pdf'},
+        }
         allowed_mimes = {'image/jpeg', 'image/png', 'image/webp', 'application/pdf'}
         file_ext = Path(file.filename).suffix.lower()
 
-        if file_ext not in allowed_extensions:
+        if file_ext not in _ext_to_mime:
             raise HTTPException(
                 status_code=400,
-                detail=f"지원하지 않는 파일 형식입니다. 허용: {', '.join(allowed_extensions)}"
+                detail=f"지원하지 않는 파일 형식입니다. 허용: {', '.join(_ext_to_mime.keys())}"
             )
 
-        # MIME type validation
+        # MIME type validation + extension-MIME cross-check
         if file.content_type and file.content_type not in allowed_mimes:
             raise HTTPException(
                 status_code=400,
                 detail=f"지원하지 않는 MIME 타입입니다: {file.content_type}"
+            )
+        if file.content_type and file.content_type not in _ext_to_mime[file_ext]:
+            raise HTTPException(
+                status_code=400,
+                detail="파일 확장자와 실제 파일 형식이 일치하지 않습니다."
             )
 
         # 2. Read file and generate hash

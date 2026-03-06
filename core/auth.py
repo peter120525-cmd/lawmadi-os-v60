@@ -21,10 +21,12 @@ _JWT_ALGORITHM = "HS256"
 
 
 def _get_jwt_secret() -> str:
-    """JWT 서명 키 반환. JWT_SECRET 우선, 없으면 INTERNAL_API_KEY fallback."""
+    """JWT 서명 키 반환. JWT_SECRET 우선, 없으면 INTERNAL_API_KEY fallback (경고)."""
     secret = os.getenv("JWT_SECRET", "").strip()
     if not secret:
         secret = os.getenv("INTERNAL_API_KEY", "").strip()
+        if secret:
+            logger.warning("[Auth] JWT_SECRET not set — falling back to INTERNAL_API_KEY. Set JWT_SECRET for production.")
     if not secret:
         raise HTTPException(status_code=500, detail="JWT secret not configured")
     return secret
