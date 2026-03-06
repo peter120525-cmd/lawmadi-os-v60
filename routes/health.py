@@ -47,7 +47,7 @@ def _diagnostic_snapshot() -> Dict[str, Any]:
             "swarm_orchestrator": bool(_RUNTIME.get("swarm_orchestrator")),
             "clevel_handler": bool(_RUNTIME.get("clevel_handler")),
             "genai_client": bool(_RUNTIME.get("genai_client")),
-            "lawmadilm_api": LAWMADILM_API_URL,
+            "lawmadilm_api": bool(LAWMADILM_API_URL),
             "tier_router": "active" if _RUNTIME.get("genai_client") else "fallback_keyword",
             "law_cache": f"{len(_LAW_CACHE)} types, {len(_KEYWORD_INDEX)} keywords" if _LAW_CACHE else "not_loaded",
             "db_client": bool(_db_client),

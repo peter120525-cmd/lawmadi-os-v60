@@ -96,6 +96,7 @@ _get_client_ip_fn: Optional[Callable] = None
 _sha256_fn: Optional[Callable] = None
 _optional_import_fn: Optional[Callable] = None
 _check_expert_access_fn: Optional[Callable] = None
+_post_deduct_fn: Optional[Callable] = None
 
 
 def _detect_lang(query: str) -> str:
@@ -130,6 +131,7 @@ def set_dependencies(
     sha256_fn,
     optional_import_fn,
     check_expert_access=None,
+    post_deduct=None,
 ):
     """Inject shared runtime objects and utility functions from main.py."""
     global _RUNTIME, _METRICS, _LEADER_REGISTRY, _limiter
@@ -137,7 +139,7 @@ def set_dependencies(
     global _match_ssot_sources_fn, _resolve_leader_from_ssot_fn, _ensure_genai_client_fn
     global _classify_gemini_error_fn, _remove_markdown_tables_fn, _remove_separator_lines_fn
     global _compute_quality_meta_fn, _audit_fn, _get_client_ip_fn, _sha256_fn, _optional_import_fn
-    global _check_expert_access_fn
+    global _check_expert_access_fn, _post_deduct_fn
 
     _RUNTIME = runtime
     _METRICS = metrics
@@ -158,6 +160,7 @@ def set_dependencies(
     _sha256_fn = sha256_fn
     _optional_import_fn = optional_import_fn
     _check_expert_access_fn = check_expert_access
+    _post_deduct_fn = post_deduct
 
 
 # ---------------------------------------------------------------------------
@@ -774,6 +777,11 @@ async def ask(request: Request):
             _ask_result["deliberation"] = _ask_deliberation
         if _ask_handoff:
             _ask_result["handoff"] = _ask_handoff
+
+        # Post-deduction: deduct credits after successful response
+        if _post_deduct_fn and _response_status == "SUCCESS":
+            _post_deduct_fn(request, "general", trace)
+
         return _ask_result
 
     except Exception as e:
@@ -1398,6 +1406,28 @@ async def ask_expert(request: Request):
         _raw_ip = _get_client_ip_fn(request)
         visitor_id = hashlib.sha256(_raw_ip.encode()).hexdigest()
 
+        # Security Guard (ask-expert)
+        guard = _RUNTIME.get("guard")
+        if guard:
+            check_result = guard.check(query)
+            if check_result == "CRISIS":
+                safety_config = _RUNTIME.get("config", {}).get("security_layer", {}).get("safety", {})
+                crisis_res = safety_config.get("crisis_resources", {})
+                if lang == "en":
+                    lines = ["🚨 Your safety is the top priority.\n"]
+                    for label, number in crisis_res.items():
+                        lines.append(f"  📞 {label}: {number}")
+                    lines.append("\nPlease contact the above professional organizations immediately.")
+                else:
+                    lines = ["🚨 당신의 안전이 가장 중요합니다.\n"]
+                    for label, number in crisis_res.items():
+                        lines.append(f"  📞 {label}: {number}")
+                    lines.append("\n위 전문 기관으로 지금 바로 연락하세요.")
+                return {"trace_id": trace, "response": "\n".join(lines), "leader": "SAFETY", "status": "CRISIS"}
+            if check_result is False:
+                blocked_msg = "🚫 Blocked by security policy." if lang == "en" else "🚫 보안 정책에 의해 차단되었습니다."
+                return {"trace_id": trace, "response": blocked_msg, "leader": "GUARD", "status": "BLOCKED"}
+
         # 질문 분석 (Stage 1)
         analysis = await _gemini_analyze_query(query)
         if not analysis:
@@ -1444,6 +1474,11 @@ async def ask_expert(request: Request):
             _response_status = "FAIL_CLOSED"
 
         latency_ms = int((time.time() - start) * 1000)
+
+        # Post-deduction: expert costs 2 credits
+        if _post_deduct_fn and _response_status == "SUCCESS":
+            _post_deduct_fn(request, "expert", trace)
+
         return {
             "trace_id": trace,
             "response": final_text,

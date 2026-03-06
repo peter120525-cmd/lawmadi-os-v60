@@ -419,6 +419,8 @@ def init_all_tables(max_retries=3, retry_delay=2.0):
     import time as _time
     from .db_client import init_tables as _init_core
 
+    from routes.paddle import init_paddle_tables
+
     _table_inits = [
         ("core", _init_core),
         ("chat_history", init_chat_history_table),
@@ -426,6 +428,7 @@ def init_all_tables(max_retries=3, retry_delay=2.0):
         ("admin", init_admin_tables),
         ("verification", init_verification_table),
         ("frontend_logs", init_frontend_logs_table),
+        ("paddle", init_paddle_tables),
     ]
 
     failed = []

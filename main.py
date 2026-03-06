@@ -145,6 +145,14 @@ from routes.files import router as files_router, set_dependencies as _set_files_
 from routes.user import router as user_router, set_dependencies as _set_user_deps
 from routes.admin import router as admin_router
 from routes.auth import router as auth_router
+from routes.paddle import (
+    router as paddle_router,
+    verify_session_token as _verify_paddle_session,
+    get_current_user as _get_paddle_user,
+    deduct_credit as _deduct_credit,
+    use_daily_free as _use_daily_free,
+    DAILY_FREE_LIMIT,
+)
 
 # =============================================================
 # BOOTSTRAP
@@ -294,11 +302,12 @@ async def security_headers_middleware(request: Request, call_next):
     # CSP: XSS 방어 — 외부 파일만 허용, 인라인 JS 완전 제거 완료
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; "
+        "script-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://sandbox-cdn.paddle.com https://cdn.paddle.com; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' https: data:; "
-        f"connect-src 'self' {LAWMADI_OS_API_URL} https://www.google-analytics.com https://region1.google-analytics.com; "
+        f"connect-src 'self' {LAWMADI_OS_API_URL} https://www.google-analytics.com https://region1.google-analytics.com https://sandbox-api.paddle.com https://api.paddle.com; "
+        "frame-src https://sandbox-checkout.paddle.com https://checkout.paddle.com; "
         "frame-ancestors 'none'; "
         "object-src 'none'; "
         "base-uri 'self'; "
@@ -617,19 +626,23 @@ PLAN_CONFIG = {
 _PREMIUM_KEYS = set(filter(None, os.getenv("PREMIUM_KEYS", "").split(",")))
 
 def _get_user_plan(request: Request) -> str:
-    """X-Premium-Key 헤더 확인 → 유효하면 'premium', 아니면 'free'"""
+    """플랜 판별: X-Premium-Key 또는 DB 세션 크레딧 확인."""
+    # 1) Legacy: X-Premium-Key 헤더
     key = request.headers.get("X-Premium-Key", "").strip()
     if key and _PREMIUM_KEYS:
-        # constant-time: 모든 키와 비교 후 판단 (timing attack 방어)
         matches = [hmac.compare_digest(key, pk) for pk in _PREMIUM_KEYS]
         if any(matches):
             return "premium"
+    # 2) DB session → users.credit_balance 확인
+    user = _get_paddle_user(request)
+    if user and user.get("credit_balance", 0) > 0:
+        return "premium"
     return "free"
 
 def _check_expert_access(request: Request) -> bool:
     """전문가 모드 접근 권한 확인 (관리자 또는 프리미엄 사용자만 허용)"""
     _admin_key = os.getenv("MCP_API_KEY", "").strip() or os.getenv("INTERNAL_API_KEY", "").strip()
-    if _admin_key and len(_admin_key) >= 8:
+    if _admin_key and len(_admin_key) >= 32:
         req_key = request.headers.get("X-Admin-Key", "").strip()
         if req_key and hmac.compare_digest(req_key, _admin_key):
             return True
@@ -663,7 +676,7 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
     _ADMIN_WINDOW_LIMIT = 1000
     _admin_key = os.getenv("MCP_API_KEY", "").strip() or os.getenv("INTERNAL_API_KEY", "").strip()
     is_admin = False
-    if _admin_key and len(_admin_key) >= 8:
+    if _admin_key and len(_admin_key) >= 32:
         req_key = request.headers.get("X-Admin-Key", "").strip()
         if req_key and hmac.compare_digest(req_key, _admin_key):
             is_admin = True
@@ -674,6 +687,26 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
         plan = _get_user_plan(request)
         plan_cfg = PLAN_CONFIG.get(plan, PLAN_CONFIG["free"])
         window_limit = plan_cfg["window_limit"]
+
+    # Credit/free-tier users: check via DB session
+    user = _get_paddle_user(request)
+    if user:
+        mode = request.headers.get("X-Request-Mode", "general").strip()
+        cost = 2 if mode == "expert" else 1
+
+        if user.get("credit_balance", 0) >= cost:
+            # Premium user with credits — allow (deduction happens post-response)
+            return True
+
+        # Free user daily limit
+        if user.get("current_plan") == "free":
+            if mode == "expert":
+                return {"blocked": True, "retry_at_kst": "credits_required_for_expert"}
+            if user.get("daily_free_used", 0) < DAILY_FREE_LIMIT:
+                return True  # daily free allowed (usage tracked post-response)
+            return {"blocked": True, "retry_at_kst": "daily_limit_reached"}
+
+        return {"blocked": True, "retry_at_kst": "credits_exhausted"}
 
     ip = _get_client_ip(request)
     ip_hash = _sha256(ip)
@@ -718,11 +751,38 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
 
 def _rate_limit_response(retry_at_kst: str = ""):
     """제한 초과 시 응답 — 다음 이용 가능 시각 안내"""
-    msg = "오늘 무료 이용 한도에 도달했습니다. 내일 00:00(한국시간) 이후 다시 이용 가능합니다." if retry_at_kst else "이용 한도에 도달했습니다. 잠시 후 다시 이용해주세요."
+    if retry_at_kst == "credits_exhausted":
+        msg = "크레딧이 모두 소진되었습니다. 추가 크레딧을 충전해주세요."
+    elif retry_at_kst == "credits_required_for_expert":
+        msg = "전문가 답변은 크레딧이 필요합니다. 크레딧을 구매해주세요."
+    elif retry_at_kst == "daily_limit_reached":
+        msg = "오늘 무료 이용 한도에 도달했습니다. 내일 00:00(한국시간) 이후 다시 이용 가능합니다."
+    elif retry_at_kst:
+        msg = "오늘 무료 이용 한도에 도달했습니다. 내일 00:00(한국시간) 이후 다시 이용 가능합니다."
+    else:
+        msg = "이용 한도에 도달했습니다. 잠시 후 다시 이용해주세요."
     return JSONResponse(
         status_code=429,
         content={"error": msg, "blocked": True, "retry_at_kst": retry_at_kst}
     )
+
+
+def _post_deduct(request: Request, query_type: str, trace_id: str = ""):
+    """Post-deduction: deduct credits AFTER successful response. Free users use daily quota."""
+    try:
+        user = _get_paddle_user(request)
+        if not user:
+            return  # Anonymous IP-only user, no deduction
+
+        cost = 2 if query_type == "expert" else 1
+        user_id = user["user_id"]
+
+        if user.get("credit_balance", 0) >= cost:
+            _deduct_credit(user_id, cost, reference_id=trace_id)
+        elif user.get("current_plan") == "free":
+            _use_daily_free(user_id, reference_id=trace_id)
+    except Exception as e:
+        logger.warning(f"[PostDeduct] Failed (non-blocking): {e}")
 
 def _trace_id() -> str:
     """[ULTRA] 요청별 고유 추적 ID"""
@@ -1152,6 +1212,7 @@ async def startup():
         sha256_fn=_sha256,
         optional_import_fn=optional_import,
         check_expert_access=_check_expert_access,
+        post_deduct=_post_deduct,
     )
     _set_files_deps(RUNTIME, rate_limiter=limiter)
     _set_user_deps(RUNTIME, rate_limiter=limiter, ask_fn=_legal_ask, search_fn=_legal_search)
@@ -1180,6 +1241,7 @@ app.include_router(files_router)
 app.include_router(user_router)
 app.include_router(admin_router)
 app.include_router(auth_router)
+app.include_router(paddle_router)
 
 # =============================================================
 # [ULTRA] GLOBAL EXCEPTION HANDLER

@@ -146,7 +146,7 @@
                 <div class="credits">20 <small>credits</small></div>
                 <div class="price"><span class="currency">$</span>1.50</div>
                 <div class="per-unit">$0.075 per query</div>
-                <button class="buy-btn" disabled>Coming Soon</button>
+                <button class="buy-btn" data-pack="starter">Buy Now</button>
             </div>
             <div class="price-card popular">
                 <div class="pack-name">Standard</div>
@@ -154,7 +154,7 @@
                 <div class="price"><span class="currency">$</span>4.99</div>
                 <div class="per-unit">$0.050 per query</div>
                 <div class="discount">33% OFF</div>
-                <button class="buy-btn" disabled>Coming Soon</button>
+                <button class="buy-btn" data-pack="standard">Buy Now</button>
             </div>
             <div class="price-card">
                 <div class="pack-name">Pro</div>
@@ -162,7 +162,7 @@
                 <div class="price"><span class="currency">$</span>9.99</div>
                 <div class="per-unit">$0.033 per query</div>
                 <div class="discount">56% OFF</div>
-                <button class="buy-btn" disabled>Coming Soon</button>
+                <button class="buy-btn" data-pack="pro">Buy Now</button>
             </div>
         </div>
 
@@ -172,13 +172,13 @@
             <div class="steps">
                 <div class="step">
                     <div class="step-num">1</div>
-                    <div class="step-title">Buy Credits</div>
-                    <div class="step-desc">Choose a pack and complete payment</div>
+                    <div class="step-title">Verify Email</div>
+                    <div class="step-desc">Enter your email and verify with a code</div>
                 </div>
                 <div class="step">
                     <div class="step-num">2</div>
-                    <div class="step-title">Check Email</div>
-                    <div class="step-desc">Credits are added to the email used at checkout</div>
+                    <div class="step-title">Buy Credits</div>
+                    <div class="step-desc">Choose a pack and complete payment</div>
                 </div>
                 <div class="step">
                     <div class="step-num">3</div>
@@ -226,7 +226,37 @@
         </div>
     </div>
 
+    <!-- OTP Modal -->
+    <div id="otpModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+        <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:36px 28px;max-width:380px;width:90%;text-align:center;position:relative;">
+            <button id="otpClose" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#94a3b8;font-size:1.5rem;cursor:pointer;">&times;</button>
+            <div id="otpStep1">
+                <h3 style="color:#f1f5f9;font-weight:800;margin-bottom:8px;">Email Verification</h3>
+                <p style="color:#94a3b8;font-size:0.9rem;margin-bottom:20px;">No sign-up needed. Just verify your email.</p>
+                <input id="otpEmail" type="email" placeholder="Email address" style="width:100%;padding:14px 16px;background:#0f172a;border:1px solid rgba(255,255,255,0.2);border-radius:12px;color:#f1f5f9;font-size:1rem;margin-bottom:12px;outline:none;">
+                <button id="otpSendBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#2563eb,#8b5cf6);border:none;border-radius:12px;color:white;font-size:1rem;font-weight:700;cursor:pointer;">Send Code</button>
+                <p id="otpSendMsg" style="color:#94a3b8;font-size:0.85rem;margin-top:12px;display:none;"></p>
+            </div>
+            <div id="otpStep2" style="display:none;">
+                <h3 style="color:#f1f5f9;font-weight:800;margin-bottom:8px;">Enter Code</h3>
+                <p style="color:#94a3b8;font-size:0.9rem;margin-bottom:20px;">Enter the 6-digit code sent to your email</p>
+                <input id="otpCode" type="text" maxlength="6" placeholder="000000" style="width:100%;padding:14px 16px;background:#0f172a;border:1px solid rgba(255,255,255,0.2);border-radius:12px;color:#f1f5f9;font-size:1.5rem;font-weight:900;letter-spacing:8px;text-align:center;margin-bottom:12px;outline:none;">
+                <button id="otpVerifyBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:12px;color:white;font-size:1rem;font-weight:700;cursor:pointer;">Verify</button>
+                <p id="otpVerifyMsg" style="color:#94a3b8;font-size:0.85rem;margin-top:12px;display:none;"></p>
+                <button id="otpResendBtn" style="background:none;border:none;color:#93c5fd;font-size:0.85rem;cursor:pointer;margin-top:8px;text-decoration:underline;">Resend</button>
+            </div>
+            <div id="otpStep3" style="display:none;">
+                <div style="font-size:3rem;margin-bottom:12px;">✅</div>
+                <h3 style="color:#f1f5f9;font-weight:800;margin-bottom:8px;">Verified</h3>
+                <p style="color:#94a3b8;font-size:0.9rem;margin-bottom:4px;">Credit balance: <span id="otpCredits" style="color:#10b981;font-weight:700;">0</span></p>
+                <p style="color:#94a3b8;font-size:0.85rem;margin-bottom:20px;">Proceeding to checkout...</p>
+            </div>
+        </div>
+    </div>
+
     <script src="/page-common.js"></script>
     <script src="/lawmadi-monitor.js" defer></script>
+    <script src="https://sandbox-cdn.paddle.com/paddle/v2/paddle.js"></script>
+    <script src="/pricing-checkout.js" defer></script>
 </body>
 </html>
