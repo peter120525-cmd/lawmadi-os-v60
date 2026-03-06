@@ -154,6 +154,30 @@
       {
         "source": "/refund-en",
         "destination": "/refund-en.html"
+      },
+      {
+        "source": "/ask",
+        "run": { "serviceId": "lawmadi-os-v60", "region": "asia-northeast3" }
+      },
+      {
+        "source": "/ask-stream",
+        "run": { "serviceId": "lawmadi-os-v60", "region": "asia-northeast3" }
+      },
+      {
+        "source": "/ask-expert",
+        "run": { "serviceId": "lawmadi-os-v60", "region": "asia-northeast3" }
+      },
+      {
+        "source": "/api/**",
+        "run": { "serviceId": "lawmadi-os-v60", "region": "asia-northeast3" }
+      },
+      {
+        "source": "/health",
+        "run": { "serviceId": "lawmadi-os-v60", "region": "asia-northeast3" }
+      },
+      {
+        "source": "/export-pdf",
+        "run": { "serviceId": "lawmadi-os-v60", "region": "asia-northeast3" }
       }
     ]
   }

@@ -5,8 +5,7 @@
 (function() {
     'use strict';
 
-    var API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-        ? '' : 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app';
+    var API_BASE = '';  // same-origin via Firebase rewrite → Cloud Run proxy
 
     var state = {
         email: '',

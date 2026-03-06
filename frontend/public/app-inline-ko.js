@@ -145,9 +145,9 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         scrollBottomBtn: document.getElementById('scrollBottomBtn'),
         charCounter: document.getElementById('charCounter'),
         newChatBtn: document.getElementById('newChatBtn'),
-        API_URL: 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app/ask',
-        STREAM_URL: 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app/ask-stream',
-        BASE_URL: 'https://lawmadi-os-v60-938146962157.asia-northeast3.run.app',
+        API_URL: '/ask',
+        STREAM_URL: '/ask-stream',
+        BASE_URL: '',
         USE_STREAMING: true,
         USE_TYPING_EFFECT: false,
         uploadedFile: null,
@@ -664,6 +664,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             const response = await fetch(this.API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({
                     query: query,
                     history: this.conversationHistory.slice(-10),
@@ -718,6 +719,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             const response = await fetch(this.STREAM_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({
                     query: query,
                     history: this.conversationHistory.slice(-10),
@@ -1499,6 +1501,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                             const expertRes = await fetch(`${this.BASE_URL}/ask-expert`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
                                 body: JSON.stringify({ query: originalQuery, original_response: rawResponse })
                             });
                             if (!expertRes.ok) throw new Error('전문가 검증 실패');
