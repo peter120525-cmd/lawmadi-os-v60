@@ -1460,7 +1460,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
                     const expertCta = document.createElement('button');
                     expertCta.className = 'bottom-cta-btn expert';
-                    expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기 <span style="font-size:0.8em;opacity:0.7">(유료 예정)</span>';
+                    expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기 <span style="font-size:0.75em;background:rgba(139,92,246,0.15);padding:2px 8px;border-radius:6px;margin-left:4px;">2 Credit</span>';
                     expertCta.onclick = async () => {
                         expertCta.disabled = true;
                         expertCta.innerHTML = '<span class="material-symbols-outlined">hourglass_top</span> 검증 중...';
@@ -1543,7 +1543,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                             clearInterval(ewElapsed);
                             waitingDiv.remove();
                             expertCta.disabled = false;
-                            expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기 <span style="font-size:0.8em;opacity:0.7">(유료 예정)</span>';
+                            expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기 <span style="font-size:0.75em;background:rgba(139,92,246,0.15);padding:2px 8px;border-radius:6px;margin-left:4px;">2 Credit</span>';
                             console.error('Expert verification failed:', e);
                         }
                     };
