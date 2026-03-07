@@ -7,7 +7,7 @@
 (function() {
     'use strict';
 
-    var isMainPage = /\/(index|index-en)?(\.html)?$/.test(location.pathname) || location.pathname === '/';
+    var isMainPage = /\/(index|index-en)?(\.html)?$/.test(location.pathname) || location.pathname === '/' || location.pathname === '/en';
     var isRefundPage = /\/refund(-en)?(\.html)?$/.test(location.pathname);
 
     // 메인 페이지, 환불 정책 페이지에서는 footer 생략
