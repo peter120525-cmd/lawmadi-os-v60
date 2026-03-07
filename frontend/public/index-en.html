@@ -280,9 +280,9 @@
         .auth-email-short { color: var(--text-muted); font-weight: 400; font-size: 0.8rem; }
         body.dark-mode .auth-email-short { color: #64748b; }
         #authDropdown {
-            position: absolute; top: calc(100% + 8px); right: 0; z-index: 9000;
+            position: fixed; top: 56px; right: 12px; z-index: 9000;
             background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.12); min-width: 220px; overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12); min-width: 220px; max-width: calc(100vw - 24px); overflow: hidden;
         }
         body.dark-mode #authDropdown {
             background: #1e293b; border-color: #334155;
