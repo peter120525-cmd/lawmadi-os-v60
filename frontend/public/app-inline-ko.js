@@ -1460,8 +1460,26 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
                     const expertCta = document.createElement('button');
                     expertCta.className = 'bottom-cta-btn expert';
-                    expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기 <span style="font-size:0.75em;background:rgba(139,92,246,0.15);padding:2px 8px;border-radius:6px;margin-left:4px;">2 Credit</span>';
+                    // 크레딧 부족 시 비활성화
+                    const _authUser = window.__lawmadiAuth && window.__lawmadiAuth.user;
+                    const _userBal = _authUser ? (_authUser.credit_balance || 0) : -1;
+                    const _isFreeNoCredit = _authUser && _userBal === 0 && _authUser.current_plan === 'free';
+                    if (_isFreeNoCredit || (_authUser && _userBal >= 0 && _userBal < 2)) {
+                        expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기 <span style="font-size:0.75em;background:rgba(239,68,68,0.15);color:#ef4444;padding:2px 8px;border-radius:6px;margin-left:4px;">크레딧 부족</span>';
+                        expertCta.disabled = true;
+                        expertCta.title = '크레딧을 충전하면 이용할 수 있습니다 (2 Credit 필요)';
+                    } else {
+                        expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기 <span style="font-size:0.75em;background:rgba(139,92,246,0.15);padding:2px 8px;border-radius:6px;margin-left:4px;">2 Credit</span>';
+                    }
                     expertCta.onclick = async () => {
+                        // 크레딧 차감 확인 모달
+                        const _bal = window.__lawmadiAuth?.user?.credit_balance || 0;
+                        if (_bal < 2) {
+                            const _goPrice = confirm('크레딧이 부족합니다.\n\n크레딧을 충전하시겠습니까?');
+                            if (_goPrice) location.href = '/pricing.html';
+                            return;
+                        }
+                        if (!confirm('전문가용 답변을 받으시겠습니까?\n\n2 Credit이 차감됩니다.\n현재 잔액: ' + _bal + ' Credit')) return;
                         expertCta.disabled = true;
                         expertCta.innerHTML = '<span class="material-symbols-outlined">hourglass_top</span> 검증 중...';
 
@@ -1544,6 +1562,11 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                             waitingDiv.remove();
                             expertCta.disabled = false;
                             expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기 <span style="font-size:0.75em;background:rgba(139,92,246,0.15);padding:2px 8px;border-radius:6px;margin-left:4px;">2 Credit</span>';
+                            // 크레딧 부족 에러인 경우
+                            if (e.message && e.message.includes('402')) {
+                                expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기 <span style="font-size:0.75em;background:rgba(239,68,68,0.15);color:#ef4444;padding:2px 8px;border-radius:6px;margin-left:4px;">크레딧 부족</span>';
+                                expertCta.disabled = true;
+                            }
                             console.error('Expert verification failed:', e);
                         }
                     };

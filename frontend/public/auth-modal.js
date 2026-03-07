@@ -94,16 +94,53 @@
         menu.innerHTML = '<div class="auth-dd-email">' + _escText(authState.email) + '</div>'
             + '<div class="auth-dd-credits"><span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">toll</span> '
             + 'Credits: <strong>' + bal + '</strong></div>'
+            + '<div id="authDdHistory" class="auth-dd-history" style="display:none;max-height:180px;overflow-y:auto;font-size:0.78rem;border-top:1px solid var(--border,#e2e8f0);padding:8px 12px;"></div>'
+            + '<button class="auth-dd-item" id="authHistoryBtn">'
+            + '<span class="material-symbols-outlined" style="font-size:1rem;">receipt_long</span> '
+            + (pageLang === 'en' ? 'Credit History' : '크레딧 내역') + '</button>'
             + '<a class="auth-dd-item" href="/pricing' + (pageLang === 'en' ? '-en' : '') + '.html">'
             + '<span class="material-symbols-outlined" style="font-size:1rem;">add_circle</span> '
-            + (pageLang === 'en' ? 'Buy Credits' : 'Buy Credits') + '</a>'
+            + (pageLang === 'en' ? 'Buy Credits' : '크레딧 충전') + '</a>'
             + '<button class="auth-dd-item auth-dd-logout" id="authLogoutBtn">'
             + '<span class="material-symbols-outlined" style="font-size:1rem;">logout</span> '
-            + (pageLang === 'en' ? 'Logout' : 'Logout') + '</button>';
+            + (pageLang === 'en' ? 'Logout' : '로그아웃') + '</button>';
 
         var btn = document.getElementById('authHeaderBtn');
         btn.parentNode.style.position = 'relative';
         btn.parentNode.appendChild(menu);
+
+        document.getElementById('authHistoryBtn').addEventListener('click', function() {
+            var histDiv = document.getElementById('authDdHistory');
+            if (histDiv.style.display !== 'none') { histDiv.style.display = 'none'; return; }
+            histDiv.innerHTML = '<div style="color:var(--text-muted,#64748b);padding:4px 0;">Loading...</div>';
+            histDiv.style.display = 'block';
+            fetch(API_BASE + '/api/paddle/credits/history', { credentials: 'include' })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    if (!d.history || d.history.length === 0) {
+                        histDiv.innerHTML = '<div style="color:var(--text-muted,#64748b);padding:4px 0;">'
+                            + (pageLang === 'en' ? 'No history yet' : '내역이 없습니다') + '</div>';
+                        return;
+                    }
+                    var html = '';
+                    d.history.forEach(function(h) {
+                        var isDeduct = h.amount < 0;
+                        var color = isDeduct ? '#ef4444' : '#10b981';
+                        var sign = isDeduct ? '' : '+';
+                        var typeLabel = h.type === 'expert_deduct' ? (pageLang === 'en' ? 'Expert' : '전문가') :
+                            h.type === 'question_deduct' ? (pageLang === 'en' ? 'Query' : '질문') :
+                            h.type === 'purchase' ? (pageLang === 'en' ? 'Purchase' : '충전') : h.type;
+                        var date = h.created_at ? h.created_at.substring(0, 10) : '';
+                        html += '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(0,0,0,0.05);">'
+                            + '<span>' + typeLabel + ' <span style="opacity:0.5;font-size:0.7rem;">' + date + '</span></span>'
+                            + '<span style="color:' + color + ';font-weight:700;">' + sign + h.amount + '</span></div>';
+                    });
+                    histDiv.innerHTML = html;
+                })
+                .catch(function() {
+                    histDiv.innerHTML = '<div style="color:#ef4444;padding:4px 0;">Error</div>';
+                });
+        });
 
         document.getElementById('authLogoutBtn').addEventListener('click', function() {
             fetch(API_BASE + '/api/paddle/logout', { method: 'POST', credentials: 'include' })
