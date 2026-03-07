@@ -636,6 +636,55 @@ async def credit_history(request: Request):
             release_connection(conn)
 
 
+@router.post("/admin/set-credits")
+@limiter.limit("3/minute")
+async def admin_set_credits(request: Request):
+    """Admin-only: set credits and plan for a user by email."""
+    admin_key = os.getenv("INTERNAL_API_KEY", "").strip()
+    req_key = request.headers.get("X-Admin-Key", "").strip()
+    if not admin_key or not req_key or not hmac.compare_digest(req_key, admin_key):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    body = await request.json()
+    email = body.get("email", "").strip().lower()
+    credits = int(body.get("credits", 0))
+    plan = body.get("plan", "admin")
+    if not email:
+        raise HTTPException(status_code=400, detail="email required")
+
+    from connectors.db_client import _db_enabled, get_connection, release_connection
+    if not _db_enabled():
+        raise HTTPException(status_code=503, detail="DB not available")
+
+    conn = None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE users SET credit_balance = %s, current_plan = %s WHERE email = %s RETURNING user_id, email, credit_balance, current_plan",
+            (credits, plan, email)
+        )
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="User not found")
+        cur.execute(
+            "INSERT INTO credit_ledger (user_id, amount, type, balance_after, reference_id) VALUES (%s, %s, 'admin_grant', %s, %s)",
+            (row[0], credits, credits, f"admin_set_{int(time.time())}")
+        )
+        conn.commit()
+        cur.close()
+        logger.info(f"[Admin] Set credits for {email}: {credits}, plan={plan}")
+        return {"ok": True, "user_id": str(row[0]), "email": row[1], "credit_balance": row[2], "current_plan": row[3]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[Admin] set-credits error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if conn:
+            release_connection(conn)
+
+
 @router.post("/credits/check")
 @limiter.limit("30/minute")
 async def check_credits(request: Request):
