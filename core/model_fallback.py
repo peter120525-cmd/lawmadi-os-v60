@@ -1,5 +1,5 @@
 """
-Gemini 모델 자동 전환 체인: 3-Flash → 2.5-Flash → 2.5-Flash-lite + 429 재시도.
+Gemini 모델 자동 전환 체인: 2.5-Flash → 2.5-Flash-lite + 429 재시도.
 
 429/ResourceExhausted 에러 감지 시 지수 백오프로 재시도.
 
@@ -17,9 +17,8 @@ logger = logging.getLogger("LawmadiOS.ModelFallback")
 
 # ─── 모델 체인 (리전에서 사용 가능한 모델만) ───
 MODEL_CHAIN = [
-    os.getenv("GEMINI_MODEL_1", "gemini-3-flash-preview"),
-    os.getenv("GEMINI_MODEL_2", "gemini-2.5-flash"),
-    os.getenv("GEMINI_MODEL_3", "gemini-2.5-flash-lite"),
+    os.getenv("GEMINI_MODEL_1", "gemini-2.5-flash"),
+    os.getenv("GEMINI_MODEL_2", "gemini-2.5-flash-lite"),
 ]
 
 # ─── 상태 관리 ───
