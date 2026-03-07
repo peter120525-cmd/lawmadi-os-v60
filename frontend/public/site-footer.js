@@ -18,7 +18,7 @@
             + '<div class="footer-biz">'
             + '<span class="footer-biz-name">Lawmadi (법마디)</span>'
             + '<span class="footer-sep">|</span>'
-            + '<span>Representative: Jaenam Choe</span>'
+            + '<span>Representative: Jainam Choe</span>'
             + '<span class="footer-sep">|</span>'
             + '<span>Business Reg. No: 751-29-01826</span>'
             + '<br class="footer-br">'
