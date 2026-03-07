@@ -64,7 +64,7 @@ L7 RENDERER    → Legal vs Reference Output Segregation (Section Divider, Discl
 | Constitutional Verifier | Gemini Flash (DRF cross-verification) |
 | Legal Draft LLM | LawmadiLM v4.0 (Qwen3-1.7B QLoRA, GGUF Q4_K_M ~1.19GB) |
 | LLM Serving | llama.cpp (OpenAI-compatible /v1/chat/completions) |
-| RAG Engine | ChromaDB + intfloat/multilingual-e5-large |
+| RAG Engine | Vertex AI Search (lawmadi-legal-cache) + law_cache keyword matching |
 | Cloud Platform | GCP Cloud Run (asia-northeast3) |
 | Cloud Resources | 2 vCPU / 2 GiB RAM / min 1 / max 10 instances / concurrency 80 / timeout 300s |
 | Frontend | Firebase Hosting (Static HTML/CSS/JS — Korean + English) |
