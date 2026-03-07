@@ -3502,6 +3502,41 @@
             color: #94a3b8;
         }
 
+        .more-sheet-divider {
+            height: 1px;
+            background: var(--border, #e2e8f0);
+            margin: 8px 16px;
+            opacity: 0.3;
+        }
+        .more-sheet-footer {
+            padding: 12px 20px 8px;
+            text-align: center;
+        }
+        .more-sheet-disclaimer {
+            font-size: 0.72rem;
+            color: #f59e0b;
+            background: rgba(245,158,11,0.08);
+            border-radius: 6px;
+            padding: 8px 10px;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        .more-sheet-biz {
+            font-size: 0.68rem;
+            color: var(--text-muted, #64748b);
+            margin: 0;
+            line-height: 1.6;
+        }
+        .more-sheet-copy {
+            font-size: 0.65rem;
+            color: var(--text-muted, #64748b);
+            opacity: 0.6;
+            margin-top: 6px;
+        }
+        body.dark-mode .more-sheet-divider {
+            background: #475569;
+        }
+
         @media (max-width: 768px) {
             .mobile-tab-bar {
                 display: block;
@@ -5679,6 +5714,19 @@
         <span class="material-symbols-outlined" aria-hidden="true">receipt_long</span>
         <span>Refund Policy</span>
     </a>
+    <a href="mailto:choepeter@outlook.kr" class="more-sheet-item">
+        <span class="material-symbols-outlined" aria-hidden="true">mail</span>
+        <span>Contact</span>
+    </a>
+    <div class="more-sheet-divider"></div>
+    <div class="more-sheet-footer">
+        <p class="more-sheet-disclaimer"><span class="material-symbols-outlined" style="font-size:0.85rem;vertical-align:middle;margin-right:3px;">info</span>This is an AI legal information service, not a substitute for professional legal advice.</p>
+        <p class="more-sheet-biz">Lawmadi (법마디) | Rep: Jaenam Choe</p>
+        <p class="more-sheet-biz">Business Reg: 751-29-01826</p>
+        <p class="more-sheet-biz">Mail-order: 2026-울산울주-0086</p>
+        <p class="more-sheet-biz">Ulju-gun, Ulsan, Republic of Korea</p>
+        <p class="more-sheet-copy">&copy; 2026 Lawmadi</p>
+    </div>
 </div>
 
 <nav class="mobile-tab-bar" id="mobileTabBar" aria-label="Mobile navigation">
@@ -5749,5 +5797,6 @@
 
 <script src="/auth-modal.js" defer></script>
 <script src="/lawmadi-monitor.js" defer></script>
+<script src="/site-footer.js" defer></script>
 </body>
 </html>
