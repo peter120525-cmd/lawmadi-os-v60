@@ -1683,8 +1683,26 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
                     const expertCta = document.createElement('button');
                     expertCta.className = 'bottom-cta-btn expert';
-                    expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> Get Expert Verification <span style="font-size:0.75em;background:rgba(139,92,246,0.15);padding:2px 8px;border-radius:6px;margin-left:4px;">2 Credit</span>';
+                    // Disable if insufficient credits
+                    const _authUser = window.__lawmadiAuth && window.__lawmadiAuth.user;
+                    const _userBal = _authUser ? (_authUser.credit_balance || 0) : -1;
+                    const _isFreeNoCredit = _authUser && _userBal === 0 && _authUser.current_plan === 'free';
+                    if (_isFreeNoCredit || (_authUser && _userBal >= 0 && _userBal < 2)) {
+                        expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> Get Expert Verification <span style="font-size:0.75em;background:rgba(239,68,68,0.15);color:#ef4444;padding:2px 8px;border-radius:6px;margin-left:4px;">Insufficient Credits</span>';
+                        expertCta.disabled = true;
+                        expertCta.title = 'Purchase credits to use this feature (2 Credits required)';
+                    } else {
+                        expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> Get Expert Verification <span style="font-size:0.75em;background:rgba(139,92,246,0.15);padding:2px 8px;border-radius:6px;margin-left:4px;">2 Credit</span>';
+                    }
                     expertCta.onclick = async () => {
+                        // Credit confirmation
+                        const _bal = window.__lawmadiAuth?.user?.credit_balance || 0;
+                        if (_bal < 2) {
+                            const _goPrice = confirm('Insufficient credits.\n\nWould you like to purchase credits?');
+                            if (_goPrice) location.href = '/pricing-en.html';
+                            return;
+                        }
+                        if (!confirm('Get expert verification?\n\n2 Credits will be deducted.\nCurrent balance: ' + _bal + ' Credits')) return;
                         expertCta.disabled = true;
                         expertCta.innerHTML = '<span class="material-symbols-outlined">hourglass_top</span> Verifying...';
                         try {

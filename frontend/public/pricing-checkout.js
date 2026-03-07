@@ -25,6 +25,25 @@
             .then(function(r) { return r.json(); })
             .then(function(cfg) {
                 state.paddleConfig = cfg;
+                // 결제 시스템 준비중 안내 (sandbox 모드)
+                if (cfg.environment === 'sandbox') {
+                    var banner = document.createElement('div');
+                    banner.style.cssText = 'background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;padding:14px 20px;border-radius:12px;margin:0 auto 20px;max-width:800px;text-align:center;font-size:0.9rem;font-weight:600;border:1px solid #f59e0b;';
+                    banner.innerHTML = '<span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;margin-right:6px;">construction</span>'
+                        + (pageLang === 'en'
+                            ? 'Payment system is being prepared. Credit purchases will be available soon.'
+                            : '결제 시스템 준비 중입니다. 크레딧 구매 서비스가 곧 제공됩니다.');
+                    var container = document.querySelector('.pricing-section') || document.querySelector('main') || document.body;
+                    if (container.firstChild) container.insertBefore(banner, container.firstChild);
+                    else container.appendChild(banner);
+                    // 구매 버튼 비활성화
+                    document.querySelectorAll('.buy-btn[data-pack]').forEach(function(b) {
+                        b.disabled = true;
+                        b.style.opacity = '0.5';
+                        b.style.cursor = 'not-allowed';
+                        b.title = pageLang === 'en' ? 'Coming soon' : '준비 중';
+                    });
+                }
                 if (typeof Paddle !== 'undefined' && cfg.client_token) {
                     Paddle.Environment.set(cfg.environment || 'sandbox');
                     Paddle.Initialize({ token: cfg.client_token });

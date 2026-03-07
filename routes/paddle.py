@@ -592,6 +592,50 @@ async def get_credits(request: Request):
     }
 
 
+@router.get("/credits/history")
+@limiter.limit("10/minute")
+async def credit_history(request: Request):
+    """Return recent credit ledger entries for authenticated user."""
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    from connectors.db_client import _db_enabled, get_connection, release_connection
+    if not _db_enabled():
+        return {"ok": True, "history": [], "balance": user["credit_balance"]}
+
+    conn = None
+    try:
+        conn = get_connection()
+        if not conn:
+            return {"ok": True, "history": [], "balance": user["credit_balance"]}
+        cur = conn.cursor()
+        cur.execute(
+            """SELECT amount, type, balance_after, reference_id, created_at
+               FROM credit_ledger WHERE user_id = %s
+               ORDER BY created_at DESC LIMIT 50""",
+            (user["user_id"],)
+        )
+        rows = cur.fetchall()
+        cur.close()
+        history = []
+        for r in rows:
+            history.append({
+                "amount": r[0],
+                "type": r[1],
+                "balance_after": r[2],
+                "reference_id": r[3] or "",
+                "created_at": r[4].isoformat() if r[4] else "",
+            })
+        return {"ok": True, "history": history, "balance": user["credit_balance"]}
+    except Exception as e:
+        logger.warning(f"[Credits] History query failed: {e}")
+        return {"ok": True, "history": [], "balance": user["credit_balance"]}
+    finally:
+        if conn:
+            release_connection(conn)
+
+
 @router.post("/credits/check")
 @limiter.limit("30/minute")
 async def check_credits(request: Request):
