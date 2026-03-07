@@ -668,8 +668,8 @@ async def admin_set_credits(request: Request):
         if not row:
             raise HTTPException(status_code=404, detail="User not found")
         cur.execute(
-            "INSERT INTO credit_ledger (user_id, amount, type, balance_after, reference_id) VALUES (%s, %s, 'admin_grant', %s, %s)",
-            (row[0], credits, credits, f"admin_set_{int(time.time())}")
+            "INSERT INTO credit_ledger (id, user_id, amount, type, balance_after, reference_id) VALUES (%s, %s, %s, 'admin_grant', %s, %s)",
+            (str(uuid.uuid4()), row[0], credits, credits, f"admin_set_{int(time.time())}")
         )
         conn.commit()
         cur.close()
