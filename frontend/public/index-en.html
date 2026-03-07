@@ -2149,13 +2149,23 @@
             }
 
             .header-right {
-                gap: 6px;
-                flex-shrink: 0;
+                flex: 1;
+                justify-content: space-between;
+                gap: 0;
+            }
+
+            .header-right > .lang-toggle {
+                order: -2;
+            }
+
+            .header-right > div:first-child {
+                order: -1;
+                margin-right: auto;
             }
 
             .header-left {
                 min-width: 0;
-                flex: 1;
+                flex-shrink: 0;
             }
 
             .header-left .badge-base {
