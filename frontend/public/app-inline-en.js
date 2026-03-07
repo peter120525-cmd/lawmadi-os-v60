@@ -1683,7 +1683,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
                     const expertCta = document.createElement('button');
                     expertCta.className = 'bottom-cta-btn expert';
-                    expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> Get Expert Verification <span style="font-size:0.8em;opacity:0.7">(Coming Soon)</span>';
+                    expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> Get Expert Verification <span style="font-size:0.75em;background:rgba(139,92,246,0.15);padding:2px 8px;border-radius:6px;margin-left:4px;">2 Credit</span>';
                     expertCta.onclick = async () => {
                         expertCta.disabled = true;
                         expertCta.innerHTML = '<span class="material-symbols-outlined">hourglass_top</span> Verifying...';
@@ -1714,7 +1714,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                             } else { throw new Error('Verification failed'); }
                         } catch (e) {
                             expertCta.disabled = false;
-                            expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> Get Expert Verification <span style="font-size:0.8em;opacity:0.7">(Coming Soon)</span>';
+                            expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> Get Expert Verification <span style="font-size:0.75em;background:rgba(139,92,246,0.15);padding:2px 8px;border-radius:6px;margin-left:4px;">2 Credit</span>';
                             console.error('Expert verification failed:', e);
                         }
                     };
