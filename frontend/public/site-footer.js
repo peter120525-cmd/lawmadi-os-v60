@@ -1,16 +1,19 @@
 /**
- * Lawmadi OS — Site Footer (AI 면책 고지 + 저작권)
- * 사업자 정보는 환불 정책 페이지에 표시 (전자상거래법 제10조)
+ * Lawmadi OS — Site Footer (서브 페이지 전용)
+ * 메인 페이지: 사이드바 + 모바일 시트에 모든 정보 포함 → footer 없음
+ * 서브 페이지: 면책 고지 + 정책 링크 + 저작권 표시
+ * 환불 정책 페이지: 사업자 정보 직접 포함 → footer 없음
  */
 (function() {
     'use strict';
 
-    var isEn = location.pathname.indexOf('-en') !== -1 || location.pathname.indexOf('/en') !== -1;
     var isMainPage = /\/(index|index-en)?(\.html)?$/.test(location.pathname) || location.pathname === '/';
     var isRefundPage = /\/refund(-en)?(\.html)?$/.test(location.pathname);
 
-    // 환불 정책 페이지에서는 사업자 정보가 HTML에 직접 포함되어 있으므로 footer 생략
-    if (isRefundPage) return;
+    // 메인 페이지, 환불 정책 페이지에서는 footer 생략
+    if (isMainPage || isRefundPage) return;
+
+    var isEn = location.pathname.indexOf('-en') !== -1 || location.pathname.indexOf('/en') !== -1;
 
     var footerHTML = isEn
         ? '<footer class="site-footer">'
@@ -46,8 +49,7 @@
 
     var style = document.createElement('style');
     style.textContent = ''
-        + '.site-footer{background:var(--footer-bg,#0f172a);color:var(--footer-text,#94a3b8);padding:32px 20px;font-size:0.8rem;line-height:1.7;border-top:1px solid var(--footer-border,rgba(255,255,255,0.08));'
-        + (isMainPage ? 'margin-bottom:72px;' : '') + '}'
+        + '.site-footer{background:var(--footer-bg,#0f172a);color:var(--footer-text,#94a3b8);padding:32px 20px;font-size:0.8rem;line-height:1.7;border-top:1px solid var(--footer-border,rgba(255,255,255,0.08));}'
         + '.site-footer-inner{max-width:800px;margin:0 auto;text-align:center;}'
         + '.footer-disclaimer{background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:10px 16px;margin-bottom:16px;color:var(--footer-warn,#fbbf24);font-size:0.78rem;font-weight:600;}'
         + '.footer-links{margin-bottom:10px;}'
@@ -56,20 +58,13 @@
         + '.footer-copy{font-size:0.72rem;opacity:0.6;}';
     document.head.appendChild(style);
 
-    var mobileTabBar = document.querySelector('.mobile-tab-bar');
-    var target = document.body;
+    var scripts = document.body.querySelectorAll('body > script');
     var temp = document.createElement('div');
     temp.innerHTML = footerHTML;
     var footerEl = temp.firstChild;
-
-    if (mobileTabBar) {
-        target.insertBefore(footerEl, mobileTabBar);
+    if (scripts.length > 0) {
+        document.body.insertBefore(footerEl, scripts[0]);
     } else {
-        var scripts = target.querySelectorAll('body > script');
-        if (scripts.length > 0) {
-            target.insertBefore(footerEl, scripts[0]);
-        } else {
-            target.appendChild(footerEl);
-        }
+        document.body.appendChild(footerEl);
     }
 })();
