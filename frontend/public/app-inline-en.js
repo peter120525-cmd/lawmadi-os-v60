@@ -786,9 +786,17 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
             const _statusLabels = {
                 'detecting_domain': '🔍 Analyzing question...',
-                'analyzing': '👥 Expert leader analyzing...',
+                'searching_laws': '⚖️ Searching laws & precedents...',
+                'analyzing': '✍️ Generating response...',
                 'parallel_analysis': '👥 Multi-leader parallel analysis...',
+                'verifying': '🔎 Cross-verifying...',
                 'synthesizing': '📝 Generating comprehensive response...'
+            };
+
+            const _statusToStep = {
+                'searching_laws': 'step-3',
+                'analyzing': 'step-4',
+                'verifying': 'step-5',
             };
 
             // SSE 이벤트 파싱 헬퍼 (multi-line data 지원)
@@ -831,7 +839,6 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         }
 
                         if (eventType === 'deliberation_start') {
-                            this.hideTypingIndicator();
                             this._renderDeliberationStart(payload);
 
                         } else if (eventType === 'deliberation_turn') {
@@ -839,30 +846,37 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
                         } else if (eventType === 'deliberation_end') {
                             this._renderDeliberationEnd(payload);
-                            this.showTypingIndicator();
 
                         } else if (eventType === 'handoff') {
-                            this.hideTypingIndicator();
                             this._renderHandoffTurn(payload);
 
                         } else if (eventType === 'status') {
                             const stepKey = payload.step || '';
                             const statusText = _statusLabels[stepKey] || stepKey;
                             const leaderInfo = payload.leader ? ` (${leaderRomanNames[payload.leader] || payload.leader})` : '';
+                            const targetStepId = _statusToStep[stepKey];
+                            if (targetStepId) {
+                                this._advanceTypingStep(targetStepId);
+                            }
                             this._updateTypingStatus(statusText + leaderInfo);
 
                         } else if (eventType === 'chunk') {
                             if (!accumulatedText) {
                                 this.hideTypingIndicator();
-                                // 첫 chunk에서만 streamDiv를 DOM에 추가 (이중 박스 방지)
                                 if (!streamDivAttached) {
                                     this.convArea.appendChild(streamDiv);
                                     streamDivAttached = true;
                                 }
                             }
                             accumulatedText += (payload.text || '');
-                            streamContent.innerHTML = _sanitize(this._renderStreamingText(accumulatedText));
-                            this._smartScroll(false);
+                            if (!this._chunkRafPending) {
+                                this._chunkRafPending = true;
+                                requestAnimationFrame(() => {
+                                    streamContent.innerHTML = _sanitize(this._renderStreamingText(accumulatedText));
+                                    this._smartScroll(false);
+                                    this._chunkRafPending = false;
+                                });
+                            }
 
                         } else if (eventType === 'done') {
                             leaderName = payload.leader || '';
@@ -1188,6 +1202,26 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                     };
                 });
             } catch(e) { /* 무시 */ }
+        },
+
+        // ═══ 서버 이벤트 기반 step 진행 ═══
+        _advanceTypingStep(targetStepId) {
+            const stepOrder = ['step-1', 'step-2', 'step-3', 'step-4', 'step-5', 'step-6'];
+            const targetIdx = stepOrder.indexOf(targetStepId);
+            if (targetIdx < 0) return;
+            stepOrder.forEach((sid, idx) => {
+                const el = document.getElementById(sid);
+                if (!el) return;
+                if (idx < targetIdx) {
+                    el.classList.remove('active');
+                    el.classList.add('done');
+                    const icon = el.querySelector('.step-icon');
+                    if (icon) icon.textContent = '✓';
+                } else if (idx === targetIdx) {
+                    el.classList.remove('done');
+                    el.classList.add('active');
+                }
+            });
         },
 
         // ═══ 타이핑 인디케이터 상태 텍스트 업데이트 ═══
