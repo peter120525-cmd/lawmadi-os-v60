@@ -1506,18 +1506,18 @@
             align-self: flex-start;
             background: linear-gradient(145deg, #f0f4ff 0%, #e8f0fe 40%, #ede9fe 100%);
             border: 1px solid rgba(99, 102, 241, 0.18);
-            padding: 40px 32px 24px;
-            border-radius: 20px;
+            padding: 40px 24px 20px;
+            border-radius: 16px;
             box-shadow:
                 0 4px 16px rgba(99, 102, 241, 0.15),
                 0 8px 24px rgba(99, 102, 241, 0.1),
                 inset 0 1px 0 rgba(255,255,255,0.9);
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 12px;
             align-items: flex-start;
-            max-width: 100%;
-            width: 100%;
+            max-width: fit-content;
+            width: auto;
             position: relative;
             animation: messageSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             overflow: visible;
@@ -1531,7 +1531,7 @@
             right: 0;
             height: 4px;
             background: linear-gradient(90deg, #2563eb 0%, #7c3aed 50%, #2563eb 100%);
-            border-radius: 20px 20px 0 0;
+            border-radius: 16px 16px 0 0;
             overflow: hidden;
         }
 
@@ -2147,8 +2147,8 @@
             }
 
             .send-action {
-                width: 36px;
-                height: 36px;
+                width: 44px;
+                height: 44px;
                 border-radius: 10px;
             }
 
@@ -3324,6 +3324,7 @@
         ═══════════════════════════════════════════════════ */
         @media (max-width: 360px) {
             header.top-status {
+                height: 48px;
                 padding: 0 6px;
             }
             .header-right {
@@ -3338,6 +3339,24 @@
                 width: 28px;
                 height: 28px;
                 font-size: 0.65rem;
+            }
+            .ai-msg {
+                padding: 24px 10px 12px;
+            }
+            .example-card-grid {
+                grid-template-columns: repeat(3, 1fr) !important;
+                gap: 8px !important;
+            }
+            .example-card {
+                padding: 10px 6px;
+                gap: 4px;
+            }
+            .example-card-icon { font-size: 1.4rem; }
+            .example-card-title { font-size: 0.92rem; }
+            .user-msg {
+                max-width: 98%;
+                padding: 8px 12px;
+                font-size: 14px;
             }
         }
 
@@ -3425,6 +3444,10 @@
         @media (max-width: 768px) {
             .leader-response-header {
                 position: static;
+                max-width: 100%;
+                box-sizing: border-box;
+                gap: 10px;
+                padding: 10px 12px;
             }
             .leader-response-header .leader-avatar-item {
                 flex-direction: column;
@@ -3438,9 +3461,37 @@
             }
             .leader-response-header .leader-name {
                 font-size: 1.4rem;
+                white-space: normal;
+                word-break: keep-all;
             }
             .leader-response-header .leader-specialty {
                 font-size: 0.85rem;
+            }
+        }
+        @media (max-width: 400px) {
+            .leader-response-header {
+                gap: 8px;
+                padding: 8px 10px;
+            }
+            .leader-response-header img {
+                width: 56px;
+                height: 56px;
+                border-radius: 10px;
+            }
+            .leader-response-header .leader-name {
+                font-size: 1.2rem;
+            }
+            .leader-response-header .leader-specialty {
+                font-size: 0.8rem;
+            }
+        }
+        @media (max-width: 360px) {
+            .leader-response-header img {
+                width: 48px;
+                height: 48px;
+            }
+            .leader-response-header .leader-name {
+                font-size: 1.1rem;
             }
         }
 

@@ -1501,20 +1501,26 @@ async def _gemini_analyze_query(query: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def _fallback_tier_classification(query: str) -> Dict[str, Any]:
+def _fallback_tier_classification(query: str, lang: str = "") -> Dict[str, Any]:
     """Gemini 실패 시 키워드 기반 fallback 분류"""
-    leader = select_swarm_leader(query, _LEADER_REGISTRY)
+    leader = select_swarm_leader(query, _LEADER_REGISTRY, lang=lang)
     leader_name = leader.get("name", "마디")
     leader_specialty = leader.get("specialty", "시스템 총괄")
 
     # 문서 작성 키워드 감지
     doc_keywords = ["작성해", "써줘", "만들어", "초안", "양식", "서식",
                      "고소장", "소장", "답변서", "내용증명", "고소취하서", "합의서", "계약서"]
-    is_document = any(kw in query for kw in doc_keywords)
+    if lang == "en":
+        doc_keywords += ["draft", "write", "template", "complaint", "petition",
+                         "settlement", "contract", "agreement", "letter of demand"]
+    is_document = any(kw in query.lower() for kw in doc_keywords)
 
     # 복잡도 판단
     complex_keywords = ["판례", "사례", "대법원", "헌법재판소", "법률 충돌", "위헌"]
     critical_keywords = ["헌법", "위헌", "기본권", "법률 간 충돌", "헌법소원"]
+    if lang == "en":
+        complex_keywords += ["case law", "precedent", "supreme court", "constitutional court", "legal conflict"]
+        critical_keywords += ["constitution", "unconstitutional", "fundamental right", "constitutional complaint"]
 
     if is_document or any(kw in query for kw in critical_keywords):
         tier = 3
@@ -1527,7 +1533,7 @@ def _fallback_tier_classification(query: str) -> Dict[str, Any]:
         complexity = "simple"
 
     # 비법률 판정: NLU 패턴 매칭이면 무조건 법률, 아니면 비법률 키워드로 판정
-    nlu_match = _nlu_detect_intent(query)
+    nlu_match = _nlu_detect_intent(query, lang=lang)
     if nlu_match:
         is_legal = True
     else:
@@ -1555,7 +1561,15 @@ def _fallback_tier_classification(query: str) -> Dict[str, Any]:
             # 쇼핑/생활
             "쇼핑", "할인", "세일",
         ]
-        is_legal = not any(kw in query for kw in non_legal_keywords)
+        if lang == "en":
+            non_legal_keywords = [
+                "weather", "recipe", "restaurant", "movie", "drama", "netflix",
+                "music", "game", "sport", "travel", "hotel", "flight",
+                "hello", "hi there", "who are you", "thank you",
+                "coding", "programming", "python", "java", "excel",
+                "math", "exam", "shopping", "discount",
+            ]
+        is_legal = not any(kw in query.lower() for kw in non_legal_keywords)
 
     return {
         "tier": tier,
