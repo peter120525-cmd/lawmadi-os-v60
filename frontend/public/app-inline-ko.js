@@ -298,7 +298,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             var premiumCta = document.getElementById('premiumCta');
             if (premiumCta) premiumCta.addEventListener('click', () => alert('프리미엄 서비스 준비 중입니다. 곧 오픈 예정입니다!'));
             var lawyerCta = document.getElementById('lawyerCtaLanding');
-            if (lawyerCta) lawyerCta.addEventListener('click', () => alert('변호사 연결 서비스 준비 중입니다. 곧 오픈 예정입니다!'));
+            if (lawyerCta) lawyerCta.addEventListener('click', () => UI.openLawyerModal('', ''));
             var modalClose = document.getElementById('modalCloseBtn');
             if (modalClose) modalClose.addEventListener('click', () => this.closeLawyerModal());
             var lawyerForm = document.getElementById('lawyerForm');
@@ -357,18 +357,88 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         },
 
         // ─── 변호사 상담 모달 ───
-        openLawyerModal(querySummary, leader) {
-            alert('변호사 연결 서비스 준비 중입니다. 곧 오픈 예정입니다!');
+        openLawyerModal(querySummary, leaderName) {
+            const overlay = document.getElementById('lawyerModalOverlay');
+            if (!overlay) return;
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            // Pre-fill fields
+            const summaryField = document.getElementById('lawyerSummary');
+            const leaderField = document.getElementById('lawyerLeader');
+            if (summaryField && querySummary) summaryField.value = querySummary.substring(0, 500);
+            if (leaderField && leaderName) leaderField.value = leaderName;
+            // Pre-fill user info if logged in
+            const user = window.__lawmadiAuth && window.__lawmadiAuth.user;
+            if (user && user.email) {
+                const nameField = document.getElementById('lawyerName');
+                if (nameField && !nameField.value) nameField.value = user.email.split('@')[0];
+            }
         },
 
         closeLawyerModal() {
             const overlay = document.getElementById('lawyerModalOverlay');
-            if (overlay) overlay.classList.remove('active');
+            if (overlay) {
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+            // Reset to form view
+            const formView = document.getElementById('lawyerFormView');
+            const successView = document.getElementById('lawyerSuccessView');
+            if (formView) formView.style.display = 'block';
+            if (successView) successView.style.display = 'none';
         },
 
         async submitLawyerInquiry(e) {
             e.preventDefault();
-            alert('변호사 연결 서비스 준비 중입니다. 곧 오픈 예정입니다!');
+            const name = document.getElementById('lawyerName')?.value?.trim();
+            const phone = document.getElementById('lawyerPhone')?.value?.trim();
+            const summary = document.getElementById('lawyerSummary')?.value?.trim();
+            const leader = document.getElementById('lawyerLeader')?.value?.trim() || '';
+
+            if (!name || !phone) {
+                alert('이름과 연락처를 입력해 주세요.');
+                return false;
+            }
+            if (!summary) {
+                alert('상담 내용을 입력해 주세요.');
+                return false;
+            }
+            // Phone validation (Korean format)
+            const phoneClean = phone.replace(/[^0-9]/g, '');
+            if (phoneClean.length < 10 || phoneClean.length > 11) {
+                alert('올바른 전화번호를 입력해 주세요.');
+                return false;
+            }
+
+            const submitBtn = document.querySelector('#lawyerFormView button[type="submit"], #lawyerFormView .lawyer-submit-btn');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = '접수 중...';
+            }
+
+            try {
+                const res = await fetch('/api/lawyer-inquiry', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ name, phone: phoneClean, query_summary: summary, leader })
+                });
+                if (!res.ok) throw new Error('접수 실패');
+
+                // Switch to success view
+                const formView = document.getElementById('lawyerFormView');
+                const successView = document.getElementById('lawyerSuccessView');
+                if (formView) formView.style.display = 'none';
+                if (successView) successView.style.display = 'block';
+            } catch (err) {
+                alert('상담 신청 접수에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+                console.error('Lawyer inquiry failed:', err);
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = '상담 신청';
+                }
+            }
             return false;
         },
 

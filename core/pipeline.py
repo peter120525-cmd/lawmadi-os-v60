@@ -1078,6 +1078,209 @@ def _postprocess_lawmadilm(draft: str, query: str) -> Optional[str]:
 
 
 # =============================================================
+# Stage 1.7: DRF Article Pre-fetch (Gemini 프롬프트에 실제 조문 주입)
+# =============================================================
+
+# LAW_BOOST 텍스트에서 법률명 추출 regex (한글)
+_BOOST_LAW_NAME_RE = re.compile(r'•\s*([가-힣]+(?:\s+[가-힣]+)*(?:\s+등에\s+관한\s+)?(?:법률|법|시행령|시행규칙|규정|조례))')
+# 쿼리에서 법률명 추출 regex (한글)
+_QUERY_LAW_NAME_RE = re.compile(r'([가-힣]+(?:\s+[가-힣]+)*(?:\s+등에\s+관한\s+)?(?:법률|법|시행령|시행규칙|규정|조례))')
+# LAW_BOOST에서 조문번호 추출 regex
+_BOOST_ARTICLE_RE = re.compile(r'•\s*([가-힣]+(?:\s+[가-힣]+)*(?:\s+등에\s+관한\s+)?(?:법률|법|시행령|시행규칙|규정|조례))\s*제(\d+)조')
+# 영문 LAW_BOOST에서 법률명+Article 추출
+_BOOST_EN_LAW_RE = re.compile(r'•\s*([\w][\w\s]*(?:ACT|CODE|DECREE|LAW|RULE|REGULATION))\s*Article\s*(\d+)', re.IGNORECASE)
+
+# Stage 1.7 결과를 Stage 4에서 재사용하기 위한 모듈 레벨 캐시
+# key: 요청별 고유 ID는 불필요 — 코루틴 로컬 변수로 전달
+_DRF_PREFETCH_TIMEOUT = float(os.getenv("DRF_PREFETCH_TIMEOUT", "5"))
+_DRF_PREFETCH_MAX_LAWS = 5
+_DRF_PREFETCH_MAX_ARTICLES = 30
+
+
+async def _stage17_drf_prefetch(
+    law_boost_text: str,
+    query: str,
+    lang: str = "",
+) -> tuple:
+    """Stage 1.7: DRF Article Pre-fetch.
+
+    LAW_BOOST와 쿼리에서 법률명을 추출하고, DRF API로 실제 조문 텍스트를
+    사전 fetch하여 Gemini 프롬프트에 주입할 컨텍스트 블록을 생성한다.
+
+    Returns:
+        (context_block: str, prefetch_cache: Dict[str, Any])
+        - context_block: 프롬프트에 주입할 조문 텍스트 블록
+        - prefetch_cache: {법률명: DRF 원시 응답} — Stage 4에서 재사용
+    """
+    prefetch_cache: Dict[str, Any] = {}
+
+    svc = _RUNTIME.get("search_service")
+    drf_inst = _RUNTIME.get("drf")
+    if not svc and not drf_inst:
+        logger.info("[Stage 1.7] DRF/SearchService 없음 → 프리패치 스킵")
+        return "", prefetch_cache
+
+    # ── 1) 법률명 + 조문번호 추출 ──
+    target_laws: Dict[str, set] = {}  # {법률명: {조문번호, ...}}
+
+    if lang == "en":
+        # 영문: LAW_BOOST에서 추출
+        for m in _BOOST_EN_LAW_RE.finditer(law_boost_text):
+            law_name = m.group(1).strip()
+            art_num = int(m.group(2))
+            # 영문 법률명 → 한글 변환 (DRF는 한글로 조회)
+            kr_name = _EN_TO_KR_LAW_MAP.get(law_name.upper())
+            if kr_name:
+                target_laws.setdefault(kr_name, set()).add(art_num)
+        # 영문 쿼리에서도 법률명 추출 시도
+        for m in _EN_LAW_REF_RE.finditer(query):
+            law_name = m.group(1).strip()
+            art_num = int(m.group(2))
+            kr_name = _EN_TO_KR_LAW_MAP.get(law_name.upper())
+            if kr_name:
+                target_laws.setdefault(kr_name, set()).add(art_num)
+    else:
+        # 한글: LAW_BOOST에서 법률명+조문번호 추출
+        for m in _BOOST_ARTICLE_RE.finditer(law_boost_text):
+            law_name = m.group(1).strip()
+            art_num = int(m.group(2))
+            target_laws.setdefault(law_name, set()).add(art_num)
+
+        # 쿼리에서 법률명 추출 (조문번호 없이 법률명만)
+        for m in _QUERY_LAW_NAME_RE.finditer(query):
+            law_name = m.group(1).strip()
+            if law_name not in target_laws:
+                target_laws[law_name] = set()
+
+    if not target_laws:
+        logger.info("[Stage 1.7] 추출된 법률명 없음 → 프리패치 스킵")
+        return "", prefetch_cache
+
+    # ── 2) 법률명 우선순위 정렬 (쿼리에 언급된 것 우선, 최대 5개) ──
+    query_mentioned = []
+    boost_only = []
+    for law_name in target_laws:
+        if law_name in query:
+            query_mentioned.append(law_name)
+        else:
+            boost_only.append(law_name)
+    ordered_laws = (query_mentioned + boost_only)[:_DRF_PREFETCH_MAX_LAWS]
+
+    # ── 3) 비동기 병렬 fetch (5초 타임아웃) ──
+    async def _prefetch_law(law_name: str):
+        try:
+            if svc and hasattr(svc, "get_law_articles_async"):
+                raw = await svc.get_law_articles_async(law_name)
+            elif svc and hasattr(svc, "get_law_articles"):
+                raw = await asyncio.to_thread(svc.get_law_articles, law_name)
+            elif drf_inst and hasattr(drf_inst, "get_law_articles_async"):
+                raw = await drf_inst.get_law_articles_async(law_name)
+            elif drf_inst and hasattr(drf_inst, "get_law_articles"):
+                raw = await asyncio.to_thread(drf_inst.get_law_articles, law_name)
+            else:
+                return law_name, None
+            return law_name, raw
+        except Exception as e:
+            logger.warning(f"[Stage 1.7] {law_name} fetch 실패: {e}")
+            return law_name, None
+
+    try:
+        results = await asyncio.wait_for(
+            asyncio.gather(*[_prefetch_law(ln) for ln in ordered_laws], return_exceptions=True),
+            timeout=_DRF_PREFETCH_TIMEOUT,
+        )
+    except asyncio.TimeoutError:
+        logger.warning(f"[Stage 1.7] DRF 프리패치 타임아웃 ({_DRF_PREFETCH_TIMEOUT}초) → 스킵")
+        return "", prefetch_cache
+
+    # ── 4) 결과 파싱 + 컨텍스트 블록 생성 ──
+    context_lines = []
+    total_articles_injected = 0
+
+    for res in results:
+        if isinstance(res, BaseException):
+            continue
+        try:
+            law_name, raw = res
+        except (ValueError, TypeError):
+            continue
+        if not raw:
+            continue
+
+        # 캐시에 저장 (Stage 4 재사용)
+        prefetch_cache[law_name] = raw
+
+        # 조문 추출
+        articles = _extract_articles_from_drf(raw)
+        if not articles:
+            continue
+
+        # 대상 조문번호 (LAW_BOOST에서 추출한 것)
+        wanted_nums = target_laws.get(law_name, set())
+
+        # 조문 선택: 대상 번호가 있으면 해당 조문만, 없으면 상위 10개
+        selected = []
+        if wanted_nums:
+            for art in articles:
+                try:
+                    art_num_str = str(art.get("조문번호", "")).strip()
+                    art_num = int(re.sub(r'[^\d]', '', art_num_str) or "0")
+                    if art_num in wanted_nums:
+                        content = art.get("조문내용", "") or art.get("조문", "") or ""
+                        title = art.get("조문제목", "") or ""
+                        if content:
+                            label = f"제{art_num}조"
+                            if title:
+                                label += f"({title})"
+                            selected.append(f"  {label} {content.strip()[:500]}")
+                            if total_articles_injected + len(selected) >= _DRF_PREFETCH_MAX_ARTICLES:
+                                break
+                except (ValueError, TypeError):
+                    continue
+        else:
+            # 쿼리에서 법률명만 나온 경우: 상위 10개 조문
+            for art in articles[:10]:
+                content = art.get("조문내용", "") or art.get("조문", "") or ""
+                title = art.get("조문제목", "") or ""
+                art_num_str = str(art.get("조문번호", "")).strip()
+                if content:
+                    try:
+                        art_num = int(re.sub(r'[^\d]', '', art_num_str) or "0")
+                        label = f"제{art_num}조" if art_num > 0 else f"조문{art_num_str}"
+                    except (ValueError, TypeError):
+                        label = f"조문{art_num_str}"
+                    if title:
+                        label += f"({title})"
+                    selected.append(f"  {label} {content.strip()[:500]}")
+                    if total_articles_injected + len(selected) >= _DRF_PREFETCH_MAX_ARTICLES:
+                        break
+
+        if selected:
+            context_lines.append(f"■ {law_name}")
+            context_lines.extend(selected)
+            total_articles_injected += len(selected)
+
+        if total_articles_injected >= _DRF_PREFETCH_MAX_ARTICLES:
+            break
+
+    if not context_lines:
+        logger.info("[Stage 1.7] DRF 프리패치: 조문 0건 → 스킵")
+        return "", prefetch_cache
+
+    # ── 5) 컨텍스트 블록 포맷팅 ──
+    separator = "━" * 44
+    if lang == "en":
+        header = "[DRF Real-time Verified Articles — Cite this text EXACTLY]"
+    else:
+        header = "[DRF 실시간 검증 조문 — 이 원문을 정확히 인용하세요]"
+
+    block = f"\n\n{header}\n{separator}\n" + "\n".join(context_lines) + f"\n{separator}"
+
+    logger.info(f"[Stage 1.7] DRF 프리패치: {len(prefetch_cache)}개 법률, {total_articles_injected}개 조문 주입")
+    return block, prefetch_cache
+
+
+# =============================================================
 # Stage 3: DRF 실시간 전수 검증
 # =============================================================
 
@@ -1209,10 +1412,11 @@ _EN_LAW_REF_RE = re.compile(
 )
 
 
-async def _drf_verify_law_refs(text: str, lang: str = "") -> VerificationResult:
+async def _drf_verify_law_refs(text: str, lang: str = "", prefetch_cache: Optional[Dict[str, Any]] = None) -> VerificationResult:
     """Stage 4: 응답에서 인용된 모든 법률+판례 참조를 DRF API로 전수 검증.
     법률 fetch와 판례 fetch를 동시 실행하여 0.5~1.5초 절약.
     lang="en" 시 영문 법률 참조도 추출하여 검증.
+    prefetch_cache: Stage 1.7에서 사전 fetch한 {법률명: DRF 원시 응답} (중복 fetch 방지).
     """
     result = VerificationResult()
 
@@ -1345,8 +1549,20 @@ async def _drf_verify_law_refs(text: str, lang: str = "") -> VerificationResult:
             logger.warning(f"[Stage 4] {en_name} elaw 조회 실패: {e}")
             return en_name, _FETCH_ERROR
 
+    # Stage 1.7 프리패치 캐시 활용: 이미 fetch한 법률은 제외
+    _pfc = prefetch_cache or {}
+    _prefetch_hit = 0
+    _laws_to_fetch = set()
+    for ln in unique_laws:
+        if ln in _pfc and _pfc[ln] is not None:
+            _prefetch_hit += 1
+        else:
+            _laws_to_fetch.add(ln)
+    if _prefetch_hit:
+        logger.info(f"[Stage 4] 프리패치 캐시 활용: {_prefetch_hit}건 재사용, {len(_laws_to_fetch)}건 신규 fetch")
+
     # 법률 + 판례 + elaw fetch를 하나의 gather로 동시 실행
-    law_tasks = [_fetch_law(ln) for ln in unique_laws] if unique_laws and svc else []
+    law_tasks = [_fetch_law(ln) for ln in _laws_to_fetch] if _laws_to_fetch and svc else []
     prec_tasks = [_fetch_prec(cn) for cn in unique_cases] if unique_cases and drf_inst else []
     elaw_tasks = [_fetch_elaw(en) for en in en_elaw_laws] if en_elaw_laws and drf_inst else []
 
@@ -1364,7 +1580,8 @@ async def _drf_verify_law_refs(text: str, lang: str = "") -> VerificationResult:
             return result
 
     # 결과 분리 (return_exceptions=True: exception은 결과로 반환됨)
-    law_articles_cache: Dict[str, Any] = {}
+    # 프리패치 캐시를 초기값으로 포함
+    law_articles_cache: Dict[str, Any] = {ln: raw for ln, raw in _pfc.items() if raw is not None}
     law_result_count = len(law_tasks)
     prec_result_count = len(prec_tasks)
     elaw_result_count = len(elaw_tasks)
@@ -2070,6 +2287,25 @@ async def _run_legal_pipeline(
             rag_context.context_text = boost_text
         logger.info(f"[Stage 1.5] 리더 {leader_id} 핵심 법률 RAG 주입")
 
+    # -- Stage 1.7: DRF Article Pre-fetch (실제 조문 텍스트 프롬프트 주입) --
+    _drf_prefetch_cache: Dict[str, Any] = {}
+    try:
+        _prefetch_block, _drf_prefetch_cache = await _stage17_drf_prefetch(
+            law_boost_text=_leader_law_boost if _leader_law_boost else "",
+            query=query,
+            lang=lang,
+        )
+        if _prefetch_block:
+            # 프리패치 조문을 RAG 컨텍스트 최상단에 주입
+            if rag_context.context_text:
+                rag_context.context_text = _prefetch_block + "\n" + rag_context.context_text
+            elif rag_context.cache_context:
+                rag_context.cache_context = _prefetch_block + "\n" + rag_context.cache_context
+            else:
+                rag_context.context_text = _prefetch_block
+    except Exception as e:
+        logger.warning(f"[Stage 1.7] DRF 프리패치 실패 (무시, 진행): {e}")
+
     # -- Stage 2: LawmadiLM 초안 (서킷브레이커 + 비활성화 가능) --
     lm_draft = ""
     _enable_lm = os.getenv("ENABLE_LAWMADILM", "true").lower() == "true"
@@ -2240,7 +2476,7 @@ async def _run_legal_pipeline(
 
     try:
         drf_verification = await asyncio.wait_for(
-            _drf_verify_law_refs(final_text, lang=lang), timeout=_DRF_VERIFY_TIMEOUT,
+            _drf_verify_law_refs(final_text, lang=lang, prefetch_cache=_drf_prefetch_cache), timeout=_DRF_VERIFY_TIMEOUT,
         )
     except asyncio.TimeoutError:
         _s4_elapsed = asyncio.get_event_loop().time() - _s4_start
@@ -2324,7 +2560,7 @@ async def _run_legal_pipeline(
             )
             if retry_text and len(retry_text.strip()) >= 30:
                 retry_drf = await asyncio.wait_for(
-                    _drf_verify_law_refs(retry_text, lang=lang), timeout=_DRF_VERIFY_TIMEOUT,
+                    _drf_verify_law_refs(retry_text, lang=lang, prefetch_cache=_drf_prefetch_cache), timeout=_DRF_VERIFY_TIMEOUT,
                 )
                 retry_result = _apply_fail_closed(retry_text, retry_drf)
                 if retry_result != FAIL_CLOSED_RESPONSE:

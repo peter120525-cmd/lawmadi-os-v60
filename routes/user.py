@@ -81,10 +81,10 @@ async def get_plans():
 # Lawyer Inquiry (in-memory, latest 500 FIFO)
 # =============================================================
 
-@router.post("/lawyer-inquiry")
+@router.post("/api/lawyer-inquiry")
 @limiter.limit("5/hour")
 async def submit_lawyer_inquiry(request: Request):
-    """Lawyer referral inquiry — name + contact + summary."""
+    """Lawyer referral inquiry — name + contact + summary. Persists to DB with in-memory fallback."""
     try:
         data = await request.json()
         name = str(data.get("name", "")).strip()[:50]
@@ -95,18 +95,31 @@ async def submit_lawyer_inquiry(request: Request):
         if not name or not phone:
             return JSONResponse(status_code=400, content={"error": "이름과 연락처는 필수입니다."})
 
-        entry = {
-            "name": name,
-            "phone": phone,
-            "query_summary": query_summary,
-            "leader": leader,
-            "ts": _now_iso(),
-            "status": "pending",
-        }
-        LAWYER_INQUIRY_STORE.append(entry)
-        while len(LAWYER_INQUIRY_STORE) > 500:
-            LAWYER_INQUIRY_STORE.pop(0)
-        logger.info(f"[LAWYER-INQUIRY] Received inquiry (total={len(LAWYER_INQUIRY_STORE)})")
+        # Try DB persistence first, fall back to in-memory
+        db_saved = False
+        try:
+            from connectors.db_client_v2 import save_lawyer_inquiry
+            result = save_lawyer_inquiry(name, phone, query_summary, leader)
+            if result and not result.get("error"):
+                db_saved = True
+                logger.info(f"[LAWYER-INQUIRY] Saved to DB (id={result})")
+        except Exception as db_err:
+            logger.warning(f"[LAWYER-INQUIRY] DB save failed, using in-memory: {db_err}")
+
+        if not db_saved:
+            entry = {
+                "name": name,
+                "phone": phone,
+                "query_summary": query_summary,
+                "leader": leader,
+                "ts": _now_iso(),
+                "status": "pending",
+            }
+            LAWYER_INQUIRY_STORE.append(entry)
+            while len(LAWYER_INQUIRY_STORE) > 500:
+                LAWYER_INQUIRY_STORE.pop(0)
+            logger.info(f"[LAWYER-INQUIRY] Saved in-memory (total={len(LAWYER_INQUIRY_STORE)})")
+
         return {"ok": True, "message": "변호사 상담 신청이 접수되었습니다. 빠른 시일 내 연락드리겠습니다."}
     except Exception as e:
         logger.warning(f"[LAWYER-INQUIRY] error: {e}")
