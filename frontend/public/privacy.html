@@ -5,15 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>개인정보처리방침 - Lawmadi OS</title>
     <meta name="description" content="Lawmadi OS 개인정보처리방침. 개인정보보호법에 근거한 개인정보 처리 및 보호에 관한 사항을 안내합니다.">
-    <link rel="canonical" href="https://lawmadi-db.web.app/privacy.html" />
+    <link rel="canonical" href="https://lawmadi-db.web.app/privacy" />
+    <link rel="alternate" hreflang="ko" href="https://lawmadi-db.web.app/privacy" />
+    <link rel="alternate" hreflang="en" href="https://lawmadi-db.web.app/privacy-en" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="개인정보처리방침 - Lawmadi OS" />
     <meta property="og:description" content="Lawmadi OS 개인정보처리방침. 개인정보보호법에 근거한 개인정보 처리 및 보호에 관한 사항을 안내합니다." />
-    <meta property="og:url" content="https://lawmadi-db.web.app/privacy.html" />
+    <meta property="og:url" content="https://lawmadi-db.web.app/privacy" />
     <meta property="og:locale" content="ko_KR" />
     <meta property="og:image" content="https://lawmadi-db.web.app/og-image.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#0f172a">
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="icon" type="image/png" href="/icon-192.png" />
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
     <style>
@@ -608,7 +612,25 @@
                 justify-content: center;
             }
         }
+
+        /* ─── Light Mode ─── */
+        body:not(.dark-mode) { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%); color: #1e293b; }
+        body:not(.dark-mode) .header { background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid #e2e8f0; }
+        body:not(.dark-mode) .header h1 { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        body:not(.dark-mode) .article-card { background: #fff; border-color: #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.06); color: #1e293b; }
+        body:not(.dark-mode) .contact-box { background: rgba(255,255,255,0.8); border-color: #e2e8f0; color: #1e293b; }
+        body:not(.dark-mode) .data-table { background: #fff; border-color: #e2e8f0; color: #1e293b; }
+        body:not(.dark-mode) .data-table th { background: rgba(37,99,235,0.06); color: #1e293b; }
+        body:not(.dark-mode) .data-table td { border-color: #e2e8f0; }
+        body:not(.dark-mode) .article-number { color: #2563eb; }
+        body:not(.dark-mode) .effective-date { background: rgba(255,255,255,0.8); border-color: #e2e8f0; color: #64748b; }
+        body:not(.dark-mode) .rights-grid { color: #1e293b; }
+        body:not(.dark-mode) .security-item { background: rgba(255,255,255,0.8); border-color: #e2e8f0; color: #1e293b; }
+        body:not(.dark-mode) .law-tag { background: rgba(37,99,235,0.1); color: #2563eb; }
+        body:not(.dark-mode) .back-button { background: rgba(0,0,0,0.05); border-color: #e2e8f0; color: #1e293b; }
+        body:not(.dark-mode) .footer-link { background: rgba(0,0,0,0.05); border-color: #e2e8f0; color: #1e293b; }
     </style>
+    <script src="/cookie-consent.js"></script>
 </head>
 <body>
     <a href="/privacy-en" style="position:fixed;top:16px;right:16px;background:rgba(255,255,255,0.15);color:#fff;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;z-index:1000;backdrop-filter:blur(8px);">EN</a>

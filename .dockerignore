@@ -30,6 +30,7 @@ uploads/*
 temp/
 logs/
 *.log
+law_cache_*.json
 
 # CI/CD 및 배포 관련
 .github/

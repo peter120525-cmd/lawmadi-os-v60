@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /health
+Disallow: /export-pdf
+
+Sitemap: https://lawmadi-db.web.app/sitemap.xml

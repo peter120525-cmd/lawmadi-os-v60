@@ -9,10 +9,13 @@
     <meta property="og:title" content="법률 리더 60인 | Lawmadi OS" />
     <meta property="og:description" content="Lawmadi OS의 60명 법률 전문 AI 리더를 만나보세요." />
     <meta property="og:url" content="https://lawmadi-db.web.app/leaders" />
+    <meta property="og:locale" content="ko_KR" />
     <meta property="og:image" content="https://lawmadi-db.web.app/og-image.png" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#1a1a2e" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="icon" type="image/png" href="/icon-192.png" />
     <link rel="alternate" hreflang="en" href="https://lawmadi-db.web.app/leaders-en" />
     <link rel="alternate" hreflang="ko" href="https://lawmadi-db.web.app/leaders" />
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -597,7 +600,25 @@
                 font-size: 1.4rem;
             }
         }
+        /* ─── Light Mode ─── */
+        body:not(.dark-mode) { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%); color: #1e293b; }
+        body:not(.dark-mode) .header { background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid #e2e8f0; }
+        body:not(.dark-mode) .header h1 { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        body:not(.dark-mode) .leader-card { background: #fff; border-color: #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        body:not(.dark-mode) .leader-card:hover { border-color: #3b82f6; box-shadow: 0 4px 16px rgba(59,130,246,0.15); }
+        body:not(.dark-mode) .clevel-card { background: #fff; border-color: #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        body:not(.dark-mode) .filter-tab { background: rgba(0,0,0,0.05); color: #475569; border-color: transparent; }
+        body:not(.dark-mode) .filter-tab.active, body:not(.dark-mode) .filter-tab:hover { background: #2563eb; color: #fff; }
+        body:not(.dark-mode) .leader-name { color: #1e293b; }
+        body:not(.dark-mode) .leader-profile, body:not(.dark-mode) .leader-role { color: #64748b; }
+        body:not(.dark-mode) .search-box { background: rgba(255,255,255,0.8); border-color: #e2e8f0; color: #1e293b; }
+        body:not(.dark-mode) .section-title { color: #1e293b; }
+        body:not(.dark-mode) .back-button { background: rgba(0,0,0,0.05); border-color: #e2e8f0; color: #1e293b; }
+        body:not(.dark-mode) .stats-section { background: rgba(255,255,255,0.8); border-color: #e2e8f0; }
+        body:not(.dark-mode) .clevel-info h3 { color: #1e293b; }
+        body:not(.dark-mode) .clevel-profile { color: #64748b; }
     </style>
+    <script src="/cookie-consent.js"></script>
 </head>
 <body>
     <a href="/leaders-en" style="position:fixed;top:16px;right:16px;background:rgba(255,255,255,0.15);color:#fff;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;z-index:1000;backdrop-filter:blur(8px);">EN</a>

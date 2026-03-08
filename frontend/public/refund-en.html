@@ -6,6 +6,8 @@
     <title>Refund Policy - Lawmadi OS</title>
     <meta name="description" content="Lawmadi OS Refund Policy. Information on credit purchases and refunds.">
     <link rel="canonical" href="https://lawmadi-db.web.app/refund-en" />
+    <link rel="alternate" hreflang="ko" href="https://lawmadi-db.web.app/refund" />
+    <link rel="alternate" hreflang="en" href="https://lawmadi-db.web.app/refund-en" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Refund Policy - Lawmadi OS" />
     <meta property="og:description" content="Lawmadi OS Refund Policy. Information on credit purchases and refunds." />
@@ -14,6 +16,8 @@
     <meta property="og:image" content="https://lawmadi-db.web.app/og-image.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#0f172a">
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="icon" type="image/png" href="/icon-192.png" />
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
     <style>
@@ -404,7 +408,21 @@
                 justify-content: center;
             }
         }
+
+        /* ─── Light Mode ─── */
+        body:not(.dark-mode) { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%); color: #1e293b; }
+        body:not(.dark-mode) .header { background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid #e2e8f0; }
+        body:not(.dark-mode) .header h1 { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        body:not(.dark-mode) .article-card { background: #fff; border-color: #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.06); color: #1e293b; }
+        body:not(.dark-mode) .highlight-box { background: rgba(37,99,235,0.06); border-color: #bfdbfe; color: #1e293b; }
+        body:not(.dark-mode) .info-box { background: rgba(245,158,11,0.06); border-color: #fde68a; color: #1e293b; }
+        body:not(.dark-mode) .article-number { color: #2563eb; }
+        body:not(.dark-mode) .effective-date { background: rgba(255,255,255,0.8); border-color: #e2e8f0; color: #64748b; }
+        body:not(.dark-mode) .back-button { background: rgba(0,0,0,0.05); border-color: #e2e8f0; color: #1e293b; }
+        body:not(.dark-mode) .footer-link { background: rgba(0,0,0,0.05); border-color: #e2e8f0; color: #1e293b; }
+        body:not(.dark-mode) .biz-footer { background: rgba(255,255,255,0.9); border-color: #e2e8f0; color: #64748b; }
     </style>
+    <script src="/cookie-consent.js"></script>
 </head>
 <body>
     <a href="/refund" style="position:fixed;top:16px;right:16px;background:rgba(255,255,255,0.15);color:#fff;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;z-index:1000;backdrop-filter:blur(8px);">KO</a>
@@ -585,9 +603,9 @@
                 <a href="mailto:choepeter@outlook.kr">choepeter@outlook.kr</a>
             </div>
             <div class="biz-links">
-                <a href="/terms-en.html">Terms</a>
-                <a href="/privacy-en.html">Privacy</a>
-                <a href="/pricing-en.html">Pricing</a>
+                <a href="/terms-en">Terms</a>
+                <a href="/privacy-en">Privacy</a>
+                <a href="/pricing-en">Pricing</a>
             </div>
             <div class="biz-copy">&copy; 2026 Lawmadi. All rights reserved.</div>
         </div>

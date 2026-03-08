@@ -23,6 +23,7 @@ logger = logging.getLogger("LawmadiOS.Deliberation")
 # 협의 타임아웃 (초)
 _DELIBERATION_TIMEOUT = 8
 _HANDOFF_TIMEOUT = 8
+_TURN_TIMEOUT = 5  # 개별 턴 타임아웃 (초)
 
 # 이름 → ID 역매핑 캐시
 _NAME_TO_ID: Dict[str, str] = {}
@@ -509,7 +510,6 @@ async def generate_handoff(
 # 턴별 즉시 yield → SSE 전송 → 실시간 채팅 UX
 # ═══════════════════════════════════════════════════════════════════
 
-_TURN_TIMEOUT = 5  # 개별 턴 타임아웃 (초)
 
 
 async def generate_deliberation_stream(
