@@ -149,7 +149,7 @@
                     authState.authenticated = false;
                     authState.user = null;
                     authState.email = '';
-                    window.__lawmadiAuth = { user: null };
+                    window.__lawmadiAuth = { authenticated: false, email: '', user: null };
                     localStorage.removeItem('lm_email');
                     localStorage.removeItem('lawmadi-chat-history');
                     localStorage.removeItem('lawmadi-favorites');

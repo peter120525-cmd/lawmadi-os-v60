@@ -429,6 +429,12 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 return false;
             }
 
+            const consent = document.getElementById('lawyerPrivacyConsent');
+            if (!consent || !consent.checked) {
+                alert('Please consent to the collection and use of personal information.');
+                return false;
+            }
+
             const submitBtn = document.querySelector('#lawyerFormView button[type="submit"], #lawyerFormView .lawyer-submit-btn');
             if (submitBtn) {
                 submitBtn.disabled = true;
@@ -1882,7 +1888,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         if (!lNames.every(n => clevelOnly.includes(n))) {
                             const lawyerCta = document.createElement('button');
                             lawyerCta.className = 'bottom-cta-btn lawyer';
-                            lawyerCta.innerHTML = '<span class="material-symbols-outlined">gavel</span> Request Attorney Consultation';
+                            lawyerCta.innerHTML = '<span class="material-symbols-outlined">gavel</span> Attorney Consultation Guide';
                             lawyerCta.onclick = () => UI.openLawyerModal(originalQuery, leaderName);
                             ctaBar.appendChild(lawyerCta);
                         }

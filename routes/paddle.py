@@ -464,7 +464,7 @@ async def verify_otp_endpoint(request: Request):
         max_age=SESSION_EXPIRY_DAYS * 86400,
         httponly=True,
         secure=True,
-        samesite="strict",
+        samesite="lax",
         path="/",
     )
     return response
