@@ -230,6 +230,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 document.body.classList.add('dark-mode');
                 if (darkToggle) {
                     darkToggle.querySelector('.material-symbols-outlined').textContent = 'light_mode';
+                    const label = darkToggle.querySelectorAll('span')[1];
+                    if (label) label.textContent = '라이트모드';
                     darkToggle.setAttribute('aria-pressed', 'true');
                 }
             }
@@ -346,6 +348,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             if (darkToggle) darkToggle.setAttribute('aria-pressed', this.darkMode);
             const icon = document.querySelector('#darkToggle .material-symbols-outlined');
             if (icon) icon.textContent = this.darkMode ? 'light_mode' : 'dark_mode';
+            const label = darkToggle ? darkToggle.querySelectorAll('span')[1] : null;
+            if (label) label.textContent = this.darkMode ? '라이트모드' : '다크모드';
         },
 
         // ═══ 즐겨찾기 ═══
