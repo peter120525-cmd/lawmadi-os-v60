@@ -16,14 +16,16 @@
     var langUrl = '';
     var langLabel = '';
 
-    // 현재 페이지의 반대 언어 URL 계산
+    // 현재 페이지의 반대 언어 URL 계산 (쿼리 파라미터 유지)
+    var qs = location.search || '';
     if (isEn) {
-        langUrl = path.replace('-en', '').replace('/en', '/');
+        langUrl = path.replace('-en', '').replace('/en', '/') + qs;
         langLabel = 'KO';
     } else {
         // 파일명에 -en 추가
         langUrl = path.replace(/\.html$/, '-en.html');
         if (langUrl === path) langUrl = path + '-en';
+        langUrl += qs;
         langLabel = 'EN';
     }
 

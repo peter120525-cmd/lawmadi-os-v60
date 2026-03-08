@@ -894,19 +894,27 @@ def load_integrated_config() -> Dict[str, Any]:
 # =============================================================
 
 def _cleanup_expired_uploads():
-    """만료된 업로드 파일 정리 (7일 경과)"""
-    uploads_dir = Path("uploads")
-    if not uploads_dir.exists():
-        return
+    """만료된 업로드/임시 파일 정리 (업로드 7일, temp 1시간)"""
     now = time.time()
-    max_age = 7 * 24 * 3600  # 7일
+    # uploads/ — 7일 경과
+    uploads_dir = Path("uploads")
     cleaned = 0
-    for f in uploads_dir.iterdir():
-        if f.is_file() and (now - f.stat().st_mtime) > max_age:
-            f.unlink(missing_ok=True)
-            cleaned += 1
+    if uploads_dir.exists():
+        max_age = 7 * 24 * 3600
+        for f in uploads_dir.iterdir():
+            if f.is_file() and (now - f.stat().st_mtime) > max_age:
+                f.unlink(missing_ok=True)
+                cleaned += 1
+    # temp/ — 1시간 경과 (PDF 등 임시 파일)
+    temp_dir = Path("temp")
+    if temp_dir.exists():
+        max_age_temp = 3600
+        for f in temp_dir.iterdir():
+            if f.is_file() and (now - f.stat().st_mtime) > max_age_temp:
+                f.unlink(missing_ok=True)
+                cleaned += 1
     if cleaned:
-        logger.info(f"🧹 만료 업로드 파일 {cleaned}개 삭제")
+        logger.info(f"🧹 만료 파일 {cleaned}개 삭제")
 
 @app.on_event("startup")
 async def startup():
@@ -920,11 +928,21 @@ async def startup():
     asyncio.get_running_loop().set_default_executor(_executor)
     logger.info("✅ ThreadPoolExecutor: max_workers=40")
 
-    # 만료된 업로드 파일 정리
+    # 만료된 업로드/임시 파일 정리
     try:
         _cleanup_expired_uploads()
     except Exception:
         pass
+
+    # 주기적 파일 정리 (1시간마다)
+    async def _periodic_cleanup():
+        while True:
+            await asyncio.sleep(3600)
+            try:
+                _cleanup_expired_uploads()
+            except Exception:
+                pass
+    asyncio.create_task(_periodic_cleanup())
 
     # [감사 #4.2] SOFT_MODE 기본값을 true로 변경 (Cloud Run 일시 장애 대비)
     soft_mode = os.getenv("SOFT_MODE", "true").lower() == "true"

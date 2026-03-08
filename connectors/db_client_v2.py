@@ -44,7 +44,7 @@ def execute(query: str, params=None, fetch="all"):
 
     except Exception as e:
         logger.error(f"⚠️ [DB] execute 실패: {e}")
-        return {"ok": False, "error": str(e)}
+        return {"ok": False, "error": "database_error"}
 
     finally:
         if cur: cur.close()

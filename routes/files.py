@@ -14,6 +14,7 @@ from pathlib import Path
 import aiofiles
 from fastapi import APIRouter, Request, HTTPException, File, UploadFile
 from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
 from google.genai import types as genai_types
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -583,10 +584,12 @@ async def export_pdf(request: Request):
         pdf.output(filepath)
 
         logger.info(f"[PDF] Generated: {filename}")
+
         return FileResponse(
             path=filepath,
             filename=filename,
             media_type="application/pdf",
+            background=BackgroundTask(lambda: os.remove(filepath) if os.path.exists(filepath) else None),
         )
 
     except HTTPException:
