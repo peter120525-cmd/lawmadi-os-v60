@@ -316,7 +316,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             var premiumCta = document.getElementById('premiumCta');
             if (premiumCta) premiumCta.addEventListener('click', () => alert('Premium service is coming soon!'));
             var lawyerCta = document.getElementById('lawyerCtaLanding');
-            if (lawyerCta) lawyerCta.addEventListener('click', () => alert('Attorney connection service is coming soon!'));
+            if (lawyerCta) lawyerCta.addEventListener('click', () => UI.openLawyerModal('', ''));
             var modalClose = document.getElementById('modalCloseBtn');
             if (modalClose) modalClose.addEventListener('click', () => this.closeLawyerModal());
             var lawyerForm = document.getElementById('lawyerForm');
@@ -376,18 +376,88 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         },
 
         // ─── 변호사 상담 모달 ───
-        openLawyerModal(querySummary, leader) {
-            alert('Attorney connection service is coming soon!');
+        openLawyerModal(querySummary, leaderName) {
+            const overlay = document.getElementById('lawyerModalOverlay');
+            if (!overlay) return;
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            // Pre-fill fields
+            const summaryField = document.getElementById('lawyerSummary');
+            const leaderField = document.getElementById('lawyerLeader');
+            if (summaryField && querySummary) summaryField.value = querySummary.substring(0, 500);
+            if (leaderField && leaderName) leaderField.value = leaderName;
+            // Pre-fill user info if logged in
+            const user = window.__lawmadiAuth && window.__lawmadiAuth.user;
+            if (user && user.email) {
+                const nameField = document.getElementById('lawyerName');
+                if (nameField && !nameField.value) nameField.value = user.email.split('@')[0];
+            }
         },
 
         closeLawyerModal() {
             const overlay = document.getElementById('lawyerModalOverlay');
-            if (overlay) overlay.classList.remove('active');
+            if (overlay) {
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+            // Reset to form view
+            const formView = document.getElementById('lawyerFormView');
+            const successView = document.getElementById('lawyerSuccessView');
+            if (formView) formView.style.display = 'block';
+            if (successView) successView.style.display = 'none';
         },
 
         async submitLawyerInquiry(e) {
             e.preventDefault();
-            alert('Attorney connection service is coming soon!');
+            const name = document.getElementById('lawyerName')?.value?.trim();
+            const phone = document.getElementById('lawyerPhone')?.value?.trim();
+            const summary = document.getElementById('lawyerSummary')?.value?.trim();
+            const leader = document.getElementById('lawyerLeader')?.value?.trim() || '';
+
+            if (!name || !phone) {
+                alert('Please enter your name and contact.');
+                return false;
+            }
+            if (!summary) {
+                alert('Please enter consultation details.');
+                return false;
+            }
+            // Phone validation
+            const phoneClean = phone.replace(/[^0-9]/g, '');
+            if (phoneClean.length < 10 || phoneClean.length > 11) {
+                alert('Please enter a valid phone number.');
+                return false;
+            }
+
+            const submitBtn = document.querySelector('#lawyerFormView button[type="submit"], #lawyerFormView .lawyer-submit-btn');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Submitting...';
+            }
+
+            try {
+                const res = await fetch('/api/lawyer-inquiry', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ name, phone: phoneClean, query_summary: summary, leader })
+                });
+                if (!res.ok) throw new Error('Submission failed');
+
+                // Switch to success view
+                const formView = document.getElementById('lawyerFormView');
+                const successView = document.getElementById('lawyerSuccessView');
+                if (formView) formView.style.display = 'none';
+                if (successView) successView.style.display = 'block';
+            } catch (err) {
+                alert('Failed to submit. Please try again.');
+                console.error('Lawyer inquiry failed:', err);
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Submit';
+                }
+            }
             return false;
         },
 
