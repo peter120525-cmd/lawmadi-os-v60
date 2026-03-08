@@ -1355,7 +1355,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 }
                 else if (/^\d+\.\s+/.test(trimmed)) {
                     if (inList) { html.push('</ul>'); inList = false; }
-                    if (!inOrderedList) { html.push('<ol>'); inOrderedList = true; }
+                    const num = trimmed.match(/^(\d+)\./)[1];
+                    if (!inOrderedList) { html.push(`<ol start="${num}">`); inOrderedList = true; }
                     let content = trimmed.replace(/^\d+\.\s+/, '');
                     html.push('<li>' + this.formatInline(content) + '</li>');
                     lastWasH2 = false;
