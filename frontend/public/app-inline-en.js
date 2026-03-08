@@ -1810,6 +1810,12 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
                     msgDiv.appendChild(toolbar);
 
+                    // ── Disclaimer ──
+                    const disclaimerDiv = document.createElement('div');
+                    disclaimerDiv.className = 'ai-disclaimer';
+                    disclaimerDiv.textContent = 'This is an AI legal information service and does not substitute for professional legal advice from an attorney.';
+                    msgDiv.appendChild(disclaimerDiv);
+
                     // ── 전문가 검증 + 변호사 상담 CTA (답변 맨 아래) ──
                     const ctaBar = document.createElement('div');
                     ctaBar.className = 'ai-bottom-cta';

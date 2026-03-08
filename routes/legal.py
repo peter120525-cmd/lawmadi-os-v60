@@ -212,7 +212,7 @@ def _build_yuna_fallback(lang: str = "") -> str:
     return (
         "**Lawmadi OS — 대한민국 법률 분석 시스템**\n\n"
         "말씀하신 내용은 법률 분야가 아닌 일반 질문으로 판단됩니다.\n\n"
-        "Lawmadi OS는 **60명의 전문 리더**가 국가법령정보센터(SSOT) 실시간 검증을 통해 "
+        "Lawmadi OS는 **60명의 AI 전문 리더**가 국가법령정보센터(SSOT) 실시간 검증을 통해 "
         "정확한 법률 분석을 제공하는 시스템입니다.\n\n"
         "**도움받을 수 있는 분야:**\n"
         "- 전세·임대차 분쟁, 보증금 반환\n"
@@ -293,7 +293,7 @@ async def ask(request: Request):
             if lang == "en":
                 msg = (
                     "**Lawmadi OS — Korea's Legal Analysis System**\n\n"
-                    "Welcome! Lawmadi OS provides **real-time legal analysis** powered by 60 specialized leaders "
+                    "Welcome! Lawmadi OS provides **real-time legal analysis** powered by 60 specialized AI leaders "
                     "and verified through the National Law Information Center (SSOT).\n\n"
                     "**What we can help with:**\n"
                     "- Lease disputes & deposit recovery\n"
@@ -310,7 +310,7 @@ async def ask(request: Request):
             else:
                 msg = (
                     "**Lawmadi OS — 대한민국 법률 분석 시스템**\n\n"
-                    "반갑습니다! Lawmadi OS는 **60명의 전문 리더**가 국가법령정보센터(SSOT) 실시간 검증을 통해 "
+                    "반갑습니다! Lawmadi OS는 **60명의 AI 전문 리더**가 국가법령정보센터(SSOT) 실시간 검증을 통해 "
                     "정확한 법률 분석을 제공하는 시스템입니다.\n\n"
                     "**도움받을 수 있는 분야:**\n"
                     "- 전세·임대차 분쟁, 보증금 반환\n"
@@ -760,6 +760,10 @@ async def ask(request: Request):
         final_text_clean = _remove_markdown_tables_fn(final_text_clean)
         final_text_clean = _remove_separator_lines_fn(final_text_clean)
 
+        _disclaimer_ko = "본 서비스는 AI 기반 법률 정보 제공 시스템이며, 변호사의 법률 자문을 대체하지 않습니다."
+        _disclaimer_en = "This is an AI legal information service and does not substitute for professional legal advice from an attorney."
+        _disclaimer = _disclaimer_en if lang == "en" else _disclaimer_ko
+
         _ask_result = {
             "trace_id": trace,
             "response": final_text_clean,
@@ -772,6 +776,7 @@ async def ask(request: Request):
             "ssot_sources": [f"{s['type']}:{s['law']}" for s in matched_sources[:3]] if matched_sources else [],
             "meta": {**_compute_quality_meta_fn(final_text_clean, matched_sources), "model": "lawmadi-primary"},
             "current_leader": {"name": leader_name, "specialty": leader_specialty, "leader_id": analysis.get("leader_id", "")},
+            "disclaimer": _disclaimer,
         }
         if _ask_deliberation:
             _ask_result["deliberation"] = _ask_deliberation
@@ -929,7 +934,7 @@ async def ask_stream(request: Request):
                 if lang == "en":
                     msg = (
                         "**Lawmadi OS — Korea's Legal Analysis System**\n\n"
-                        "Welcome! Lawmadi OS provides **real-time legal analysis** powered by 60 specialized leaders "
+                        "Welcome! Lawmadi OS provides **real-time legal analysis** powered by 60 specialized AI leaders "
                         "and verified through the National Law Information Center (SSOT).\n\n"
                         "**What we can help with:**\n"
                         "- Lease disputes & deposit recovery\n"
@@ -946,7 +951,7 @@ async def ask_stream(request: Request):
                 else:
                     msg = (
                         "**Lawmadi OS — 대한민국 법률 분석 시스템**\n\n"
-                        "반갑습니다! Lawmadi OS는 **60명의 전문 리더**가 국가법령정보센터(SSOT) 실시간 검증을 통해 "
+                        "반갑습니다! Lawmadi OS는 **60명의 AI 전문 리더**가 국가법령정보센터(SSOT) 실시간 검증을 통해 "
                         "정확한 법률 분석을 제공하는 시스템입니다.\n\n"
                         "**도움받을 수 있는 분야:**\n"
                         "- 전세·임대차 분쟁, 보증금 반환\n"
@@ -1539,6 +1544,10 @@ async def ask_expert(request: Request):
         if _post_deduct_fn and _response_status == "SUCCESS":
             _post_deduct_fn(request, "expert", trace)
 
+        _expert_disclaimer_ko = "본 전문가 분석은 AI 기반 법률 정보이며, 변호사의 법률 자문이 아닙니다. 중요한 법적 결정 시 반드시 변호사와 상담하세요."
+        _expert_disclaimer_en = "This expert analysis is AI-generated legal information, not professional legal advice. Consult a qualified attorney for important legal decisions."
+        _expert_disclaimer = _expert_disclaimer_en if lang == "en" else _expert_disclaimer_ko
+
         return {
             "trace_id": trace,
             "response": final_text,
@@ -1546,6 +1555,7 @@ async def ask_expert(request: Request):
             "leader_specialty": leader_specialty,
             "status": _response_status,
             "latency_ms": latency_ms,
+            "disclaimer": _expert_disclaimer,
         }
 
     except Exception as e:

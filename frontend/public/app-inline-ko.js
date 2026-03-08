@@ -1594,6 +1594,12 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
                     msgDiv.appendChild(toolbar);
 
+                    // ── 면책 안내 ──
+                    const disclaimerDiv = document.createElement('div');
+                    disclaimerDiv.className = 'ai-disclaimer';
+                    disclaimerDiv.textContent = '본 서비스는 AI 기반 법률 정보 제공 시스템이며, 변호사의 법률 자문을 대체하지 않습니다.';
+                    msgDiv.appendChild(disclaimerDiv);
+
                     // ── 전문가 검증 + 변호사 상담 CTA (답변 맨 아래) ──
                     const ctaBar = document.createElement('div');
                     ctaBar.className = 'ai-bottom-cta';
@@ -1881,7 +1887,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         <span class="step-icon">🔍</span> 질문 분석 중...
                     </div>
                     <div class="typing-step" id="step-2">
-                        <span class="step-icon">👥</span> 전문 리더 배정 중...
+                        <span class="step-icon">👥</span> AI 전문 리더 배정 중...
                     </div>
                     <div class="typing-step" id="step-3">
                         <span class="step-icon">⚖️</span> 법령·판례 검색 중...
