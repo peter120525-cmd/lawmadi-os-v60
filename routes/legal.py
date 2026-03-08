@@ -475,6 +475,104 @@ async def ask(request: Request):
                     f"routing={_routing_method}, classify_ms={_classify_ms}")
 
         # -------------------------------------------------
+        # 4.03) Tier 1 Search-Only 라우팅 (Gemini 스킵)
+        # -------------------------------------------------
+        # 조건: 단순 질의 + RAG 검색 고득점 + extractive_answers 존재
+        # → Vertex AI Search 결과만으로 응답 (크레딧 100% 커버)
+        _tier1_complexity = analysis.get("complexity", "")
+        _tier1_eligible = (
+            is_legal
+            and not is_document
+            and _tier1_complexity == "simple"
+            and rag_context
+            and rag_context.matched_laws
+        )
+        if _tier1_eligible:
+            # 최고 점수 검색 결과 확인
+            _top_result = max(rag_context.matched_laws, key=lambda x: x.get("score", 0))
+            _top_score = _top_result.get("score", 0)
+            _ext_answers = _top_result.get("extractive_answers", [])
+            _ext_segments = _top_result.get("extractive_segments", [])
+            _key_articles = _top_result.get("key_article_texts", [])
+
+            # 고득점(≥0.7) + 추출 답변 또는 조문 텍스트 존재
+            if _top_score >= 0.7 and (_ext_answers or _key_articles):
+                logger.info(f"⚡ [Tier1-SearchOnly] score={_top_score:.2f}, "
+                            f"answers={len(_ext_answers)}, articles={len(_key_articles)} → Gemini 스킵")
+
+                # 응답 조립: extractive_answers + key_articles
+                _t1_law = _top_result.get("law", "")
+                _t1_parts = []
+
+                if lang == "en":
+                    _t1_header = f"**Assigned: {leader_name} ({leader_specialty} Expert)**\n\n"
+                    _t1_parts.append(f"### Relevant Legal Provisions — {_t1_law}\n")
+                else:
+                    _t1_header = f"**담당: {leader_name} ({leader_specialty} 전문)**\n\n"
+                    _t1_parts.append(f"### 관련 법령 — {_t1_law}\n")
+
+                # Extractive Answers (Search가 추출한 핵심 답변)
+                for ans in _ext_answers[:3]:
+                    _t1_parts.append(f"> {ans}\n")
+
+                # Key Articles (조문 원문)
+                for art_text in _key_articles[:5]:
+                    _t1_parts.append(f"- {art_text}")
+
+                # 추가 법률 소스 (2번째 이후)
+                _other_laws = [m for m in rag_context.matched_laws if m.get("law") != _t1_law and m.get("score", 0) >= 0.5]
+                for _ol in _other_laws[:2]:
+                    _ol_name = _ol.get("law", "")
+                    if lang == "en":
+                        _t1_parts.append(f"\n### Additional Reference — {_ol_name}")
+                    else:
+                        _t1_parts.append(f"\n### 추가 참조 — {_ol_name}")
+                    for _oa in _ol.get("extractive_answers", [])[:2]:
+                        _t1_parts.append(f"> {_oa}")
+                    for _oart in _ol.get("key_article_texts", [])[:3]:
+                        _t1_parts.append(f"- {_oart}")
+
+                # 면책 조항
+                if lang == "en":
+                    _t1_parts.append("\n---\n*This response is based on legal database search results. For complex legal analysis, please use Expert mode.*")
+                else:
+                    _t1_parts.append("\n---\n*본 응답은 법령 데이터베이스 검색 결과에 기반합니다. 심층 법률 분석이 필요하시면 전문가 모드를 이용해 주세요.*")
+
+                _t1_response = _t1_header + "\n".join(_t1_parts)
+
+                latency_ms = int((time.time() - start_time) * 1000)
+                with _METRICS_LOCK:
+                    _METRICS["requests"] += 1
+                _audit_fn("ask_tier1", {
+                    "query": query, "leader": leader_name, "tier": 1,
+                    "status": "SUCCESS_TIER1", "latency_ms": latency_ms,
+                    "search_score": _top_score, "routing_method": _routing_method,
+                })
+                record_request("/ask", latency_ms, leader=leader_name,
+                               routing_method="tier1_search_only", status="SUCCESS",
+                               is_cache_hit=False, stage_timings={"classify": _classify_ms, "total": latency_ms})
+                record_event("tier1_search_only")
+
+                _disclaimer = ("This is an AI legal information service and does not substitute for professional legal advice from an attorney."
+                               if lang == "en" else "본 서비스는 AI 기반 법률 정보 제공 시스템이며, 변호사의 법률 자문을 대체하지 않습니다.")
+
+                return {
+                    "trace_id": trace,
+                    "response": _t1_response,
+                    "leader": leader_name,
+                    "leader_specialty": leader_specialty,
+                    "tier": 1,
+                    "status": "SUCCESS",
+                    "swarm_mode": False,
+                    "constitutional_check": "PASS",
+                    "ssot_sources": [f"{s['type']}:{s['law']}" for s in matched_sources[:3]] if matched_sources else [],
+                    "meta": {"model": "search-only", "search_score": round(_top_score, 3)},
+                    "current_leader": {"name": leader_name, "specialty": leader_specialty, "leader_id": analysis.get("leader_id", "")},
+                    "disclaimer": _disclaimer,
+                    "latency_ms": latency_ms,
+                }
+
+        # -------------------------------------------------
         # 4.05) 리더 협의(Deliberation) / 인수인계(Handoff) 준비
         # -------------------------------------------------
         _ask_deliberation = None
