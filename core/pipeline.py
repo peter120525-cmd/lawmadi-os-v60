@@ -1412,6 +1412,76 @@ _EN_LAW_REF_RE = re.compile(
 )
 
 
+# ---------------------------------------------------------------------------
+# Stage 4-b: 인지액/소송비용 계산 검증 (민사소송등인지법 제2조)
+# ---------------------------------------------------------------------------
+_INJI_RE = re.compile(
+    r'인지(?:대|액)?\s*(?:약\s*)?([0-9,]+(?:\.\d+)?)\s*원',
+)
+_SOGADAE_RE = re.compile(
+    r'소(?:가|송목적의?\s*값?)\s*(?:약?\s*)?([0-9,]+(?:\.\d+)?)\s*(?:만\s*)?원',
+)
+
+
+def _calc_inji(soga: int) -> int:
+    """민사소송등인지법 제2조 인지액 계산."""
+    if soga < 10_000_000:
+        amt = soga * 0.005
+    elif soga < 100_000_000:
+        amt = soga * 0.0045 + 5_000
+    elif soga < 1_000_000_000:
+        amt = soga * 0.004 + 55_000
+    else:
+        amt = soga * 0.0035 + 555_000
+    amt = round(amt)  # 부동소수점 오차 방지
+    if amt < 1000:
+        amt = 1000
+    else:
+        amt = (amt // 100) * 100  # 100원 미만 절사
+    return amt
+
+
+def _verify_inji_in_text(text: str) -> Optional[str]:
+    """응답 텍스트에서 인지액 언급을 찾아 계산 검증.
+    오류 발견 시 교정 메시지 반환, 정상이면 None."""
+    inji_matches = _INJI_RE.findall(text)
+    soga_matches = _SOGADAE_RE.findall(text)
+    if not inji_matches or not soga_matches:
+        return None
+
+    # 소가 파싱 (첫 번째 매칭)
+    soga_str = soga_matches[0].replace(",", "")
+    try:
+        soga = int(float(soga_str))
+    except ValueError:
+        return None
+    # "만원" 단위 보정
+    if "만" in text[text.find(soga_str):text.find(soga_str) + len(soga_str) + 5]:
+        soga *= 10_000
+
+    correct_inji = _calc_inji(soga)
+
+    # 응답에 명시된 인지액 파싱
+    stated_str = inji_matches[0].replace(",", "")
+    try:
+        stated_inji = int(float(stated_str))
+    except ValueError:
+        return None
+
+    # 허용 오차 20% 이내이면 통과
+    if correct_inji == 0:
+        return None
+    error_ratio = abs(stated_inji - correct_inji) / correct_inji
+    if error_ratio <= 0.20:
+        return None
+
+    return (
+        f"\n\n> ⚠️ **인지액 자동 검증**: 소가 {soga:,}원 기준 인지액은 "
+        f"**{correct_inji:,}원**입니다 (민사소송등인지법 제2조). "
+        f"응답의 {stated_inji:,}원과 차이가 있으니 확인하세요."
+    )
+
+
 async def _drf_verify_law_refs(text: str, lang: str = "", prefetch_cache: Optional[Dict[str, Any]] = None) -> VerificationResult:
     """Stage 4: 응답에서 인용된 모든 법률+판례 참조를 DRF API로 전수 검증.
     법률 fetch와 판례 fetch를 동시 실행하여 0.5~1.5초 절약.
@@ -2508,6 +2578,13 @@ async def _run_legal_pipeline(
                     final_text = final_text.rstrip() + grounding_disclaimer
         except Exception as e:
             logger.warning(f"[CheckGrounding] 결과 수집 실패 (무시): {e}")
+
+    # ── Stage 4-b: 인지액 계산 검증 (전문가 답변 전용) ──
+    if mode == "expert":
+        inji_correction = _verify_inji_in_text(final_text)
+        if inji_correction:
+            logger.info("[Stage 4-b] 인지액 계산 오류 감지 → 교정 메시지 부착")
+            final_text = final_text.rstrip() + inji_correction
 
     # FAIL_CLOSED 적용 (0.1% 초과 미검증 또는 DRF 오류 시 차단)
     fail_closed_result = _apply_fail_closed(final_text, drf_verification)

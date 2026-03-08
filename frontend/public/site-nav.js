@@ -19,11 +19,11 @@
     // 현재 페이지의 반대 언어 URL 계산 (쿼리 파라미터 유지)
     var qs = location.search || '';
     if (isEn) {
-        langUrl = path.replace('-en', '').replace('/en', '/') + qs;
+        langUrl = path.replace(/\.html$/, '').replace('-en', '').replace('/en', '/') + qs;
         langLabel = 'KO';
     } else {
-        langUrl = path.replace(/\.html$/, '-en.html');
-        if (langUrl === path) langUrl = path + '-en';
+        var cleanPath = path.replace(/\.html$/, '');
+        langUrl = cleanPath + '-en';
         langUrl += qs;
         langLabel = 'EN';
     }
@@ -230,7 +230,7 @@
                 + '<div class="site-nav-auth-dd-email">' + _esc(email) + '</div>'
                 + '<div class="site-nav-auth-dd-credits"><span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">toll</span> '
                 +   (isEn ? 'Credits: ' : '크레딧: ') + '<strong>' + bal + '</strong></div>'
-                + '<a href="/pricing' + (isEn ? '-en' : '') + '.html" class="site-nav-dd-item">'
+                + '<a href="/pricing' + (isEn ? '-en' : '') + '" class="site-nav-dd-item">'
                 +   '<span class="material-symbols-outlined">add_circle</span>'
                 +   '<span>' + (isEn ? 'Buy Credits' : '크레딧 충전') + '</span>'
                 + '</a>'

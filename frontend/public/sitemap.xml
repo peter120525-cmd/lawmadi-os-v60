@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://lawmadi-db.web.app/</loc><priority>1.0</priority></url>
+  <url><loc>https://lawmadi-db.web.app/index-en.html</loc><priority>1.0</priority></url>
+  <url><loc>https://lawmadi-db.web.app/leaders</loc><priority>0.8</priority></url>
+  <url><loc>https://lawmadi-db.web.app/leaders-en</loc><priority>0.8</priority></url>
+  <url><loc>https://lawmadi-db.web.app/about</loc><priority>0.7</priority></url>
+  <url><loc>https://lawmadi-db.web.app/about-en</loc><priority>0.7</priority></url>
+  <url><loc>https://lawmadi-db.web.app/leader-profile</loc><priority>0.6</priority></url>
+  <url><loc>https://lawmadi-db.web.app/leader-profile-en</loc><priority>0.6</priority></url>
+  <url><loc>https://lawmadi-db.web.app/pricing</loc><priority>0.9</priority></url>
+  <url><loc>https://lawmadi-db.web.app/pricing-en</loc><priority>0.9</priority></url>
+  <url><loc>https://lawmadi-db.web.app/terms</loc><priority>0.4</priority></url>
+  <url><loc>https://lawmadi-db.web.app/terms-en</loc><priority>0.4</priority></url>
+  <url><loc>https://lawmadi-db.web.app/privacy</loc><priority>0.4</priority></url>
+  <url><loc>https://lawmadi-db.web.app/privacy-en</loc><priority>0.4</priority></url>
+  <url><loc>https://lawmadi-db.web.app/refund</loc><priority>0.4</priority></url>
+  <url><loc>https://lawmadi-db.web.app/refund-en</loc><priority>0.4</priority></url>
+</urlset>

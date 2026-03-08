@@ -5,16 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>리더 프로필 - Lawmadi OS</title>
     <meta name="description" content="Lawmadi OS 전문 리더의 상세 프로필을 확인하세요.">
-    <link rel="canonical" href="https://lawmadi-db.web.app/leader-profile.html" />
-    <link rel="alternate" hreflang="ko" href="https://lawmadi-db.web.app/leader" />
-    <link rel="alternate" hreflang="en" href="https://lawmadi-db.web.app/leader-en" />
+    <link rel="canonical" href="https://lawmadi-db.web.app/leader-profile" />
+    <link rel="alternate" hreflang="ko" href="https://lawmadi-db.web.app/leader-profile" />
+    <link rel="alternate" hreflang="en" href="https://lawmadi-db.web.app/leader-profile-en" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="리더 프로필 - Lawmadi OS" />
     <meta property="og:description" content="Lawmadi OS 전문 리더의 상세 프로필을 확인하세요." />
     <meta property="og:image" content="https://lawmadi-db.web.app/og-image.png" />
-    <meta property="og:url" content="https://lawmadi-db.web.app/leader-profile.html" />
+    <meta property="og:url" content="https://lawmadi-db.web.app/leader-profile" />
     <meta property="og:locale" content="ko_KR" />
     <meta name="twitter:card" content="summary_large_image" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="icon" type="image/png" href="/icon-192.png" />
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
     <style>
@@ -465,7 +467,26 @@
 
             .solve-item { flex-direction: column; gap: 12px; }
         }
+
+        /* ─── Light Mode ─── */
+        body:not(.dark-mode) { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%); color: #1e293b; }
+        body:not(.dark-mode) .profile-section { background: rgba(255,255,255,0.8); border-color: #e2e8f0; }
+        body:not(.dark-mode) .section-card { background: #fff; border-color: #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        body:not(.dark-mode) .section-card:hover { border-color: #3b82f6; box-shadow: 0 4px 16px rgba(59,130,246,0.15); }
+        body:not(.dark-mode) .section-label { color: #2563eb; }
+        body:not(.dark-mode) .hero-section { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); }
+        body:not(.dark-mode) .hero-name { color: #1e293b; }
+        body:not(.dark-mode) .hero-role { color: #64748b; }
+        body:not(.dark-mode) .hero-statement { color: #475569; }
+        body:not(.dark-mode) .hero-badge { background: rgba(37,99,235,0.1); color: #2563eb; }
+        body:not(.dark-mode) .identity-grid { color: #1e293b; }
+        body:not(.dark-mode) .solve-grid { color: #1e293b; }
+        body:not(.dark-mode) .expertise-grid { color: #1e293b; }
+        body:not(.dark-mode) .cta-section { background: rgba(255,255,255,0.8); border-color: #e2e8f0; }
+        body:not(.dark-mode) .cta-button { background: #2563eb; color: #fff; }
+        body:not(.dark-mode) .back-button { background: rgba(0,0,0,0.05); border-color: #e2e8f0; color: #1e293b; }
     </style>
+    <script src="/cookie-consent.js"></script>
 </head>
 <body>
     <a id="langToggle" href="/leader-profile-en" style="position:fixed;top:16px;right:16px;background:rgba(255,255,255,0.15);color:#fff;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;z-index:1000;backdrop-filter:blur(8px);">EN</a>
