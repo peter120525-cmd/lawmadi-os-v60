@@ -10,14 +10,14 @@
     <!-- SEO: Open Graph (항목 #9) -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Lawmadi OS - Legal Decision Support System" />
-    <meta property="og:description" content="60 expert leaders collaborate to turn your legal issues into concrete action plans." />
+    <meta property="og:description" content="60 AI leaders organize legal information into concrete action plans." />
     <meta property="og:url" content="https://lawmadi-db.web.app/en" />
     <meta property="og:image" content="https://lawmadi-db.web.app/og-image.png" />
     <meta property="og:locale" content="en_US" />
     <!-- SEO: Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Lawmadi OS - Legal Decision Support System" />
-    <meta name="twitter:description" content="60 expert leaders collaborate to turn your legal issues into concrete action plans." />
+    <meta name="twitter:description" content="60 AI leaders organize legal information into concrete action plans." />
     <!-- SEO: Canonical -->
     <link rel="canonical" href="https://lawmadi-db.web.app/en" />
     <!-- PWA (항목 #10) -->
@@ -34,7 +34,7 @@
         "@context": "https://schema.org",
         "@type": "WebApplication",
         "name": "Lawmadi OS",
-        "description": "Lawmadi OS Legal Decision Support System where 60 expert leaders collaborate to turn your legal issues into concrete action plans",
+        "description": "Lawmadi OS Legal Information System where 60 AI leaders organize legal information into concrete action plans",
         "url": "https://lawmadi-db.web.app",
         "applicationCategory": "LegalService",
         "operatingSystem": "Web",
@@ -5639,9 +5639,9 @@
                         <ul>
                             <li>100 questions per 4 hours</li>
                             <li>5000+ character in-depth responses</li>
-                            <li>Claude expert verification</li>
-                            <li>Consultation history management</li>
-                            <li>Professional attorney connection</li>
+                            <li>Claude AI cross-verification</li>
+                            <li>Query history management</li>
+                            <li>Attorney information guide</li>
                         </ul>
                         <button class="plan-cta premium-cta" id="premiumCta">Start Premium</button>
                     </div>
@@ -5650,11 +5650,11 @@
 
             <!-- Lawyer Consultation CTA -->
             <div class="lawyer-section">
-                <h3>Lawmadi OS provides initial analysis, professional attorneys finalize</h3>
-                <p>Based on Lawmadi OS analysis results, professional attorneys provide final consultation</p>
+                <h3>Lawmadi OS organizes legal info, attorney consultations are separate</h3>
+                <p>Use AI-organized legal information to communicate efficiently during attorney consultations</p>
                 <button class="lawyer-cta-landing" id="lawyerCtaLanding">
                     <span class="material-symbols-outlined" style="font-size: 1.1rem; vertical-align: middle;">gavel</span>
-                    Request Attorney Consultation
+                    Attorney Consultation Guide
                 </button>
             </div>
 
@@ -5722,8 +5722,8 @@
             <span class="material-symbols-outlined">close</span>
         </button>
         <div id="lawyerFormView">
-            <h3>Request Attorney Consultation</h3>
-            <p class="modal-desc">A professional attorney will contact you based on Lawmadi OS analysis results</p>
+            <h3>Attorney Consultation Guide Request</h3>
+            <p class="modal-desc">We will guide you to relevant attorneys based on Lawmadi OS analysis results</p>
             <form id="lawyerForm">
                 <div class="form-group">
                     <label for="lawyerName">Name *</label>
@@ -5738,6 +5738,10 @@
                     <textarea id="lawyerSummary" maxlength="500" placeholder="Briefly describe what you need consultation on"></textarea>
                 </div>
                 <input type="hidden" id="lawyerLeader" value="">
+                <label class="lawyer-consent-label" style="display:flex;align-items:flex-start;gap:8px;margin:12px 0;font-size:0.82rem;color:#94a3b8;">
+                  <input type="checkbox" id="lawyerPrivacyConsent" required style="margin-top:3px;">
+                  <span>I consent to the collection and use of personal information. (Name, phone number, consultation details — for attorney referral purposes, deleted within 30 days after referral) <a href="/privacy.html" target="_blank" style="color:#818cf8;">Privacy Policy</a></span>
+                </label>
                 <button type="submit" class="modal-submit" id="lawyerSubmitBtn">Submit Request</button>
             </form>
         </div>
@@ -5745,7 +5749,7 @@
             <div class="modal-success">
                 <div class="success-icon">&#9989;</div>
                 <p>Your attorney consultation request has been received</p>
-                <p style="font-size: 0.78rem; color: var(--text-muted, #64748b); margin-top: 8px;">We will contact you shortly</p>
+                <p style="font-size: 0.78rem; color: var(--text-muted, #64748b); margin-top: 8px;">We will guide you to relevant attorneys shortly</p>
                 <button class="modal-submit" style="margin-top: 16px;" id="lawyerSuccessCloseBtn">OK</button>
             </div>
         </div>

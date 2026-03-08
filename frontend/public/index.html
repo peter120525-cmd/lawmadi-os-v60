@@ -5902,9 +5902,9 @@
                         <ul>
                             <li>4시간당 100회 질문</li>
                             <li>5000자+ 심층 응답</li>
-                            <li>Claude 전문가 검증</li>
-                            <li>상담 이력 관리</li>
-                            <li>전문 변호사 연결</li>
+                            <li>Claude AI 교차 검증</li>
+                            <li>질문 이력 관리</li>
+                            <li>변호사 정보 안내</li>
                         </ul>
                         <button class="plan-cta premium-cta" id="premiumCta">프리미엄 시작하기</button>
                     </div>
@@ -5913,11 +5913,11 @@
 
             <!-- Lawyer Consultation CTA -->
             <div class="lawyer-section">
-                <h3>Lawmadi OS가 1차 분석, 전문 변호사가 마무리</h3>
-                <p>Lawmadi OS 분석 결과를 바탕으로 전문 변호사가 최종 자문을 드립니다</p>
+                <h3>Lawmadi OS가 법률 정보 정리, 변호사 상담은 별도로</h3>
+                <p>AI가 정리한 법률 정보를 바탕으로 변호사 상담 시 효율적으로 소통할 수 있습니다</p>
                 <button class="lawyer-cta-landing" id="lawyerCtaLanding">
                     <span class="material-symbols-outlined" style="font-size: 1.1rem; vertical-align: middle;">gavel</span>
-                    변호사 상담 신청
+                    변호사 상담 안내
                 </button>
             </div>
 
@@ -5985,8 +5985,8 @@
             <span class="material-symbols-outlined">close</span>
         </button>
         <div id="lawyerFormView">
-            <h3>변호사 상담 신청</h3>
-            <p class="modal-desc">Lawmadi OS 분석 결과를 바탕으로 전문 변호사가 연락드립니다</p>
+            <h3>변호사 상담 안내 신청</h3>
+            <p class="modal-desc">Lawmadi OS 분석 결과를 바탕으로 관련 분야 변호사 정보를 안내해 드립니다</p>
             <form id="lawyerForm">
                 <div class="form-group">
                     <label for="lawyerName">이름 *</label>
@@ -6001,14 +6001,18 @@
                     <textarea id="lawyerSummary" maxlength="500" placeholder="상담받고 싶은 내용을 간략히 적어주세요"></textarea>
                 </div>
                 <input type="hidden" id="lawyerLeader" value="">
-                <button type="submit" class="modal-submit" id="lawyerSubmitBtn">상담 신청하기</button>
+                <label class="lawyer-consent-label" style="display:flex;align-items:flex-start;gap:8px;margin:12px 0;font-size:0.82rem;color:#94a3b8;">
+                  <input type="checkbox" id="lawyerPrivacyConsent" required style="margin-top:3px;">
+                  <span>개인정보 수집·이용에 동의합니다. (이름, 전화번호, 상담내용 — 상담 안내 목적, 안내 완료 후 30일 이내 삭제) <a href="/privacy.html" target="_blank" style="color:#818cf8;">개인정보처리방침</a></span>
+                </label>
+                <button type="submit" class="modal-submit" id="lawyerSubmitBtn">상담 안내 신청하기</button>
             </form>
         </div>
         <div id="lawyerSuccessView" style="display:none;">
             <div class="modal-success">
                 <div class="success-icon">&#9989;</div>
-                <p>변호사 상담 신청이 접수되었습니다</p>
-                <p style="font-size: 0.78rem; color: var(--text-muted, #64748b); margin-top: 8px;">빠른 시일 내 연락드리겠습니다</p>
+                <p>변호사 상담 안내 신청이 접수되었습니다</p>
+                <p style="font-size: 0.78rem; color: var(--text-muted, #64748b); margin-top: 8px;">관련 분야 변호사 정보를 안내해 드리겠습니다</p>
                 <button class="modal-submit" style="margin-top: 16px;" id="lawyerSuccessCloseBtn">확인</button>
             </div>
         </div>

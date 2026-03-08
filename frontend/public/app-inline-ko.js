@@ -410,6 +410,12 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 return false;
             }
 
+            const consent = document.getElementById('lawyerPrivacyConsent');
+            if (!consent || !consent.checked) {
+                alert('개인정보 수집·이용에 동의해 주세요.');
+                return false;
+            }
+
             const submitBtn = document.querySelector('#lawyerFormView button[type="submit"], #lawyerFormView .lawyer-submit-btn');
             if (submitBtn) {
                 submitBtn.disabled = true;
@@ -1723,7 +1729,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         if (!lNames.every(n => clevelOnly.includes(n))) {
                             const lawyerCta = document.createElement('button');
                             lawyerCta.className = 'bottom-cta-btn lawyer';
-                            lawyerCta.innerHTML = '<span class="material-symbols-outlined">gavel</span> 변호사 상담 신청';
+                            lawyerCta.innerHTML = '<span class="material-symbols-outlined">gavel</span> 변호사 상담 안내';
                             lawyerCta.onclick = () => UI.openLawyerModal(originalQuery, leaderName);
                             ctaBar.appendChild(lawyerCta);
                         }
