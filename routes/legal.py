@@ -429,7 +429,7 @@ async def ask(request: Request):
         analysis = analysis_result
         _routing_method = "gemini"
         if not analysis:
-            analysis = _fallback_tier_classification(query)
+            analysis = _fallback_tier_classification(query, lang=lang)
             _routing_method = analysis.get("routing_method", "keyword")
             logger.info(f"🔄 키워드 기반 fallback 분류: tier={analysis['tier']}")
         else:
@@ -1143,7 +1143,7 @@ async def ask_stream(request: Request):
             )
             analysis = analysis_result
             if not analysis:
-                analysis = _fallback_tier_classification(query)
+                analysis = _fallback_tier_classification(query, lang=lang)
             is_legal = analysis.get("is_legal", True)
 
             # NLU 검증/보정 (스트리밍)
@@ -1601,7 +1601,7 @@ async def ask_expert(request: Request):
         # 질문 분석 (Stage 1)
         analysis = await _gemini_analyze_query(query)
         if not analysis:
-            analysis = _fallback_tier_classification(query)
+            analysis = _fallback_tier_classification(query, lang=lang)
 
         leader_name = analysis.get("leader_name", "마디")
         leader_specialty = analysis.get("leader_specialty", "통합")
