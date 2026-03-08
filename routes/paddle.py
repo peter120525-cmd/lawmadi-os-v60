@@ -215,8 +215,8 @@ def _create_db_session(user_id: str) -> str:
         )
         execute(
             """INSERT INTO sessions (session_token, user_id, expires_at)
-               VALUES (%s, %s, NOW() + INTERVAL '%s days')""",
-            (token, user_id, expires_days), fetch="none"
+               VALUES (%s, %s, NOW() + INTERVAL '1 day' * %s)""",
+            (token, user_id, int(expires_days)), fetch="none"
         )
     except Exception as e:
         logger.error(f"[Session] DB insert failed: {e}")
@@ -298,7 +298,7 @@ async def send_otp(request: Request):
     if not sent:
         logger.warning(f"[OTP] Email send failed for {email[:3]}***")
         if PADDLE_ENVIRONMENT == "sandbox":
-            logger.info(f"[OTP-SANDBOX] code={code[:2]}**** for {email[:3]}***")
+            logger.info(f"[OTP-SANDBOX] code sent (sandbox fallback) for {email[:3]}***")
             return {"ok": True, "message": "OTP sent (sandbox mode)", "ttl": _OTP_TTL_SEC}
         raise HTTPException(
             status_code=500,

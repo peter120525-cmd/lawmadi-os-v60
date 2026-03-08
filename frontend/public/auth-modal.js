@@ -129,11 +129,12 @@
                         var sign = isDeduct ? '' : '+';
                         var typeLabel = h.type === 'expert_deduct' ? (pageLang === 'en' ? 'Expert' : '전문가') :
                             h.type === 'question_deduct' ? (pageLang === 'en' ? 'Query' : '질문') :
-                            h.type === 'purchase' ? (pageLang === 'en' ? 'Purchase' : '충전') : h.type;
-                        var date = h.created_at ? h.created_at.substring(0, 10) : '';
+                            h.type === 'purchase' ? (pageLang === 'en' ? 'Purchase' : '충전') : _escText(String(h.type));
+                        var date = h.created_at ? _escText(String(h.created_at).substring(0, 10)) : '';
+                        var safeAmount = _escText(String(sign) + String(Math.abs(h.amount)));
                         html += '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(0,0,0,0.05);">'
                             + '<span>' + typeLabel + ' <span style="opacity:0.5;font-size:0.7rem;">' + date + '</span></span>'
-                            + '<span style="color:' + color + ';font-weight:700;">' + sign + h.amount + '</span></div>';
+                            + '<span style="color:' + color + ';font-weight:700;">' + safeAmount + '</span></div>';
                     });
                     histDiv.innerHTML = html;
                 })
@@ -148,7 +149,10 @@
                     authState.authenticated = false;
                     authState.user = null;
                     authState.email = '';
+                    window.__lawmadiAuth = { user: null };
                     localStorage.removeItem('lm_email');
+                    localStorage.removeItem('lawmadi-chat-history');
+                    localStorage.removeItem('lawmadi-favorites');
                     menu.remove();
                     updateHeaderAuth();
                 });
@@ -299,6 +303,13 @@
         el.textContent = text;
         el.style.display = 'block';
         el.style.color = isError ? '#ef4444' : '#10b981';
+    }
+
+    // Expose openAuthModal for external callers (e.g., expert CTA login prompt)
+    if (typeof window.UI !== 'undefined') {
+        window.UI.openAuthModal = showOtpModal;
+    } else {
+        window.UI = { openAuthModal: showOtpModal };
     }
 
     // Init

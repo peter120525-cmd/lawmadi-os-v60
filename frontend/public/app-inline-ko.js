@@ -1040,7 +1040,12 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 const lastStep = steps[steps.length - 1];
                 lastStep.classList.remove('done');
                 lastStep.classList.add('active');
-                lastStep.textContent = statusText;
+                const icon = lastStep.querySelector('.step-icon');
+                if (icon) {
+                    icon.nextSibling ? icon.nextSibling.textContent = ' ' + statusText : lastStep.appendChild(document.createTextNode(' ' + statusText));
+                } else {
+                    lastStep.innerHTML = '<span class="step-icon">⏳</span> ' + statusText;
+                }
             }
         },
 
@@ -1531,8 +1536,15 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기 <span style="font-size:0.75em;background:rgba(139,92,246,0.15);padding:2px 8px;border-radius:6px;margin-left:4px;">2 Credit</span>';
                     }
                     expertCta.onclick = async () => {
+                        // 로그인 확인
+                        const _authU = window.__lawmadiAuth && window.__lawmadiAuth.user;
+                        if (!_authU) {
+                            const _goLogin = confirm('전문가용 답변을 받으려면 로그인이 필요합니다.\n\n로그인하시겠습니까?');
+                            if (_goLogin && typeof UI !== 'undefined' && UI.openAuthModal) { UI.openAuthModal(); }
+                            return;
+                        }
                         // 크레딧 차감 확인 모달
-                        const _bal = window.__lawmadiAuth?.user?.credit_balance || 0;
+                        const _bal = _authU.credit_balance || 0;
                         if (_bal < 2) {
                             const _goPrice = confirm('크레딧이 부족합니다.\n\n크레딧을 충전하시겠습니까?');
                             if (_goPrice) location.href = '/pricing.html';
@@ -1614,6 +1626,10 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                                 }
                                 expertCta.innerHTML = '<span class="material-symbols-outlined">check_circle</span> 검증 완료';
                                 expertCta.classList.add('done');
+                                // 전문가 패널 상단으로 스크롤
+                                requestAnimationFrame(() => {
+                                    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                });
                             } else { throw new Error('검증 실패'); }
                         } catch (e) {
                             ewTimers.forEach(t => clearTimeout(t));

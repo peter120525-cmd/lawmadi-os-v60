@@ -977,6 +977,7 @@ EXPERT_RESPONSE_FORMAT = """
 - "AI", "상담" 표현 사용 금지
 - 각 섹션을 1~2줄로 축약하는 행위 (반드시 상세히 서술)
 
+[문단 길이] 전문가 모드에서는 3줄 이상의 긴 문단을 허용합니다. 법률 검토서 수준의 심층 분석을 위해 충분한 분량으로 서술하세요. 단, 하나의 문단이 10줄을 넘지 않도록 적절히 나누세요.
 [글자수] 6,000~8,000자. 법률 검토서/의견서 수준으로 충실히 작성.
 [톤] 객관적, 분석적, 정확한. 법률 의견서/검토서 스타일.
 """
@@ -1078,6 +1079,7 @@ Final opinion in 3-5 sentences with prioritized action items and risk assessment
 ## Legal Basis
 All cited statutes (Korean + English), case numbers, and interpretive rulings.
 
+[Paragraph Length] In expert mode, paragraphs longer than 3 lines ARE allowed. Write thorough, in-depth analysis befitting a legal review. However, keep individual paragraphs under 10 lines for readability.
 [Length] 6,000-8,000 characters
 [Tone] Objective, analytical, precise. Legal opinion/review style.
 """

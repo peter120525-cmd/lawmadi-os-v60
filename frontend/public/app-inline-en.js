@@ -1252,7 +1252,12 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 const lastStep = steps[steps.length - 1];
                 lastStep.classList.remove('done');
                 lastStep.classList.add('active');
-                lastStep.textContent = statusText;
+                const icon = lastStep.querySelector('.step-icon');
+                if (icon) {
+                    icon.nextSibling ? icon.nextSibling.textContent = ' ' + statusText : lastStep.appendChild(document.createTextNode(' ' + statusText));
+                } else {
+                    lastStep.innerHTML = '<span class="step-icon">⏳</span> ' + statusText;
+                }
             }
         },
 
@@ -1747,8 +1752,15 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> Get Expert Verification <span style="font-size:0.75em;background:rgba(139,92,246,0.15);padding:2px 8px;border-radius:6px;margin-left:4px;">2 Credit</span>';
                     }
                     expertCta.onclick = async () => {
+                        // Login check
+                        const _authU = window.__lawmadiAuth && window.__lawmadiAuth.user;
+                        if (!_authU) {
+                            const _goLogin = confirm('Login is required for expert verification.\n\nWould you like to log in?');
+                            if (_goLogin && typeof UI !== 'undefined' && UI.openAuthModal) { UI.openAuthModal(); }
+                            return;
+                        }
                         // Credit confirmation
-                        const _bal = window.__lawmadiAuth?.user?.credit_balance || 0;
+                        const _bal = _authU.credit_balance || 0;
                         if (_bal < 2) {
                             const _goPrice = confirm('Insufficient credits.\n\nWould you like to purchase credits?');
                             if (_goPrice) location.href = '/pricing-en.html';
@@ -1781,6 +1793,10 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                                 }
                                 expertCta.innerHTML = '<span class="material-symbols-outlined">check_circle</span> Verification Complete';
                                 expertCta.classList.add('done');
+                                // Scroll to expert panel
+                                requestAnimationFrame(() => {
+                                    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                });
                             } else { throw new Error('Verification failed'); }
                         } catch (e) {
                             expertCta.disabled = false;
@@ -1864,7 +1880,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             tsDiv.className = 'msg-timestamp';
             let tsText = this._formatTime();
             if (sender === 'ai' && elapsedTime) {
-                tsText += ` · ⏱ ${elapsedTime}초`;
+                tsText += ` · ⏱ ${elapsedTime}s`;
             }
             tsDiv.textContent = tsText;
             msgDiv.appendChild(tsDiv);
