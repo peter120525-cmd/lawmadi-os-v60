@@ -2050,7 +2050,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             this._delibContainer = null;
         },
 
-        // 스트리밍: handoff 이벤트 (턴별)
+        // 스트리밍: handoff 이벤트 (턴별, 6턴 CSO 주재)
         _renderHandoffTurn(payload) {
             if (!this._handoffContainer) {
                 const container = document.createElement('div');
@@ -2058,7 +2058,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 container.innerHTML = _sanitize(
                     '<div class="handoff-header">' +
                     '<span class="delib-header-dot"></span>' +
-                    '<span>리더 인수인계</span>' +
+                    '<span>리더 인수인계 — 서연(CSO) 주재</span>' +
                     '</div>'
                 );
                 this.convArea.appendChild(container);
@@ -2069,29 +2069,23 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             const name = payload.speaker || '?';
             const role = payload.role || '';
             const text = payload.text || '';
-            const idx = this._handoffTurnIndex || 0;
+            const isFinal = payload.is_final || false;
+            const isMod = (name === '서연');
 
             // 이전 타이핑 인디케이터 제거
             this._removeDelibTypingIndicator(container);
 
-            // 두 번째 말풍선 앞에 화살표 커넥터 삽입
-            if (idx === 1) {
-                const arrow = document.createElement('div');
-                arrow.innerHTML = this._buildHandoffArrow();
-                container.appendChild(arrow.firstChild);
-            }
-
             const bubble = document.createElement('div');
-            bubble.className = 'handoff-bubble';
+            bubble.className = 'handoff-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
             bubble.innerHTML = _sanitize(
                 this._buildAvatarHTML(name, 'handoff') +
                 this._buildBubbleBody(name, role, text)
             );
             container.appendChild(bubble);
-            this._handoffTurnIndex = idx + 1;
+            this._handoffTurnIndex = (this._handoffTurnIndex || 0) + 1;
 
-            // 첫 턴 후 다음 턴 대기 인디케이터
-            if (idx === 0) {
+            // 마지막 턴이 아니면 다음 턴 대기 인디케이터
+            if (!isFinal) {
                 this._appendDelibTypingIndicator(container, '');
             }
             this._smartScroll(false);
@@ -2126,7 +2120,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             this._smartScroll(false);
         },
 
-        // Classic (/ask) 응답의 handoff 렌더링
+        // Classic (/ask) 응답의 handoff 렌더링 (6턴 CSO 주재)
         _renderHandoff(turns) {
             if (!turns || !turns.length) return;
             const container = document.createElement('div');
@@ -2134,18 +2128,14 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             container.innerHTML = _sanitize(
                 '<div class="handoff-header">' +
                 '<span class="delib-header-dot"></span>' +
-                '<span>리더 인수인계</span>' +
+                '<span>리더 인수인계 — 서연(CSO) 주재</span>' +
                 '</div>'
             );
             turns.forEach((turn, idx) => {
-                // 두 번째 말풍선 앞에 화살표 커넥터 삽입
-                if (idx === 1) {
-                    const arrow = document.createElement('div');
-                    arrow.innerHTML = this._buildHandoffArrow();
-                    container.appendChild(arrow.firstChild);
-                }
+                const isMod = (turn.speaker === '서연');
+                const isFinal = turn.is_final || false;
                 const bubble = document.createElement('div');
-                bubble.className = 'handoff-bubble';
+                bubble.className = 'handoff-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
                 bubble.style.animationDelay = (idx * 0.25) + 's';
                 bubble.innerHTML = _sanitize(
                     this._buildAvatarHTML(turn.speaker, 'handoff') +

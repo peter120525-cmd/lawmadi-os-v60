@@ -156,9 +156,6 @@ async def _single_leader_call(
     text = _remove_think_blocks(text).strip()
     # "변호사" 명칭 사용 금지 — 후처리 안전장치
     text = re.sub(r'변호사', '전문가', text)
-    # 300자 truncate (프롬프트에서 150자 이내 지시, 여유분 확보)
-    if len(text) > 300:
-        text = text[:297] + "..."
     return text
 
 
@@ -205,169 +202,206 @@ async def generate_deliberation(
     lang: str = "",
 ) -> Optional[List[Dict]]:
     """
-    CSO 서연 주재 리더 회의 — 3턴 순차 개별 Gemini 호출.
+    CSO 서연 주재 리더 회의 — 9턴 (후보 간 협의 전 과정 표시, 10턴 이내).
 
-    Turn 1: CSO 서연 → 질문 요약 + 의견 요청
-    Turn 2: 담당 리더 → 자기 분야 관점 의견
-    Turn 3: CSO 서연 → 담당 리더 지명 (is_final=True)
-
-    Args:
-        gc: Gemini client
-        query: 사용자 질문
-        leaders: 후보 리더 목록 [{"name": ..., "specialty": ..., "leader_id": ...}, ...]
-        lang: 언어 코드
-
-    Returns:
-        대화 턴 리스트 또는 None (실패 시)
+    Turn 1: CSO 서연 → 질문 요약 + 후보 소개 + B에게 의견 요청
+    Turn 2: 후보 B → 자기 분야 관점 의견
+    Turn 3: CSO → A에게도 의견 요청
+    Turn 4: 담당 A → 본인이 적합한 이유
+    Turn 5: 후보 B → A에게 보충 질문/의견
+    Turn 6: 담당 A → B에게 답변 + 구체적 접근법
+    Turn 7: 후보 B → 동의/양보
+    Turn 8: CSO 서연 → 담당 리더 공식 지명
+    Turn 9: 담당 A → 사용자 인사 + 접근법 (is_final)
     """
     if not gc or not leaders:
         return None
 
     selected = leaders[0]
-    selected_name = selected.get("name", "?")
-    selected_specialty = selected.get("specialty", "")
-    selected_id = selected.get("leader_id", "") or _name_to_id(selected_name)
+    sel_name = selected.get("name", "?")
+    sel_spec = selected.get("specialty", "")
+    sel_id = selected.get("leader_id", "") or _name_to_id(sel_name)
 
-    # 페르소나 빌드
-    cso_persona = _build_cso_persona()
-    leader_persona = _build_leader_persona(selected_id) if selected_id else ""
-    if not leader_persona:
-        leader_persona = f"{selected_name}: {selected_specialty} 전문 리더"
+    has_alt = len(leaders) >= 2
+    if has_alt:
+        alt = leaders[1]
+        alt_name = alt.get("name", "?")
+        alt_spec = alt.get("specialty", "")
+        alt_id = alt.get("leader_id", "") or _name_to_id(alt_name)
+    else:
+        alt_name = alt_spec = alt_id = ""
+
+    cso_p = _build_cso_persona()
+    sel_p = _build_leader_persona(sel_id) if sel_id else f"{sel_name}: {sel_spec} 전문 리더"
+    alt_p = (_build_leader_persona(alt_id) if alt_id else f"{alt_name}: {alt_spec} 전문 리더") if has_alt else ""
 
     turns: List[Dict] = []
-
     _en = lang == "en"
+    _cso = "Seoyeon" if _en else "서연"
+    _base = "[External client question.]\n" if _en else "[외부 의뢰인 질문입니다.]\n"
+    _q = f"Question: {query[:300]}\n" if _en else f"질문: {query[:300]}\n"
+    _style_en = "2-3 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
+    _style_ko = "100~150자. 존댓말, 따뜻하고 전문적 톤. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
+    _short_en = "1-2 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
+    _short_ko = "80~120자. 존댓말. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
+
+    async def _call(persona, prompt):
+        try:
+            return await asyncio.wait_for(_single_leader_call(gc, persona, prompt), timeout=_TURN_TIMEOUT)
+        except Exception:
+            return ""
 
     try:
-        # ── Turn 1: CSO 서연 — 질문 요약 + 의견 요청 (순차) ──
-        _leaders_str = ', '.join(l.get('name','?') + '(' + l.get('specialty','') + ')' for l in leaders[:3])
-        if _en:
-            t1_prompt = (
-                f"[This is an external client's question — NOT your case or any leader's case.]\nClient question: {query[:300]}\n"
-                f"Designated leader: {selected_name} ({selected_specialty})\n\n"
-                f"You are CSO Seoyeon. Summarize the core of this question, "
-                f"explain why an expert in {selected_specialty} is needed, "
-                f"then ask {selected_name} for their input. "
-                f"IMPORTANT: You MUST address {selected_name} by name — do NOT mention or refer to any other leader. "
-                f"Write 2-3 complete sentences. Professional, warm, and natural tone. "
-                f"Respond entirely in English. Use 'leader' or 'expert', never 'lawyer'."
-            )
+        # ── Turn 1: CSO — 질문 요약 + 후보 소개 ──
+        if has_alt:
+            p1 = (f"{_base}{_q}Candidates: {sel_name}({sel_spec}), {alt_name}({alt_spec})\n\n"
+                  f"You are CSO Seoyeon. Summarize the question, introduce both candidates, ask {alt_name} for their view first. {_style_en}"
+                  if _en else
+                  f"{_base}{_q}후보: {sel_name}({sel_spec}), {alt_name}({alt_spec})\n\n"
+                  f"당신은 CSO 서연. 질문 핵심을 요약하고, 두 후보를 소개한 뒤 {alt_name}님에게 먼저 의견을 요청하세요. {_style_ko}")
         else:
-            t1_prompt = (
-                f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
-                f"지정 리더: {selected_name} ({selected_specialty})\n\n"
-                f"당신은 CSO 서연입니다. 이 질문의 핵심을 요약하고, "
-                f"왜 {selected_specialty} 분야의 전문가가 필요한지 설명한 뒤, "
-                f"{selected_name}님에게 의견을 요청하세요. "
-                f"중요: 반드시 {selected_name}님만 언급하세요. 다른 리더 이름을 절대 언급하지 마세요. "
-                f"반드시 100자 이상 150자 이내로 작성하세요. "
-                f"존댓말, 따뜻하고 전문적인 톤으로 자연스럽게 말하세요. "
-                f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
-                f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-            )
-        try:
-            t1_text = await asyncio.wait_for(
-                _single_leader_call(gc, cso_persona, t1_prompt),
-                timeout=_TURN_TIMEOUT,
-            )
-        except Exception:
-            t1_text = ""
-        if not t1_text:
-            t1_text = (
-                f"This question falls under {selected_specialty}. {selected_name}, could you share your perspective?"
-                if _en else
-                f"이 질문은 {selected_specialty} 분야입니다. {selected_name}님, 의견 부탁드립니다."
-            )
-        turns.append({
-            "speaker": "Seoyeon" if _en else "서연",
-            "role": "CSO",
-            "text": t1_text,
-            "is_final": False,
-        })
+            p1 = (f"{_base}{_q}Designated leader: {sel_name}({sel_spec})\n\n"
+                  f"You are CSO Seoyeon. Summarize the question, explain why {sel_spec} expertise is needed, ask {sel_name} for input. {_style_en}"
+                  if _en else
+                  f"{_base}{_q}지정 리더: {sel_name}({sel_spec})\n\n"
+                  f"당신은 CSO 서연. 질문 핵심을 요약하고, {sel_spec} 전문가가 필요한 이유를 설명한 뒤 {sel_name}님에게 의견 요청. {_style_ko}")
+        t1 = await _call(cso_p, p1) or (
+            f"This question involves {sel_spec}. {alt_name if has_alt else sel_name}, please share your view."
+            if _en else f"이 질문은 {sel_spec} 분야입니다. {alt_name if has_alt else sel_name}님, 의견 부탁드립니다.")
+        turns.append({"speaker": _cso, "role": "CSO", "text": t1, "is_final": False})
 
-        # ── Turn 2+3: 병렬 — 담당 리더 의견 + CSO 지명 ──
-        if _en:
-            t2_prompt = (
-                f"[This is an external client's question — NOT your case.]\nClient question: {query[:300]}\n"
-                f"CSO Seoyeon has asked for your input.\n\n"
-                f"You are {selected_name} ({selected_specialty} expert leader). "
-                f"Based on your expertise, explain specifically how you can help with this question "
-                f"and confidently offer your assistance. "
-                f"Write 2-3 complete sentences. Professional, warm, and natural tone. "
-                f"Respond entirely in English. Be humble and practical — no exaggeration."
-            )
-            t3_prompt = (
-                f"{selected_name} has offered to help from the {selected_specialty} perspective.\n\n"
-                f"You are CSO Seoyeon. Acknowledge {selected_name}'s expertise "
-                f"and officially designate {selected_name} as the assigned leader for this question. "
-                f"IMPORTANT: You MUST designate {selected_name} only — do NOT mention any other leader name. "
-                f"Add a reassuring note to the user. "
-                f"Write 2-3 complete sentences. Warm, trustworthy, and professional tone. "
-                f"Respond entirely in English. Use 'leader' or 'expert', never 'lawyer'."
-            )
+        if has_alt:
+            # ── Group 2: T2 (B 의견) ──
+            p2 = (f"{_base}{_q}CSO asked for your perspective.\n\nYou are {alt_name} ({alt_spec} expert). "
+                  f"Share your view on this question from your specialty. {_style_en}"
+                  if _en else
+                  f"{_base}{_q}CSO 서연이 의견을 요청했습니다.\n\n당신은 {alt_name}({alt_spec} 전문). "
+                  f"자기 분야 관점에서 이 질문에 대한 의견을 말씀하세요. {_style_ko}")
+            t2 = await _call(alt_p, p2) or (
+                f"From {alt_spec} perspective, this is an important question."
+                if _en else f"{alt_spec} 관점에서 중요한 질문입니다.")
+            turns.append({"speaker": alt_name, "role": alt_spec, "text": t2, "is_final": False})
+
+            # ── Group 3: T3 (CSO→A 요청) + T4 (A 의견) 병렬 ──
+            p3 = (f"{alt_name} shared their view. You are CSO Seoyeon. Now ask {sel_name} for their perspective too. {_short_en}"
+                  if _en else
+                  f"{alt_name}님이 의견을 말했습니다. 당신은 CSO 서연. 이제 {sel_name}님에게도 의견을 요청하세요. {_short_ko}")
+            p4 = (f"{_base}{_q}{alt_name}({alt_spec}) shared their view. CSO asked you too.\n\nYou are {sel_name} ({sel_spec} expert). "
+                  f"Explain why this question falls in your area and how you can specifically help. {_style_en}"
+                  if _en else
+                  f"{_base}{_q}{alt_name}({alt_spec})님이 의견을 말했습니다. CSO가 당신에게도 의견을 요청합니다.\n\n당신은 {sel_name}({sel_spec} 전문). "
+                  f"왜 이 질문이 자기 분야에 해당하는지, 어떻게 구체적으로 도울 수 있는지 설명하세요. {_style_ko}")
+            r34 = await asyncio.gather(_call(cso_p, p3), _call(sel_p, p4), return_exceptions=True)
+            t3 = r34[0] if isinstance(r34[0], str) and r34[0] else (
+                f"{sel_name}, could you share your perspective?" if _en else f"{sel_name}님도 의견 부탁드립니다.")
+            t4 = r34[1] if isinstance(r34[1], str) and r34[1] else (
+                f"This falls right in my area — I can help specifically." if _en
+                else f"이 질문은 제 분야에 해당하며, 구체적으로 도와드릴 수 있습니다.")
+            turns.append({"speaker": _cso, "role": "CSO", "text": t3, "is_final": False})
+            turns.append({"speaker": sel_name, "role": sel_spec, "text": t4, "is_final": False})
+
+            # ── Group 4: T5 (B 보충 질문) + T6 (A 답변) 병렬 ──
+            p5 = (f"You are {alt_name} ({alt_spec}). {sel_name} explained their view. "
+                  f"Ask a follow-up question or share additional insight from {alt_spec} that may help. {_short_en}"
+                  if _en else
+                  f"당신은 {alt_name}({alt_spec}). {sel_name}님이 의견을 설명했습니다. "
+                  f"{alt_spec} 관점에서 보충 질문이나 추가 의견을 말씀하세요. {_short_ko}")
+            p6 = (f"{_base}{_q}You are {sel_name} ({sel_spec}). {alt_name} asked a follow-up. "
+                  f"Respond with your specific approach and concrete plan. {_style_en}"
+                  if _en else
+                  f"{_base}{_q}당신은 {sel_name}({sel_spec}). {alt_name}님이 보충 질문을 했습니다. "
+                  f"구체적인 접근법과 계획으로 답변하세요. {_style_ko}")
+            r56 = await asyncio.gather(_call(alt_p, p5), _call(sel_p, p6), return_exceptions=True)
+            t5 = r56[0] if isinstance(r56[0], str) and r56[0] else (
+                f"That's a solid approach. How would you handle the specific details?" if _en
+                else f"좋은 접근이네요. 구체적인 세부 사항은 어떻게 처리하실 건가요?")
+            t6 = r56[1] if isinstance(r56[1], str) and r56[1] else (
+                f"I'll address each point systematically." if _en
+                else f"각 사안을 체계적으로 검토하겠습니다.")
+            turns.append({"speaker": alt_name, "role": alt_spec, "text": t5, "is_final": False})
+            turns.append({"speaker": sel_name, "role": sel_spec, "text": t6, "is_final": False})
+
+            # ── Group 5: T7 (B 양보) + T8 (CSO 지명) + T9 (A 인사) 병렬 ──
+            p7 = (f"You are {alt_name} ({alt_spec}). {sel_name} gave a thorough response. "
+                  f"Agree that {sel_name} is the right leader and express confidence. {_short_en}"
+                  if _en else
+                  f"당신은 {alt_name}({alt_spec}). {sel_name}님이 충실히 답변했습니다. "
+                  f"{sel_name}님이 적임자라는 데 동의하고 신뢰를 표현하세요. {_short_ko}")
+            p8 = (f"Both leaders discussed thoroughly. {alt_name} agreed {sel_name} is best.\n\n"
+                  f"You are CSO Seoyeon. Officially designate {sel_name} as the assigned leader. Reassure the user. {_style_en}"
+                  if _en else
+                  f"두 리더가 충분히 논의했고, {alt_name}님이 {sel_name}님에게 양보했습니다.\n\n"
+                  f"당신은 CSO 서연. {sel_name}님을 담당 리더로 공식 지명하세요. 사용자에게 안심 메시지도. {_style_ko}")
+            p9 = (f"You've been designated as leader.\n{_q}\nYou are {sel_name} ({sel_spec}). "
+                  f"Greet the user warmly and briefly explain how you'll help. {_style_en}"
+                  if _en else
+                  f"당신이 담당 리더로 지명되었습니다.\n{_q}\n당신은 {sel_name}({sel_spec}). "
+                  f"사용자에게 따뜻하게 인사하고 어떻게 도와드릴지 간략히 말씀하세요. {_short_ko}")
+            r789 = await asyncio.gather(_call(alt_p, p7), _call(cso_p, p8), _call(sel_p, p9), return_exceptions=True)
+            t7 = r789[0] if isinstance(r789[0], str) and r789[0] else (
+                f"I agree — {sel_name} is the perfect fit." if _en else f"저도 동의합니다. {sel_name}님이 적임자입니다.")
+            t8 = r789[1] if isinstance(r789[1], str) and r789[1] else (
+                f"{sel_name} will be your assigned leader." if _en else f"{sel_name}님이 담당하시겠습니다.")
+            t9 = r789[2] if isinstance(r789[2], str) and r789[2] else (
+                f"Hello, I'll take care of this for you right away." if _en else f"안녕하세요, 바로 도와드리겠습니다.")
+            turns.append({"speaker": alt_name, "role": alt_spec, "text": t7, "is_final": False})
+            turns.append({"speaker": _cso, "role": "CSO", "text": t8, "is_final": False})
+            turns.append({"speaker": sel_name, "role": sel_spec, "text": t9, "is_final": True})
+
         else:
-            t2_prompt = (
-                f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
-                f"CSO 서연이 당신에게 의견을 요청했습니다.\n\n"
-                f"당신은 {selected_name}({selected_specialty} 전문 리더)입니다. "
-                f"자기 분야의 전문 지식을 바탕으로 이 질문에 어떻게 도움을 줄 수 있는지 "
-                f"구체적으로 설명하고, 자신감 있게 돕겠다고 답하세요. "
-                f"반드시 100자 이상 150자 이내로 작성하세요. "
-                f"존댓말, 전문적이고 따뜻한 톤으로 자연스럽게 말하세요. "
-                f"과장된 자기소개(CLO급, 유니콘 등)는 하지 마세요. 겸손하고 실질적으로 말하세요. "
-                f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
-                f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-            )
-            t3_prompt = (
-                f"{selected_name}님이 {selected_specialty} 분야에서 돕겠다고 했습니다.\n\n"
-                f"당신은 CSO 서연입니다. {selected_name}님의 전문성을 인정하며 "
-                f"이 질문의 담당 리더로 공식 지명하세요. "
-                f"중요: 반드시 {selected_name}님만 지명하세요. 다른 리더 이름을 절대 언급하지 마세요. "
-                f"사용자에게 안심하라는 말도 덧붙이세요. "
-                f"반드시 100자 이상 150자 이내로 작성하세요. "
-                f"존댓말, 따뜻하고 신뢰감 있는 톤으로 자연스럽게 말하세요. "
-                f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
-                f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-            )
-        results = await asyncio.gather(
-            asyncio.wait_for(
-                _single_leader_call(gc, leader_persona, t2_prompt),
-                timeout=_TURN_TIMEOUT,
-            ),
-            asyncio.wait_for(
-                _single_leader_call(gc, cso_persona, t3_prompt),
-                timeout=_TURN_TIMEOUT,
-            ),
-            return_exceptions=True,
-        )
-        t2_text = results[0] if isinstance(results[0], str) and results[0] else ""
-        t3_text = results[1] if isinstance(results[1], str) and results[1] else ""
-        if not t2_text:
-            t2_text = (
-                f"Absolutely — I'll assist right away from the {selected_specialty} perspective."
-                if _en else
-                f"네, {selected_specialty} 관점에서 바로 도와드리겠습니다."
-            )
-        if not t3_text:
-            t3_text = (
-                f"{selected_name} will be your assigned leader for this matter."
-                if _en else
-                f"{selected_name}님이 담당하시겠습니다."
-            )
-        turns.append({
-            "speaker": selected_name,
-            "role": selected_specialty,
-            "text": t2_text,
-            "is_final": False,
-        })
-        turns.append({
-            "speaker": "Seoyeon" if _en else "서연",
-            "role": "CSO",
-            "text": t3_text,
-            "is_final": True,
-        })
+            # 후보 없음 — CSO + 리더 A 대화 (7턴)
+            p2 = (f"{_base}{_q}You are CSO Seoyeon. Ask {sel_name} what specific approach they'd take. {_short_en}"
+                  if _en else
+                  f"{_base}{_q}당신은 CSO 서연. {sel_name}님에게 어떤 접근법을 취할 것인지 구체적으로 물어보세요. {_short_ko}")
+            p3 = (f"{_base}{_q}CSO asked about your approach.\n\nYou are {sel_name} ({sel_spec} expert). "
+                  f"Explain your specific approach and why your expertise fits. {_style_en}"
+                  if _en else
+                  f"{_base}{_q}CSO가 접근법을 물었습니다.\n\n당신은 {sel_name}({sel_spec} 전문). "
+                  f"구체적 접근법과 자기 전문성이 적합한 이유를 설명하세요. {_style_ko}")
+            r23 = await asyncio.gather(_call(cso_p, p2), _call(sel_p, p3), return_exceptions=True)
+            t2 = r23[0] if isinstance(r23[0], str) and r23[0] else (
+                f"{sel_name}, what approach would you take?" if _en else f"{sel_name}님, 어떤 접근법을 취하실 건가요?")
+            t3 = r23[1] if isinstance(r23[1], str) and r23[1] else (
+                f"This falls right in my area — I can help specifically." if _en
+                else f"이 질문은 제 분야에 해당하며, 구체적으로 도와드릴 수 있습니다.")
+            turns.append({"speaker": _cso, "role": "CSO", "text": t2, "is_final": False})
+            turns.append({"speaker": sel_name, "role": sel_spec, "text": t3, "is_final": False})
 
-        logger.info(f"[Deliberation] 3턴 생성 완료 (Turn1 순차 + Turn2+3 병렬)")
+            p4 = (f"You are CSO Seoyeon. {sel_name} explained their approach. Ask a follow-up about any specific concerns. {_short_en}"
+                  if _en else
+                  f"당신은 CSO 서연. {sel_name}님이 접근법을 설명했습니다. 구체적 우려 사항에 대해 추가 질문하세요. {_short_ko}")
+            p5 = (f"{_base}{_q}CSO asked a follow-up.\n\nYou are {sel_name} ({sel_spec}). "
+                  f"Address the concern with your specific plan. {_style_en}"
+                  if _en else
+                  f"{_base}{_q}CSO가 추가 질문을 했습니다.\n\n당신은 {sel_name}({sel_spec}). "
+                  f"구체적 계획으로 답변하세요. {_style_ko}")
+            r45 = await asyncio.gather(_call(cso_p, p4), _call(sel_p, p5), return_exceptions=True)
+            t4 = r45[0] if isinstance(r45[0], str) and r45[0] else (
+                f"That sounds good. Any specific concerns to address?" if _en else f"좋습니다. 특별히 주의할 점이 있을까요?")
+            t5 = r45[1] if isinstance(r45[1], str) and r45[1] else (
+                f"I'll handle each point carefully." if _en else f"각 사안을 꼼꼼히 검토하겠습니다.")
+            turns.append({"speaker": _cso, "role": "CSO", "text": t4, "is_final": False})
+            turns.append({"speaker": sel_name, "role": sel_spec, "text": t5, "is_final": False})
+
+            p6 = (f"{sel_name} explained their approach thoroughly.\n\nYou are CSO Seoyeon. "
+                  f"Officially designate {sel_name} as the assigned leader. Reassure the user. {_style_en}"
+                  if _en else
+                  f"{sel_name}님이 접근법을 충분히 설명했습니다.\n\n당신은 CSO 서연. "
+                  f"{sel_name}님을 담당 리더로 공식 지명하세요. 사용자에게 안심 메시지도. {_style_ko}")
+            p7 = (f"You've been designated as leader.\n{_q}\nYou are {sel_name} ({sel_spec}). "
+                  f"Greet the user warmly and briefly explain how you'll help. {_style_en}"
+                  if _en else
+                  f"당신이 담당 리더로 지명되었습니다.\n{_q}\n당신은 {sel_name}({sel_spec}). "
+                  f"사용자에게 따뜻하게 인사하고 어떻게 도와드릴지 간략히 말씀하세요. {_short_ko}")
+            r67 = await asyncio.gather(_call(cso_p, p6), _call(sel_p, p7), return_exceptions=True)
+            t6 = r67[0] if isinstance(r67[0], str) and r67[0] else (
+                f"{sel_name} will be your assigned leader." if _en else f"{sel_name}님이 담당하시겠습니다.")
+            t7 = r67[1] if isinstance(r67[1], str) and r67[1] else (
+                f"Hello, I'll take care of this for you right away." if _en else f"안녕하세요, 바로 도와드리겠습니다.")
+            turns.append({"speaker": _cso, "role": "CSO", "text": t6, "is_final": False})
+            turns.append({"speaker": sel_name, "role": sel_spec, "text": t7, "is_final": True})
+
+        logger.info(f"[Deliberation] {len(turns)}턴 생성 완료")
         return turns
 
     except asyncio.TimeoutError:
@@ -386,20 +420,17 @@ async def generate_handoff(
     lang: str = "",
 ) -> Optional[List[Dict]]:
     """
-    리더 간 인수인계 대화 — 2턴 병렬 Gemini 호출.
+    리더 간 인수인계 대화 — 9턴 (CSO 주재, 협의 전 과정, 10턴 이내).
 
-    Turn 1: 현재 리더 → 인계 이유
-    Turn 2: 새 리더   → 인사
-
-    Args:
-        gc: Gemini client
-        query: 사용자 질문
-        current_leader: {"name": ..., "specialty": ..., "leader_id": ...}
-        new_leader: {"name": ..., "specialty": ..., "leader_id": ...}
-        lang: 언어 코드
-
-    Returns:
-        인수인계 턴 리스트 또는 None (실패 시)
+    Turn 1: CSO → 주제 변경 감지 + 두 리더 소개
+    Turn 2: 현재 리더 → 인계 이유
+    Turn 3: CSO → 새 리더에게 의견 요청
+    Turn 4: 새 리더 → 자기 관점
+    Turn 5: 현재 리더 → 조언/당부
+    Turn 6: 새 리더 → 감사 + 구체적 접근법
+    Turn 7: 현재 리더 → 동의/양보
+    Turn 8: CSO → 새 리더 공식 지명
+    Turn 9: 새 리더 → 인사 (is_final)
     """
     if not gc or not current_leader or not new_leader:
         return None
@@ -412,89 +443,123 @@ async def generate_handoff(
     new_specialty = new_leader.get("specialty", "")
     new_id = new_leader.get("leader_id", "") or _name_to_id(new_name)
 
-    # 페르소나 빌드
     cur_persona = _build_leader_persona(cur_id) if cur_id else ""
     if not cur_persona:
         cur_persona = f"{cur_name}: {cur_specialty} 전문 리더"
     new_persona = _build_leader_persona(new_id) if new_id else ""
     if not new_persona:
         new_persona = f"{new_name}: {new_specialty} 전문 리더"
+    cso_p = _build_cso_persona()
 
-    # ── 병렬 호출 ──
+    turns: List[Dict] = []
     _en = lang == "en"
-    if _en:
-        t1_prompt = (
-            f"[This is an external client's question — NOT your case.]\nClient question: {query[:300]}\n"
-            f"You are {cur_name} ({cur_specialty} expert). "
-            f"This question is closer to {new_specialty}, "
-            f"so you're handing it off to {new_name}. "
-            f"Explain why this question falls under {new_specialty} "
-            f"and why {new_name} can better assist. "
-            f"Write 2-3 complete sentences. Warm, natural tone. "
-            f"Respond entirely in English. Use 'leader' or 'expert', never 'lawyer'."
-        )
-        t2_prompt = (
-            f"[This is an external client's question — NOT your case.]\nClient question: {query[:300]}\n"
-            f"You are {new_name} ({new_specialty} expert). "
-            f"{cur_name} has handed off this question to you. "
-            f"Greet the user warmly and explain specifically "
-            f"how you can help from your area of expertise. "
-            f"Write 2-3 complete sentences. Professional, friendly tone. "
-            f"Respond entirely in English. Be humble and practical — no exaggeration."
-        )
-        t1_fallback = f"This question is better suited for {new_specialty}, so I'm connecting you with {new_name}."
-        t2_fallback = f"Hello, I'm {new_name}, specializing in {new_specialty}. I'll assist you right away."
-    else:
-        t1_prompt = (
-            f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
-            f"당신은 {cur_name}({cur_specialty} 전문)입니다. "
-            f"이 질문은 {new_specialty} 분야에 더 가까워서 "
-            f"{new_name}님에게 인계하려 합니다. "
-            f"왜 이 질문이 {new_specialty} 분야에 해당하는지, "
-            f"그리고 {new_name}님이 더 잘 도와드릴 수 있는 이유를 설명하세요. "
-            f"반드시 100자 이상 150자 이내로 작성하세요. "
-            f"존댓말, 따뜻한 톤으로 자연스럽게 말하세요. "
-            f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
-            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-        )
-        t2_prompt = (
-            f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
-            f"당신은 {new_name}({new_specialty} 전문)입니다. "
-            f"{cur_name}님이 이 질문을 인계해 주었습니다. "
-            f"사용자에게 따뜻하게 인사하고, 자신의 전문 분야에서 "
-            f"어떻게 도움을 드릴 수 있는지 구체적으로 설명하세요. "
-            f"반드시 100자 이상 150자 이내로 작성하세요. "
-            f"존댓말, 전문적이고 친절한 톤으로 자연스럽게 말하세요. "
-            f"과장된 자기소개(CLO급, 유니콘 등)는 하지 마세요. 겸손하고 실질적으로 말하세요. "
-            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-        )
-        t1_fallback = f"이 질문은 {new_specialty} 분야라 {new_name}님께 연결해 드리겠습니다."
-        t2_fallback = f"안녕하세요, {new_specialty} 전문 {new_name}입니다. 바로 도와드리겠습니다."
+    _cso = "Seoyeon" if _en else "서연"
+    _base = "[External client question.]\n" if _en else "[외부 의뢰인 질문입니다.]\n"
+    _q = f"Question: {query[:300]}\n" if _en else f"질문: {query[:300]}\n"
+    _style_en = "2-3 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
+    _style_ko = "100~150자. 존댓말, 따뜻하고 전문적 톤. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
+    _short_en = "1-2 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
+    _short_ko = "80~120자. 존댓말. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
+
+    async def _call(persona, prompt):
+        try:
+            return await asyncio.wait_for(_single_leader_call(gc, persona, prompt), timeout=_TURN_TIMEOUT)
+        except Exception:
+            return ""
 
     try:
-        results = await asyncio.gather(
-            asyncio.wait_for(_single_leader_call(gc, cur_persona, t1_prompt), timeout=_TURN_TIMEOUT),
-            asyncio.wait_for(_single_leader_call(gc, new_persona, t2_prompt), timeout=_TURN_TIMEOUT),
-            return_exceptions=True,
-        )
+        # ── T1: CSO — 주제 변경 감지 + 두 리더 소개 ──
+        p1 = (f"{_base}{_q}Current leader: {cur_name}({cur_specialty}), New candidate: {new_name}({new_specialty})\n\n"
+              f"You are CSO Seoyeon. The topic has shifted. Explain the change, introduce both leaders, "
+              f"and ask {cur_name} to share their thoughts on handoff. {_style_en}"
+              if _en else
+              f"{_base}{_q}현재 리더: {cur_name}({cur_specialty}), 새 후보: {new_name}({new_specialty})\n\n"
+              f"당신은 CSO 서연. 질문 주제가 바뀌었음을 설명하고, 두 리더를 소개한 뒤 "
+              f"{cur_name}님에게 인계 의견을 요청하세요. {_style_ko}")
+        t1 = await _call(cso_p, p1) or (
+            f"The topic has changed. {cur_name}, what do you think about handing this to {new_name}?"
+            if _en else f"질문 주제가 바뀌었습니다. {cur_name}님, {new_name}님에게 인계하는 것에 대해 어떻게 생각하시나요?")
+        turns.append({"speaker": _cso, "role": "CSO", "text": t1, "is_final": False})
 
-        t1_text = results[0] if isinstance(results[0], str) and results[0] else t1_fallback
-        t2_text = results[1] if isinstance(results[1], str) and results[1] else t2_fallback
+        # ── T2: 현재 리더 — 인계 이유 ──
+        p2 = (f"{_base}{_q}CSO asked about handoff to {new_name}({new_specialty}).\n\nYou are {cur_name} ({cur_specialty} expert). "
+              f"Explain why this question is closer to {new_specialty} and why {new_name} is better suited. "
+              f"Be gracious about the handoff. {_style_en}"
+              if _en else
+              f"{_base}{_q}CSO가 {new_name}({new_specialty})님에게 인계에 대해 물었습니다.\n\n당신은 {cur_name}({cur_specialty} 전문). "
+              f"왜 이 질문이 {new_specialty} 분야에 더 가까운지, {new_name}님이 더 적합한 이유를 설명하세요. {_style_ko}")
+        t2 = await _call(cur_persona, p2) or (
+            f"This question is better suited for {new_specialty}. {new_name} can help more effectively."
+            if _en else f"이 질문은 {new_specialty} 분야에 더 가깝습니다. {new_name}님이 더 잘 도와드릴 수 있습니다.")
+        turns.append({"speaker": cur_name, "role": cur_specialty, "text": t2, "is_final": False})
 
-        turns = [
-            {
-                "speaker": cur_name,
-                "role": cur_specialty,
-                "text": t1_text,
-            },
-            {
-                "speaker": new_name,
-                "role": new_specialty,
-                "text": t2_text,
-            },
-        ]
+        # ── T3+T4: 병렬 — CSO→새 리더 요청 + 새 리더 관점 ──
+        p3 = (f"{cur_name} explained the handoff reason. You are CSO Seoyeon. Now ask {new_name} for their perspective. {_short_en}"
+              if _en else
+              f"{cur_name}님이 인계 이유를 설명했습니다. 당신은 CSO 서연. 이제 {new_name}님에게도 의견을 요청하세요. {_short_ko}")
+        p4 = (f"{_base}{_q}{cur_name}({cur_specialty}) is handing off to you.\n\nYou are {new_name} ({new_specialty} expert). "
+              f"Share how this question fits your specialty and how you can specifically help. {_style_en}"
+              if _en else
+              f"{_base}{_q}{cur_name}({cur_specialty})님이 인계를 제안했습니다.\n\n당신은 {new_name}({new_specialty} 전문). "
+              f"이 질문이 자기 분야에 어떻게 해당하는지, 구체적으로 어떻게 도울 수 있는지 설명하세요. {_style_ko}")
+        r34 = await asyncio.gather(_call(cso_p, p3), _call(new_persona, p4), return_exceptions=True)
+        t3 = r34[0] if isinstance(r34[0], str) and r34[0] else (
+            f"{new_name}, could you share your perspective?" if _en else f"{new_name}님도 의견 부탁드립니다.")
+        t4 = r34[1] if isinstance(r34[1], str) and r34[1] else (
+            f"This falls right in my area of {new_specialty} — I can help specifically."
+            if _en else f"이 질문은 제 {new_specialty} 분야에 해당하며, 구체적으로 도와드릴 수 있습니다.")
+        turns.append({"speaker": _cso, "role": "CSO", "text": t3, "is_final": False})
+        turns.append({"speaker": new_name, "role": new_specialty, "text": t4, "is_final": False})
 
-        logger.info(f"[Handoff] {cur_name} → {new_name} (2턴, parallel calls)")
+        # ── T5+T6: 병렬 — 현재 리더 조언 + 새 리더 감사/접근법 ──
+        p5 = (f"You are {cur_name} ({cur_specialty}). {new_name} will take over. "
+              f"Share any advice or important context for {new_name} to consider. {_short_en}"
+              if _en else
+              f"당신은 {cur_name}({cur_specialty}). {new_name}님이 인수합니다. "
+              f"{new_name}님이 참고할 조언이나 중요 맥락을 전달하세요. {_short_ko}")
+        p6 = (f"You are {new_name} ({new_specialty}). {cur_name} shared advice. "
+              f"Thank them and explain your specific approach plan. {_style_en}"
+              if _en else
+              f"당신은 {new_name}({new_specialty}). {cur_name}님이 조언을 해주었습니다. "
+              f"감사를 표하고 구체적 접근 계획을 설명하세요. {_style_ko}")
+        r56 = await asyncio.gather(_call(cur_persona, p5), _call(new_persona, p6), return_exceptions=True)
+        t5 = r56[0] if isinstance(r56[0], str) and r56[0] else (
+            f"Please keep in mind the key details of this case." if _en
+            else f"이 사안의 핵심 사항을 잘 참고해 주세요.")
+        t6 = r56[1] if isinstance(r56[1], str) and r56[1] else (
+            f"Thank you for the context. I'll handle this carefully." if _en
+            else f"조언 감사합니다. 꼼꼼히 검토하겠습니다.")
+        turns.append({"speaker": cur_name, "role": cur_specialty, "text": t5, "is_final": False})
+        turns.append({"speaker": new_name, "role": new_specialty, "text": t6, "is_final": False})
+
+        # ── T7+T8+T9: 병렬 — 동의 + CSO 지명 + 인사 ──
+        p7 = (f"You are {cur_name} ({cur_specialty}). {new_name} has a solid plan. "
+              f"Express full confidence and officially agree to the handoff. {_short_en}"
+              if _en else
+              f"당신은 {cur_name}({cur_specialty}). {new_name}님이 충실한 계획을 세웠습니다. "
+              f"전적으로 신뢰하며 인계에 동의하세요. {_short_ko}")
+        p8 = (f"{cur_name} agreed to hand off. Both leaders discussed thoroughly.\n\nYou are CSO Seoyeon. "
+              f"Officially designate {new_name} as the new assigned leader. Reassure the user. {_style_en}"
+              if _en else
+              f"{cur_name}님이 인계에 동의했습니다. 두 리더가 충분히 논의했습니다.\n\n당신은 CSO 서연. "
+              f"{new_name}님을 새 담당 리더로 공식 지명하세요. 사용자에게 안심 메시지도. {_style_ko}")
+        p9 = (f"You've been designated as the new leader.\n{_q}\nYou are {new_name} ({new_specialty}). "
+              f"Greet the user warmly and briefly explain how you'll help. {_style_en}"
+              if _en else
+              f"당신이 새 담당 리더로 지명되었습니다.\n{_q}\n당신은 {new_name}({new_specialty}). "
+              f"사용자에게 따뜻하게 인사하고 어떻게 도와드릴지 간략히 말씀하세요. {_short_ko}")
+        r789 = await asyncio.gather(_call(cur_persona, p7), _call(cso_p, p8), _call(new_persona, p9), return_exceptions=True)
+        t7 = r789[0] if isinstance(r789[0], str) and r789[0] else (
+            f"I fully trust {new_name} with this." if _en else f"{new_name}님을 전적으로 신뢰합니다.")
+        t8 = r789[1] if isinstance(r789[1], str) and r789[1] else (
+            f"{new_name} will be your new assigned leader." if _en else f"{new_name}님이 새로 담당하시겠습니다.")
+        t9 = r789[2] if isinstance(r789[2], str) and r789[2] else (
+            f"Hello, I'll take care of this for you right away." if _en else f"안녕하세요, 바로 도와드리겠습니다.")
+        turns.append({"speaker": cur_name, "role": cur_specialty, "text": t7, "is_final": False})
+        turns.append({"speaker": _cso, "role": "CSO", "text": t8, "is_final": False})
+        turns.append({"speaker": new_name, "role": new_specialty, "text": t9, "is_final": True})
+
+        logger.info(f"[Handoff] {cur_name} → {new_name} ({len(turns)}턴)")
         return turns
 
     except asyncio.TimeoutError:
@@ -519,177 +584,236 @@ async def generate_deliberation_stream(
     lang: str = "",
 ) -> AsyncGenerator[Dict, None]:
     """
-    CSO 서연 주재 리더 회의 — 3턴 순차, 턴별 즉시 yield.
+    CSO 서연 주재 리더 회의 — 최대 9턴 순차 yield (10턴 이내, 협의 전 과정).
 
-    Turn 1: CSO 서연 → 질문 요약 + 의견 요청
-    Turn 2: 담당 리더 → 자기 분야 관점 의견
-    Turn 3: CSO 서연 → 담당 리더 지명 (is_final=True)
+    후보 있을 때 (9턴):
+    T1: CSO → 질문 요약 + 후보 소개 + B에게 의견 요청
+    T2: 후보 B → 자기 분야 관점 의견
+    T3: CSO → A에게도 의견 요청
+    T4: 담당 A → 본인 적합 이유
+    T5: 후보 B → A에게 보충 질문/의견
+    T6: 담당 A → 답변 + 구체적 접근법
+    T7: 후보 B → 동의/양보
+    T8: CSO → 담당 리더 공식 지명
+    T9: 담당 A → 인사 (is_final)
+
+    후보 없을 때 (7턴): CSO + 리더 대화
     """
     if not gc or not leaders:
         logger.warning("[Deliberation:Stream] gc 또는 leaders 없음 — 스킵")
         return
 
     selected = leaders[0]
-    selected_name = selected.get("name", "?")
-    selected_specialty = selected.get("specialty", "")
-    selected_id = selected.get("leader_id", "") or _name_to_id(selected_name)
+    sel_name = selected.get("name", "?")
+    sel_spec = selected.get("specialty", "")
+    sel_id = selected.get("leader_id", "") or _name_to_id(sel_name)
 
-    logger.info(f"[Deliberation:Stream] 시작 — leader={selected_name}({selected_id})")
+    has_alt = len(leaders) >= 2
+    if has_alt:
+        alt = leaders[1]
+        alt_name = alt.get("name", "?")
+        alt_spec = alt.get("specialty", "")
+        alt_id = alt.get("leader_id", "") or _name_to_id(alt_name)
+    else:
+        alt_name = alt_spec = alt_id = ""
+
+    logger.info(f"[Deliberation:Stream] 시작 — leader={sel_name}({sel_id}), alt={alt_name}")
 
     try:
-        cso_persona = _build_cso_persona()
-        leader_persona = _build_leader_persona(selected_id) if selected_id else ""
-        if not leader_persona:
-            leader_persona = f"{selected_name}: {selected_specialty} 전문 리더"
+        cso_p = _build_cso_persona()
+        sel_p = _build_leader_persona(sel_id) if sel_id else ""
+        if not sel_p:
+            sel_p = f"{sel_name}: {sel_spec} 전문 리더"
+        alt_p = ""
+        if has_alt:
+            alt_p = _build_leader_persona(alt_id) if alt_id else ""
+            if not alt_p:
+                alt_p = f"{alt_name}: {alt_spec} 전문 리더"
     except Exception as e:
         logger.error(f"[Deliberation:Stream] 페르소나 빌드 실패: {type(e).__name__}: {e}")
         return
 
     _en = lang == "en"
-    _leaders_str = ', '.join(l.get('name','?') + '(' + l.get('specialty','') + ')' for l in leaders[:3])
+    _cso = "Seoyeon" if _en else "서연"
+    _base = "[External client question.]\n" if _en else "[외부 의뢰인 질문입니다.]\n"
+    _q = f"Question: {query[:300]}\n" if _en else f"질문: {query[:300]}\n"
+    _style_en = "2-3 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
+    _style_ko = "100~150자. 존댓말, 따뜻하고 전문적 톤. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
+    _short_en = "1-2 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
+    _short_ko = "80~120자. 존댓말. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
 
-    # ── Turn 1: CSO 서연 ──
-    if _en:
-        t1_prompt = (
-            f"[This is an external client's question — NOT your case or any leader's case.]\nClient question: {query[:300]}\n"
-            f"Designated leader: {selected_name} ({selected_specialty})\n\n"
-            f"You are CSO Seoyeon. Summarize the core of this question, "
-            f"explain why an expert in {selected_specialty} is needed, "
-            f"then ask {selected_name} for their input. "
-            f"IMPORTANT: You MUST address {selected_name} by name — do NOT mention or refer to any other leader. "
-            f"Write 2-3 complete sentences. Professional, warm, and natural tone. "
-            f"Respond entirely in English. Use 'leader' or 'expert', never 'lawyer'."
-        )
-    else:
-        t1_prompt = (
-            f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
-            f"지정 리더: {selected_name} ({selected_specialty})\n\n"
-            f"당신은 CSO 서연입니다. 이 질문의 핵심을 요약하고, "
-            f"왜 {selected_specialty} 분야의 전문가가 필요한지 설명한 뒤, "
-            f"{selected_name}님에게 의견을 요청하세요. "
-            f"중요: 반드시 {selected_name}님만 언급하세요. 다른 리더 이름을 절대 언급하지 마세요. "
-            f"반드시 100자 이상 150자 이내로 작성하세요. "
-            f"존댓말, 따뜻하고 전문적인 톤으로 자연스럽게 말하세요. "
-            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-        )
-    logger.info("[Deliberation:Stream] Turn1 Gemini 호출 시작")
-    try:
-        t1_text = await asyncio.wait_for(
-            _single_leader_call(gc, cso_persona, t1_prompt), timeout=_TURN_TIMEOUT
-        )
-        logger.info(f"[Deliberation:Stream] Turn1 성공 ({len(t1_text)}자)")
-    except BaseException as e:
-        logger.warning(f"[Deliberation:Stream] Turn1 실패: {type(e).__name__}: {e}")
-        t1_text = ""
-        if isinstance(e, asyncio.CancelledError):
+    async def _call(persona, prompt):
+        try:
+            return await asyncio.wait_for(_single_leader_call(gc, persona, prompt), timeout=_TURN_TIMEOUT)
+        except asyncio.CancelledError:
             raise
-    if not t1_text:
-        t1_text = (
-            f"This question falls under {selected_specialty}. {selected_name}, could you share your perspective?"
-            if _en else
-            f"이 질문은 {selected_specialty} 분야입니다. {selected_name}님, 의견 부탁드립니다."
-        )
-    yield {
-        "speaker": "Seoyeon" if _en else "서연",
-        "role": "CSO",
-        "text": t1_text,
-        "is_final": False,
-    }
-    logger.info("[Deliberation:Stream] Turn1 yield 완료")
+        except Exception:
+            return ""
 
-    # ── Turn 2: 담당 리더 ──
-    if _en:
-        t2_prompt = (
-            f"[This is an external client's question — NOT your case.]\nClient question: {query[:300]}\n"
-            f"CSO Seoyeon has asked for your input.\n\n"
-            f"You are {selected_name} ({selected_specialty} expert). "
-            f"Based on your expertise, explain specifically how you can help with this question "
-            f"and confidently offer your assistance. "
-            f"Write 2-3 complete sentences. Professional, warm, and natural tone. "
-            f"Respond entirely in English. Be humble and practical — no exaggeration."
-        )
+    # ── T1: CSO — 질문 요약 + 후보 소개 ──
+    if has_alt:
+        p1 = (f"{_base}{_q}Candidates: {sel_name}({sel_spec}), {alt_name}({alt_spec})\n\n"
+              f"You are CSO Seoyeon. Summarize the question, introduce both candidates, ask {alt_name} for their view first. {_style_en}"
+              if _en else
+              f"{_base}{_q}후보: {sel_name}({sel_spec}), {alt_name}({alt_spec})\n\n"
+              f"당신은 CSO 서연. 질문 핵심을 요약하고, 두 후보를 소개한 뒤 {alt_name}님에게 먼저 의견을 요청하세요. {_style_ko}")
     else:
-        t2_prompt = (
-            f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
-            f"CSO 서연이 당신에게 의견을 요청했습니다.\n\n"
-            f"당신은 {selected_name}({selected_specialty} 전문)입니다. "
-            f"자기 분야의 전문 지식을 바탕으로 이 질문에 어떻게 도움을 줄 수 있는지 "
-            f"구체적으로 설명하고, 자신감 있게 돕겠다고 답하세요. "
-            f"반드시 100자 이상 150자 이내로 작성하세요. "
-            f"존댓말, 전문적이고 따뜻한 톤으로 자연스럽게 말하세요. "
-            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-        )
-    logger.info("[Deliberation:Stream] Turn2 Gemini 호출 시작")
-    try:
-        t2_text = await asyncio.wait_for(
-            _single_leader_call(gc, leader_persona, t2_prompt), timeout=_TURN_TIMEOUT
-        )
-        logger.info(f"[Deliberation:Stream] Turn2 성공 ({len(t2_text)}자)")
-    except BaseException as e:
-        logger.warning(f"[Deliberation:Stream] Turn2 실패: {type(e).__name__}: {e}")
-        t2_text = ""
-        if isinstance(e, asyncio.CancelledError):
-            raise
-    if not t2_text:
-        t2_text = (
-            f"Absolutely — I'll assist right away from the {selected_specialty} perspective."
-            if _en else
-            f"네, {selected_specialty} 관점에서 바로 도와드리겠습니다."
-        )
-    yield {
-        "speaker": selected_name,
-        "role": selected_specialty,
-        "text": t2_text,
-        "is_final": False,
-    }
-    logger.info("[Deliberation:Stream] Turn2 yield 완료")
+        p1 = (f"{_base}{_q}Designated leader: {sel_name}({sel_spec})\n\n"
+              f"You are CSO Seoyeon. Summarize the question, explain why {sel_spec} expertise is needed, ask {sel_name} for input. {_style_en}"
+              if _en else
+              f"{_base}{_q}지정 리더: {sel_name}({sel_spec})\n\n"
+              f"당신은 CSO 서연. 질문 핵심을 요약하고, {sel_spec} 전문가가 필요한 이유를 설명한 뒤 {sel_name}님에게 의견 요청. {_style_ko}")
+    t1 = await _call(cso_p, p1) or (
+        f"This question involves {sel_spec}. {alt_name if has_alt else sel_name}, please share your view."
+        if _en else f"이 질문은 {sel_spec} 분야입니다. {alt_name if has_alt else sel_name}님, 의견 부탁드립니다.")
+    yield {"speaker": _cso, "role": "CSO", "text": t1, "is_final": False}
 
-    # ── Turn 3: CSO 서연 — 담당 리더 지명 ──
-    if _en:
-        t3_prompt = (
-            f"{selected_name} has offered to help from the {selected_specialty} perspective.\n\n"
-            f"You are CSO Seoyeon. Acknowledge {selected_name}'s expertise "
-            f"and officially designate {selected_name} as the assigned leader for this question. "
-            f"IMPORTANT: You MUST designate {selected_name} only — do NOT mention any other leader name. "
-            f"Add a reassuring note to the user. "
-            f"Write 2-3 complete sentences. Warm, trustworthy, and professional tone. "
-            f"Respond entirely in English. Use 'leader' or 'expert', never 'lawyer'."
-        )
+    if has_alt:
+        # ── T2: 후보 B 의견 ──
+        p2 = (f"{_base}{_q}CSO asked for your perspective.\n\nYou are {alt_name} ({alt_spec} expert). "
+              f"Share your view on this question from your specialty. {_style_en}"
+              if _en else
+              f"{_base}{_q}CSO 서연이 의견을 요청했습니다.\n\n당신은 {alt_name}({alt_spec} 전문). "
+              f"자기 분야 관점에서 이 질문에 대한 의견을 말씀하세요. {_style_ko}")
+        t2 = await _call(alt_p, p2) or (
+            f"From {alt_spec} perspective, this is an important question." if _en
+            else f"{alt_spec} 관점에서 중요한 질문입니다.")
+        yield {"speaker": alt_name, "role": alt_spec, "text": t2, "is_final": False}
+
+        # ── T3: CSO → A에게 의견 요청 ──
+        p3 = (f"{alt_name} shared their view. You are CSO Seoyeon. Now ask {sel_name} for their perspective too. {_short_en}"
+              if _en else
+              f"{alt_name}님이 의견을 말했습니다. 당신은 CSO 서연. 이제 {sel_name}님에게도 의견을 요청하세요. {_short_ko}")
+        t3 = await _call(cso_p, p3) or (
+            f"{sel_name}, could you share your perspective?" if _en else f"{sel_name}님도 의견 부탁드립니다.")
+        yield {"speaker": _cso, "role": "CSO", "text": t3, "is_final": False}
+
+        # ── T4: 담당 A 의견 ──
+        p4 = (f"{_base}{_q}{alt_name}({alt_spec}) shared their view. CSO asked you too.\n\nYou are {sel_name} ({sel_spec} expert). "
+              f"Explain why this question falls in your area and how you can specifically help. {_style_en}"
+              if _en else
+              f"{_base}{_q}{alt_name}({alt_spec})님이 의견을 말했습니다. CSO가 당신에게도 의견을 요청합니다.\n\n당신은 {sel_name}({sel_spec} 전문). "
+              f"왜 이 질문이 자기 분야에 해당하는지, 어떻게 구체적으로 도울 수 있는지 설명하세요. {_style_ko}")
+        t4 = await _call(sel_p, p4) or (
+            f"This falls right in my area — I can help specifically." if _en
+            else f"이 질문은 제 분야에 해당하며, 구체적으로 도와드릴 수 있습니다.")
+        yield {"speaker": sel_name, "role": sel_spec, "text": t4, "is_final": False}
+
+        # ── T5: 후보 B 보충 질문 ──
+        p5 = (f"You are {alt_name} ({alt_spec}). {sel_name} explained their view. "
+              f"Ask a follow-up question or share additional insight from {alt_spec} that may help. {_short_en}"
+              if _en else
+              f"당신은 {alt_name}({alt_spec}). {sel_name}님이 의견을 설명했습니다. "
+              f"{alt_spec} 관점에서 보충 질문이나 추가 의견을 말씀하세요. {_short_ko}")
+        t5 = await _call(alt_p, p5) or (
+            f"That's a solid approach. How would you handle the specific details?" if _en
+            else f"좋은 접근이네요. 구체적인 세부 사항은 어떻게 처리하실 건가요?")
+        yield {"speaker": alt_name, "role": alt_spec, "text": t5, "is_final": False}
+
+        # ── T6: 담당 A 답변 + 접근법 ──
+        p6 = (f"{_base}{_q}You are {sel_name} ({sel_spec}). {alt_name} asked a follow-up. "
+              f"Respond with your specific approach and concrete plan. {_style_en}"
+              if _en else
+              f"{_base}{_q}당신은 {sel_name}({sel_spec}). {alt_name}님이 보충 질문을 했습니다. "
+              f"구체적인 접근법과 계획으로 답변하세요. {_style_ko}")
+        t6 = await _call(sel_p, p6) or (
+            f"I'll address each point systematically." if _en
+            else f"각 사안을 체계적으로 검토하겠습니다.")
+        yield {"speaker": sel_name, "role": sel_spec, "text": t6, "is_final": False}
+
+        # ── T7: 후보 B 동의/양보 ──
+        p7 = (f"You are {alt_name} ({alt_spec}). {sel_name} gave a thorough response. "
+              f"Agree that {sel_name} is the right leader and express confidence. {_short_en}"
+              if _en else
+              f"당신은 {alt_name}({alt_spec}). {sel_name}님이 충실히 답변했습니다. "
+              f"{sel_name}님이 적임자라는 데 동의하고 신뢰를 표현하세요. {_short_ko}")
+        t7 = await _call(alt_p, p7) or (
+            f"I agree — {sel_name} is the perfect fit." if _en
+            else f"저도 동의합니다. {sel_name}님이 적임자입니다.")
+        yield {"speaker": alt_name, "role": alt_spec, "text": t7, "is_final": False}
+
+        # ── T8: CSO 공식 지명 ──
+        p8 = (f"Both leaders discussed thoroughly. {alt_name} agreed {sel_name} is best.\n\n"
+              f"You are CSO Seoyeon. Officially designate {sel_name} as the assigned leader. Reassure the user. {_style_en}"
+              if _en else
+              f"두 리더가 충분히 논의했고, {alt_name}님이 {sel_name}님에게 양보했습니다.\n\n"
+              f"당신은 CSO 서연. {sel_name}님을 담당 리더로 공식 지명하세요. 사용자에게 안심 메시지도. {_style_ko}")
+        t8 = await _call(cso_p, p8) or (
+            f"{sel_name} will be your assigned leader." if _en else f"{sel_name}님이 담당하시겠습니다.")
+        yield {"speaker": _cso, "role": "CSO", "text": t8, "is_final": False}
+
+        # ── T9: 담당 A 인사 (is_final) ──
+        p9 = (f"You've been designated as leader.\n{_q}\nYou are {sel_name} ({sel_spec}). "
+              f"Greet the user warmly and briefly explain how you'll help. {_style_en}"
+              if _en else
+              f"당신이 담당 리더로 지명되었습니다.\n{_q}\n당신은 {sel_name}({sel_spec}). "
+              f"사용자에게 따뜻하게 인사하고 어떻게 도와드릴지 간략히 말씀하세요. {_short_ko}")
+        t9 = await _call(sel_p, p9) or (
+            f"Hello, I'll take care of this for you right away." if _en
+            else f"안녕하세요, 바로 도와드리겠습니다.")
+        yield {"speaker": sel_name, "role": sel_spec, "text": t9, "is_final": True}
+        logger.info("[Deliberation:Stream] 9턴 스트리밍 완료")
+
     else:
-        t3_prompt = (
-            f"{selected_name}님이 {selected_specialty} 분야에서 돕겠다고 했습니다.\n\n"
-            f"당신은 CSO 서연입니다. {selected_name}님의 전문성을 인정하며 "
-            f"이 질문의 담당 리더로 공식 지명하세요. "
-            f"중요: 반드시 {selected_name}님만 지명하세요. 다른 리더 이름을 절대 언급하지 마세요. "
-            f"사용자에게 안심하라는 말도 덧붙이세요. "
-            f"반드시 100자 이상 150자 이내로 작성하세요. "
-            f"존댓말, 따뜻하고 신뢰감 있는 톤으로 자연스럽게 말하세요. "
-            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-        )
-    logger.info("[Deliberation:Stream] Turn3 Gemini 호출 시작")
-    try:
-        t3_text = await asyncio.wait_for(
-            _single_leader_call(gc, cso_persona, t3_prompt), timeout=_TURN_TIMEOUT
-        )
-        logger.info(f"[Deliberation:Stream] Turn3 성공 ({len(t3_text)}자)")
-    except BaseException as e:
-        logger.warning(f"[Deliberation:Stream] Turn3 실패: {type(e).__name__}: {e}")
-        t3_text = ""
-        if isinstance(e, asyncio.CancelledError):
-            raise
-    if not t3_text:
-        t3_text = (
-            f"{selected_name} will be your assigned leader for this matter."
-            if _en else
-            f"{selected_name}님이 담당하시겠습니다."
-        )
-    yield {
-        "speaker": "Seoyeon" if _en else "서연",
-        "role": "CSO",
-        "text": t3_text,
-        "is_final": True,
-    }
-    logger.info("[Deliberation:Stream] 3턴 스트리밍 완료")
+        # 후보 없음 — CSO + 리더 대화 (7턴)
+        # T2: CSO 추가 질문
+        p2 = (f"{_base}{_q}You are CSO Seoyeon. Ask {sel_name} what specific approach they'd take. {_short_en}"
+              if _en else
+              f"{_base}{_q}당신은 CSO 서연. {sel_name}님에게 어떤 접근법을 취할 것인지 구체적으로 물어보세요. {_short_ko}")
+        t2 = await _call(cso_p, p2) or (
+            f"{sel_name}, what approach would you take?" if _en else f"{sel_name}님, 어떤 접근법을 취하실 건가요?")
+        yield {"speaker": _cso, "role": "CSO", "text": t2, "is_final": False}
+
+        # T3: 리더 접근법
+        p3 = (f"{_base}{_q}CSO asked about your approach.\n\nYou are {sel_name} ({sel_spec} expert). "
+              f"Explain your specific approach and why your expertise fits. {_style_en}"
+              if _en else
+              f"{_base}{_q}CSO가 접근법을 물었습니다.\n\n당신은 {sel_name}({sel_spec} 전문). "
+              f"구체적 접근법과 자기 전문성이 적합한 이유를 설명하세요. {_style_ko}")
+        t3 = await _call(sel_p, p3) or (
+            f"This falls right in my area — I can help specifically." if _en
+            else f"이 질문은 제 분야에 해당하며, 구체적으로 도와드릴 수 있습니다.")
+        yield {"speaker": sel_name, "role": sel_spec, "text": t3, "is_final": False}
+
+        # T4: CSO 추가 질문
+        p4 = (f"You are CSO Seoyeon. {sel_name} explained their approach. Ask a follow-up about any specific concerns. {_short_en}"
+              if _en else
+              f"당신은 CSO 서연. {sel_name}님이 접근법을 설명했습니다. 구체적 우려 사항에 대해 추가 질문하세요. {_short_ko}")
+        t4 = await _call(cso_p, p4) or (
+            f"That sounds good. Any specific concerns to address?" if _en else f"좋습니다. 특별히 주의할 점이 있을까요?")
+        yield {"speaker": _cso, "role": "CSO", "text": t4, "is_final": False}
+
+        # T5: 리더 답변
+        p5 = (f"{_base}{_q}CSO asked a follow-up.\n\nYou are {sel_name} ({sel_spec}). "
+              f"Address the concern with your specific plan. {_style_en}"
+              if _en else
+              f"{_base}{_q}CSO가 추가 질문을 했습니다.\n\n당신은 {sel_name}({sel_spec}). "
+              f"구체적 계획으로 답변하세요. {_style_ko}")
+        t5 = await _call(sel_p, p5) or (
+            f"I'll handle each point carefully." if _en else f"각 사안을 꼼꼼히 검토하겠습니다.")
+        yield {"speaker": sel_name, "role": sel_spec, "text": t5, "is_final": False}
+
+        # T6: CSO 지명
+        p6 = (f"{sel_name} explained their approach thoroughly.\n\nYou are CSO Seoyeon. "
+              f"Officially designate {sel_name} as the assigned leader. Reassure the user. {_style_en}"
+              if _en else
+              f"{sel_name}님이 접근법을 충분히 설명했습니다.\n\n당신은 CSO 서연. "
+              f"{sel_name}님을 담당 리더로 공식 지명하세요. 사용자에게 안심 메시지도. {_style_ko}")
+        t6 = await _call(cso_p, p6) or (
+            f"{sel_name} will be your assigned leader." if _en else f"{sel_name}님이 담당하시겠습니다.")
+        yield {"speaker": _cso, "role": "CSO", "text": t6, "is_final": False}
+
+        # T7: 리더 인사
+        p7 = (f"You've been designated as leader.\n{_q}\nYou are {sel_name} ({sel_spec}). "
+              f"Greet the user warmly and briefly explain how you'll help. {_style_en}"
+              if _en else
+              f"당신이 담당 리더로 지명되었습니다.\n{_q}\n당신은 {sel_name}({sel_spec}). "
+              f"사용자에게 따뜻하게 인사하고 어떻게 도와드릴지 간략히 말씀하세요. {_short_ko}")
+        t7 = await _call(sel_p, p7) or (
+            f"Hello, I'll take care of this for you right away." if _en
+            else f"안녕하세요, 바로 도와드리겠습니다.")
+        yield {"speaker": sel_name, "role": sel_spec, "text": t7, "is_final": True}
+        logger.info("[Deliberation:Stream] 7턴 스트리밍 완료")
 
 
 async def generate_handoff_stream(
@@ -700,10 +824,17 @@ async def generate_handoff_stream(
     lang: str = "",
 ) -> AsyncGenerator[Dict, None]:
     """
-    리더 간 인수인계 대화 — 2턴 순차 yield.
+    리더 간 인수인계 대화 — 9턴 순차 yield (CSO 주재, 협의 전 과정, 10턴 이내).
 
-    Turn 1: 현재 리더 → 인계 이유
-    Turn 2: 새 리더   → 인사
+    T1: CSO → 주제 변경 감지 + 두 리더 소개
+    T2: 현재 리더 → 인계 이유
+    T3: CSO → 새 리더에게 의견 요청
+    T4: 새 리더 → 자기 관점
+    T5: 현재 리더 → 조언/당부
+    T6: 새 리더 → 감사 + 구체적 접근법
+    T7: 현재 리더 → 동의/양보
+    T8: CSO → 새 리더 공식 지명
+    T9: 새 리더 → 인사 (is_final)
     """
     if not gc or not current_leader or not new_leader:
         logger.warning("[Handoff:Stream] gc/leaders 없음 — 스킵")
@@ -725,94 +856,118 @@ async def generate_handoff_stream(
     new_persona = _build_leader_persona(new_id) if new_id else ""
     if not new_persona:
         new_persona = f"{new_name}: {new_specialty} 전문 리더"
+    cso_p = _build_cso_persona()
 
     _en = lang == "en"
+    _cso = "Seoyeon" if _en else "서연"
+    _base = "[External client question.]\n" if _en else "[외부 의뢰인 질문입니다.]\n"
+    _q = f"Question: {query[:300]}\n" if _en else f"질문: {query[:300]}\n"
+    _style_en = "2-3 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
+    _style_ko = "100~150자. 존댓말, 따뜻하고 전문적 톤. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
+    _short_en = "1-2 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
+    _short_ko = "80~120자. 존댓말. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
 
-    # ── Turn 1: 현재 리더 ──
-    if _en:
-        t1_prompt = (
-            f"[This is an external client's question — NOT your case.]\nClient question: {query[:300]}\n"
-            f"You are {cur_name} ({cur_specialty} expert). "
-            f"This question is closer to {new_specialty}, "
-            f"so you're handing it off to {new_name}. "
-            f"Explain why this question falls under {new_specialty} "
-            f"and why {new_name} can better assist. "
-            f"Write 2-3 complete sentences. Warm, natural tone. "
-            f"Respond entirely in English. Use 'leader' or 'expert', never 'lawyer'."
-        )
-        t1_fallback = f"This question is better suited for {new_specialty}, so I'm connecting you with {new_name}."
-    else:
-        t1_prompt = (
-            f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
-            f"당신은 {cur_name}({cur_specialty} 전문)입니다. "
-            f"이 질문은 {new_specialty} 분야에 더 가까워서 "
-            f"{new_name}님에게 인계하려 합니다. "
-            f"왜 이 질문이 {new_specialty} 분야에 해당하는지, "
-            f"그리고 {new_name}님이 더 잘 도와드릴 수 있는 이유를 설명하세요. "
-            f"반드시 100자 이상 150자 이내로 작성하세요. "
-            f"존댓말, 따뜻한 톤으로 자연스럽게 말하세요. "
-            f"절대 '변호사'라는 명칭을 사용하지 마세요. '리더' 또는 '전문가'로 호칭하세요. "
-            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-        )
-        t1_fallback = f"이 질문은 {new_specialty} 분야라 {new_name}님께 연결해 드리겠습니다."
-
-    try:
-        t1_text = await asyncio.wait_for(
-            _single_leader_call(gc, cur_persona, t1_prompt), timeout=_TURN_TIMEOUT
-        )
-    except BaseException as e:
-        logger.warning(f"[Handoff:Stream] Turn1 실패: {type(e).__name__}: {e}")
-        t1_text = ""
-        if isinstance(e, asyncio.CancelledError):
+    async def _call(persona, prompt):
+        try:
+            return await asyncio.wait_for(_single_leader_call(gc, persona, prompt), timeout=_TURN_TIMEOUT)
+        except asyncio.CancelledError:
             raise
-    if not t1_text:
-        t1_text = t1_fallback
-    yield {
-        "speaker": cur_name,
-        "role": cur_specialty,
-        "text": t1_text,
-    }
+        except Exception:
+            return ""
 
-    # ── Turn 2: 새 리더 ──
-    if _en:
-        t2_prompt = (
-            f"[This is an external client's question — NOT your case.]\nClient question: {query[:300]}\n"
-            f"You are {new_name} ({new_specialty} expert). "
-            f"{cur_name} has handed off this question to you. "
-            f"Greet the user warmly and explain specifically "
-            f"how you can help from your area of expertise. "
-            f"Write 2-3 complete sentences. Professional, friendly tone. "
-            f"Respond entirely in English. Be humble and practical — no exaggeration."
-        )
-        t2_fallback = f"Hello, I'm {new_name}, specializing in {new_specialty}. I'll assist you right away."
-    else:
-        t2_prompt = (
-            f"[외부 의뢰인의 질문입니다. 당신이나 다른 리더의 사건이 아닙니다.]\n의뢰인 질문: {query[:300]}\n"
-            f"당신은 {new_name}({new_specialty} 전문)입니다. "
-            f"{cur_name}님이 이 질문을 인계해 주었습니다. "
-            f"사용자에게 따뜻하게 인사하고, 자신의 전문 분야에서 "
-            f"어떻게 도움을 드릴 수 있는지 구체적으로 설명하세요. "
-            f"반드시 100자 이상 150자 이내로 작성하세요. "
-            f"존댓말, 전문적이고 친절한 톤으로 자연스럽게 말하세요. "
-            f"과장된 자기소개(CLO급, 유니콘 등)는 하지 마세요. 겸손하고 실질적으로 말하세요. "
-            f"제목이나 키워드가 아닌, 완전한 문장으로 답변하세요."
-        )
-        t2_fallback = f"안녕하세요, {new_specialty} 전문 {new_name}입니다. 바로 도와드리겠습니다."
+    # ── T1: CSO — 주제 변경 감지 + 두 리더 소개 ──
+    p1 = (f"{_base}{_q}Current leader: {cur_name}({cur_specialty}), New candidate: {new_name}({new_specialty})\n\n"
+          f"You are CSO Seoyeon. The topic has shifted. Explain the change, introduce both leaders, "
+          f"and ask {cur_name} to share their thoughts on handoff. {_style_en}"
+          if _en else
+          f"{_base}{_q}현재 리더: {cur_name}({cur_specialty}), 새 후보: {new_name}({new_specialty})\n\n"
+          f"당신은 CSO 서연. 질문 주제가 바뀌었음을 설명하고, 두 리더를 소개한 뒤 "
+          f"{cur_name}님에게 인계 의견을 요청하세요. {_style_ko}")
+    t1 = await _call(cso_p, p1) or (
+        f"The topic has changed. {cur_name}, what do you think about handing this to {new_name}?"
+        if _en else f"질문 주제가 바뀌었습니다. {cur_name}님, {new_name}님에게 인계하는 것에 대해 어떻게 생각하시나요?")
+    yield {"speaker": _cso, "role": "CSO", "text": t1, "is_final": False}
 
-    try:
-        t2_text = await asyncio.wait_for(
-            _single_leader_call(gc, new_persona, t2_prompt), timeout=_TURN_TIMEOUT
-        )
-    except BaseException as e:
-        logger.warning(f"[Handoff:Stream] Turn2 실패: {type(e).__name__}: {e}")
-        t2_text = ""
-        if isinstance(e, asyncio.CancelledError):
-            raise
-    if not t2_text:
-        t2_text = t2_fallback
-    yield {
-        "speaker": new_name,
-        "role": new_specialty,
-        "text": t2_text,
-    }
-    logger.info(f"[Handoff:Stream] {cur_name} → {new_name} 스트리밍 완료")
+    # ── T2: 현재 리더 — 인계 이유 ──
+    p2 = (f"{_base}{_q}CSO asked about handoff to {new_name}({new_specialty}).\n\nYou are {cur_name} ({cur_specialty} expert). "
+          f"Explain why this question is closer to {new_specialty} and why {new_name} is better suited. {_style_en}"
+          if _en else
+          f"{_base}{_q}CSO가 {new_name}({new_specialty})님에게 인계에 대해 물었습니다.\n\n당신은 {cur_name}({cur_specialty} 전문). "
+          f"왜 이 질문이 {new_specialty} 분야에 더 가까운지, {new_name}님이 더 적합한 이유를 설명하세요. {_style_ko}")
+    t2 = await _call(cur_persona, p2) or (
+        f"This question is better suited for {new_specialty}. {new_name} can help more effectively."
+        if _en else f"이 질문은 {new_specialty} 분야에 더 가깝습니다. {new_name}님이 더 잘 도와드릴 수 있습니다.")
+    yield {"speaker": cur_name, "role": cur_specialty, "text": t2, "is_final": False}
+
+    # ── T3: CSO → 새 리더에게 의견 요청 ──
+    p3 = (f"{cur_name} explained the handoff reason. You are CSO Seoyeon. Now ask {new_name} for their perspective. {_short_en}"
+          if _en else
+          f"{cur_name}님이 인계 이유를 설명했습니다. 당신은 CSO 서연. 이제 {new_name}님에게도 의견을 요청하세요. {_short_ko}")
+    t3 = await _call(cso_p, p3) or (
+        f"{new_name}, could you share your perspective?" if _en else f"{new_name}님도 의견 부탁드립니다.")
+    yield {"speaker": _cso, "role": "CSO", "text": t3, "is_final": False}
+
+    # ── T4: 새 리더 — 자기 관점 ──
+    p4 = (f"{_base}{_q}{cur_name}({cur_specialty}) is handing off to you.\n\nYou are {new_name} ({new_specialty} expert). "
+          f"Share how this question fits your specialty and how you can specifically help. {_style_en}"
+          if _en else
+          f"{_base}{_q}{cur_name}({cur_specialty})님이 인계를 제안했습니다.\n\n당신은 {new_name}({new_specialty} 전문). "
+          f"이 질문이 자기 분야에 어떻게 해당하는지, 구체적으로 어떻게 도울 수 있는지 설명하세요. {_style_ko}")
+    t4 = await _call(new_persona, p4) or (
+        f"This falls right in my area of {new_specialty} — I can help specifically."
+        if _en else f"이 질문은 제 {new_specialty} 분야에 해당하며, 구체적으로 도와드릴 수 있습니다.")
+    yield {"speaker": new_name, "role": new_specialty, "text": t4, "is_final": False}
+
+    # ── T5: 현재 리더 — 조언/당부 ──
+    p5 = (f"You are {cur_name} ({cur_specialty}). {new_name} will take over. "
+          f"Share any advice or important context for {new_name} to consider. {_short_en}"
+          if _en else
+          f"당신은 {cur_name}({cur_specialty}). {new_name}님이 인수합니다. "
+          f"{new_name}님이 참고할 조언이나 중요 맥락을 전달하세요. {_short_ko}")
+    t5 = await _call(cur_persona, p5) or (
+        f"Please keep in mind the key details of this case." if _en
+        else f"이 사안의 핵심 사항을 잘 참고해 주세요.")
+    yield {"speaker": cur_name, "role": cur_specialty, "text": t5, "is_final": False}
+
+    # ── T6: 새 리더 — 감사 + 접근법 ──
+    p6 = (f"You are {new_name} ({new_specialty}). {cur_name} shared advice. "
+          f"Thank them and explain your specific approach plan. {_style_en}"
+          if _en else
+          f"당신은 {new_name}({new_specialty}). {cur_name}님이 조언을 해주었습니다. "
+          f"감사를 표하고 구체적 접근 계획을 설명하세요. {_style_ko}")
+    t6 = await _call(new_persona, p6) or (
+        f"Thank you for the context. I'll handle this carefully." if _en
+        else f"조언 감사합니다. 꼼꼼히 검토하겠습니다.")
+    yield {"speaker": new_name, "role": new_specialty, "text": t6, "is_final": False}
+
+    # ── T7: 현재 리더 — 동의/양보 ──
+    p7 = (f"You are {cur_name} ({cur_specialty}). {new_name} has a solid plan. "
+          f"Express full confidence and officially agree to the handoff. {_short_en}"
+          if _en else
+          f"당신은 {cur_name}({cur_specialty}). {new_name}님이 충실한 계획을 세웠습니다. "
+          f"전적으로 신뢰하며 인계에 동의하세요. {_short_ko}")
+    t7 = await _call(cur_persona, p7) or (
+        f"I fully trust {new_name} with this." if _en else f"{new_name}님을 전적으로 신뢰합니다.")
+    yield {"speaker": cur_name, "role": cur_specialty, "text": t7, "is_final": False}
+
+    # ── T8: CSO — 공식 지명 ──
+    p8 = (f"{cur_name} agreed to hand off. Both leaders discussed thoroughly.\n\nYou are CSO Seoyeon. "
+          f"Officially designate {new_name} as the new assigned leader. Reassure the user. {_style_en}"
+          if _en else
+          f"{cur_name}님이 인계에 동의했습니다. 두 리더가 충분히 논의했습니다.\n\n당신은 CSO 서연. "
+          f"{new_name}님을 새 담당 리더로 공식 지명하세요. 사용자에게 안심 메시지도. {_style_ko}")
+    t8 = await _call(cso_p, p8) or (
+        f"{new_name} will be your new assigned leader." if _en else f"{new_name}님이 새로 담당하시겠습니다.")
+    yield {"speaker": _cso, "role": "CSO", "text": t8, "is_final": False}
+
+    # ── T9: 새 리더 — 인사 (is_final) ──
+    p9 = (f"You've been designated as the new leader.\n{_q}\nYou are {new_name} ({new_specialty}). "
+          f"Greet the user warmly and briefly explain how you'll help. {_style_en}"
+          if _en else
+          f"당신이 새 담당 리더로 지명되었습니다.\n{_q}\n당신은 {new_name}({new_specialty}). "
+          f"사용자에게 따뜻하게 인사하고 어떻게 도와드릴지 간략히 말씀하세요. {_short_ko}")
+    t9 = await _call(new_persona, p9) or (
+        f"Hello, I'll take care of this for you right away." if _en
+        else f"안녕하세요, 바로 도와드리겠습니다.")
+    yield {"speaker": new_name, "role": new_specialty, "text": t9, "is_final": True}
+    logger.info(f"[Handoff:Stream] {cur_name} → {new_name} 9턴 스트리밍 완료")
