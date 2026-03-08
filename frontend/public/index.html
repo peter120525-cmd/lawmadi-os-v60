@@ -2707,6 +2707,23 @@
             transition: all 0.2s;
         }
 
+        .more-menu-dropdown {
+            position: absolute; top: calc(100% + 6px); right: 0; z-index: 1000;
+            background: var(--bg-card, #fff); border: 1px solid var(--border); border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12); min-width: 160px; padding: 6px 0;
+            animation: fadeIn 0.15s ease;
+        }
+        body.dark-mode .more-menu-dropdown { background: #1e293b; border-color: #334155; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+        .more-menu-item {
+            display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 16px;
+            background: none; border: none; color: var(--text-primary); font-size: 0.9rem;
+            cursor: pointer; transition: background 0.15s; text-align: left;
+        }
+        .more-menu-item:hover { background: var(--bg-hover, #f1f5f9); }
+        body.dark-mode .more-menu-item { color: #e2e8f0; }
+        body.dark-mode .more-menu-item:hover { background: #334155; }
+        .more-menu-item .material-symbols-outlined { font-size: 1.1rem; color: var(--text-muted); }
+
         .dark-toggle:hover {
             background: var(--primary-light);
             color: var(--primary);
@@ -5683,12 +5700,21 @@
                     <span class="material-symbols-outlined" style="font-size: 1.1rem; color: #D97706;">verified</span>
                     Verify
                 </div>
-                <button id="favToggle" class="dark-toggle" title="즐겨찾기" aria-label="즐겨찾기 열기/닫기">
-                    <span class="material-symbols-outlined" style="font-size: 1.2rem;" aria-hidden="true">bookmark</span>
-                </button>
-                <button id="darkToggle" class="dark-toggle" title="다크모드 전환" aria-label="다크모드 전환" aria-pressed="false">
-                    <span class="material-symbols-outlined" style="font-size: 1.2rem;" aria-hidden="true">dark_mode</span>
-                </button>
+                <div class="more-menu-wrap" style="position:relative;">
+                    <button id="moreMenuBtn" class="dark-toggle" title="더보기" aria-label="더보기 메뉴" aria-expanded="false">
+                        <span class="material-symbols-outlined" style="font-size: 1.2rem;" aria-hidden="true">more_vert</span>
+                    </button>
+                    <div id="moreMenuDropdown" class="more-menu-dropdown" style="display:none;">
+                        <button id="favToggle" class="more-menu-item" data-action="favorites">
+                            <span class="material-symbols-outlined">bookmark</span>
+                            <span>즐겨찾기</span>
+                        </button>
+                        <button id="darkToggle" class="more-menu-item" data-action="darkmode" aria-pressed="false">
+                            <span class="material-symbols-outlined">dark_mode</span>
+                            <span>다크모드</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </header>
 
