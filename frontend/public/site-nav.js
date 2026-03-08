@@ -12,7 +12,7 @@
     if (isMain) return;
 
     var isEn = path.indexOf('-en') !== -1 || path.indexOf('/en') !== -1;
-    var homeUrl = isEn ? '/index-en.html' : '/index.html';
+    var homeUrl = isEn ? '/en' : '/';
     var langUrl = '';
     var langLabel = '';
 

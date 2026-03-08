@@ -3207,6 +3207,67 @@
         }
         @keyframes expertFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* Expert Verification Waiting Indicator */
+        .expert-waiting-indicator {
+            margin-top: 12px;
+            padding: 20px;
+            border: 1px solid rgba(124, 58, 237, 0.3);
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(124,58,237,0.05) 0%, rgba(109,40,217,0.08) 100%);
+            animation: expertFadeIn 0.3s ease;
+        }
+        [data-theme="dark"] .expert-waiting-indicator {
+            background: linear-gradient(135deg, rgba(124,58,237,0.1) 0%, rgba(109,40,217,0.13) 100%);
+        }
+        .expert-waiting-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #7c3aed;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .expert-waiting-title .material-symbols-outlined {
+            font-size: 1.1rem;
+            animation: expertSpin 1.2s linear infinite;
+        }
+        @keyframes expertSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .expert-waiting-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .expert-wait-step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            transition: all 0.3s;
+        }
+        .expert-wait-step.active {
+            color: #7c3aed;
+            font-weight: 600;
+        }
+        .expert-wait-step.done {
+            color: var(--success);
+        }
+        .expert-wait-step .ew-icon {
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .expert-wait-elapsed {
+            margin-top: 8px;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
         /* ═══ 스트리밍 실시간 텍스트 ═══ */
         .stream-content {
             font-family: 'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -5369,31 +5430,31 @@
                 <span class="material-symbols-outlined" aria-hidden="true">chat_bubble</span>
                 <span>Legal Analysis</span>
             </div>
-            <a class="menu-item" href="leaders-en.html" role="menuitem" aria-label="View 60 Expert Leaders">
+            <a class="menu-item" href="/leaders-en" role="menuitem" aria-label="View 60 Expert Leaders">
                 <span class="material-symbols-outlined" aria-hidden="true">account_tree</span>
                 <span>60 Leaders</span>
             </a>
-            <a class="menu-item" href="clevel-en.html" role="menuitem" aria-label="C-Level Executives">
+            <a class="menu-item" href="/clevel-en" role="menuitem" aria-label="C-Level Executives">
                 <span class="material-symbols-outlined" aria-hidden="true">groups</span>
                 <span>C-Level Executives</span>
             </a>
-            <a class="menu-item" href="about-en.html" role="menuitem" aria-label="About Lawmadi OS">
+            <a class="menu-item" href="/about-en" role="menuitem" aria-label="About Lawmadi OS">
                 <span class="material-symbols-outlined" aria-hidden="true">info</span>
                 <span>About</span>
             </a>
-            <a class="menu-item" href="terms-en.html" role="menuitem" aria-label="Terms of Service">
+            <a class="menu-item" href="/terms-en" role="menuitem" aria-label="Terms of Service">
                 <span class="material-symbols-outlined" aria-hidden="true">gavel</span>
                 <span>Terms</span>
             </a>
-            <a class="menu-item" href="privacy-en.html" role="menuitem" aria-label="Privacy Policy">
+            <a class="menu-item" href="/privacy-en" role="menuitem" aria-label="Privacy Policy">
                 <span class="material-symbols-outlined" aria-hidden="true">shield</span>
                 <span>Privacy</span>
             </a>
-            <a class="menu-item" href="pricing-en.html" role="menuitem" aria-label="Pricing">
+            <a class="menu-item" href="/pricing-en" role="menuitem" aria-label="Pricing">
                 <span class="material-symbols-outlined" aria-hidden="true">payments</span>
                 <span>Pricing</span>
             </a>
-            <a class="menu-item" href="refund-en.html" role="menuitem" aria-label="Refund Policy">
+            <a class="menu-item" href="/refund-en" role="menuitem" aria-label="Refund Policy">
                 <span class="material-symbols-outlined" aria-hidden="true">receipt_long</span>
                 <span>Refund</span>
             </a>
@@ -5698,7 +5759,7 @@
             <div class="input-container">
                 <!-- 파일 업로드 버튼 (v60) -->
                 <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.webp,.pdf" style="display: none;" aria-label="Select document or image file" />
-                <button id="uploadBtn" class="send-action" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);" title="Upload document/image" aria-label="Upload document/image">
+                <button id="uploadBtn" class="send-action" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);" title="File Upload (Coming Soon · 1MB limit)" aria-label="File Upload (Coming Soon)">
                     <span class="material-symbols-outlined" style="font-size: 1.4rem;" aria-hidden="true">upload_file</span>
                 </button>
 
@@ -5757,7 +5818,7 @@
                 <input type="hidden" id="lawyerLeader" value="">
                 <label class="lawyer-consent-label" style="display:flex;align-items:flex-start;gap:8px;margin:12px 0;font-size:0.82rem;color:#94a3b8;">
                   <input type="checkbox" id="lawyerPrivacyConsent" required style="margin-top:3px;">
-                  <span>I consent to the collection and use of personal information. (Name, phone number, consultation details — for attorney referral purposes, deleted within 30 days after referral) <a href="/privacy.html" target="_blank" style="color:#818cf8;">Privacy Policy</a></span>
+                  <span>I consent to the collection and use of personal information. (Name, phone number, consultation details — for attorney referral purposes, deleted within 30 days after referral) <a href="/privacy-en" target="_blank" style="color:#818cf8;">Privacy Policy</a></span>
                 </label>
                 <button type="submit" class="modal-submit" id="lawyerSubmitBtn">Submit Request</button>
             </form>
@@ -5779,23 +5840,23 @@
 <div id="moreSheetOverlay" class="more-sheet-overlay"></div>
 <div id="moreSheet" class="more-sheet" role="dialog" aria-label="More menu">
     <div class="more-sheet-handle"></div>
-    <a href="about-en.html" class="more-sheet-item">
+    <a href="/about-en" class="more-sheet-item">
         <span class="material-symbols-outlined" aria-hidden="true">info</span>
         <span>About</span>
     </a>
-    <a href="terms-en.html" class="more-sheet-item">
+    <a href="/terms-en" class="more-sheet-item">
         <span class="material-symbols-outlined" aria-hidden="true">gavel</span>
         <span>Terms of Service</span>
     </a>
-    <a href="privacy-en.html" class="more-sheet-item">
+    <a href="/privacy-en" class="more-sheet-item">
         <span class="material-symbols-outlined" aria-hidden="true">shield</span>
         <span>Privacy Policy</span>
     </a>
-    <a href="pricing-en.html" class="more-sheet-item">
+    <a href="/pricing-en" class="more-sheet-item">
         <span class="material-symbols-outlined" aria-hidden="true">payments</span>
         <span>Pricing</span>
     </a>
-    <a href="refund-en.html" class="more-sheet-item">
+    <a href="/refund-en" class="more-sheet-item">
         <span class="material-symbols-outlined" aria-hidden="true">receipt_long</span>
         <span>Refund Policy</span>
     </a>
