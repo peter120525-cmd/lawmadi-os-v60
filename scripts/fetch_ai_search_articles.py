@@ -19,6 +19,7 @@ import base64
 import argparse
 import subprocess
 import urllib.request
+import urllib.parse
 import urllib.error
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -325,5 +326,4 @@ def main():
 
 
 if __name__ == "__main__":
-    import urllib.parse
     main()
