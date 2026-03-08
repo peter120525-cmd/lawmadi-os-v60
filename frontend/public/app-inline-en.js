@@ -234,8 +234,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
             this.initVisitorTracking();
 
-            // v60: 파일 업로드 이벤트 핸들러
-            this.uploadBtn.onclick = () => this.fileInput.click();
+            // v60: File upload (coming soon)
+            this.uploadBtn.onclick = () => this.showUploadComingSoon();
             this.fileInput.onchange = (e) => this.handleFileSelect(e);
             this.removeFileBtn.onclick = () => this.clearUploadedFile();
 
@@ -557,6 +557,21 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             this.uploadedFilePreview.style.display = 'none';
         },
 
+        showUploadComingSoon() {
+            const existing = document.getElementById('upload-coming-soon');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.id = 'upload-coming-soon';
+            toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#1e293b,#334155);color:#f1f5f9;padding:16px 28px;border-radius:14px;border:1px solid rgba(139,92,246,0.4);box-shadow:0 8px 32px rgba(0,0,0,0.3);z-index:9999;display:flex;align-items:center;gap:12px;font-size:0.95rem;font-weight:600;animation:expertFadeIn 0.3s ease;max-width:90vw;';
+            toast.innerHTML = '<span class="material-symbols-outlined" style="color:#8b5cf6;font-size:1.5rem;">upload_file</span><div><div>File Upload — <span style="color:#f59e0b;">Coming Soon</span></div><div style="font-size:0.8rem;font-weight:400;color:#94a3b8;margin-top:4px;">Max 1MB · JPG, PNG, WEBP, PDF supported</div></div>';
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.transition = 'opacity 0.4s';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 400);
+            }, 3000);
+        },
+
         formatFileSize(bytes) {
             if (bytes === 0) return '0 Bytes';
             const k = 1024;
@@ -777,7 +792,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             if (response.status === 429) {
                 this.hideTypingIndicator();
                 var limitMsg = '<p>Daily free limit reached.</p>'
-                    + '<p style="margin-top:8px;"><a href="/pricing-en.html" style="color:#2563eb;font-weight:700;text-decoration:underline;">Buy credits</a> to continue using Lawmadi OS.</p>';
+                    + '<p style="margin-top:8px;"><a href="/pricing-en" style="color:#2563eb;font-weight:700;text-decoration:underline;">Buy credits</a> to continue using Lawmadi OS.</p>';
                 if (window.__lawmadiAuth && !window.__lawmadiAuth.authenticated) {
                     limitMsg += '<p style="margin-top:4px;font-size:0.9em;color:#64748b;">Already purchased? Click <strong>Login</strong> in the header.</p>';
                 }
@@ -839,7 +854,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             if (response.status === 429) {
                 this.hideTypingIndicator();
                 var limitMsg = '<p>Daily free limit reached.</p>'
-                    + '<p style="margin-top:8px;"><a href="/pricing-en.html" style="color:#2563eb;font-weight:700;text-decoration:underline;">Buy credits</a> to continue using Lawmadi OS.</p>';
+                    + '<p style="margin-top:8px;"><a href="/pricing-en" style="color:#2563eb;font-weight:700;text-decoration:underline;">Buy credits</a> to continue using Lawmadi OS.</p>';
                 if (window.__lawmadiAuth && !window.__lawmadiAuth.authenticated) {
                     limitMsg += '<p style="margin-top:4px;font-size:0.9em;color:#64748b;">Already purchased? Click <strong>Login</strong> in the header.</p>';
                 }
@@ -1845,12 +1860,57 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         const _bal = _authU.credit_balance || 0;
                         if (_bal < 2) {
                             const _goPrice = confirm('Insufficient credits.\n\nWould you like to purchase credits?');
-                            if (_goPrice) location.href = '/pricing-en.html';
+                            if (_goPrice) location.href = '/pricing-en';
                             return;
                         }
                         if (!confirm('Get expert verification?\n\n2 Credits will be deducted.\nCurrent balance: ' + _bal + ' Credits')) return;
                         expertCta.disabled = true;
                         expertCta.innerHTML = '<span class="material-symbols-outlined">hourglass_top</span> Verifying...';
+
+                        // ── Waiting indicator ──
+                        const waitingDiv = document.createElement('div');
+                        waitingDiv.className = 'expert-waiting-indicator';
+                        waitingDiv.innerHTML = `
+                            <div class="expert-waiting-title">
+                                <span class="material-symbols-outlined">sync</span>
+                                Expert Verification in Progress
+                            </div>
+                            <div class="expert-waiting-steps">
+                                <div class="expert-wait-step active" data-ew="1"><span class="ew-icon">🔍</span> Analyzing original response...</div>
+                                <div class="expert-wait-step" data-ew="2"><span class="ew-icon">📖</span> Verifying statutes via DRF...</div>
+                                <div class="expert-wait-step" data-ew="3"><span class="ew-icon">⚖️</span> Cross-checking decrees & rules...</div>
+                                <div class="expert-wait-step" data-ew="4"><span class="ew-icon">📋</span> Generating verification report...</div>
+                            </div>
+                            <div class="expert-wait-elapsed">0s elapsed</div>
+                        `;
+                        msgDiv.insertBefore(waitingDiv, ctaBar);
+                        this._smartScroll(true);
+
+                        const ewSteps = [
+                            { ew: '1', delay: 0 },
+                            { ew: '2', delay: 2000 },
+                            { ew: '3', delay: 5000 },
+                            { ew: '4', delay: 9000 }
+                        ];
+                        const ewTimers = [];
+                        ewSteps.forEach((s, idx) => {
+                            const t = setTimeout(() => {
+                                const el = waitingDiv.querySelector(`[data-ew="${s.ew}"]`);
+                                if (el) { el.classList.add('active'); }
+                                if (idx > 0) {
+                                    const prev = waitingDiv.querySelector(`[data-ew="${ewSteps[idx-1].ew}"]`);
+                                    if (prev) { prev.classList.remove('active'); prev.classList.add('done'); }
+                                }
+                            }, s.delay);
+                            ewTimers.push(t);
+                        });
+                        let ewSec = 0;
+                        const ewElapsed = setInterval(() => {
+                            ewSec++;
+                            const el = waitingDiv.querySelector('.expert-wait-elapsed');
+                            if (el) el.textContent = `${ewSec}s elapsed`;
+                        }, 1000);
+
                         try {
                             const expertRes = await fetch(`${this.BASE_URL}/ask-expert`, {
                                 method: 'POST',
@@ -1860,6 +1920,9 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                             });
                             if (!expertRes.ok) throw new Error('Expert verification failed');
                             const expertData = await expertRes.json();
+                            ewTimers.forEach(t => clearTimeout(t));
+                            clearInterval(ewElapsed);
+                            waitingDiv.remove();
                             if (expertData.status === 'SUCCESS' && expertData.response) {
                                 const panel = document.createElement('div');
                                 panel.className = 'expert-response-panel';
@@ -1881,6 +1944,9 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                                 });
                             } else { throw new Error('Verification failed'); }
                         } catch (e) {
+                            ewTimers.forEach(t => clearTimeout(t));
+                            clearInterval(ewElapsed);
+                            if (waitingDiv.parentNode) waitingDiv.remove();
                             expertCta.disabled = false;
                             expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> Get Expert Verification <span style="font-size:0.75em;background:rgba(139,92,246,0.15);padding:2px 8px;border-radius:6px;margin-left:4px;">2 Credit</span>';
                             console.error('Expert verification failed:', e);

@@ -772,7 +772,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             if (response.status === 429) {
                 this.hideTypingIndicator();
                 var limitMsg = '<p>일일 무료 이용 한도에 도달했습니다.</p>'
-                    + '<p style="margin-top:8px;"><a href="/pricing.html" style="color:#2563eb;font-weight:700;text-decoration:underline;">크레딧 구매</a>하시면 계속 이용 가능합니다.</p>';
+                    + '<p style="margin-top:8px;"><a href="/pricing" style="color:#2563eb;font-weight:700;text-decoration:underline;">크레딧 구매</a>하시면 계속 이용 가능합니다.</p>';
                 if (window.__lawmadiAuth && !window.__lawmadiAuth.authenticated) {
                     limitMsg += '<p style="margin-top:4px;font-size:0.9em;color:#64748b;">이미 크레딧을 구매하셨다면 헤더의 <strong>Login</strong> 버튼으로 로그인하세요.</p>';
                 }
@@ -833,7 +833,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             if (response.status === 429) {
                 this.hideTypingIndicator();
                 var limitMsg = '<p>일일 무료 이용 한도에 도달했습니다.</p>'
-                    + '<p style="margin-top:8px;"><a href="/pricing.html" style="color:#2563eb;font-weight:700;text-decoration:underline;">크레딧 구매</a>하시면 계속 이용 가능합니다.</p>';
+                    + '<p style="margin-top:8px;"><a href="/pricing" style="color:#2563eb;font-weight:700;text-decoration:underline;">크레딧 구매</a>하시면 계속 이용 가능합니다.</p>';
                 if (window.__lawmadiAuth && !window.__lawmadiAuth.authenticated) {
                     limitMsg += '<p style="margin-top:4px;font-size:0.9em;color:#64748b;">이미 크레딧을 구매하셨다면 헤더의 <strong>Login</strong> 버튼으로 로그인하세요.</p>';
                 }
@@ -1629,7 +1629,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         const _bal = _authU.credit_balance || 0;
                         if (_bal < 2) {
                             const _goPrice = confirm('크레딧이 부족합니다.\n\n크레딧을 충전하시겠습니까?');
-                            if (_goPrice) location.href = '/pricing.html';
+                            if (_goPrice) location.href = '/pricing';
                             return;
                         }
                         if (!confirm('전문가용 답변을 받으시겠습니까?\n\n2 Credit이 차감됩니다.\n현재 잔액: ' + _bal + ' Credit')) return;
