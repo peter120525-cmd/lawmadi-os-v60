@@ -99,18 +99,18 @@ def _load_progress(step: str) -> dict:
 
 # ─── 1단계: 대법원 판례 목록 수집 ───────────────────────────────
 
-def step_list():
-    """lawSearch.do로 대법원 판례 목록(일련번호) 2만건 수집."""
+def step_list(limit: int = TARGET_COUNT):
+    """lawSearch.do로 대법원 판례 목록(일련번호) 수집."""
     os.makedirs(LIST_DIR, exist_ok=True)
     total = 0
     page = 1
 
-    print(f"\n[1/4] 대법원 판례 목록 수집 (목표: {TARGET_COUNT}건)")
+    print(f"\n[1/4] 대법원 판례 목록 수집 (목표: {limit}건)")
     print("  정렬: 최신순 (ddes)")
 
     all_serials = []
 
-    while total < TARGET_COUNT:
+    while total < limit:
         url = (
             f"{DRF_BASE}/lawSearch.do?"
             f"OC={OC}&target=prec&type=JSON"
@@ -148,7 +148,7 @@ def step_list():
         time.sleep(LIST_DELAY)
 
     # 일련번호 목록 저장
-    all_serials = all_serials[:TARGET_COUNT]
+    all_serials = all_serials[:limit]
     serials_path = os.path.join(OUTPUT_DIR, "serials.json")
     with open(serials_path, "w") as f:
         json.dump(all_serials, f)
@@ -470,11 +470,11 @@ def main():
 
     print("=" * 60)
     print("대법원 판례 본문 수집 → Vertex AI Search")
-    print(f"목표: {TARGET_COUNT}건 (본문 포함 고품질)")
+    print(f"목표: {args.limit}건 (본문 포함 고품질)")
     print("=" * 60)
 
     if args.step in ("all", "list"):
-        step_list()
+        step_list(limit=args.limit)
 
     if args.step in ("all", "detail"):
         step_detail(resume=args.resume or args.step == "all")
