@@ -32,6 +32,23 @@ document.querySelectorAll('.executive-avatar').forEach(function(avatar) {
     });
 });
 
+// Hover-to-play video: mouse enter starts muted playback, mouse leave pauses
+document.querySelectorAll('.video-wrapper').forEach(function(wrapper) {
+    var video = wrapper.querySelector('video');
+    if (!video) return;
+
+    wrapper.addEventListener('mouseenter', function() {
+        video.muted = true;
+        video.play().catch(function() {});
+    });
+
+    wrapper.addEventListener('mouseleave', function() {
+        if (!video.paused) {
+            video.pause();
+        }
+    });
+});
+
 // Page load animation
 window.addEventListener('load', function() {
     document.body.style.opacity = '0';
