@@ -271,7 +271,7 @@ def _remove_separator_lines(text: str) -> str:
 def _compute_quality_meta(text: str, matched_sources: list) -> dict:
     """응답 품질 메타데이터 계산"""
     has_law_name = bool(re.search(r'[가-힣]+법', text)) or bool(re.search(r'\b[A-Z][a-z]+ Act\b', text))
-    has_article = bool(re.search(r'제\d+조', text)) or bool(re.search(r'Article \d+', text))
+    has_article = bool(re.search(r'제\d+조', text)) or bool(re.search(r'(?:Article|Art\.?)\s*\d+', text, re.IGNORECASE))
     has_action_guide = any(kw in text for kw in [
         "즉시", "1단계", "▶", "□", "체크리스트", "준비물",
         "immediately", "step 1", "Step 1", "checklist", "right now", "action",

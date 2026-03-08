@@ -743,6 +743,9 @@ GENERAL_MODE_PROMPT = """당신은 법률 문제로 불안해하는 일반인에
 ## 법률 근거
 
 인용된 법률명 + 조문번호를 1~2줄로 정리.
+관련 판례가 있으면 반드시 1건 이상 포함.
+형식: **대법원 20XX. X. X. 선고 20XX다XXXXX 판결** — 요지 1줄
+판례가 확인되지 않으면 "(※ 법원 종합법률정보에서 확인 필요)" 표기.
 
 담당: {leader_name} 리더 ({leader_specialty} 전문)
 
@@ -752,6 +755,7 @@ GENERAL_MODE_PROMPT = """당신은 법률 문제로 불안해하는 일반인에
 - 3줄 이상의 긴 문단 작성
 - 법 조문 원문 그대로 인용
 - "AI", "상담" 표현 사용 금지
+- 존재하지 않는 판례번호 생성 (환각 금지)
 
 [글자수]
 2,000~3,000자. 읽는 데 3분 이내.
@@ -1054,10 +1058,11 @@ GENERAL_RESPONSE_FORMAT_EN = """
 
 [Response Principles]
 1. State the conclusion first, in 3 lines or fewer.
-2. When using Korean legal terms, immediately provide the original Korean in parentheses.
-3. Suggest concrete actions the user can take today.
-4. Show empathy without exaggeration. Calm, warm tone.
-5. Only bold **key terms**.
+2. Every legal claim MUST cite the statute name + article number. E.g., "Under the Civil Act (민법) Article 750, ..."
+3. When using Korean legal terms, immediately provide the original Korean in parentheses.
+4. Suggest concrete actions the user can take today.
+5. Show empathy without exaggeration. Calm, warm tone.
+6. Only bold **key terms**.
 
 [Readability Rules — MUST FOLLOW]
 - Keep each sentence concise and clear.
@@ -1094,7 +1099,13 @@ Easily missed deadlines, penalties, practical tips.
 At least 2 free legal support organizations with contact info.
 
 ## Legal Basis
-Cited statute names (with Korean original) + article numbers
+- **MUST** cite specific statutes with article numbers in the format: "Law Name (한글 법명) Article N"
+- Example: "Civil Act (민법) Article 750", "Housing Lease Protection Act (주택임대차보호법) Article 3-2"
+- Every legal claim MUST have at least one statute + article number citation
+- Include at least 3 relevant statute citations
+- Include at least 1 relevant court case if applicable.
+- Format: **Supreme Court Decision 20XX. X. X. 20XXDaXXXXX** — key holding in 1 line
+- If case number cannot be verified, write: "(※ Verify at glaw.scourt.go.kr)"
 
 [NEVER do the following]
 - Paragraphs longer than 3 lines
@@ -1102,6 +1113,7 @@ Cited statute names (with Korean original) + article numbers
 - Using "AI" or "consultation" phrasing
 - Giving vague guidance like "you can file a lawsuit" without costs/timelines
 - Omitting costs or deadlines from action items
+- Fabricating non-existent case numbers (hallucination)
 
 [Length] 2,000-3,000 characters
 [Tone] Calm, warm, yet precise on legal citations
@@ -1137,7 +1149,8 @@ EXPERT_RESPONSE_FORMAT_EN = """
 3-5 core issues, each described in 2-3 sentences.
 
 ## Relevant Statutes
-Statutes + articles in order of importance. Cite content directly with Korean originals.
+Statutes + articles in order of importance. MUST use format: "Law Name (한글 법명) Article N".
+E.g., "**Civil Act (민법) Article 750** — A person who causes damage to another by an unlawful act..."
 
 ## Case Law Review
 At least 3 relevant cases. Format: **Court Name, Date, Case No.** — Summary → Application to this case.
@@ -1160,7 +1173,11 @@ Format: **Counterargument 1:** (content) → **Response:** (legal rebuttal with 
 Final opinion in 3-5 sentences with prioritized action items and risk assessment.
 
 ## Legal Basis
-All cited statutes (Korean + English), case numbers, and interpretive rulings.
+All cited statutes (Korean + English name, article numbers).
+Case law: at least 3 relevant cases with court name, date, case number, and key holding.
+Format: **Supreme Court Decision 20XX. X. X. 20XXDaXXXXX** — holding summary + application to this case
+If case number cannot be verified via SSOT: "(※ Verify at glaw.scourt.go.kr)"
+Do NOT fabricate non-existent case numbers.
 
 [Paragraph Length] In expert mode, paragraphs longer than 3 lines ARE allowed. Write thorough, in-depth analysis befitting a legal opinion. However, keep individual paragraphs under 10 lines for readability.
 [Length] 6,000-8,000 characters
@@ -1355,6 +1372,9 @@ LAWMADILM_SYSTEM_PROMPT = """당신은 대한민국 법률 전문 'LawmadiLM'입
 
 ## 법률 근거
 인용된 법률명 + 조문번호 정리.
+관련 판례가 있으면 반드시 1건 이상 포함.
+형식: **대법원 20XX. X. X. 선고 20XX다XXXXX 판결** — 요지 1줄
+판례가 확인되지 않으면 "(※ 법원 종합법률정보에서 확인 필요)" 표기.
 
 [절대 하지 말 것]
 - 법률 용어만 나열하고 설명 없이 넘어가기
@@ -1362,6 +1382,7 @@ LAWMADILM_SYSTEM_PROMPT = """당신은 대한민국 법률 전문 'LawmadiLM'입
 - 법 조문 원문 그대로 인용
 - "AI", "상담" 표현 사용 금지
 - DRF 미검증 조문([X] 표시)은 절대 사용 금지
+- 존재하지 않는 판례번호 생성 (환각 금지)
 
 [글자수] 2,000~3,000자
 [톤] 차분하고 따뜻하되 법률 근거는 정확하게

@@ -760,6 +760,13 @@ async def ask(request: Request):
         final_text_clean = _remove_markdown_tables_fn(final_text_clean)
         final_text_clean = _remove_separator_lines_fn(final_text_clean)
 
+        # 영문 응답 시 응답 텍스트의 한글 법률명으로 SSOT 재매칭
+        if lang == "en" and not matched_sources and _match_ssot_sources_fn:
+            _en_ssot = _match_ssot_sources_fn(final_text_clean, top_k=5)
+            if _en_ssot:
+                matched_sources = _en_ssot
+                logger.info(f"📦 [Cache-EN] 응답 텍스트로 SSOT 재매칭: {len(_en_ssot)}건")
+
         _disclaimer_ko = "본 서비스는 AI 기반 법률 정보 제공 시스템이며, 변호사의 법률 자문을 대체하지 않습니다."
         _disclaimer_en = "This is an AI legal information service and does not substitute for professional legal advice from an attorney."
         _disclaimer = _disclaimer_en if lang == "en" else _disclaimer_ko
