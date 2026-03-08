@@ -874,14 +874,15 @@ async def _stage1_rag_search(query: str, top_k: int = 10) -> RAGContext:
     if USE_VERTEX_SEARCH and _vertex_search_fn:
         try:
             # 병렬 호출: 시맨틱 검색 + 컨텍스트 생성
+            # cache_context는 context_text와 동일 검색을 중복 호출하므로 제거
+            # → 프롬프트 압축 단계에서 matched_laws 기반으로 컨텍스트 재구성
             search_task = _vertex_search_fn(query, top_k=8)
             async def _noop_coro():
                 return ""
             context_task = _vertex_context_fn(query, top_k=30) if _vertex_context_fn else _noop_coro()
-            cache_ctx_task = _vertex_cache_context_fn(query, top_k=30) if _vertex_cache_context_fn else _noop_coro()
 
-            matched, context_text, cache_context = await asyncio.gather(
-                search_task, context_task, cache_ctx_task,
+            matched, context_text = await asyncio.gather(
+                search_task, context_task,
                 return_exceptions=True,
             )
 
@@ -891,12 +892,10 @@ async def _stage1_rag_search(query: str, top_k: int = 10) -> RAGContext:
                 matched = []
             if isinstance(context_text, Exception):
                 context_text = ""
-            if isinstance(cache_context, Exception):
-                cache_context = ""
 
             ctx.matched_laws = matched or []
             ctx.context_text = context_text or ""
-            ctx.cache_context = cache_context or ""
+            ctx.cache_context = ""  # 중복 호출 제거 — context_text로 통합
 
             total = len(ctx.matched_laws)
             logger.info(f"[Stage 1] Vertex AI Search 완료: {total}건 시맨틱 매칭")
@@ -2100,15 +2099,54 @@ async def _gemini_fallback_compose(
         )
 
     # RAG/캐시 컨텍스트 주입 (SSOT 캐시 최우선 참조)
-    ctx_section = ""
+    # ── 프롬프트 압축: Ranking 점수 기반 컨텍스트 필터링 ──
+    # 고득점 결과만 포함하여 입력 토큰 절감 (크레딧 미적용 Gemini 비용 최소화)
+    _ctx_budget = 30000 if mode == "expert" else 20000  # expert: 30KB, general: 20KB
+    _compressed_context = ""
     if rag_context.context_text:
+        _raw_ctx = rag_context.context_text
+        if len(_raw_ctx) > _ctx_budget:
+            # matched_laws가 있으면 점수순 상위 결과만으로 컨텍스트 재구성
+            if rag_context.matched_laws:
+                _sorted_laws = sorted(rag_context.matched_laws, key=lambda x: x.get("score", 0), reverse=True)
+                _top_n = 8 if mode == "expert" else 5  # expert: 상위 8건, general: 5건
+                _top_laws = _sorted_laws[:_top_n]
+                _compressed_lines = ["[SSOT 매칭 결과 — Vertex AI Search (상위 관련도)]"]
+                for s in _top_laws:
+                    _compressed_lines.append(f"\n■ {s.get('law', '')} ({s.get('label', '')})")
+                    for ea in s.get("extractive_answers", [])[:2]:
+                        _compressed_lines.append(f"  ★ 핵심 원문: {ea}")
+                    for es in s.get("extractive_segments", [])[:2]:
+                        seg = es.get("content", "") if isinstance(es, dict) else es
+                        if seg:
+                            _compressed_lines.append(f"  📄 관련 구절: {seg[:500]}")
+                    for art in s.get("key_article_texts", [])[:10]:
+                        _compressed_lines.append(f"  조문: {art}")
+                    for prec in s.get("key_precedents", [])[:5]:
+                        _compressed_lines.append(f"  판례: {prec}")
+                _compressed_context = "\n".join(_compressed_lines)
+                # 여전히 초과하면 하드컷
+                if len(_compressed_context) > _ctx_budget:
+                    _compressed_context = _compressed_context[:_ctx_budget]
+                logger.info(f"[PromptCompress] {len(_raw_ctx):,}자 → {len(_compressed_context):,}자 "
+                            f"({len(_compressed_context)/max(len(_raw_ctx),1)*100:.0f}%), 상위 {len(_top_laws)}건")
+            else:
+                _compressed_context = _raw_ctx[:_ctx_budget]
+                logger.info(f"[PromptCompress] 하드컷 {len(_raw_ctx):,}자 → {_ctx_budget:,}자")
+        else:
+            _compressed_context = _raw_ctx
+    elif rag_context.cache_context:
+        _compressed_context = rag_context.cache_context[:_ctx_budget]
+
+    ctx_section = ""
+    if _compressed_context:
         if lang == "en":
             ctx_section = (
                 "\n\n[SSOT Cache — MUST reference as primary source]\n"
                 "The SSOT cache data below is pre-verified legal information from the DRF API.\n"
                 "You MUST cite statute names, article numbers, and case numbers exactly as they appear.\n"
                 "Do NOT fabricate any statutes or cases not found in this cache.\n"
-                f"{rag_context.context_text[:100000]}"
+                f"{_compressed_context}"
             )
         else:
             ctx_section = (
@@ -2117,21 +2155,7 @@ async def _gemini_fallback_compose(
                 "답변 시 반드시 이 캐시의 법령명·조문번호·판례번호를 그대로 인용하세요.\n"
                 "캐시에 없는 법령이나 판례를 임의 생성하지 마세요.\n"
                 "⛔ 캐시에 존재하지 않는 법률을 포함하면 DRF 검증에서 불합격되어 답변이 차단됩니다.\n"
-                f"{rag_context.context_text[:100000]}"
-            )
-    elif rag_context.cache_context:
-        if lang == "en":
-            ctx_section = (
-                "\n\n[SSOT Cache — MUST reference as primary source]\n"
-                "Cite statute names, article numbers, and case numbers exactly as they appear below.\n"
-                f"{rag_context.cache_context[:50000]}"
-            )
-        else:
-            ctx_section = (
-                "\n\n[SSOT 캐시 — 반드시 최우선 참조]\n"
-                "아래 캐시 데이터의 법령명·조문번호·판례번호를 그대로 인용하세요.\n"
-                "⛔ 캐시에 존재하지 않는 법률을 포함하면 DRF 검증에서 불합격되어 답변이 차단됩니다.\n"
-                f"{rag_context.cache_context[:50000]}"
+                f"{_compressed_context}"
             )
 
     # 모드별 보강 지시
@@ -2242,8 +2266,8 @@ async def _gemini_fallback_compose(
             ),
         ]
 
-    # ── Selective Thinking (expert=1024, general=0) ──
-    thinking_budget = 1024 if mode == "expert" else 0
+    # ── Selective Thinking (expert=512, general=0) ──
+    thinking_budget = 512 if mode == "expert" else 0
     thinking_config = genai_types.ThinkingConfig(thinking_budget=thinking_budget)
 
     # ── GenerateContentConfig 조립 ──
