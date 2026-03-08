@@ -234,6 +234,24 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 }
             }
 
+            // 3-dot 더보기 메뉴
+            const moreMenuBtn = document.getElementById('moreMenuBtn');
+            const moreMenuDropdown = document.getElementById('moreMenuDropdown');
+            if (moreMenuBtn && moreMenuDropdown) {
+                moreMenuBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    const open = moreMenuDropdown.style.display !== 'none';
+                    moreMenuDropdown.style.display = open ? 'none' : 'block';
+                    moreMenuBtn.setAttribute('aria-expanded', !open);
+                };
+                document.addEventListener('click', (e) => {
+                    if (!moreMenuDropdown.contains(e.target) && e.target !== moreMenuBtn) {
+                        moreMenuDropdown.style.display = 'none';
+                        moreMenuBtn.setAttribute('aria-expanded', 'false');
+                    }
+                });
+            }
+
             // 대화 이력 복원 (항목 #13)
             try {
                 const saved = localStorage.getItem('lawmadi-chat-history');
