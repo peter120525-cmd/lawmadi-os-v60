@@ -1084,56 +1084,47 @@ async def ask_stream(request: Request):
                 is_name_call=_is_name_call,
             )
 
+            # ─── 협의 후보 리더 준비 (full/handoff 공통) ───
+            _candidate_leaders = []
             if _delib_mode == "full":
-                try:
-                    # 후보 리더 선정 (swarm_orchestrator 활용)
-                    _candidate_leaders = []
-                    so = _RUNTIME.get("swarm_orchestrator")
-                    if so:
-                        _domains = so.detect_domains(query)
-                        _selected = so.select_leaders(query, _domains)
-                        for sl in _selected[:3]:
-                            _candidate_leaders.append({
-                                "name": sl.get("name", "?"),
-                                "specialty": sl.get("specialty", ""),
-                                "leader_id": sl.get("_id", ""),
-                            })
-                    # 최소한 분류된 리더는 포함
-                    if not any(c["name"] == _new_leader_name for c in _candidate_leaders):
-                        _candidate_leaders.insert(0, {
-                            "name": _new_leader_name,
-                            "specialty": analysis.get("leader_specialty", "통합"),
-                            "leader_id": analysis.get("leader_id", ""),
+                so = _RUNTIME.get("swarm_orchestrator")
+                if so:
+                    _domains = so.detect_domains(query)
+                    _selected = so.select_leaders(query, _domains)
+                    for sl in _selected[:3]:
+                        _candidate_leaders.append({
+                            "name": sl.get("name", "?"),
+                            "specialty": sl.get("specialty", ""),
+                            "leader_id": sl.get("_id", ""),
                         })
-                    _candidate_leaders = _candidate_leaders[:3]
-
-                    yield _sse("deliberation_start", {
-                        "leaders": _candidate_leaders,
-                        "moderator": "서연",
+                if not any(c["name"] == _new_leader_name for c in _candidate_leaders):
+                    _candidate_leaders.insert(0, {
+                        "name": _new_leader_name,
+                        "specialty": analysis.get("leader_specialty", "통합"),
+                        "leader_id": analysis.get("leader_id", ""),
                     })
-
-                    async for turn in generate_deliberation_stream(gc, query, _candidate_leaders, lang):
-                        yield _sse("deliberation_turn", turn)
-
-                    yield _sse("deliberation_end", {
-                        "selected_leader": _new_leader_name,
-                        "selected_leader_specialty": analysis.get("leader_specialty", "통합"),
-                    })
-                except Exception as delib_err:
-                    logger.warning(f"[Deliberation] 스킵: {type(delib_err).__name__}: {delib_err}")
-
-            elif _delib_mode == "handoff":
-                try:
-                    _cur = req_current_leader if isinstance(req_current_leader, dict) else {"name": "마디", "specialty": "통합"}
-                    _new = {"name": _new_leader_name, "specialty": analysis.get("leader_specialty", "통합"), "leader_id": analysis.get("leader_id", "")}
-
-                    async for turn in generate_handoff_stream(gc, query, _cur, _new, lang):
-                        yield _sse("handoff", turn)
-                except Exception as handoff_err:
-                    logger.warning(f"[Handoff] 스킵: {type(handoff_err).__name__}: {handoff_err}")
+                _candidate_leaders = _candidate_leaders[:3]
 
             # ─── 경로 A: C-Level 직접 호출 (검증 후 스트리밍) ───
             if clevel_decision and clevel_decision.get("mode") == "direct":
+                # C-Level: 협의 먼저 직렬, 파이프라인 이후
+                if _delib_mode == "full" and _candidate_leaders:
+                    try:
+                        yield _sse("deliberation_start", {"leaders": _candidate_leaders, "moderator": "서연"})
+                        async for turn in generate_deliberation_stream(gc, query, _candidate_leaders, lang):
+                            yield _sse("deliberation_turn", turn)
+                        yield _sse("deliberation_end", {"selected_leader": _new_leader_name, "selected_leader_specialty": analysis.get("leader_specialty", "통합")})
+                    except Exception as delib_err:
+                        logger.warning(f"[Deliberation] 스킵: {type(delib_err).__name__}: {delib_err}")
+                elif _delib_mode == "handoff":
+                    try:
+                        _cur = req_current_leader if isinstance(req_current_leader, dict) else {"name": "마디", "specialty": "통합"}
+                        _new = {"name": _new_leader_name, "specialty": analysis.get("leader_specialty", "통합"), "leader_id": analysis.get("leader_id", "")}
+                        async for turn in generate_handoff_stream(gc, query, _cur, _new, lang):
+                            yield _sse("handoff", turn)
+                    except Exception as handoff_err:
+                        logger.warning(f"[Handoff] 스킵: {type(handoff_err).__name__}: {handoff_err}")
+
                 exec_id = clevel_decision.get("executive_id")
                 clevel_instruction = clevel.get_clevel_system_instruction(exec_id, _build_system_instruction(stream_mode, lang=lang))
                 leader_name = clevel.executives.get(exec_id, {}).get("name", exec_id)
@@ -1152,7 +1143,6 @@ async def ask_stream(request: Request):
                     history=gemini_history,
                 )
 
-                # 전체 응답 수집 (검증 전까지 스트리밍 보류)
                 accumulated = ""
                 async for text_part in _async_stream_chunks(
                     chat.send_message_stream(
@@ -1161,7 +1151,6 @@ async def ask_stream(request: Request):
                 ):
                     accumulated += text_part
 
-                # DRF 검증 + FAIL_CLOSED 적용
                 yield _sse("status", {"step": "verifying", "leader": leader_name})
                 drf_verification = await run_pipeline_stage3(accumulated, lang=lang)
                 accumulated = _apply_fail_closed(accumulated, drf_verification)
@@ -1179,37 +1168,107 @@ async def ask_stream(request: Request):
                     })
                     return
 
-                # 헌법 적합성 검증
                 if not validate_constitutional_compliance(accumulated):
                     yield _sse("error", {"message": "⚠️ 시스템 무결성 정책에 의해 답변이 제한되었습니다."})
                     return
 
-                # 검증 통과 후 청크 스트리밍
-                chunks = accumulated.split("\n\n")
-                for i, chunk in enumerate(chunks):
-                    text_part = chunk if i == len(chunks) - 1 else chunk + "\n\n"
-                    yield _sse("chunk", {"text": text_part})
+                # 줄 단위 점진적 스트리밍 (위→아래 자연스럽게)
+                _lines = accumulated.split("\n")
+                for _li, _line in enumerate(_lines):
+                    _ltext = _line if _li == len(_lines) - 1 else _line + "\n"
+                    yield _sse("chunk", {"text": _ltext})
+                    if _li < len(_lines) - 1:
+                        await asyncio.sleep(0.04)
 
                 final_text = accumulated
                 swarm_mode = False
 
-            # ─── 경로 B: _run_legal_pipeline 통합 (LAW_BOOST·재시도·strip 포함) ───
+            # ─── 경로 B: 협의 + 파이프라인 병렬 실행 ───
             else:
                 leader_name = analysis.get("leader_name", "마디")
                 leader_specialty = analysis.get("leader_specialty", "통합")
 
-                yield _sse("status", {"step": "searching_laws", "leader": leader_name})
-                yield _sse("status", {"step": "analyzing", "leader": leader_name})
+                # 협의가 필요한 경우: Queue 기반 병렬 실행
+                _need_delib = (_delib_mode in ("full", "handoff"))
+                if _need_delib:
+                    _event_queue = asyncio.Queue()
 
-                # _run_legal_pipeline 호출 (Stage 1.5 LAW_BOOST, 재시도, strip fallback 모두 포함)
-                final_text, drf_verification = await _run_legal_pipeline(
-                    query, analysis, tools, gemini_history,
-                    now_kst, ssot_available,
-                    lang=lang, mode=stream_mode,
-                    rag_context=rag_context_pre,
-                )
+                    async def _delib_producer():
+                        """협의/인수인계 이벤트를 Queue에 넣는 producer."""
+                        try:
+                            if _delib_mode == "full" and _candidate_leaders:
+                                await _event_queue.put(("deliberation_start", {"leaders": _candidate_leaders, "moderator": "서연"}))
+                                async for turn in generate_deliberation_stream(gc, query, _candidate_leaders, lang):
+                                    await _event_queue.put(("deliberation_turn", turn))
+                                await _event_queue.put(("deliberation_end", {"selected_leader": _new_leader_name, "selected_leader_specialty": analysis.get("leader_specialty", "통합")}))
+                            elif _delib_mode == "handoff":
+                                _cur = req_current_leader if isinstance(req_current_leader, dict) else {"name": "마디", "specialty": "통합"}
+                                _new_l = {"name": _new_leader_name, "specialty": analysis.get("leader_specialty", "통합"), "leader_id": analysis.get("leader_id", "")}
+                                async for turn in generate_handoff_stream(gc, query, _cur, _new_l, lang):
+                                    await _event_queue.put(("handoff", turn))
+                        except Exception as e:
+                            logger.warning(f"[Deliberation:Parallel] 스킵: {type(e).__name__}: {e}")
+                        await _event_queue.put(("_delib_done", None))
 
-                yield _sse("status", {"step": "verifying", "leader": leader_name})
+                    _pipeline_result = {}
+
+                    async def _pipeline_producer():
+                        """파이프라인을 실행하고 결과를 dict에 저장하는 producer."""
+                        try:
+                            await _event_queue.put(("status", {"step": "searching_laws", "leader": leader_name}))
+                            await _event_queue.put(("status", {"step": "analyzing", "leader": leader_name}))
+                            _ft, _drf = await _run_legal_pipeline(
+                                query, analysis, tools, gemini_history,
+                                now_kst, ssot_available,
+                                lang=lang, mode=stream_mode,
+                                rag_context=rag_context_pre,
+                            )
+                            await _event_queue.put(("status", {"step": "verifying", "leader": leader_name}))
+                            _pipeline_result["final_text"] = _ft
+                            _pipeline_result["drf"] = _drf
+                        except Exception as e:
+                            logger.error(f"[Pipeline:Parallel] 실패: {type(e).__name__}: {e}")
+                            _pipeline_result["final_text"] = ""
+                            _pipeline_result["drf"] = None
+                        await _event_queue.put(("_pipeline_done", None))
+
+                    # 두 producer를 병렬 실행
+                    _delib_task = asyncio.create_task(_delib_producer())
+                    _pipeline_task = asyncio.create_task(_pipeline_producer())
+
+                    _delib_finished = False
+                    _pipeline_finished = False
+
+                    while not (_delib_finished and _pipeline_finished):
+                        evt_type, evt_data = await _event_queue.get()
+                        if evt_type == "_delib_done":
+                            _delib_finished = True
+                            continue
+                        if evt_type == "_pipeline_done":
+                            _pipeline_finished = True
+                            continue
+                        yield _sse(evt_type, evt_data)
+
+                    # 두 task가 모두 종료될 때까지 대기 (예외 전파)
+                    await _delib_task
+                    await _pipeline_task
+
+                    final_text = _pipeline_result.get("final_text", "")
+                    drf_verification = _pipeline_result.get("drf")
+
+                # 협의가 불필요한 경우: 기존 직렬 실행
+                else:
+                    yield _sse("status", {"step": "searching_laws", "leader": leader_name})
+                    yield _sse("status", {"step": "analyzing", "leader": leader_name})
+
+                    final_text, drf_verification = await _run_legal_pipeline(
+                        query, analysis, tools, gemini_history,
+                        now_kst, ssot_available,
+                        lang=lang, mode=stream_mode,
+                        rag_context=rag_context_pre,
+                    )
+
+                    yield _sse("status", {"step": "verifying", "leader": leader_name})
 
                 # FAIL_CLOSED 체크
                 _is_fc = (FAIL_CLOSED_RESPONSE in final_text) or (final_text.strip() == FAIL_CLOSED_RESPONSE.strip())
@@ -1226,17 +1285,18 @@ async def ask_stream(request: Request):
                     })
                     return
 
-                # 헌법 적합성 검증 (스트리밍 전)
                 if not validate_constitutional_compliance(final_text):
                     yield _sse("error", {"message": "⚠️ 시스템 무결성 정책에 의해 답변이 제한되었습니다."})
                     return
 
-                # 청크 단위로 스트리밍 (문단 기준 분할)
+                # 줄 단위 점진적 스트리밍 (위→아래 자연스럽게)
                 if final_text:
-                    chunks = final_text.split("\n\n")
-                    for i, chunk in enumerate(chunks):
-                        text_part = chunk if i == len(chunks) - 1 else chunk + "\n\n"
-                        yield _sse("chunk", {"text": text_part})
+                    _lines = final_text.split("\n")
+                    for _li, _line in enumerate(_lines):
+                        _ltext = _line if _li == len(_lines) - 1 else _line + "\n"
+                        yield _sse("chunk", {"text": _ltext})
+                        if _li < len(_lines) - 1:
+                            await asyncio.sleep(0.04)
 
                 swarm_mode = False
 
