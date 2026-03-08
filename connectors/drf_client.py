@@ -583,6 +583,204 @@ class DRFConnector:
         return None
 
     # -------------------------------------------------
+    # 지능형 법령검색 (aiSearch)
+    # -------------------------------------------------
+    def ai_search(self, query: str, search: int = 0, display: int = 20) -> Optional[Any]:
+        """
+        법령정보지식베이스 지능형 법령검색 API (target=aiSearch)
+
+        Args:
+            query: 검색 질의 (예: "뺑소니", "임대차 보증금 반환")
+            search: 검색범위 (0:법령조문, 1:법령 별표·서식, 2:행정규칙 조문, 3:행정규칙 별표·서식)
+            display: 결과 개수 (기본 20)
+
+        Returns:
+            JSON dict 또는 None
+        """
+        _init_cache()
+
+        cache_key = f"drf:v2:aiSearch:{search}:{hashlib.md5(query.encode('utf-8')).hexdigest()}"
+        try:
+            cached_data = _cache_get(cache_key)
+            if cached_data and cached_data.get("data"):
+                logger.info(f"🎯 [Cache HIT] aiSearch, query={query[:30]}")
+                return cached_data["data"]
+        except Exception:
+            pass
+
+        logger.info(f"🔍 [Cache MISS] aiSearch, query={query[:30]}")
+
+        params = {
+            "OC": self.drf_key,
+            "target": "aiSearch",
+            "type": "JSON",
+            "search": search,
+            "query": query,
+            "display": display,
+        }
+
+        last_err = None
+        for attempt in range(2):
+            try:
+                r = self._session.get(self.drf_url, params=params, timeout=self.timeout_sec)
+                if r.status_code != 200:
+                    raise RuntimeError(f"aiSearch HTTP {r.status_code}")
+                result = r.json()
+                ttl = _CACHE_TTL.get("default", 3600)
+                try:
+                    _cache_set(cache_key, {"data": result, "query": query[:200], "target": "aiSearch"}, ttl_seconds=ttl)
+                except Exception:
+                    pass
+                return result
+            except Exception as e:
+                last_err = e
+                if attempt < 1:
+                    wait = 0.5 + _random.uniform(0, 0.3)
+                    logger.warning(f"⚠️ aiSearch 재시도: {e}, {wait:.1f}s 대기")
+                    _time.sleep(wait)
+
+        logger.error(f"[aiSearch] 실패: {last_err}")
+        return None
+
+    def ai_related_laws(self, query: str, search: int = 0) -> Optional[Any]:
+        """
+        지능형 법령검색 연관법령 API (target=aiRltLs)
+
+        Args:
+            query: 검색 질의 (예: "뺑소니", "임대차 보증금 반환")
+            search: 검색범위 (0:법령조문, 1:행정규칙조문)
+
+        Returns:
+            JSON dict 또는 None
+        """
+        _init_cache()
+
+        cache_key = f"drf:v2:aiRltLs:{search}:{hashlib.md5(query.encode('utf-8')).hexdigest()}"
+        try:
+            cached_data = _cache_get(cache_key)
+            if cached_data and cached_data.get("data"):
+                logger.info(f"🎯 [Cache HIT] aiRltLs, query={query[:30]}")
+                return cached_data["data"]
+        except Exception:
+            pass
+
+        params = {
+            "OC": self.drf_key,
+            "target": "aiRltLs",
+            "type": "JSON",
+            "search": search,
+            "query": query,
+        }
+
+        last_err = None
+        for attempt in range(2):
+            try:
+                r = self._session.get(self.drf_url, params=params, timeout=self.timeout_sec)
+                if r.status_code != 200:
+                    raise RuntimeError(f"aiRltLs HTTP {r.status_code}")
+                result = r.json()
+                try:
+                    _cache_set(cache_key, {"data": result, "query": query[:200], "target": "aiRltLs"}, ttl_seconds=3600)
+                except Exception:
+                    pass
+                return result
+            except Exception as e:
+                last_err = e
+                if attempt < 1:
+                    _time.sleep(0.5 + _random.uniform(0, 0.3))
+
+        logger.error(f"[aiRltLs] 실패: {last_err}")
+        return None
+
+    async def ai_related_laws_async(self, query: str, search: int = 0) -> Optional[Any]:
+        """비동기 연관법령 검색"""
+        import asyncio as _aio
+        if not _HTTPX_AVAILABLE:
+            return await _aio.to_thread(self.ai_related_laws, query, search)
+
+        await _aio.to_thread(_init_cache)
+
+        cache_key = f"drf:v2:aiRltLs:{search}:{hashlib.md5(query.encode('utf-8')).hexdigest()}"
+        try:
+            cached_data = await _aio.to_thread(_cache_get, cache_key)
+            if cached_data and cached_data.get("data"):
+                return cached_data["data"]
+        except Exception:
+            pass
+
+        params = {
+            "OC": self.drf_key,
+            "target": "aiRltLs",
+            "type": "JSON",
+            "search": search,
+            "query": query,
+        }
+
+        client = await self._get_async_client()
+        try:
+            r = await client.get(self.drf_url, params=params)
+            if r.status_code != 200:
+                raise RuntimeError(f"aiRltLs HTTP {r.status_code}")
+            result = r.json()
+            try:
+                await _aio.to_thread(_cache_set, cache_key, {"data": result, "query": query[:200], "target": "aiRltLs"}, 3600)
+            except Exception:
+                pass
+            return result
+        except Exception as e:
+            logger.error(f"[aiRltLs async] 실패: {e}")
+            return None
+
+    async def ai_search_async(self, query: str, search: int = 0, display: int = 20) -> Optional[Any]:
+        """비동기 지능형 법령검색"""
+        import asyncio as _aio
+        if not _HTTPX_AVAILABLE:
+            return await _aio.to_thread(self.ai_search, query, search, display)
+
+        await _aio.to_thread(_init_cache)
+
+        cache_key = f"drf:v2:aiSearch:{search}:{hashlib.md5(query.encode('utf-8')).hexdigest()}"
+        try:
+            cached_data = await _aio.to_thread(_cache_get, cache_key)
+            if cached_data and cached_data.get("data"):
+                logger.info(f"🎯 [Cache HIT async] aiSearch, query={query[:30]}")
+                return cached_data["data"]
+        except Exception:
+            pass
+
+        params = {
+            "OC": self.drf_key,
+            "target": "aiSearch",
+            "type": "JSON",
+            "search": search,
+            "query": query,
+            "display": display,
+        }
+
+        last_err = None
+        client = await self._get_async_client()
+        for attempt in range(2):
+            try:
+                r = await client.get(self.drf_url, params=params)
+                if r.status_code != 200:
+                    raise RuntimeError(f"aiSearch HTTP {r.status_code}")
+                result = r.json()
+                ttl = _CACHE_TTL.get("default", 3600)
+                try:
+                    await _aio.to_thread(_cache_set, cache_key, {"data": result, "query": query[:200], "target": "aiSearch"}, ttl)
+                except Exception:
+                    pass
+                return result
+            except Exception as e:
+                last_err = e
+                if attempt < 1:
+                    import asyncio
+                    await asyncio.sleep(0.5 + _random.uniform(0, 0.3))
+
+        logger.error(f"[aiSearch async] 실패: {last_err}")
+        return None
+
+    # -------------------------------------------------
     # Async variants (httpx.AsyncClient)
     # 기존 동기 메서드 유지 + _async 비동기 메서드 병행
     # -------------------------------------------------
