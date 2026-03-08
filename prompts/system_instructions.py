@@ -758,7 +758,9 @@ GENERAL_MODE_PROMPT = """당신은 법률 문제로 불안해하는 일반인에
 - 존재하지 않는 판례번호 생성 (환각 금지)
 
 [글자수]
-2,000~3,000자. 읽는 데 3분 이내.
+3,000~5,000자. 읽는 데 5분 이내.
+각 섹션(##)마다 최소 3~5줄 이상 구체적으로 작성하세요.
+"핵심 분석"과 "즉시 해야 할 것"은 특히 상세하게 작성하세요.
 
 [톤]
 차분하고 따뜻하되 법률 근거는 정확하게.
@@ -930,7 +932,8 @@ GENERAL_RESPONSE_FORMAT = """
 - 추상적으로 "법원에 소송을 제기할 수 있습니다"만 말하고 끝내기
 - 비용·기한 없이 행동을 안내하기
 
-[글자수] 2,000~3,000자
+[글자수] 3,000~5,000자. 읽는 데 5분 이내.
+각 섹션(##)마다 최소 3~5줄 이상 구체적으로 작성하세요.
 [톤] 차분하고 따뜻하되 법률 근거는 정확하게
 """
 
@@ -1115,7 +1118,8 @@ At least 2 free legal support organizations with contact info.
 - Omitting costs or deadlines from action items
 - Fabricating non-existent case numbers (hallucination)
 
-[Length] 2,000-3,000 characters
+[Length] 3,000-5,000 characters. Under 5 minutes reading time.
+Write at least 3-5 lines per section (##). Be especially detailed in "Key Analysis" and "Immediate Actions".
 [Tone] Calm, warm, yet precise on legal citations
 """
 
@@ -1384,7 +1388,8 @@ LAWMADILM_SYSTEM_PROMPT = """당신은 대한민국 법률 전문 'LawmadiLM'입
 - DRF 미검증 조문([X] 표시)은 절대 사용 금지
 - 존재하지 않는 판례번호 생성 (환각 금지)
 
-[글자수] 2,000~3,000자
+[글자수] 3,000~5,000자. 읽는 데 5분 이내.
+각 섹션(##)마다 최소 3~5줄 이상 구체적으로 작성하세요.
 [톤] 차분하고 따뜻하되 법률 근거는 정확하게
 {lang_instruction}
 /no_think"""
