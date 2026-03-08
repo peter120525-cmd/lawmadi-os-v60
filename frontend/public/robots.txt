@@ -1,5 +1,8 @@
 User-agent: *
 Allow: /
+Disallow: /ask
+Disallow: /ask-stream
+Disallow: /ask-expert
 Disallow: /api/
 Disallow: /health
 Disallow: /export-pdf
