@@ -976,6 +976,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                             // Final answer streaming (line by line typing)
                             accumulatedText += (payload.text || '');
                             if (!streamDivAttached) {
+                                this._flushTurnQueue();
                                 this._hideMiniWaiting();
                                 this._removeChatTypingBubbleAll();
                                 this.convArea.appendChild(streamDiv);
@@ -1088,22 +1089,80 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 '</div>';
         },
 
-        // Streaming: deliberation_start event
-        _renderDeliberationStart(payload) {
-            const container = document.createElement('div');
-            container.className = 'chat-flow-container';
-            container.id = 'delib-live-' + Date.now();
-            this._appendChatTypingBubble(container, 'Seoyeon', 'CSO');
-            this.convArea.appendChild(container);
-            this._smartScroll(false);
-            this._delibContainer = container;
-            this._delibTurnIndex = 0;
+        // ─── Turn queue: sequential playback even when turns arrive simultaneously ───
+        _turnQueue: [],
+        _turnPlaying: false,
+        _turnFlushed: false,
+
+        _enqueueTurn(type, payload) {
+            if (this._turnFlushed) return;
+            this._turnQueue.push({ type, payload });
+            if (!this._turnPlaying) this._playNextTurn();
         },
 
-        // Streaming: deliberation_turn event (natural chat flow)
-        _renderDeliberationTurn(payload) {
-            const container = this._delibContainer;
+        // Flush queue: render remaining turns instantly (no animation)
+        _flushTurnQueue() {
+            this._turnFlushed = true;
+            this._turnPlaying = false;
+            const remaining = this._turnQueue.splice(0);
+            for (const { type, payload } of remaining) {
+                if (type === 'deliberation_turn') {
+                    this._doTurnInstant(payload, this._delibContainer, 'deliberation');
+                } else if (type === 'handoff') {
+                    this._doTurnInstant(payload, this._handoffContainer, 'handoff');
+                } else if (type === 'deliberation_end') {
+                    this._doDeliberationEnd(payload);
+                }
+            }
+            this._removeChatTypingBubbleAll();
+        },
+
+        _doTurnInstant(payload, container, mode) {
             if (!container) return;
+            const name = payload.speaker || '?';
+            const role = payload.role || '';
+            const text = payload.text || '';
+            const isMod = (name === 'Seoyeon' || name === '서연');
+            this._removeChatTypingBubble(container);
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-msg-bubble' + (isMod ? ' moderator' : '');
+            const idx = (mode === 'handoff' ? this._handoffTurnIndex : this._delibTurnIndex) || 0;
+            bubble.innerHTML = _sanitize(
+                this._buildAvatarHTML(name, mode) +
+                '<div class="chat-msg-body">' +
+                '<div class="chat-msg-meta"><span class="chat-msg-name">' + this.escapeHtml(name) + '</span>' +
+                '<span class="chat-msg-role">' + this.escapeHtml(role) + '</span>' +
+                '<span class="chat-msg-time">' + this._getTimeStamp(idx) + '</span></div>' +
+                '<div class="chat-msg-text">' + this.escapeHtml(text) + '</div></div>'
+            );
+            container.appendChild(bubble);
+            if (mode === 'handoff') this._handoffTurnIndex = idx + 1;
+            else this._delibTurnIndex = idx + 1;
+            if (payload.is_final) {
+                const endMsg = document.createElement('div');
+                endMsg.className = 'chat-flow-status';
+                endMsg.textContent = 'Meeting complete';
+                container.appendChild(endMsg);
+            }
+        },
+
+        _playNextTurn() {
+            if (this._turnFlushed || !this._turnQueue.length) { this._turnPlaying = false; return; }
+            this._turnPlaying = true;
+            const { type, payload } = this._turnQueue.shift();
+            if (type === 'deliberation_turn') {
+                this._doDeliberationTurn(payload, () => this._playNextTurn());
+            } else if (type === 'handoff') {
+                this._doHandoffTurn(payload, () => this._playNextTurn());
+            } else if (type === 'deliberation_end') {
+                this._doDeliberationEnd(payload);
+                this._playNextTurn();
+            } else { this._playNextTurn(); }
+        },
+
+        _doDeliberationTurn(payload, onDone) {
+            const container = this._delibContainer;
+            if (!container) { onDone(); return; }
             const name = payload.speaker || '?';
             const role = payload.role || '';
             const text = payload.text || '';
@@ -1137,12 +1196,12 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         this._appendChatTypingBubble(container, nextName, nextRole);
                     }
                     this._smartScroll(false);
+                    setTimeout(onDone, 1000);
                 });
-            }
+            } else { onDone(); }
         },
 
-        // Streaming: deliberation_end event
-        _renderDeliberationEnd(payload) {
+        _doDeliberationEnd(payload) {
             const container = this._delibContainer;
             if (!container) return;
             this._removeChatTypingBubble(container);
@@ -1157,7 +1216,23 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             this._showMiniWaiting(`${selected} (${specialty}) is composing the response`);
         },
 
-        // Streaming: handoff_start event
+        _renderDeliberationTurn(payload) { this._enqueueTurn('deliberation_turn', payload); },
+        _renderDeliberationEnd(payload) { this._enqueueTurn('deliberation_end', payload); },
+
+        _renderDeliberationStart(payload) {
+            const container = document.createElement('div');
+            container.className = 'chat-flow-container';
+            container.id = 'delib-live-' + Date.now();
+            this._appendChatTypingBubble(container, 'Seoyeon', 'CSO');
+            this.convArea.appendChild(container);
+            this._smartScroll(false);
+            this._delibContainer = container;
+            this._delibTurnIndex = 0;
+            this._turnQueue = [];
+            this._turnPlaying = false;
+            this._turnFlushed = false;
+        },
+
         _renderHandoffStart(payload) {
             if (this._handoffContainer) return;
             const container = document.createElement('div');
@@ -1166,11 +1241,15 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             this.convArea.appendChild(container);
             this._handoffContainer = container;
             this._handoffTurnIndex = 0;
+            this._turnQueue = [];
+            this._turnPlaying = false;
+            this._turnFlushed = false;
             this._smartScroll(false);
         },
 
-        // Streaming: handoff event (natural chat flow)
-        _renderHandoffTurn(payload) {
+        _renderHandoffTurn(payload) { this._enqueueTurn('handoff', payload); },
+
+        _doHandoffTurn(payload, onDone) {
             if (!this._handoffContainer) {
                 const container = document.createElement('div');
                 container.className = 'chat-flow-container';
@@ -1216,8 +1295,9 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         this._showMiniWaiting('Composing response');
                     }
                     this._smartScroll(false);
+                    setTimeout(onDone, 1000);
                 });
-            }
+            } else { onDone(); }
         },
 
         // Classic (/ask) deliberation rendering
@@ -2225,8 +2305,10 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         },
 
         hideTypingIndicator() {
+            this._flushTurnQueue();
             this._hideSimpleWaiting();
             this._hideMiniWaiting();
+            this._removeChatTypingBubbleAll();
             const typingDiv = document.getElementById('typing-indicator');
             if (typingDiv) typingDiv.remove();
         },
