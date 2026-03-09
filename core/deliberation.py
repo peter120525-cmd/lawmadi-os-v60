@@ -28,6 +28,17 @@ _TURN_TIMEOUT = 5  # 개별 턴 타임아웃 (초)
 # 이름 → ID 역매핑 캐시
 _NAME_TO_ID: Dict[str, str] = {}
 
+# 프롬프트 인젝션 방지: 쿼리 새니타이즈
+_INJECTION_MARKERS = re.compile(r'\[(지시|페르소나|INST|SYSTEM)\]|```|<\/?system>', re.IGNORECASE)
+
+def _sanitize_query_for_prompt(query: str, lang: str = "") -> str:
+    """사용자 쿼리를 Gemini 프롬프트에 안전하게 삽입하기 위한 새니타이즈."""
+    q = query[:300]
+    q = _INJECTION_MARKERS.sub('', q)
+    if lang == "en":
+        return f"Question: ```{q}```\n"
+    return f"질문: ```{q}```\n"
+
 
 def _build_name_to_id_map() -> Dict[str, str]:
     """leader-profiles.json + leaders.json 기반 이름→ID 역매핑 구축."""
@@ -239,7 +250,7 @@ async def generate_deliberation(
     _en = lang == "en"
     _cso = "Seoyeon" if _en else "서연"
     _base = "[External client question.]\n" if _en else "[외부 의뢰인 질문입니다.]\n"
-    _q = f"Question: {query[:300]}\n" if _en else f"질문: {query[:300]}\n"
+    _q = _sanitize_query_for_prompt(query, lang)
     _style_en = "2-3 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
     _style_ko = "100~150자. 존댓말, 따뜻하고 전문적 톤. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
     _short_en = "1-2 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
@@ -455,7 +466,7 @@ async def generate_handoff(
     _en = lang == "en"
     _cso = "Seoyeon" if _en else "서연"
     _base = "[External client question.]\n" if _en else "[외부 의뢰인 질문입니다.]\n"
-    _q = f"Question: {query[:300]}\n" if _en else f"질문: {query[:300]}\n"
+    _q = _sanitize_query_for_prompt(query, lang)
     _style_en = "2-3 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
     _style_ko = "100~150자. 존댓말, 따뜻하고 전문적 톤. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
     _short_en = "1-2 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
@@ -636,7 +647,7 @@ async def generate_deliberation_stream(
     _en = lang == "en"
     _cso = "Seoyeon" if _en else "서연"
     _base = "[External client question.]\n" if _en else "[외부 의뢰인 질문입니다.]\n"
-    _q = f"Question: {query[:300]}\n" if _en else f"질문: {query[:300]}\n"
+    _q = _sanitize_query_for_prompt(query, lang)
     _style_en = "2-3 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
     _style_ko = "100~150자. 존댓말, 따뜻하고 전문적 톤. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
     _short_en = "1-2 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
@@ -861,7 +872,7 @@ async def generate_handoff_stream(
     _en = lang == "en"
     _cso = "Seoyeon" if _en else "서연"
     _base = "[External client question.]\n" if _en else "[외부 의뢰인 질문입니다.]\n"
-    _q = f"Question: {query[:300]}\n" if _en else f"질문: {query[:300]}\n"
+    _q = _sanitize_query_for_prompt(query, lang)
     _style_en = "2-3 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
     _style_ko = "100~150자. 존댓말, 따뜻하고 전문적 톤. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
     _short_en = "1-2 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
