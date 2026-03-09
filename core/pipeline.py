@@ -2587,11 +2587,18 @@ async def _run_legal_pipeline(
                     logger.warning(
                         f"[CheckGrounding] 낮은 근거 점수({support_score:.2f}) — DRF 통과했으나 근거 부족 가능"
                     )
-                    grounding_disclaimer = (
-                        "\n\n---\n"
-                        "※ 이 답변의 일부 내용은 법률 데이터 근거 검증에서 낮은 점수를 받았습니다. "
-                        "정확한 내용은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
-                    )
+                    if lang == "en":
+                        grounding_disclaimer = (
+                            "\n\n---\n"
+                            "※ Some parts of this response may require additional verification. "
+                            "Please confirm with the [Korean Law Information Center](https://law.go.kr)."
+                        )
+                    else:
+                        grounding_disclaimer = (
+                            "\n\n---\n"
+                            "※ 이 답변의 일부 내용은 추가 확인이 필요할 수 있습니다. "
+                            "정확한 내용은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
+                        )
                     final_text = final_text.rstrip() + grounding_disclaimer
         except Exception as e:
             logger.warning(f"[CheckGrounding] 결과 수집 실패 (무시): {e}")

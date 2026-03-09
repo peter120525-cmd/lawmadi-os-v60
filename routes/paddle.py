@@ -255,7 +255,7 @@ def _delete_session(token: str):
 
 def _get_session_token(request: Request) -> str:
     """Extract session token from HttpOnly cookie only (no header fallback — CSRF safe)."""
-    return request.cookies.get("lm_session", "")
+    return request.cookies.get("__session", "")
 
 
 # ─── Auth Dependency: get_current_user ───
@@ -459,7 +459,7 @@ async def verify_otp_endpoint(request: Request):
         "expires_in": SESSION_EXPIRY_DAYS * 86400,
     })
     response.set_cookie(
-        key="lm_session",
+        key="__session",
         value=token,
         max_age=SESSION_EXPIRY_DAYS * 86400,
         httponly=True,
@@ -567,7 +567,7 @@ async def auth_logout(request: Request):
     if token:
         _delete_session(token)
     response = JSONResponse(content={"ok": True})
-    response.delete_cookie("lm_session", path="/")
+    response.delete_cookie("__session", path="/")
     return response
 
 

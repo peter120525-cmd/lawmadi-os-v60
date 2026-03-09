@@ -534,7 +534,7 @@
             <p>Email verification (OTP) is required for credit purchases and paid service usage.</p>
             <ul>
                 <li>Users enter their email address and verify their identity through a 6-digit code sent to their email.</li>
-                <li>Upon successful verification, a session cookie (lm_session) is created and maintains login status for 30 days.</li>
+                <li>Upon successful verification, a session cookie (__session) is created and maintains login status for 30 days.</li>
                 <li>Users must not use another person's email for verification or share verification codes with others.</li>
                 <li>After 5 failed verification attempts, the code expires and a new one must be requested.</li>
                 <li>Sessions are immediately deleted upon logout. Clearing browser cookies will require re-authentication.</li>
@@ -676,5 +676,6 @@
 <script src="/lawmadi-monitor.js" defer></script>
 <script src="/site-nav.js" defer></script>
 <script src="/site-footer.js" defer></script>
+<script src="/auth-modal.js" defer></script>
 </body>
 </html>

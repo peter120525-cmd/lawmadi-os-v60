@@ -612,7 +612,7 @@ async def ask(request: Request):
                     _ask_candidates = _ask_candidates[:3]
                     _delib = await asyncio.wait_for(
                         generate_deliberation(gc, query, _ask_candidates, lang),
-                        timeout=8,
+                        timeout=30,
                     )
                 except Exception as e:
                     logger.warning(f"[Deliberation/ask] 스킵: {type(e).__name__}: {e}")
@@ -623,7 +623,7 @@ async def ask(request: Request):
                     _new = {"name": leader_name, "specialty": leader_specialty, "leader_id": analysis.get("leader_id", "")}
                     _hand = await asyncio.wait_for(
                         generate_handoff(gc, query, _cur, _new, lang),
-                        timeout=8,
+                        timeout=15,
                     )
                 except Exception as e:
                     logger.warning(f"[Handoff/ask] 스킵: {type(e).__name__}: {e}")
@@ -1437,6 +1437,10 @@ async def ask_stream(request: Request):
                 "latency_ms": latency_ms,
                 "swarm_mode": swarm_mode,
             })
+
+            # 크레딧 차감 (성공 응답 후)
+            if _post_deduct_fn:
+                _post_deduct_fn(request, "general", trace)
 
             # done 이벤트
             yield _sse("done", {

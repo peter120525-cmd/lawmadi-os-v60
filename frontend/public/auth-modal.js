@@ -1,6 +1,7 @@
 /**
  * Lawmadi OS -- Auth Modal (Email OTP) + Header Credit Display
- * Shared by index.html / index-en.html
+ * Self-contained: auto-creates floating auth button + OTP modal if DOM elements are missing.
+ * Works on ALL pages — just include <script src="/auth-modal.js" defer></script>
  */
 (function() {
     'use strict';
@@ -16,6 +17,80 @@
 
     // Expose for app-inline-ko/en.js to read
     window.__lawmadiAuth = authState;
+
+    // ─── Auto-inject floating auth button if not in page ───
+    function ensureAuthButton() {
+        if (document.getElementById('authHeaderBtn')) return;
+
+        // Inject minimal CSS for floating button + dropdown
+        var style = document.createElement('style');
+        style.textContent = ''
+            + '.auth-float-wrap{position:fixed;top:12px;right:16px;z-index:8000;}'
+            + '.auth-header-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;'
+            + 'border-radius:20px;font-size:0.85rem;font-weight:600;cursor:pointer;'
+            + 'border:1px solid rgba(37,99,235,0.3);background:rgba(255,255,255,0.95);'
+            + 'color:#2563eb;box-shadow:0 2px 12px rgba(0,0,0,0.08);transition:all 0.2s;'
+            + 'backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}'
+            + '.auth-header-btn:hover{box-shadow:0 4px 16px rgba(37,99,235,0.15);border-color:#2563eb;}'
+            + '.auth-header-btn.auth-logged-in{background:rgba(255,255,255,0.95);color:#1e293b;border-color:#e2e8f0;}'
+            + '.auth-credit-num{font-weight:800;color:#2563eb;}'
+            + '.auth-email-short{color:#64748b;font-size:0.78rem;}'
+            + '#authDropdown{position:absolute;top:calc(100% + 8px);right:0;background:#fff;'
+            + 'border:1px solid #e2e8f0;border-radius:14px;min-width:220px;box-shadow:0 8px 30px rgba(0,0,0,0.12);'
+            + 'overflow:hidden;z-index:8001;}'
+            + '.auth-dd-email{padding:12px 16px 4px;font-size:0.82rem;color:#64748b;}'
+            + '.auth-dd-credits{padding:4px 16px 12px;font-size:0.9rem;color:#1e293b;border-bottom:1px solid #e2e8f0;}'
+            + '.auth-dd-item{display:flex;align-items:center;gap:8px;width:100%;padding:10px 16px;'
+            + 'border:none;background:none;font-size:0.88rem;color:#1e293b;cursor:pointer;text-decoration:none;}'
+            + '.auth-dd-item:hover{background:#f1f5f9;}'
+            + '.auth-dd-logout{color:#ef4444 !important;}'
+            + '.auth-dd-logout:hover{background:#fef2f2 !important;}';
+        document.head.appendChild(style);
+
+        var wrap = document.createElement('div');
+        wrap.className = 'auth-float-wrap';
+        wrap.innerHTML = '<button id="authHeaderBtn" class="auth-header-btn auth-logged-out" aria-label="Login">'
+            + '<span class="material-symbols-outlined" style="font-size:1.1rem;">login</span>'
+            + '<span class="auth-label">Login</span></button>';
+        document.body.appendChild(wrap);
+    }
+
+    // ─── Auto-inject OTP modal if not in page ───
+    function ensureOtpModal() {
+        if (document.getElementById('authOtpModal')) return;
+
+        var modal = document.createElement('div');
+        modal.id = 'authOtpModal';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-label', 'Email Login');
+        modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);align-items:center;justify-content:center;';
+        modal.innerHTML = ''
+            + '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:36px 28px;max-width:380px;width:90%;text-align:center;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.15);">'
+            + '<button id="authOtpClose" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#94a3b8;font-size:1.5rem;cursor:pointer;">&times;</button>'
+            + '<div id="authOtpStep1">'
+            + '<h3 style="color:#1e293b;font-weight:800;margin-bottom:8px;">Email Login</h3>'
+            + '<p style="color:#64748b;font-size:0.9rem;margin-bottom:20px;">No signup needed. Just verify your email.</p>'
+            + '<input id="authOtpEmail" type="email" placeholder="Email" style="width:100%;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;color:#1e293b;font-size:1rem;margin-bottom:12px;outline:none;">'
+            + '<button id="authOtpSendBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#2563eb,#8b5cf6);border:none;border-radius:12px;color:white;font-size:1rem;font-weight:700;cursor:pointer;">Send Code</button>'
+            + '<p id="authOtpSendMsg" style="color:#94a3b8;font-size:0.85rem;margin-top:12px;display:none;"></p>'
+            + '</div>'
+            + '<div id="authOtpStep2" style="display:none;">'
+            + '<h3 style="color:#1e293b;font-weight:800;margin-bottom:8px;">Enter Code</h3>'
+            + '<p style="color:#64748b;font-size:0.9rem;margin-bottom:20px;">Enter the 6-digit code from your email</p>'
+            + '<input id="authOtpCode" type="text" maxlength="6" placeholder="000000" inputmode="numeric" autocomplete="one-time-code" style="width:100%;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;color:#1e293b;font-size:1.5rem;font-weight:900;letter-spacing:8px;text-align:center;margin-bottom:12px;outline:none;">'
+            + '<button id="authOtpVerifyBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:12px;color:white;font-size:1rem;font-weight:700;cursor:pointer;">Verify</button>'
+            + '<p id="authOtpVerifyMsg" style="color:#94a3b8;font-size:0.85rem;margin-top:12px;display:none;"></p>'
+            + '<button id="authOtpResendBtn" style="background:none;border:none;color:#2563eb;font-size:0.85rem;cursor:pointer;margin-top:8px;text-decoration:underline;">Resend</button>'
+            + '</div>'
+            + '<div id="authOtpStep3" style="display:none;">'
+            + '<div style="font-size:3rem;margin-bottom:12px;color:#10b981;">&#10003;</div>'
+            + '<h3 style="color:#1e293b;font-weight:800;margin-bottom:8px;">Verified!</h3>'
+            + '<p style="color:#64748b;font-size:0.9rem;margin-bottom:4px;">Credits: <span id="authOtpCredits" style="color:#10b981;font-weight:700;">0</span></p>'
+            + '</div>'
+            + '</div>';
+        document.body.appendChild(modal);
+    }
 
     // ─── Session Check on Load ───
     function checkSession() {
@@ -167,135 +242,146 @@
         }, 10);
     }
 
-    // ─── OTP Modal ───
-    var modal = document.getElementById('authOtpModal');
-    if (!modal) return;
+    // ─── OTP Modal Setup ───
+    function setupOtpModal() {
+        var modal = document.getElementById('authOtpModal');
+        if (!modal) return;
 
-    var step1 = document.getElementById('authOtpStep1');
-    var step2 = document.getElementById('authOtpStep2');
-    var step3 = document.getElementById('authOtpStep3');
+        var step1 = document.getElementById('authOtpStep1');
+        var step2 = document.getElementById('authOtpStep2');
+        var step3 = document.getElementById('authOtpStep3');
 
-    function showOtpModal() {
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-        step1.style.display = 'block';
-        step2.style.display = 'none';
-        step3.style.display = 'none';
-        var emailInput = document.getElementById('authOtpEmail');
-        var saved = localStorage.getItem('lm_email');
-        if (saved) emailInput.value = saved;
-        if (authState.email) emailInput.value = authState.email;
-        emailInput.focus();
-    }
+        window._showOtpModal = showOtpModal;
 
-    function hideOtpModal() { modal.style.display = 'none'; document.body.style.overflow = ''; }
-
-    document.getElementById('authOtpClose').addEventListener('click', hideOtpModal);
-    modal.addEventListener('click', function(e) {
-        if (e.target === modal) hideOtpModal();
-    });
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && modal.style.display === 'flex') hideOtpModal();
-    });
-
-    // Send OTP
-    document.getElementById('authOtpSendBtn').addEventListener('click', function() {
-        var email = document.getElementById('authOtpEmail').value.trim().toLowerCase();
-        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            showMsg('authOtpSendMsg', pageLang === 'en' ? 'Please enter a valid email' : 'Please enter a valid email', true);
-            return;
+        function showOtpModal() {
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            step1.style.display = 'block';
+            step2.style.display = 'none';
+            step3.style.display = 'none';
+            var emailInput = document.getElementById('authOtpEmail');
+            var saved = localStorage.getItem('lm_email');
+            if (saved) emailInput.value = saved;
+            if (authState.email) emailInput.value = authState.email;
+            emailInput.focus();
         }
-        authState.email = email;
-        var btn = this;
-        btn.disabled = true;
-        btn.textContent = pageLang === 'en' ? 'Sending...' : 'Sending...';
 
-        fetch(API_BASE + '/api/paddle/otp/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ email: email })
-        })
-        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
-        .then(function(res) {
-            btn.disabled = false;
-            btn.textContent = pageLang === 'en' ? 'Send Code' : 'Send Code';
-            if (res.ok) {
-                step1.style.display = 'none';
-                step2.style.display = 'block';
-                document.getElementById('authOtpCode').focus();
-                showMsg('authOtpVerifyMsg', pageLang === 'en' ? 'Check your email (5 min)' : 'Check your email (5 min)', false);
-            } else {
-                showMsg('authOtpSendMsg', res.data.detail || res.data.error || 'Send failed', true);
-            }
-        })
-        .catch(function() {
-            btn.disabled = false;
-            btn.textContent = pageLang === 'en' ? 'Send Code' : 'Send Code';
-            showMsg('authOtpSendMsg', 'Network error', true);
+        function hideOtpModal() { modal.style.display = 'none'; document.body.style.overflow = ''; }
+
+        document.getElementById('authOtpClose').addEventListener('click', hideOtpModal);
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) hideOtpModal();
         });
-    });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal.style.display === 'flex') hideOtpModal();
+        });
 
-    // Verify OTP
-    document.getElementById('authOtpVerifyBtn').addEventListener('click', verifyOtp);
-    document.getElementById('authOtpCode').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') verifyOtp();
-    });
+        // Send OTP
+        document.getElementById('authOtpSendBtn').addEventListener('click', function() {
+            var email = document.getElementById('authOtpEmail').value.trim().toLowerCase();
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showMsg('authOtpSendMsg', 'Please enter a valid email', true);
+                return;
+            }
+            authState.email = email;
+            var btn = this;
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
 
-    function verifyOtp() {
-        var code = document.getElementById('authOtpCode').value.trim();
-        if (!code || code.length !== 6) {
-            showMsg('authOtpVerifyMsg', pageLang === 'en' ? 'Enter 6-digit code' : 'Enter 6-digit code', true);
-            return;
-        }
-        var btn = document.getElementById('authOtpVerifyBtn');
-        btn.disabled = true;
-        btn.textContent = pageLang === 'en' ? 'Verifying...' : 'Verifying...';
-
-        fetch(API_BASE + '/api/paddle/otp/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ email: authState.email, code: code })
-        })
-        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
-        .then(function(res) {
-            btn.disabled = false;
-            btn.textContent = pageLang === 'en' ? 'Verify' : 'Verify';
-            if (res.ok) {
-                authState.authenticated = true;
-                authState.user = res.data.user || null;
-                localStorage.setItem('lm_email', authState.email);
-
-                step2.style.display = 'none';
-                step3.style.display = 'block';
-
-                var credEl = document.getElementById('authOtpCredits');
-                if (credEl && authState.user) {
-                    credEl.textContent = authState.user.credit_balance || 0;
+            fetch(API_BASE + '/api/paddle/otp/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ email: email })
+            })
+            .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+            .then(function(res) {
+                btn.disabled = false;
+                btn.textContent = 'Send Code';
+                if (res.ok) {
+                    step1.style.display = 'none';
+                    step2.style.display = 'block';
+                    document.getElementById('authOtpCode').focus();
+                    showMsg('authOtpVerifyMsg', 'Check your email (5 min)', false);
+                } else {
+                    showMsg('authOtpSendMsg', res.data.detail || res.data.error || 'Send failed', true);
                 }
-
-                setTimeout(function() {
-                    hideOtpModal();
-                    updateHeaderAuth();
-                }, 1200);
-            } else {
-                showMsg('authOtpVerifyMsg', res.data.error || 'Verification failed', true);
-            }
-        })
-        .catch(function() {
-            btn.disabled = false;
-            btn.textContent = pageLang === 'en' ? 'Verify' : 'Verify';
-            showMsg('authOtpVerifyMsg', 'Network error', true);
+            })
+            .catch(function() {
+                btn.disabled = false;
+                btn.textContent = 'Send Code';
+                showMsg('authOtpSendMsg', 'Network error', true);
+            });
         });
-    }
 
-    // Resend
-    document.getElementById('authOtpResendBtn').addEventListener('click', function() {
-        step2.style.display = 'none';
-        step1.style.display = 'block';
-        document.getElementById('authOtpSendBtn').click();
-    });
+        // Verify OTP
+        document.getElementById('authOtpVerifyBtn').addEventListener('click', verifyOtp);
+        document.getElementById('authOtpCode').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') verifyOtp();
+        });
+
+        function verifyOtp() {
+            var code = document.getElementById('authOtpCode').value.trim();
+            if (!code || code.length !== 6) {
+                showMsg('authOtpVerifyMsg', 'Enter 6-digit code', true);
+                return;
+            }
+            var btn = document.getElementById('authOtpVerifyBtn');
+            btn.disabled = true;
+            btn.textContent = 'Verifying...';
+
+            fetch(API_BASE + '/api/paddle/otp/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ email: authState.email, code: code })
+            })
+            .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+            .then(function(res) {
+                btn.disabled = false;
+                btn.textContent = 'Verify';
+                if (res.ok) {
+                    authState.authenticated = true;
+                    authState.user = res.data.user || null;
+                    localStorage.setItem('lm_email', authState.email);
+
+                    step2.style.display = 'none';
+                    step3.style.display = 'block';
+
+                    var credEl = document.getElementById('authOtpCredits');
+                    if (credEl && authState.user) {
+                        credEl.textContent = authState.user.credit_balance || 0;
+                    }
+
+                    setTimeout(function() {
+                        hideOtpModal();
+                        updateHeaderAuth();
+                    }, 1200);
+                } else {
+                    showMsg('authOtpVerifyMsg', res.data.error || 'Verification failed', true);
+                }
+            })
+            .catch(function() {
+                btn.disabled = false;
+                btn.textContent = 'Verify';
+                showMsg('authOtpVerifyMsg', 'Network error', true);
+            });
+        }
+
+        // Resend
+        document.getElementById('authOtpResendBtn').addEventListener('click', function() {
+            step2.style.display = 'none';
+            step1.style.display = 'block';
+            document.getElementById('authOtpSendBtn').click();
+        });
+
+        // Expose openAuthModal for external callers
+        if (typeof window.UI !== 'undefined') {
+            window.UI.openAuthModal = showOtpModal;
+        } else {
+            window.UI = { openAuthModal: showOtpModal };
+        }
+    }
 
     function showMsg(id, text, isError) {
         var el = document.getElementById(id);
@@ -305,13 +391,9 @@
         el.style.color = isError ? '#ef4444' : '#10b981';
     }
 
-    // Expose openAuthModal for external callers (e.g., expert CTA login prompt)
-    if (typeof window.UI !== 'undefined') {
-        window.UI.openAuthModal = showOtpModal;
-    } else {
-        window.UI = { openAuthModal: showOtpModal };
-    }
-
-    // Init
+    // ─── Init ───
+    ensureAuthButton();
+    ensureOtpModal();
+    setupOtpModal();
     checkSession();
 })();

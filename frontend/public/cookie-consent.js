@@ -1,7 +1,7 @@
 /**
  * Cookie Consent Banner
  * GA4 is blocked until user accepts analytics cookies.
- * Session cookie (lm_session) is strictly necessary — no consent needed.
+ * Session cookie (__session) is strictly necessary — no consent needed.
  */
 (function() {
     'use strict';

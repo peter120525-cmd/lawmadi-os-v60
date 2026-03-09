@@ -54,7 +54,7 @@ gcloud run deploy ${SERVICE_NAME} \
   --cpu 1 \
   --timeout 300 \
   --concurrency 15 \
-  --min-instances 0 \
+  --min-instances 1 \
   --max-instances 5 \
   --port 8080 \
   --set-env-vars "ENABLE_LAWMADILM=false,LAWMADILM_TIMEOUT=3,USE_VERTEX_AI=true,USE_VERTEX_SEARCH=true,GCP_PROJECT_ID=lawmadi-db,VERTEX_SEARCH_DATA_STORE_ID=lawmadi-legal-cache,VERTEX_SEARCH_ENGINE_ID=lawmadi-search-engine,VERTEX_PROJECT=lawmadi-db,VERTEX_LOCATION=asia-northeast3,SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,PADDLE_ENVIRONMENT=sandbox,DAILY_FREE_LIMIT=2,SESSION_EXPIRY_DAYS=30" \
