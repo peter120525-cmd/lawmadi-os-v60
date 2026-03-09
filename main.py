@@ -684,11 +684,11 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
             is_admin = True
 
     if is_admin:
-        window_limit = _ADMIN_WINDOW_LIMIT
-    else:
-        plan = _get_user_plan(request)
-        plan_cfg = PLAN_CONFIG.get(plan, PLAN_CONFIG["free"])
-        window_limit = plan_cfg["window_limit"]
+        return True  # Admin 키 인증 시 제한 없음
+
+    plan = _get_user_plan(request)
+    plan_cfg = PLAN_CONFIG.get(plan, PLAN_CONFIG["free"])
+    window_limit = plan_cfg["window_limit"]
 
     # Credit/free-tier users: check via DB session
     user = _get_paddle_user(request)
