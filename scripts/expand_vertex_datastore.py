@@ -33,10 +33,11 @@ from collections import defaultdict
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Data sources
-RAW_V50_DIR = "/home/peter120525/LawmadiLM/data/raw_v50"
-PRECEDENT_QA_PATH = "/home/peter120525/LawmadiLM/data/processed/precedent_qa.jsonl"
-ALL_QA_PATH = "/home/peter120525/LawmadiLM/data/processed/all_qa_dataset.jsonl"
+# Data sources (env var override 가능)
+_LAWMADILM_DATA = os.getenv("LAWMADILM_DATA_DIR", "/home/peter120525/LawmadiLM/data")
+RAW_V50_DIR = os.getenv("RAW_V50_DIR", os.path.join(_LAWMADILM_DATA, "raw_v50"))
+PRECEDENT_QA_PATH = os.getenv("PRECEDENT_QA_PATH", os.path.join(_LAWMADILM_DATA, "processed", "precedent_qa.jsonl"))
+ALL_QA_PATH = os.getenv("ALL_QA_PATH", os.path.join(_LAWMADILM_DATA, "processed", "all_qa_dataset.jsonl"))
 
 # Output
 OUTPUT_DIR = os.path.join(BASE_DIR, "vertex_expansion")
