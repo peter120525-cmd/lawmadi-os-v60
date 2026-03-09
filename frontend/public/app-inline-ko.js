@@ -183,7 +183,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
             this.sendBtn.onclick = () => this.dispatchPacket();
             this.userInput.onkeydown = (e) => {
-                if(e.key === 'Enter' && !e.shiftKey) {
+                if(e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
                     e.preventDefault();
                     this.dispatchPacket();
                 }
