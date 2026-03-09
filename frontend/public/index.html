@@ -6132,27 +6132,27 @@
 
 <!-- Auth OTP Modal -->
 <div id="authOtpModal" role="dialog" aria-modal="true" aria-label="Email Login" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
-    <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:36px 28px;max-width:380px;width:90%;text-align:center;position:relative;">
+    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:36px 28px;max-width:380px;width:90%;text-align:center;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.15);">
         <button id="authOtpClose" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#94a3b8;font-size:1.5rem;cursor:pointer;">&times;</button>
         <div id="authOtpStep1">
-            <h3 style="color:#f1f5f9;font-weight:800;margin-bottom:8px;">Email Login</h3>
-            <p style="color:#94a3b8;font-size:0.9rem;margin-bottom:20px;">No signup needed. Just verify your email.</p>
-            <input id="authOtpEmail" type="email" placeholder="Email" style="width:100%;padding:14px 16px;background:#0f172a;border:1px solid rgba(255,255,255,0.2);border-radius:12px;color:#f1f5f9;font-size:1rem;margin-bottom:12px;outline:none;">
+            <h3 style="color:#1e293b;font-weight:800;margin-bottom:8px;">Email Login</h3>
+            <p style="color:#64748b;font-size:0.9rem;margin-bottom:20px;">No signup needed. Just verify your email.</p>
+            <input id="authOtpEmail" type="email" placeholder="Email" style="width:100%;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;color:#1e293b;font-size:1rem;margin-bottom:12px;outline:none;">
             <button id="authOtpSendBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#2563eb,#8b5cf6);border:none;border-radius:12px;color:white;font-size:1rem;font-weight:700;cursor:pointer;">Send Code</button>
             <p id="authOtpSendMsg" style="color:#94a3b8;font-size:0.85rem;margin-top:12px;display:none;"></p>
         </div>
         <div id="authOtpStep2" style="display:none;">
-            <h3 style="color:#f1f5f9;font-weight:800;margin-bottom:8px;">Enter Code</h3>
-            <p style="color:#94a3b8;font-size:0.9rem;margin-bottom:20px;">Enter the 6-digit code from your email</p>
-            <input id="authOtpCode" type="text" maxlength="6" placeholder="000000" inputmode="numeric" autocomplete="one-time-code" style="width:100%;padding:14px 16px;background:#0f172a;border:1px solid rgba(255,255,255,0.2);border-radius:12px;color:#f1f5f9;font-size:1.5rem;font-weight:900;letter-spacing:8px;text-align:center;margin-bottom:12px;outline:none;">
+            <h3 style="color:#1e293b;font-weight:800;margin-bottom:8px;">Enter Code</h3>
+            <p style="color:#64748b;font-size:0.9rem;margin-bottom:20px;">Enter the 6-digit code from your email</p>
+            <input id="authOtpCode" type="text" maxlength="6" placeholder="000000" inputmode="numeric" autocomplete="one-time-code" style="width:100%;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;color:#1e293b;font-size:1.5rem;font-weight:900;letter-spacing:8px;text-align:center;margin-bottom:12px;outline:none;">
             <button id="authOtpVerifyBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:12px;color:white;font-size:1rem;font-weight:700;cursor:pointer;">Verify</button>
             <p id="authOtpVerifyMsg" style="color:#94a3b8;font-size:0.85rem;margin-top:12px;display:none;"></p>
-            <button id="authOtpResendBtn" style="background:none;border:none;color:#93c5fd;font-size:0.85rem;cursor:pointer;margin-top:8px;text-decoration:underline;">Resend</button>
+            <button id="authOtpResendBtn" style="background:none;border:none;color:#2563eb;font-size:0.85rem;cursor:pointer;margin-top:8px;text-decoration:underline;">Resend</button>
         </div>
         <div id="authOtpStep3" style="display:none;">
-            <div style="font-size:3rem;margin-bottom:12px;">&#10003;</div>
-            <h3 style="color:#f1f5f9;font-weight:800;margin-bottom:8px;">Verified!</h3>
-            <p style="color:#94a3b8;font-size:0.9rem;margin-bottom:4px;">Credits: <span id="authOtpCredits" style="color:#10b981;font-weight:700;">0</span></p>
+            <div style="font-size:3rem;margin-bottom:12px;color:#10b981;">&#10003;</div>
+            <h3 style="color:#1e293b;font-weight:800;margin-bottom:8px;">Verified!</h3>
+            <p style="color:#64748b;font-size:0.9rem;margin-bottom:4px;">Credits: <span id="authOtpCredits" style="color:#10b981;font-weight:700;">0</span></p>
         </div>
     </div>
 </div>
