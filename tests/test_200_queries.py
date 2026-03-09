@@ -312,9 +312,9 @@ async def send_query(session: aiohttp.ClientSession, url: str, query: str,
                         except json.JSONDecodeError:
                             continue
 
-                        if event_type == 'chunk':
+                        if event_type == 'answer_chunk':
                             full_text += payload.get('text', '')
-                        elif event_type == 'done':
+                        elif event_type == 'answer_done':
                             leader = payload.get('leader', '')
                             specialty = payload.get('specialty', '')
                             if payload.get('full_text'):

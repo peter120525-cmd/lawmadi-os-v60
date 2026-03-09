@@ -90,7 +90,7 @@ try:
                     full_text += payload["text"]
             except:
                 pass
-        elif line.startswith("event: done"):
+        elif line.startswith("event: answer_done"):
             pass  # next line will have data
         elif line.startswith("event: "):
             pass
