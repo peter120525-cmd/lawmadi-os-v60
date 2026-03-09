@@ -958,6 +958,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                             // 최종 답변 스트리밍 (한 줄씩 타이핑)
                             accumulatedText += (payload.text || '');
                             if (!streamDivAttached) {
+                                // 턴 큐 즉시 비우기 (남은 턴 한꺼번에 표시)
+                                this._flushTurnQueue();
                                 this._hideMiniWaiting();
                                 this._removeChatTypingBubbleAll();
                                 this.convArea.appendChild(streamDiv);
@@ -1990,20 +1992,95 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             this._delibTurnIndex = 0;
         },
 
-        // 스트리밍: deliberation_turn 이벤트 (자연스러운 채팅 흐름)
-        _renderDeliberationTurn(payload) {
-            const container = this._delibContainer;
+        // ─── 턴 큐잉 시스템: 턴이 동시 도착해도 순차 재생 ───
+        _turnQueue: [],
+        _turnPlaying: false,
+        _turnFlushed: false,
+
+        _enqueueTurn(type, payload) {
+            // 이미 flush됨 → 즉시 무시
+            if (this._turnFlushed) return;
+            this._turnQueue.push({ type, payload });
+            if (!this._turnPlaying) this._playNextTurn();
+        },
+
+        // chunk 도착 시 호출: 남은 턴 즉시 표시 (애니메이션 없이)
+        _flushTurnQueue() {
+            this._turnFlushed = true;
+            this._turnPlaying = false;
+            const remaining = this._turnQueue.splice(0);
+            for (const { type, payload } of remaining) {
+                if (type === 'deliberation_turn') {
+                    this._doTurnInstant(payload, this._delibContainer, 'deliberation');
+                } else if (type === 'handoff') {
+                    this._doTurnInstant(payload, this._handoffContainer, 'handoff');
+                } else if (type === 'deliberation_end') {
+                    this._doDeliberationEnd(payload);
+                }
+            }
+            // 모든 타이핑 버블 제거
+            this._removeChatTypingBubbleAll();
+        },
+
+        // 즉시 렌더링 (타자 효과/딜레이 없음)
+        _doTurnInstant(payload, container, mode) {
             if (!container) return;
+            const name = payload.speaker || '?';
+            const role = payload.role || '';
+            const text = payload.text || '';
+            const isMod = (name === '서연');
+            this._removeChatTypingBubble(container);
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-msg-bubble' + (isMod ? ' moderator' : '');
+            const idx = (mode === 'handoff' ? this._handoffTurnIndex : this._delibTurnIndex) || 0;
+            bubble.innerHTML = _sanitize(
+                this._buildAvatarHTML(name, mode) +
+                '<div class="chat-msg-body">' +
+                '<div class="chat-msg-meta"><span class="chat-msg-name">' + this.escapeHtml(name) + '</span>' +
+                '<span class="chat-msg-role">' + this.escapeHtml(role) + '</span>' +
+                '<span class="chat-msg-time">' + this._getTimeStamp(idx) + '</span></div>' +
+                '<div class="chat-msg-text">' + this.escapeHtml(text) + '</div></div>'
+            );
+            container.appendChild(bubble);
+            if (mode === 'handoff') this._handoffTurnIndex = idx + 1;
+            else this._delibTurnIndex = idx + 1;
+            if (payload.is_final) {
+                const endMsg = document.createElement('div');
+                endMsg.className = 'chat-flow-status';
+                endMsg.textContent = '회의 완료';
+                container.appendChild(endMsg);
+            }
+        },
+
+        _playNextTurn() {
+            if (this._turnFlushed || !this._turnQueue.length) { this._turnPlaying = false; return; }
+            this._turnPlaying = true;
+            const { type, payload } = this._turnQueue.shift();
+
+            if (type === 'deliberation_turn') {
+                this._doDeliberationTurn(payload, () => this._playNextTurn());
+            } else if (type === 'handoff') {
+                this._doHandoffTurn(payload, () => this._playNextTurn());
+            } else if (type === 'deliberation_end') {
+                this._doDeliberationEnd(payload);
+                this._playNextTurn();
+            } else {
+                this._playNextTurn();
+            }
+        },
+
+        // 실제 deliberation 턴 렌더링 (콜백 기반)
+        _doDeliberationTurn(payload, onDone) {
+            const container = this._delibContainer;
+            if (!container) { onDone(); return; }
             const name = payload.speaker || '?';
             const role = payload.role || '';
             const text = payload.text || '';
             const isFinal = payload.is_final || false;
             const isMod = (name === '서연');
 
-            // 이전 타이핑 버블 제거
             this._removeChatTypingBubble(container);
 
-            // 메시지 버블 생성
             const bubble = document.createElement('div');
             bubble.className = 'chat-msg-bubble' + (isMod ? ' moderator' : '');
             const turnIdx = this._delibTurnIndex || 0;
@@ -2020,7 +2097,6 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             this._delibTurnIndex = turnIdx + 1;
             this._smartScroll(false);
 
-            // 타자 효과로 텍스트 표시
             const textEl = bubble.querySelector('.chat-msg-text');
             if (textEl) {
                 this._typewriterReveal(textEl, text, () => {
@@ -2030,12 +2106,14 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         this._appendChatTypingBubble(container, nextName, nextRole);
                     }
                     this._smartScroll(false);
+                    // 다음 턴 전 1초 대기 (타이핑 느낌)
+                    setTimeout(onDone, 1000);
                 });
-            }
+            } else { onDone(); }
         },
 
-        // 스트리밍: deliberation_end 이벤트
-        _renderDeliberationEnd(payload) {
+        // 실제 deliberation_end 렌더링
+        _doDeliberationEnd(payload) {
             const container = this._delibContainer;
             if (!container) return;
             this._removeChatTypingBubble(container);
@@ -2047,25 +2125,48 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             container.appendChild(endMsg);
             this._smartScroll(false);
             this._delibContainer = null;
-            // "X 리더가 답변을 작성합니다" 상태 표시
             this._showMiniWaiting(`${selected}(${specialty}) 리더가 답변을 작성합니다`);
         },
 
-        // 스트리밍: handoff_start 이벤트 → 자연스러운 채팅 흐름
+        // SSE에서 호출하는 래퍼 (큐에 넣기만)
+        _renderDeliberationTurn(payload) { this._enqueueTurn('deliberation_turn', payload); },
+        _renderDeliberationEnd(payload) { this._enqueueTurn('deliberation_end', payload); },
+
+        // 스트리밍: deliberation_start
+        _renderDeliberationStart(payload) {
+            const container = document.createElement('div');
+            container.className = 'chat-flow-container';
+            container.id = 'delib-live-' + Date.now();
+            this._appendChatTypingBubble(container, '서연', 'CSO');
+            this.convArea.appendChild(container);
+            this._smartScroll(false);
+            this._delibContainer = container;
+            this._delibTurnIndex = 0;
+            this._turnQueue = [];
+            this._turnPlaying = false;
+            this._turnFlushed = false;
+        },
+
+        // 스트리밍: handoff_start
         _renderHandoffStart(payload) {
             if (this._handoffContainer) return;
             const container = document.createElement('div');
             container.className = 'chat-flow-container';
-            // 헤더 없음 — 타이핑 버블만
             this._appendChatTypingBubble(container, '서연', 'CSO');
             this.convArea.appendChild(container);
             this._handoffContainer = container;
             this._handoffTurnIndex = 0;
+            this._turnQueue = [];
+            this._turnPlaying = false;
+            this._turnFlushed = false;
             this._smartScroll(false);
         },
 
-        // 스트리밍: handoff 이벤트 (자연스러운 채팅 흐름)
-        _renderHandoffTurn(payload) {
+        // SSE에서 호출하는 handoff 래퍼 (큐에 넣기만)
+        _renderHandoffTurn(payload) { this._enqueueTurn('handoff', payload); },
+
+        // 실제 handoff 턴 렌더링 (콜백 기반)
+        _doHandoffTurn(payload, onDone) {
             if (!this._handoffContainer) {
                 const container = document.createElement('div');
                 container.className = 'chat-flow-container';
@@ -2080,10 +2181,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             const isFinal = payload.is_final || false;
             const isMod = (name === '서연');
 
-            // 이전 타이핑 버블 제거
             this._removeChatTypingBubble(container);
 
-            // 메시지 버블
             const bubble = document.createElement('div');
             bubble.className = 'chat-msg-bubble' + (isMod ? ' moderator' : '');
             const hoTurnIdx = this._handoffTurnIndex || 0;
@@ -2100,24 +2199,22 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             this._handoffTurnIndex = hoTurnIdx + 1;
             this._smartScroll(false);
 
-            // 타자 효과로 텍스트 표시
             const textEl = bubble.querySelector('.chat-msg-text');
             if (textEl) {
                 this._typewriterReveal(textEl, text, () => {
                     if (!isFinal) {
                         this._appendChatTypingBubble(container, '', '');
                     } else {
-                        // 마지막 턴: "회의 완료" + "리더가 답변을 작성합니다"
                         const endMsg = document.createElement('div');
                         endMsg.className = 'chat-flow-status';
                         endMsg.textContent = '회의 완료';
                         container.appendChild(endMsg);
-                        // 담당 리더 이름은 done 이벤트에서 확정 → 일반 대기 표시
                         this._showMiniWaiting('답변을 작성합니다');
                     }
                     this._smartScroll(false);
+                    setTimeout(onDone, 1000);
                 });
-            }
+            } else { onDone(); }
         },
 
         // Classic (/ask) 응답의 deliberation 렌더링
@@ -2296,8 +2393,10 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         },
 
         hideTypingIndicator() {
+            this._flushTurnQueue();
             this._hideSimpleWaiting();
             this._hideMiniWaiting();
+            this._removeChatTypingBubbleAll();
             const typingDiv = document.getElementById('typing-indicator');
             if (typingDiv) typingDiv.remove();
         },
