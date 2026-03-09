@@ -66,11 +66,13 @@
             --primary-light: #eff6ff;
             --accent-gold: #f59e0b;
             --success: #10b981;
+            --danger: #ef4444;
             --sidebar-bg: #0f172a;
             --surface: #ffffff;
             --bg: #f8fafc;
             --text-main: #1e293b;
             --text-muted: #64748b;
+            --text-subtle: #9ca3af;
             --border: #e2e8f0;
             --sidebar-width: 280px;
         }
@@ -985,6 +987,13 @@
         }
 
         /* 스크롤바 스타일 */
+        .conversation-viewport {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 transparent;
+        }
+        body.dark-mode .conversation-viewport {
+            scrollbar-color: #475569 transparent;
+        }
         .conversation-viewport::-webkit-scrollbar {
             width: 8px;
         }
@@ -1019,11 +1028,10 @@
             font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             font-size: 19px;
             line-height: 2.1;
-            color: #1e293b;
+            color: var(--text-main);
             letter-spacing: 0.02em;
             word-spacing: 1px;
             position: relative;
-            overflow: visible;
             overflow-x: clip;
             word-break: break-word;
             overflow-wrap: break-word;
@@ -1477,7 +1485,7 @@
             border-radius: 20px 20px 4px 20px;
             max-width: 80%;
             font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            font-size: 16px;
+            font-size: 17px;
             font-weight: 600;
             line-height: 1.65;
             box-shadow:
@@ -1574,8 +1582,8 @@
         .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
 
         .typing-text {
-            font-size: 15px;
-            color: #1e40af;
+            font-size: 16px;
+            color: var(--primary-dark);
             font-weight: 500;
             letter-spacing: 0.01em;
             line-height: 1.7;
@@ -2180,6 +2188,7 @@
 
             .header-right > div:nth-of-type(2) {
                 display: none;
+                visibility: hidden;
             }
 
             .header-right {
@@ -3381,7 +3390,7 @@
         @media (max-height: 500px) and (orientation: landscape) {
             header.top-status {
                 height: 40px;
-                padding: 0 10px;
+                padding: 0 max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left));
             }
             .tab-bar {
                 display: none;
@@ -3394,8 +3403,12 @@
                 font-size: 0.9rem;
             }
             .conversation-viewport {
-                padding: 8px 10px;
+                padding: 8px max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left));
                 gap: 8px;
+            }
+            .input-pipeline-wrapper {
+                padding-left: max(8px, env(safe-area-inset-left));
+                padding-right: max(8px, env(safe-area-inset-right));
             }
         }
 
@@ -4869,6 +4882,17 @@
         body.dark-mode .ssot-confidence-bar .bar-label { color: #6ee7b7; }
         body.dark-mode .ssot-confidence-bar .bar-track { background: #1e293b; }
 
+        /* 다크모드: 변호사 연결 섹션 */
+        body.dark-mode .lawyer-section {
+            background: linear-gradient(135deg, #022c22 0%, #064e3b 50%, #065f46 100%);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        body.dark-mode .lawyer-section h3 { color: #ecfdf5; }
+        body.dark-mode .lawyer-section p { color: #6ee7b7; }
+        body.dark-mode .lawyer-section .lawyer-cta-landing {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        }
+
         /* 다크모드: 예시 카드 */
         body.dark-mode .example-card {
             background: #1e293b;
@@ -5650,7 +5674,14 @@
         }
         /* 애니메이션 미지원/감소 모션 폴백 */
         @media (prefers-reduced-motion: reduce) {
-            .deliberation-bubble, .handoff-bubble {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+            .deliberation-bubble, .handoff-bubble,
+            .ai-msg, .user-msg, .typing-dots span,
+            .chat-msg-bubble, .chat-flow-status {
                 opacity: 1 !important;
                 animation: none !important;
             }

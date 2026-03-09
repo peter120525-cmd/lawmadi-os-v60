@@ -493,12 +493,13 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 </div>
             `).join('');
 
-            list.querySelectorAll('.fav-delete').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    UI.deleteFavorite(parseInt(btn.dataset.favId));
+            if (!list._favDeleteDelegated) {
+                list.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.fav-delete');
+                    if (btn) { e.stopPropagation(); UI.deleteFavorite(parseInt(btn.dataset.favId)); }
                 });
-            });
+                list._favDeleteDelegated = true;
+            }
 
             list.querySelectorAll('.fav-item').forEach(item => {
                 item.onclick = () => {
@@ -609,9 +610,12 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 element.textContent = '0';
                 return;
             }
+            if (this._animTimers) this._animTimers.forEach(t => clearInterval(t));
+            this._animTimers = this._animTimers || [];
             let current = 0;
             const increment = target / 50;
             const timer = setInterval(() => {
+                if (!element.parentNode) { clearInterval(timer); return; }
                 current += increment;
                 if (current >= target) {
                     element.textContent = target.toLocaleString();
@@ -620,6 +624,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                     element.textContent = Math.floor(current).toLocaleString();
                 }
             }, 20);
+            this._animTimers.push(timer);
         },
 
         toggleSidebar(state) {

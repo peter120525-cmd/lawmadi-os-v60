@@ -1289,12 +1289,14 @@ async def ask_stream(request: Request):
                     return
 
                 # 줄 단위 점진적 스트리밍 (위→아래 자연스럽게)
+                _elapsed_so_far = time.time() - start_time
+                _chunk_delay = 0.015 if _elapsed_so_far > 8 else 0.04
                 _lines = accumulated.split("\n")
                 for _li, _line in enumerate(_lines):
                     _ltext = _line if _li == len(_lines) - 1 else _line + "\n"
                     yield _sse("answer_chunk", {"text": _ltext})
                     if _li < len(_lines) - 1:
-                        await asyncio.sleep(0.04)
+                        await asyncio.sleep(_chunk_delay)
 
                 final_text = accumulated
                 swarm_mode = False
@@ -1408,12 +1410,14 @@ async def ask_stream(request: Request):
                 # answer_start → answer_chunk 스트리밍 → answer_done
                 yield _sse("answer_start", {"speaker": leader_name, "role": leader_specialty})
                 if final_text:
+                    _elapsed_so_far = time.time() - start_time
+                    _chunk_delay = 0.015 if _elapsed_so_far > 8 else 0.04
                     _lines = final_text.split("\n")
                     for _li, _line in enumerate(_lines):
                         _ltext = _line if _li == len(_lines) - 1 else _line + "\n"
                         yield _sse("answer_chunk", {"text": _ltext})
                         if _li < len(_lines) - 1:
-                            await asyncio.sleep(0.04)
+                            await asyncio.sleep(_chunk_delay)
 
                 swarm_mode = False
 
