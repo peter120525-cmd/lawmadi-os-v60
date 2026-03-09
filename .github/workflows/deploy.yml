@@ -174,17 +174,17 @@ jobs:
               sys.exit(1)
           " || exit 1
 
-          # Integration: /leaders 엔드포인트 검증
-          LEADERS=$(curl -sf --max-time 15 "$STAGING_URL/leaders") || { echo "❌ /leaders 응답 실패"; exit 1; }
+          # Integration: /api/leaders 엔드포인트 검증
+          LEADERS=$(curl -sf --max-time 15 "$STAGING_URL/api/leaders") || { echo "❌ /api/leaders 응답 실패"; exit 1; }
           echo "$LEADERS" | python3 -c "
           import sys, json
           try:
               d = json.loads(sys.stdin.read())
               leaders = d if isinstance(d, list) else d.get('leaders', [])
               assert len(leaders) >= 60, f'Leaders count: {len(leaders)} < 60'
-              print(f'✅ /leaders passed: {len(leaders)} leaders')
+              print(f'✅ /api/leaders passed: {len(leaders)} leaders')
           except (json.JSONDecodeError, AssertionError) as e:
-              print(f'❌ /leaders 검증 실패: {e}')
+              print(f'❌ /api/leaders 검증 실패: {e}')
               sys.exit(1)
           " || exit 1
 
