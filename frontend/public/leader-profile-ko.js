@@ -115,6 +115,10 @@ function renderProfile(basic, profile, code) {
         document.getElementById('visionCard').innerHTML = '<p>' + esc(profile.vision) + '</p>';
     }
 
+    // Chat CTA link
+    var chatCta = document.getElementById('chatCta');
+    if (chatCta) chatCta.href = '/leader-chat?id=' + encodeURIComponent(code);
+
     // Show content
     document.getElementById('loadingState').style.display = 'none';
     document.getElementById('profileContent').style.display = 'block';

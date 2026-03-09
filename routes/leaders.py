@@ -1,7 +1,7 @@
 """
 Lawmadi OS v60 — Leader 1:1 Chat routes.
-GET /api/leaders  — 리더 목록 (L01~L60)
-POST /chat-leader — SSE 스트리밍 1:1 채팅
+GET /api/leaders      — 리더 목록 (CSO/CTO/CCO + L01~L60)
+POST /api/chat-leader — SSE 스트리밍 1:1 채팅
 """
 import json
 import asyncio
@@ -191,20 +191,19 @@ def _convert_history(raw_history: list) -> list:
 
 @router.get("/api/leaders")
 async def get_leaders():
-    """L01~L60 리더 목록 반환."""
+    """CSO/CTO/CCO + L01~L60 리더 목록 반환."""
     leaders = []
     for lid, entry in sorted(_LEADER_REGISTRY.items()):
-        if not lid.startswith("L"):
-            continue
+        specialty = entry.get("specialty", "") or entry.get("role", "")
         leaders.append({
             "id": lid,
             "name": entry.get("name", ""),
-            "specialty": entry.get("specialty", ""),
+            "specialty": specialty,
             "role": entry.get("role", ""),
             "description": entry.get("profile", ""),
             "personality": _build_personality(lid, entry),
             "avatar": _LEADER_PROFILES.get(lid, {}).get("images", {}).get("profile", f"images/leaders/{lid}.jpg"),
-            "tags": _split_tags(entry.get("specialty", "")),
+            "tags": _split_tags(specialty),
         })
     return JSONResponse({"leaders": leaders})
 
@@ -213,7 +212,7 @@ async def get_leaders():
 # POST /chat-leader — SSE 스트리밍 1:1 채팅
 # ---------------------------------------------------------------------------
 
-@router.post("/chat-leader")
+@router.post("/api/chat-leader")
 async def chat_leader(request: Request):
     """리더 1:1 채팅 (SSE 스트리밍)."""
     # Rate limit
@@ -236,11 +235,11 @@ async def chat_leader(request: Request):
 
     # Validate leader
     entry = _LEADER_REGISTRY.get(leader_id)
-    if not entry or not leader_id.startswith("L"):
+    if not entry:
         return JSONResponse({"error": f"Unknown leader: {leader_id}"}, status_code=404)
 
     leader_name = entry.get("name", leader_id)
-    leader_specialty = entry.get("specialty", "")
+    leader_specialty = entry.get("specialty", "") or entry.get("role", "")
     lang = _detect_lang(query)
     query = query[:MAX_QUERY_LEN]
 
