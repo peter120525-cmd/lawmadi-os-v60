@@ -82,7 +82,7 @@ def _build_cso_persona() -> str:
     profiles = _load_leader_profiles()
     p = profiles.get("CSO")
     if not p:
-        return "CSO 서연: Lawmadi OS 전략 총괄. 리더 회의를 주재합니다."
+        return "CSO 서연: 법률 전략 총괄. 리더 회의를 주재합니다."
     parts = []
     if p.get("hero"):
         parts.append(f"신조: {p['hero']}")
@@ -92,7 +92,7 @@ def _build_cso_persona() -> str:
     if p.get("philosophy"):
         parts.append(f"철학: {p['philosophy']}")
     if not parts:
-        return "CSO 서연: Lawmadi OS 전략 총괄."
+        return "CSO 서연: 법률 전략 총괄."
     return "CSO 서연\n" + "\n".join(parts)
 
 

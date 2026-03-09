@@ -960,7 +960,6 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
                         } else if (eventType === 'deliberation_end') {
                             this._renderDeliberationEnd(payload);
-                            this._showMiniWaiting();
 
                         } else if (eventType === 'handoff_start') {
                             this.hideTypingIndicator();
@@ -974,8 +973,16 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                             // status event: simple waiting only (6-step indicator removed)
 
                         } else if (eventType === 'chunk') {
-                            // Final answer shown all at once — no progressive rendering
+                            // Final answer streaming (line by line typing)
                             accumulatedText += (payload.text || '');
+                            if (!streamDivAttached) {
+                                this._hideMiniWaiting();
+                                this._removeChatTypingBubbleAll();
+                                this.convArea.appendChild(streamDiv);
+                                streamDivAttached = true;
+                            }
+                            streamContent.innerHTML = this._renderStreamingText(accumulatedText);
+                            this._smartScroll(false);
 
                         } else if (eventType === 'done') {
                             leaderName = payload.leader || '';
@@ -1066,11 +1073,11 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
         _buildBubbleBody(name, role, text, turnIndex) {
             const ts = this._getTimeStamp(turnIndex || 0);
-            return `<div class="delib-body">` +
-                `<div class="delib-meta-row"><span class="delib-name">${this.escapeHtml(name)}</span>` +
-                `<span class="delib-role">${this.escapeHtml(role)}</span>` +
-                `<span class="delib-time">${ts}</span></div>` +
-                `<div class="delib-text">${this.escapeHtml(text)}</div></div>`;
+            return `<div class="chat-msg-body">` +
+                `<div class="chat-msg-meta"><span class="chat-msg-name">${this.escapeHtml(name)}</span>` +
+                `<span class="chat-msg-role">${this.escapeHtml(role)}</span>` +
+                `<span class="chat-msg-time">${ts}</span></div>` +
+                `<div class="chat-msg-text">${this.escapeHtml(text)}</div></div>`;
         },
 
         _buildHandoffArrow() {
@@ -1084,25 +1091,16 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         // Streaming: deliberation_start event
         _renderDeliberationStart(payload) {
             const container = document.createElement('div');
-            container.className = 'deliberation-container';
+            container.className = 'chat-flow-container';
             container.id = 'delib-live-' + Date.now();
-            const leaders = payload.leaders || [];
-            const count = leaders.filter(l => l.name !== 'Seoyeon' && l.name !== '서연').length;
-            container.innerHTML = _sanitize(
-                `<div class="delib-header">` +
-                `<span class="delib-header-dot"></span>` +
-                `<span>Meeting in progress — Seoyeon (CSO) presiding</span>` +
-                (count > 1 ? `<span class="delib-header-count">${count} attending</span>` : ``) +
-                `</div>`
-            );
-            this._appendDelibTypingIndicator(container, 'Seoyeon');
+            this._appendChatTypingBubble(container, 'Seoyeon', 'CSO');
             this.convArea.appendChild(container);
             this._smartScroll(false);
             this._delibContainer = container;
             this._delibTurnIndex = 0;
         },
 
-        // Streaming: deliberation_turn event
+        // Streaming: deliberation_turn event (natural chat flow)
         _renderDeliberationTurn(payload) {
             const container = this._delibContainer;
             if (!container) return;
@@ -1112,84 +1110,70 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             const isFinal = payload.is_final || false;
             const isMod = (name === 'Seoyeon' || name === '서연');
 
-            this._removeDelibTypingIndicator(container);
+            this._removeChatTypingBubble(container);
 
             const bubble = document.createElement('div');
-            bubble.className = 'deliberation-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
+            bubble.className = 'chat-msg-bubble' + (isMod ? ' moderator' : '');
             const turnIdx = this._delibTurnIndex || 0;
             const ts = this._getTimeStamp(turnIdx);
-            // Show typing dots first
             bubble.innerHTML = _sanitize(
                 this._buildAvatarHTML(name, 'deliberation') +
-                '<div class="delib-body">' +
-                '<div class="delib-meta-row"><span class="delib-name">' + this.escapeHtml(name) + '</span>' +
-                '<span class="delib-role">' + this.escapeHtml(role) + '</span>' +
-                '<span class="delib-time">' + ts + '</span></div>' +
-                '<div class="delib-text"><div class="delib-typing-dots"><span></span><span></span><span></span></div></div></div>'
+                '<div class="chat-msg-body">' +
+                '<div class="chat-msg-meta"><span class="chat-msg-name">' + this.escapeHtml(name) + '</span>' +
+                '<span class="chat-msg-role">' + this.escapeHtml(role) + '</span>' +
+                '<span class="chat-msg-time">' + ts + '</span></div>' +
+                '<div class="chat-msg-text"></div></div>'
             );
             container.appendChild(bubble);
             this._delibTurnIndex = turnIdx + 1;
             this._smartScroll(false);
 
-            // Typewriter effect after 800ms
-            setTimeout(() => {
-                const textEl = bubble.querySelector('.delib-text');
-                if (textEl) {
-                    this._typewriterReveal(textEl, text, () => {
-                        if (!isFinal) {
-                            const nextSpeaker = isMod ? '' : 'Seoyeon';
-                            this._appendDelibTypingIndicator(container, nextSpeaker);
-                        }
-                        this._smartScroll(false);
-                    });
-                }
-            }, 800);
+            const textEl = bubble.querySelector('.chat-msg-text');
+            if (textEl) {
+                this._typewriterReveal(textEl, text, () => {
+                    if (!isFinal) {
+                        const nextName = isMod ? '' : 'Seoyeon';
+                        const nextRole = isMod ? '' : 'CSO';
+                        this._appendChatTypingBubble(container, nextName, nextRole);
+                    }
+                    this._smartScroll(false);
+                });
+            }
         },
 
         // Streaming: deliberation_end event
         _renderDeliberationEnd(payload) {
             const container = this._delibContainer;
             if (!container) return;
-            this._removeDelibTypingIndicator(container);
+            this._removeChatTypingBubble(container);
             const selected = payload.selected_leader || '?';
             const specialty = payload.selected_leader_specialty || '';
-            const summary = document.createElement('div');
-            summary.className = 'delib-conclusion';
-            summary.textContent = `${selected} (${specialty}) has been assigned as your leader`;
-            container.appendChild(summary);
+            const endMsg = document.createElement('div');
+            endMsg.className = 'chat-flow-status';
+            endMsg.textContent = 'Meeting complete';
+            container.appendChild(endMsg);
             this._smartScroll(false);
             this._delibContainer = null;
+            this._showMiniWaiting(`${selected} (${specialty}) is composing the response`);
         },
 
-        // Streaming: handoff_start event — create container + typing indicator
+        // Streaming: handoff_start event
         _renderHandoffStart(payload) {
             if (this._handoffContainer) return;
             const container = document.createElement('div');
-            container.className = 'handoff-container';
-            container.innerHTML = _sanitize(
-                '<div class="handoff-header">' +
-                '<span class="delib-header-dot"></span>' +
-                '<span>Leader Handoff — Seoyeon (CSO) presiding</span>' +
-                '</div>'
-            );
-            this._appendDelibTypingIndicator(container, 'Seoyeon');
+            container.className = 'chat-flow-container';
+            this._appendChatTypingBubble(container, 'Seoyeon', 'CSO');
             this.convArea.appendChild(container);
             this._handoffContainer = container;
             this._handoffTurnIndex = 0;
             this._smartScroll(false);
         },
 
-        // Streaming: handoff event (per turn, 6-turn CSO-moderated)
+        // Streaming: handoff event (natural chat flow)
         _renderHandoffTurn(payload) {
             if (!this._handoffContainer) {
                 const container = document.createElement('div');
-                container.className = 'handoff-container';
-                container.innerHTML = _sanitize(
-                    '<div class="handoff-header">' +
-                    '<span class="delib-header-dot"></span>' +
-                    '<span>Leader Handoff — Seoyeon (CSO) presiding</span>' +
-                    '</div>'
-                );
+                container.className = 'chat-flow-container';
                 this.convArea.appendChild(container);
                 this._handoffContainer = container;
                 this._handoffTurnIndex = 0;
@@ -1201,58 +1185,50 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             const isFinal = payload.is_final || false;
             const isMod = (name === 'Seoyeon' || name === '서연');
 
-            // Remove previous typing indicator
-            this._removeDelibTypingIndicator(container);
+            this._removeChatTypingBubble(container);
 
             const bubble = document.createElement('div');
-            bubble.className = 'handoff-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
+            bubble.className = 'chat-msg-bubble' + (isMod ? ' moderator' : '');
             const hoTurnIdx = this._handoffTurnIndex || 0;
             const ts = this._getTimeStamp(hoTurnIdx);
-            // Show typing dots first
             bubble.innerHTML = _sanitize(
                 this._buildAvatarHTML(name, 'handoff') +
-                '<div class="delib-body">' +
-                '<div class="delib-meta-row"><span class="delib-name">' + this.escapeHtml(name) + '</span>' +
-                '<span class="delib-role">' + this.escapeHtml(role) + '</span>' +
-                '<span class="delib-time">' + ts + '</span></div>' +
-                '<div class="delib-text"><div class="delib-typing-dots"><span></span><span></span><span></span></div></div></div>'
+                '<div class="chat-msg-body">' +
+                '<div class="chat-msg-meta"><span class="chat-msg-name">' + this.escapeHtml(name) + '</span>' +
+                '<span class="chat-msg-role">' + this.escapeHtml(role) + '</span>' +
+                '<span class="chat-msg-time">' + ts + '</span></div>' +
+                '<div class="chat-msg-text"></div></div>'
             );
             container.appendChild(bubble);
             this._handoffTurnIndex = hoTurnIdx + 1;
             this._smartScroll(false);
 
-            // Typewriter effect after 800ms
-            setTimeout(() => {
-                const textEl = bubble.querySelector('.delib-text');
-                if (textEl) {
-                    this._typewriterReveal(textEl, text, () => {
-                        if (!isFinal) {
-                            this._appendDelibTypingIndicator(container, '');
-                        }
-                        this._smartScroll(false);
-                    });
-                }
-            }, 800);
+            const textEl = bubble.querySelector('.chat-msg-text');
+            if (textEl) {
+                this._typewriterReveal(textEl, text, () => {
+                    if (!isFinal) {
+                        this._appendChatTypingBubble(container, '', '');
+                    } else {
+                        const endMsg = document.createElement('div');
+                        endMsg.className = 'chat-flow-status';
+                        endMsg.textContent = 'Meeting complete';
+                        container.appendChild(endMsg);
+                        this._showMiniWaiting('Composing response');
+                    }
+                    this._smartScroll(false);
+                });
+            }
         },
 
         // Classic (/ask) deliberation rendering
         _renderDeliberation(turns) {
             if (!turns || !turns.length) return;
             const container = document.createElement('div');
-            container.className = 'deliberation-container';
-            const names = [...new Set(turns.map(t => t.speaker))].filter(n => n !== 'Seoyeon' && n !== '서연');
-            container.innerHTML = _sanitize(
-                `<div class="delib-header">` +
-                `<span class="delib-header-dot"></span>` +
-                `<span>Meeting in progress — Seoyeon (CSO) presiding</span>` +
-                (names.length > 1 ? `<span class="delib-header-count">${names.length} attending</span>` : ``) +
-                `</div>`
-            );
+            container.className = 'chat-flow-container';
             turns.forEach((turn, idx) => {
                 const isMod = (turn.speaker === 'Seoyeon' || turn.speaker === '서연');
-                const isFinal = turn.is_final || false;
                 const bubble = document.createElement('div');
-                bubble.className = 'deliberation-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
+                bubble.className = 'chat-msg-bubble' + (isMod ? ' moderator' : '');
                 bubble.style.animationDelay = (idx * 0.25) + 's';
                 bubble.innerHTML = _sanitize(
                     this._buildAvatarHTML(turn.speaker, 'deliberation') +
@@ -1260,26 +1236,23 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 );
                 container.appendChild(bubble);
             });
+            const endMsg = document.createElement('div');
+            endMsg.className = 'chat-flow-status';
+            endMsg.textContent = 'Meeting complete';
+            container.appendChild(endMsg);
             this.convArea.appendChild(container);
             this._smartScroll(false);
         },
 
-        // Classic (/ask) handoff rendering (6-turn CSO-moderated)
+        // Classic (/ask) handoff rendering
         _renderHandoff(turns) {
             if (!turns || !turns.length) return;
             const container = document.createElement('div');
-            container.className = 'handoff-container';
-            container.innerHTML = _sanitize(
-                '<div class="handoff-header">' +
-                '<span class="delib-header-dot"></span>' +
-                '<span>Leader Handoff — Seoyeon (CSO) presiding</span>' +
-                '</div>'
-            );
+            container.className = 'chat-flow-container';
             turns.forEach((turn, idx) => {
                 const isMod = (turn.speaker === 'Seoyeon' || turn.speaker === '서연');
-                const isFinal = turn.is_final || false;
                 const bubble = document.createElement('div');
-                bubble.className = 'handoff-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
+                bubble.className = 'chat-msg-bubble' + (isMod ? ' moderator' : '');
                 bubble.style.animationDelay = (idx * 0.25) + 's';
                 bubble.innerHTML = _sanitize(
                     this._buildAvatarHTML(turn.speaker, 'handoff') +
@@ -1287,25 +1260,33 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 );
                 container.appendChild(bubble);
             });
+            const endMsg = document.createElement('div');
+            endMsg.className = 'chat-flow-status';
+            endMsg.textContent = 'Meeting complete';
+            container.appendChild(endMsg);
             this.convArea.appendChild(container);
             this._smartScroll(false);
         },
 
-        // Deliberation typing indicator helpers
-        _appendDelibTypingIndicator(container, speakerHint) {
-            const indicator = document.createElement('div');
-            indicator.className = 'delib-typing-indicator';
-            const label = speakerHint ? `${speakerHint} is typing` : 'typing';
-            indicator.innerHTML = _sanitize(
-                `<div class="delib-typing-dots"><span></span><span></span><span></span></div>` +
-                `<span>${label}</span>`
+        // Chat flow typing bubble helpers
+        _appendChatTypingBubble(container, speakerName, speakerRole) {
+            this._removeChatTypingBubble(container);
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-typing-bubble';
+            const label = speakerName ? `${speakerName}${speakerRole ? ' (' + speakerRole + ')' : ''} is typing` : 'typing';
+            bubble.innerHTML = _sanitize(
+                '<div class="chat-typing-dots"><span></span><span></span><span></span></div>' +
+                '<span class="chat-typing-label">' + this.escapeHtml(label) + '</span>'
             );
-            container.appendChild(indicator);
+            container.appendChild(bubble);
             this._smartScroll(false);
         },
-        _removeDelibTypingIndicator(container) {
-            const existing = container.querySelector('.delib-typing-indicator');
-            if (existing) existing.remove();
+        _removeChatTypingBubble(container) {
+            const el = container.querySelector('.chat-typing-bubble');
+            if (el) el.remove();
+        },
+        _removeChatTypingBubbleAll() {
+            document.querySelectorAll('.chat-typing-bubble').forEach(el => el.remove());
         },
 
         // ═══ 스트리밍 텍스트 실시간 렌더링 (경량) ═══
@@ -2072,7 +2053,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
             // 협의/인수인계 컨테이너를 AI 메시지 안으로 이동
             if (sender === 'ai') {
-                const delibEls = Array.from(this.convArea.querySelectorAll(':scope > .deliberation-container, :scope > .handoff-container'));
+                const delibEls = Array.from(this.convArea.querySelectorAll(':scope > .deliberation-container, :scope > .handoff-container, :scope > .chat-flow-container'));
                 if (delibEls.length) {
                     const headerEl = msgDiv.querySelector('.leader-response-header');
                     const summaryEl = msgDiv.querySelector('.response-summary-card');
@@ -2197,14 +2178,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             this._hideSimpleWaiting();
             const container = document.createElement('div');
             container.id = 'simple-waiting';
-            container.className = 'deliberation-container';
-            container.innerHTML = _sanitize(
-                '<div class="delib-header">' +
-                '<span class="delib-header-dot"></span>' +
-                '<span>Preparing — Seoyeon (CSO)</span>' +
-                '</div>'
-            );
-            this._appendDelibTypingIndicator(container, 'Seoyeon');
+            container.className = 'chat-flow-container';
+            this._appendChatTypingBubble(container, 'Seoyeon', 'CSO');
             this.convArea.appendChild(container);
             this._smartScroll(true);
         },
@@ -2213,13 +2188,16 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             if (el) el.remove();
         },
 
-        // Mini waiting indicator after deliberation ends
-        _showMiniWaiting() {
+        // Mini waiting indicator after meeting ends
+        _showMiniWaiting(leaderHint) {
             this._hideMiniWaiting();
             const mini = document.createElement('div');
             mini.id = 'mini-waiting';
-            mini.className = 'mini-waiting-indicator';
-            mini.innerHTML = '<div class="delib-typing-dots"><span></span><span></span><span></span></div><span>Composing response...</span>';
+            mini.className = 'chat-flow-status writing';
+            mini.innerHTML = _sanitize(
+                '<div class="chat-typing-dots"><span></span><span></span><span></span></div>' +
+                '<span>' + this.escapeHtml(leaderHint || 'Composing response...') + '</span>'
+            );
             this.convArea.appendChild(mini);
             this._smartScroll(false);
         },
