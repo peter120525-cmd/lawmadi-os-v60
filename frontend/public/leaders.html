@@ -462,6 +462,29 @@
             line-height: 1.5;
         }
 
+        .leader-chat-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .leader-chat-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+        }
+
         /* Stats Section */
         .stats-section {
             display: grid;
@@ -681,6 +704,7 @@
                         </div>
                     </div>
                     <p class="clevel-profile">미국 연방대법원 로클럭 출신급 / 글로벌 Top3 전략 컨설팅 파트너급</p>
+                    <a class="leader-chat-btn" href="/leader-chat?id=CSO" onclick="event.stopPropagation();"><span class="material-symbols-outlined" style="font-size:18px;">chat</span> 대화하기</a>
                 </div>
 
                 <div class="clevel-card cto" data-name="지유">
@@ -692,6 +716,7 @@
                         </div>
                     </div>
                     <p class="clevel-profile">실리콘밸리 유니콘 창업 멤버급 / 무결성 검증 기술 분야 세계적 석학급</p>
+                    <a class="leader-chat-btn" href="/leader-chat?id=CTO" onclick="event.stopPropagation();"><span class="material-symbols-outlined" style="font-size:18px;">chat</span> 대화하기</a>
                 </div>
 
                 <div class="clevel-card cco" data-name="유나">
@@ -703,6 +728,7 @@
                         </div>
                     </div>
                     <p class="clevel-profile">애플 휴먼 인터페이스 그룹 리드급 / 칸 라이언즈 그랑프리 수상자급</p>
+                    <a class="leader-chat-btn" href="/leader-chat?id=CCO" onclick="event.stopPropagation();"><span class="material-symbols-outlined" style="font-size:18px;">chat</span> 대화하기</a>
                 </div>
             </div>
         </div>

@@ -1252,8 +1252,8 @@ async def startup():
     _set_files_deps(RUNTIME, rate_limiter=limiter)
     _set_user_deps(RUNTIME, rate_limiter=limiter, ask_fn=_legal_ask, search_fn=_legal_search)
 
-    # Leader 1:1 chat
-    _leader_reg = LEADER_REGISTRY.get("swarm_engine_config", {}).get("leader_registry", {})
+    # Leader 1:1 chat (CSO/CTO/CCO + L01~L60)
+    _leader_reg = {**LEADER_REGISTRY.get("core_registry", {}), **LEADER_REGISTRY.get("swarm_engine_config", {}).get("leader_registry", {})}
     _leader_profiles: Dict[str, Any] = {}
     try:
         with open("frontend/public/leader-profiles.json", "r", encoding="utf-8") as f:

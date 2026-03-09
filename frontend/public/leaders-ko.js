@@ -155,6 +155,8 @@ function renderLeaders(searchTerm) {
             '<div class="leader-specialty">' + esc(leader.specialty) + '</div>' +
             '<div class="leader-role">' + esc(leader.role) + '</div>' +
             '<div class="leader-profile">' + esc(leader.profile) + '</div>' +
+            '<a class="leader-chat-btn" href="/leader-chat?id=' + encodeURIComponent(leader.code) + '" onclick="event.stopPropagation();">' +
+            '<span class="material-symbols-outlined" style="font-size:18px;">chat</span> 대화하기</a>' +
             bannerHtml +
             '</div>';
     }).join('');

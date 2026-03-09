@@ -209,8 +209,8 @@
         "run": { "serviceId": "lawmadi-os-v60", "region": "asia-northeast3" }
       },
       {
-        "source": "/chat-leader",
-        "run": { "serviceId": "lawmadi-os-v60", "region": "asia-northeast3" }
+        "source": "/leader-chat",
+        "destination": "/leader-chat.html"
       },
       {
         "source": "/leader-profile",
