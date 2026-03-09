@@ -125,26 +125,27 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         '서연': '전략 기획', '지유': '기술 검증', '유나': '콘텐츠 설계',
     };
 
+    const _el = (id) => document.getElementById(id);
     const UI = {
-        sidebar: document.getElementById('sidebar'),
-        overlay: document.getElementById('overlay'),
-        menuToggle: document.getElementById('menuToggle'),
-        userInput: document.getElementById('userInput'),
-        sendBtn: document.getElementById('sendBtn'),
-        startChatBtn: document.getElementById('startChatBtn'),
-        landingContent: document.getElementById('landing-content'),
-        convArea: document.getElementById('conversation-area'),
-        uploadBtn: document.getElementById('uploadBtn'),
-        fileInput: document.getElementById('fileInput'),
-        uploadedFilePreview: document.getElementById('uploadedFilePreview'),
-        uploadedFileName: document.getElementById('uploadedFileName'),
-        uploadedFileSize: document.getElementById('uploadedFileSize'),
-        removeFileBtn: document.getElementById('removeFileBtn'),
-        favoritesPanel: document.getElementById('favoritesPanel'),
-        favoritesList: document.getElementById('favoritesList'),
-        scrollBottomBtn: document.getElementById('scrollBottomBtn'),
-        charCounter: document.getElementById('charCounter'),
-        newChatBtn: document.getElementById('newChatBtn'),
+        sidebar: _el('sidebar'),
+        overlay: _el('overlay'),
+        menuToggle: _el('menuToggle'),
+        userInput: _el('userInput'),
+        sendBtn: _el('sendBtn'),
+        startChatBtn: _el('startChatBtn'),
+        landingContent: _el('landing-content'),
+        convArea: _el('conversation-area'),
+        uploadBtn: _el('uploadBtn'),
+        fileInput: _el('fileInput'),
+        uploadedFilePreview: _el('uploadedFilePreview'),
+        uploadedFileName: _el('uploadedFileName'),
+        uploadedFileSize: _el('uploadedFileSize'),
+        removeFileBtn: _el('removeFileBtn'),
+        favoritesPanel: _el('favoritesPanel'),
+        favoritesList: _el('favoritesList'),
+        scrollBottomBtn: _el('scrollBottomBtn'),
+        charCounter: _el('charCounter'),
+        newChatBtn: _el('newChatBtn'),
         API_URL: '/ask',
         STREAM_URL: '/ask-stream',
         BASE_URL: '',
@@ -161,6 +162,11 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         isFirstQuestion: true,  // 첫 질문 여부
 
         init() {
+            // 필수 DOM 요소 존재 확인
+            if (!this.convArea || !this.userInput || !this.sendBtn) {
+                console.error('[Lawmadi] 필수 DOM 요소 누락 — 페이지 구조를 확인하세요.');
+                return;
+            }
             this.menuToggle.onclick = (e) => {
                 e.stopPropagation();
                 const isMobile = window.innerWidth <= 768;
@@ -348,7 +354,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         toggleDarkMode() {
             this.darkMode = !this.darkMode;
             document.body.classList.toggle('dark-mode', this.darkMode);
-            localStorage.setItem('lawmadi-dark-mode', this.darkMode);
+            try { localStorage.setItem('lawmadi-dark-mode', this.darkMode); } catch(e) {}
             const darkToggle = document.getElementById('darkToggle');
             if (darkToggle) darkToggle.setAttribute('aria-pressed', this.darkMode);
             const icon = document.querySelector('#darkToggle .material-symbols-outlined');
@@ -466,13 +472,13 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 date: new Date().toLocaleDateString('ko-KR')
             });
             if (favs.length > 50) favs.pop();
-            localStorage.setItem('lawmadi-favorites', JSON.stringify(favs));
+            try { localStorage.setItem('lawmadi-favorites', JSON.stringify(favs)); } catch(e) {}
         },
 
         deleteFavorite(id) {
             let favs = JSON.parse(localStorage.getItem('lawmadi-favorites') || '[]');
             favs = favs.filter(f => f.id !== id);
-            localStorage.setItem('lawmadi-favorites', JSON.stringify(favs));
+            try { localStorage.setItem('lawmadi-favorites', JSON.stringify(favs)); } catch(e) {}
             this.renderFavorites();
         },
 
@@ -1162,7 +1168,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 });
 
                 if (!uploadResponse.ok) {
-                    const errorData = await uploadResponse.json();
+                    let errorData = {};
+                    try { errorData = await uploadResponse.json(); } catch(_) {}
                     throw new Error(errorData.detail || '파일 업로드 실패');
                 }
 
@@ -1177,7 +1184,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 });
 
                 if (!analyzeResponse.ok) {
-                    const errorData = await analyzeResponse.json();
+                    let errorData = {};
+                    try { errorData = await analyzeResponse.json(); } catch(_) {}
                     throw new Error(errorData.detail || '문서 분석 실패');
                 }
 
@@ -2426,6 +2434,14 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         }
     };
 
+    // ── 탭 닫기 시 스트림 정리 ──
+    window.addEventListener('beforeunload', () => {
+        if (UI.currentAbortController) {
+            UI.currentAbortController.abort();
+            UI.currentAbortController = null;
+        }
+    });
+
     window.onload = () => {
         UI.init();
 
@@ -2604,7 +2620,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
     dismissBtn.addEventListener('click', function() {
         promptEl.classList.remove('show');
-        localStorage.setItem('shortcut-dismissed', Date.now().toString());
+        try { localStorage.setItem('shortcut-dismissed', Date.now().toString()); } catch(e) {}
     });
 })();
 

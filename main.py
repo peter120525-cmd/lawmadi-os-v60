@@ -742,6 +742,14 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
     now = time.time()
     today_start = _kst_today_start_ts()
     _MAX_TIMESTAMPS_PER_IP = 200
+
+    # 매 요청마다 stale 엔트리 점진 정리 (최대 50개씩)
+    _MAX_RATE_ENTRIES = 5000
+    if len(_rate_usage) > 100:
+        _stale = [k for k, v in list(_rate_usage.items())[:50] if not v or max(v) < today_start]
+        for k in _stale:
+            _rate_usage.pop(k, None)
+
     timestamps = _rate_usage.get(ip_hash, [])
     timestamps = [t for t in timestamps if t >= today_start][-_MAX_TIMESTAMPS_PER_IP:]
 
@@ -752,15 +760,15 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
     timestamps.append(now)
     _rate_usage[ip_hash] = timestamps
 
-    _MAX_RATE_ENTRIES = 5000
+    # 하드 리밋: 최대 엔트리 수 초과 시 강제 정리
     if len(_rate_usage) > _MAX_RATE_ENTRIES:
-        stale_keys = [k for k, v in _rate_usage.items() if not v or max(v) < today_start]
+        stale_keys = [k for k, v in list(_rate_usage.items()) if not v or max(v) < today_start]
         for k in stale_keys:
-            del _rate_usage[k]
+            _rate_usage.pop(k, None)
         if len(_rate_usage) > _MAX_RATE_ENTRIES:
-            sorted_keys = sorted(_rate_usage.keys(), key=lambda k: max(_rate_usage[k], default=0))
+            sorted_keys = sorted(_rate_usage.keys(), key=lambda k: max(_rate_usage.get(k, [0]), default=0))
             for k in sorted_keys[:len(_rate_usage) // 2]:
-                del _rate_usage[k]
+                _rate_usage.pop(k, None)
 
     return True
 
@@ -944,8 +952,8 @@ async def startup():
     # 만료된 업로드/임시 파일 정리
     try:
         _cleanup_expired_uploads()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"⚠️ startup: 파일 정리 실패: {e}")
 
     # 주기적 파일 정리 (1시간마다)
     async def _periodic_cleanup():

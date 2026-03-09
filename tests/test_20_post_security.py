@@ -95,11 +95,11 @@ async def test_stream(session, cat, idx, query):
                 elif line.startswith('data: '):
                     try:
                         p = json.loads(line[6:])
-                        if events and events[-1] == 'chunk':
+                        if events and events[-1] == 'answer_chunk':
                             if not ms_first:
                                 ms_first = int((time.time() - start) * 1000)
                             text += p.get('text', '')
-                        elif events and events[-1] == 'done':
+                        elif events and events[-1] == 'answer_done':
                             leader = p.get('leader', '')
                             if p.get('full_text'):
                                 text = p['full_text']

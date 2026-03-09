@@ -143,20 +143,21 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         '서연': 'Strategic Planning', '지유': 'Technical Verification', '유나': 'Content Design',
     };
 
+    const _el = (id) => document.getElementById(id);
     const UI = {
-        sidebar: document.getElementById('sidebar'),
-        overlay: document.getElementById('overlay'),
-        menuToggle: document.getElementById('menuToggle'),
-        userInput: document.getElementById('userInput'),
-        sendBtn: document.getElementById('sendBtn'),
-        startChatBtn: document.getElementById('startChatBtn'),
-        landingContent: document.getElementById('landing-content'),
-        convArea: document.getElementById('conversation-area'),
-        uploadBtn: document.getElementById('uploadBtn'),
-        fileInput: document.getElementById('fileInput'),
-        uploadedFilePreview: document.getElementById('uploadedFilePreview'),
-        uploadedFileName: document.getElementById('uploadedFileName'),
-        uploadedFileSize: document.getElementById('uploadedFileSize'),
+        sidebar: _el('sidebar'),
+        overlay: _el('overlay'),
+        menuToggle: _el('menuToggle'),
+        userInput: _el('userInput'),
+        sendBtn: _el('sendBtn'),
+        startChatBtn: _el('startChatBtn'),
+        landingContent: _el('landing-content'),
+        convArea: _el('conversation-area'),
+        uploadBtn: _el('uploadBtn'),
+        fileInput: _el('fileInput'),
+        uploadedFilePreview: _el('uploadedFilePreview'),
+        uploadedFileName: _el('uploadedFileName'),
+        uploadedFileSize: _el('uploadedFileSize'),
         removeFileBtn: document.getElementById('removeFileBtn'),
         favoritesPanel: document.getElementById('favoritesPanel'),
         favoritesList: document.getElementById('favoritesList'),
@@ -179,6 +180,11 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         isFirstQuestion: true,  // first question flag
 
         init() {
+            // Essential DOM element existence check
+            if (!this.convArea || !this.userInput || !this.sendBtn) {
+                console.error('[Lawmadi] Required DOM elements missing — check page structure.');
+                return;
+            }
             this.menuToggle.onclick = (e) => {
                 e.stopPropagation();
                 const isMobile = window.innerWidth <= 768;
@@ -367,7 +373,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         toggleDarkMode() {
             this.darkMode = !this.darkMode;
             document.body.classList.toggle('dark-mode', this.darkMode);
-            localStorage.setItem('lawmadi-dark-mode', this.darkMode);
+            try { localStorage.setItem('lawmadi-dark-mode', this.darkMode); } catch(e) {}
             const darkToggle = document.getElementById('darkToggle');
             if (darkToggle) darkToggle.setAttribute('aria-pressed', this.darkMode);
             const icon = document.querySelector('#darkToggle .material-symbols-outlined');
@@ -485,13 +491,13 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 date: new Date().toLocaleDateString('en-US')
             });
             if (favs.length > 50) favs.pop();
-            localStorage.setItem('lawmadi-favorites', JSON.stringify(favs));
+            try { localStorage.setItem('lawmadi-favorites', JSON.stringify(favs)); } catch(e) {}
         },
 
         deleteFavorite(id) {
             let favs = JSON.parse(localStorage.getItem('lawmadi-favorites') || '[]');
             favs = favs.filter(f => f.id !== id);
-            localStorage.setItem('lawmadi-favorites', JSON.stringify(favs));
+            try { localStorage.setItem('lawmadi-favorites', JSON.stringify(favs)); } catch(e) {}
             this.renderFavorites();
         },
 
@@ -1490,7 +1496,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 });
 
                 if (!uploadResponse.ok) {
-                    const errorData = await uploadResponse.json();
+                    let errorData = {};
+                    try { errorData = await uploadResponse.json(); } catch(_) {}
                     throw new Error(errorData.detail || 'File upload failed');
                 }
 
@@ -1505,7 +1512,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 });
 
                 if (!analyzeResponse.ok) {
-                    const errorData = await analyzeResponse.json();
+                    let errorData = {};
+                    try { errorData = await analyzeResponse.json(); } catch(_) {}
                     throw new Error(errorData.detail || 'Document analysis failed');
                 }
 
@@ -2338,6 +2346,14 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         }
     };
 
+    // ── Clean up stream on tab close ──
+    window.addEventListener('beforeunload', () => {
+        if (UI.currentAbortController) {
+            UI.currentAbortController.abort();
+            UI.currentAbortController = null;
+        }
+    });
+
     window.onload = () => {
         UI.init();
 
@@ -2516,7 +2532,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
     dismissBtn.addEventListener('click', function() {
         promptEl.classList.remove('show');
-        localStorage.setItem('shortcut-dismissed', Date.now().toString());
+        try { localStorage.setItem('shortcut-dismissed', Date.now().toString()); } catch(e) {}
     });
 })();
 
