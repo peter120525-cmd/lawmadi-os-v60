@@ -1260,6 +1260,12 @@ async def startup():
             _leader_profiles = json.load(f)
     except Exception as e:
         logger.warning(f"leader-profiles.json load failed: {e}")
+    _leader_personas: Dict[str, Any] = {}
+    try:
+        with open("data/leader-personas-v2.json", "r", encoding="utf-8") as f:
+            _leader_personas = json.load(f)
+    except Exception as e:
+        logger.warning(f"leader-personas-v2.json load failed: {e}")
     _set_leaders_deps(
         RUNTIME, _leader_reg,
         ensure_genai_client=_ensure_genai_client,
@@ -1267,6 +1273,7 @@ async def startup():
         rate_limit_response=_rate_limit_response,
         get_client_ip=_get_client_ip,
         leader_profiles=_leader_profiles,
+        leader_personas=_leader_personas,
     )
 
     METRICS["boot_time"] = _now_iso()
