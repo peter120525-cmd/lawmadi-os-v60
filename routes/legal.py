@@ -1096,6 +1096,8 @@ async def ask_stream(request: Request):
             cached = _check_response_cache_fn(query)
             if cached:
                 latency_ms = int((time.time() - start_time) * 1000)
+                with _METRICS_LOCK:
+                    _METRICS["requests"] += 1
                 logger.info(f"⚡ [Stream Cache HIT] leader={cached.get('leader', '?')} latency={latency_ms}ms")
                 yield _sse("answer_start", {"speaker": cached.get("leader", "마디"), "role": cached.get("leader_specialty", "통합")})
                 yield _sse("answer_chunk", {"text": cached.get("response", "")})
@@ -1582,8 +1584,10 @@ async def ask_stream(request: Request):
             ref = datetime.datetime.now().strftime("%H%M%S")
             logger.error(f"💥 스트리밍 에러 (trace={trace}, ref={ref}): {type(e).__name__}: {e}")
             logger.error(traceback.format_exc())
+            _err_cat = _classify_error_category(e)
+            record_request("/ask-stream", int((time.time() - start_time) * 1000), status="ERROR", error_category=_err_cat)
             if lang == "en":
-                user_msg = f"An error occurred while processing your request. (Ref: {ref})"
+                user_msg = f"⚠️ A system error occurred. Please try again shortly. (Ref: {ref})"
             else:
                 user_msg = _classify_gemini_error_fn(e, ref)
             yield _sse("error", {"message": user_msg})
