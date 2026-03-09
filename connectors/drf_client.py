@@ -221,11 +221,10 @@ class DRFConnector:
 
         logger.info(f"🔍 [Cache MISS] target={target}, query={query[:30]}")
 
-        # Dual SSOT 재시도 로직
+        # Dual SSOT 재시도 로직 (DRF-2 제거: 타임아웃 중첩 방지)
         attempts = [
             ("DRF-1", lambda q: self._call_drf(q, target=target)),
             ("DATA-1", self._call_data_go),  # fallback (target 미지원일 수 있음)
-            ("DRF-2", lambda q: self._call_drf(q, target=target)),
         ]
 
         for label, fn in attempts:

@@ -95,8 +95,8 @@ def _sync_search(query: str, top_k: int = 10, ssot_type_filter: str = "") -> Lis
         ),
         content_search_spec=discoveryengine.SearchRequest.ContentSearchSpec(
             extractive_content_spec=discoveryengine.SearchRequest.ContentSearchSpec.ExtractiveContentSpec(
-                max_extractive_answer_count=3,
-                max_extractive_segment_count=3,
+                max_extractive_answer_count=2,
+                max_extractive_segment_count=2,
                 return_extractive_segment_score=True,
             ),
             snippet_spec=discoveryengine.SearchRequest.ContentSearchSpec.SnippetSpec(

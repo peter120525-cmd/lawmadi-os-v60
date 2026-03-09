@@ -21,8 +21,8 @@ MODEL_CHAIN = [
     os.getenv("GEMINI_MODEL_2", "gemini-2.5-flash-lite"),
 ]
 
-# ─── 상태 관리 ───
-_lock = threading.Lock()
+# ─── 상태 관리 (lock-free 읽기, 쓰기만 lock) ───
+_write_lock = threading.Lock()
 _current_index = 0
 _downgrade_time: float = 0
 _UPGRADE_INTERVAL = int(os.getenv("MODEL_UPGRADE_INTERVAL", "3600"))  # 기본 1시간
@@ -31,21 +31,26 @@ _RETRY_BASE_SEC = float(os.getenv("GEMINI_RETRY_BASE_SEC", "2.0"))
 
 
 def get_model() -> str:
-    """현재 활성 모델명 반환. 다운그레이드 후 일정 시간 경과 시 자동 업그레이드."""
+    """현재 활성 모델명 반환. 다운그레이드 후 일정 시간 경과 시 자동 업그레이드.
+    읽기 경로는 lock-free (동시 요청 직렬화 방지).
+    """
     global _current_index, _downgrade_time
-    with _lock:
-        if _current_index > 0 and time.time() - _downgrade_time >= _UPGRADE_INTERVAL:
-            prev = MODEL_CHAIN[_current_index]
-            _current_index = 0
-            _downgrade_time = 0
-            logger.info(f"[ModelFallback] ⬆️ 상위 모델 복귀: {MODEL_CHAIN[0]} (이전: {prev})")
-        return MODEL_CHAIN[_current_index]
+    idx = _current_index  # atomic read
+    if idx > 0 and time.time() - _downgrade_time >= _UPGRADE_INTERVAL:
+        with _write_lock:
+            # double-check under lock
+            if _current_index > 0 and time.time() - _downgrade_time >= _UPGRADE_INTERVAL:
+                prev = MODEL_CHAIN[_current_index]
+                _current_index = 0
+                _downgrade_time = 0
+                logger.info(f"[ModelFallback] ⬆️ 상위 모델 복귀: {MODEL_CHAIN[0]} (이전: {prev})")
+    return MODEL_CHAIN[_current_index]
 
 
 def on_quota_error() -> str:
     """429/ResourceExhausted 발생 시 호출 → 다음 모델로 전환. 새 모델명 반환."""
     global _current_index, _downgrade_time
-    with _lock:
+    with _write_lock:
         if _current_index < len(MODEL_CHAIN) - 1:
             prev = MODEL_CHAIN[_current_index]
             _current_index += 1
@@ -82,7 +87,7 @@ def is_retryable_model_error(e: Exception) -> bool:
 
 def get_status() -> dict:
     """현재 모델 상태 (health/diagnostics용)."""
-    with _lock:
+    with _write_lock:
         return {
             "current_model": MODEL_CHAIN[_current_index],
             "model_chain": MODEL_CHAIN,
