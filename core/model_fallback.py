@@ -16,10 +16,10 @@ from typing import Any, Optional
 logger = logging.getLogger("LawmadiOS.ModelFallback")
 
 # ─── 모델 체인 (리전에서 사용 가능한 모델만) ───
-# gemini-2.5-flash: 내부 thinking 비활성화 불가 → 응답 지연 (42초+)
-# gemini-2.0-flash: thinking 없음, 빠름 (asia-northeast3 지원)
+# asia-northeast3: gemini-2.5-flash, gemini-2.5-flash-lite만 사용 가능
+# gemini-2.0-flash, gemini-2.5-pro 등은 해당 리전 미지원 (404)
 MODEL_CHAIN = [
-    os.getenv("GEMINI_MODEL_1", "gemini-2.0-flash"),
+    os.getenv("GEMINI_MODEL_1", "gemini-2.5-flash"),
     os.getenv("GEMINI_MODEL_2", "gemini-2.5-flash-lite"),
 ]
 
