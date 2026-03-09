@@ -13,6 +13,7 @@ google-cloud-discoveryengine SDK 사용, asyncio.to_thread로 async 래핑.
 import json
 import asyncio
 import logging
+import threading
 from typing import List, Dict, Optional, Tuple
 
 from core.constants import (
@@ -25,6 +26,7 @@ from core.constants import (
 logger = logging.getLogger("LawmadiOS.VertexSearch")
 
 # Lazy-init SDK clients (모듈 임포트 시 초기화하지 않음)
+_init_lock = threading.Lock()   # #9 thread-safe singleton
 _search_client = None
 _serving_config = None
 _rank_client = None
@@ -32,49 +34,55 @@ _grounding_client = None
 
 
 def _get_client():
-    """Discovery Engine SearchServiceClient 싱글턴."""
+    """Discovery Engine SearchServiceClient 싱글턴 (thread-safe)."""
     global _search_client, _serving_config
     if _search_client is not None:
         return _search_client, _serving_config
 
-    from google.cloud import discoveryengine_v1 as discoveryengine
-
-    _search_client = discoveryengine.SearchServiceClient()
-    _serving_config = (
-        f"projects/{VERTEX_SEARCH_PROJECT_ID}"
-        f"/locations/{VERTEX_SEARCH_LOCATION}"
-        f"/collections/default_collection"
-        f"/engines/{VERTEX_SEARCH_ENGINE_ID}"
-        f"/servingConfigs/default_search"
-    )
-    logger.info(f"✅ Vertex AI Search client initialized: {VERTEX_SEARCH_ENGINE_ID}")
-    return _search_client, _serving_config
+    with _init_lock:
+        if _search_client is not None:
+            return _search_client, _serving_config
+        from google.cloud import discoveryengine_v1 as discoveryengine
+        _search_client = discoveryengine.SearchServiceClient()
+        _serving_config = (
+            f"projects/{VERTEX_SEARCH_PROJECT_ID}"
+            f"/locations/{VERTEX_SEARCH_LOCATION}"
+            f"/collections/default_collection"
+            f"/engines/{VERTEX_SEARCH_ENGINE_ID}"
+            f"/servingConfigs/default_search"
+        )
+        logger.info(f"✅ Vertex AI Search client initialized: {VERTEX_SEARCH_ENGINE_ID}")
+        return _search_client, _serving_config
 
 
 def _get_rank_client():
-    """Discovery Engine RankServiceClient 싱글턴."""
+    """Discovery Engine RankServiceClient 싱글턴 (thread-safe)."""
     global _rank_client
     if _rank_client is not None:
         return _rank_client
 
-    from google.cloud import discoveryengine_v1 as discoveryengine
-
-    _rank_client = discoveryengine.RankServiceClient()
-    logger.info("✅ Vertex AI Rank client initialized")
-    return _rank_client
+    with _init_lock:
+        if _rank_client is not None:
+            return _rank_client
+        from google.cloud import discoveryengine_v1 as discoveryengine
+        _rank_client = discoveryengine.RankServiceClient()
+        logger.info("✅ Vertex AI Rank client initialized")
+        return _rank_client
 
 
 def _get_grounding_client():
-    """Discovery Engine GroundedGenerationServiceClient 싱글턴."""
+    """Discovery Engine GroundedGenerationServiceClient 싱글턴 (thread-safe)."""
     global _grounding_client
     if _grounding_client is not None:
         return _grounding_client
 
-    from google.cloud import discoveryengine_v1 as discoveryengine
-
-    _grounding_client = discoveryengine.GroundedGenerationServiceClient()
-    logger.info("✅ Vertex AI Grounding client initialized")
-    return _grounding_client
+    with _init_lock:
+        if _grounding_client is not None:
+            return _grounding_client
+        from google.cloud import discoveryengine_v1 as discoveryengine
+        _grounding_client = discoveryengine.GroundedGenerationServiceClient()
+        logger.info("✅ Vertex AI Grounding client initialized")
+        return _grounding_client
 
 
 def _sync_search(query: str, top_k: int = 10, ssot_type_filter: str = "") -> List[Dict]:
@@ -110,7 +118,7 @@ def _sync_search(query: str, top_k: int = 10, ssot_type_filter: str = "") -> Lis
         request.filter = f'ssot_type: ANY("{ssot_type_filter}")'
 
     try:
-        response = client.search(request)
+        response = client.search(request, timeout=10.0)
     except Exception as e:
         logger.warning(f"[VertexSearch] API 호출 실패: {e}")
         return []
@@ -210,8 +218,8 @@ def _sync_search(query: str, top_k: int = 10, ssot_type_filter: str = "") -> Lis
             "snippet": snippet,
         })
 
-    # ─── Ranking API로 재정렬 ───
-    if results and len(results) >= 2:
+    # ─── Ranking API로 재정렬 (3건 이상일 때만) ───
+    if results and len(results) >= 3:
         results = _rerank_results(query, results)
 
     logger.info(f"[VertexSearch] '{query[:30]}...' → {len(results)}건 검색 완료 (ranked)")
@@ -247,7 +255,7 @@ def _rerank_results(query: str, results: List[Dict]) -> List[Dict]:
             top_n=len(records),
         )
 
-        response = rank_client.rank(request)
+        response = rank_client.rank(request, timeout=5.0)
 
         # 재정렬된 순서로 결과 재배치
         reranked = []
@@ -281,12 +289,16 @@ async def search_legal_documents(
         return []
 
 
-async def build_vertex_context(query: str, top_k: int = 30) -> str:
+async def build_vertex_context(
+    query: str, top_k: int = 30, sources: Optional[List[Dict]] = None,
+) -> str:
     """
     build_ssot_context 대체 — 법률명+조문원문+판례요지+Q&A.
+    sources가 전달되면 추가 API 호출 없이 컨텍스트만 생성.
     """
     try:
-        sources = await search_legal_documents(query, top_k=top_k)
+        if sources is None:
+            sources = await search_legal_documents(query, top_k=top_k)
         if not sources:
             return ""
 
@@ -366,10 +378,16 @@ def _sync_check_grounding(
 
     grounding_facts = []
     for f in facts:
+        fact_text = f.get("text", "").strip()
+        if not fact_text:
+            continue
         grounding_facts.append(discoveryengine.GroundingFact(
-            fact_text=f.get("text", "")[:10000],
+            fact_text=fact_text[:10000],
             attributes={"source": f.get("source", "unknown")},
         ))
+
+    if not grounding_facts:
+        return {"support_score": -1.0, "total_claims": 0, "grounded_claims": 0, "claims": []}
 
     request = discoveryengine.CheckGroundingRequest(
         grounding_config=grounding_config,
@@ -380,7 +398,7 @@ def _sync_check_grounding(
         ),
     )
 
-    response = grounding_client.check_grounding(request)
+    response = grounding_client.check_grounding(request, timeout=4.0)
 
     claims = []
     for claim in response.claims:

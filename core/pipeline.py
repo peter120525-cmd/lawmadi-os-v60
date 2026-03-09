@@ -874,43 +874,38 @@ async def _stage1_rag_search(query: str, top_k: int = 10) -> RAGContext:
     # ─── Vertex AI Search 모드 ───
     if USE_VERTEX_SEARCH and _vertex_search_fn:
         try:
-            # 병렬 호출: 시맨틱 검색 + 컨텍스트 생성
-            # cache_context는 context_text와 동일 검색을 중복 호출하므로 제거
-            # → 프롬프트 압축 단계에서 matched_laws 기반으로 컨텍스트 재구성
-            search_task = _vertex_search_fn(query, top_k=8)
-            async def _noop_coro():
-                return ""
-            context_task = _vertex_context_fn(query, top_k=30) if _vertex_context_fn else _noop_coro()
+            # 1회 검색 (top_k=30) → 상위 8건 matched_laws, 전체로 context 생성
+            _all_results = await _vertex_search_fn(query, top_k=30)
+            _all_results = _all_results or []
 
-            matched, context_text = await asyncio.gather(
-                search_task, context_task,
-                return_exceptions=True,
-            )
+            ctx.matched_laws = _all_results[:8]
 
-            # 예외 처리
-            if isinstance(matched, Exception):
-                logger.warning(f"[Stage 1] Vertex Search 실패: {matched}")
-                matched = []
-            if isinstance(context_text, Exception):
-                context_text = ""
-
-            ctx.matched_laws = matched or []
-            ctx.context_text = context_text or ""
-            ctx.cache_context = ""  # 중복 호출 제거 — context_text로 통합
+            # 검색 결과 재사용 (추가 API 호출 없음)
+            if _vertex_context_fn and _all_results:
+                try:
+                    ctx.context_text = await _vertex_context_fn(
+                        query, top_k=30, sources=_all_results,
+                    )
+                except Exception:
+                    ctx.context_text = ""
+            ctx.cache_context = ""
 
             total = len(ctx.matched_laws)
-            logger.info(f"[Stage 1] Vertex AI Search 완료: {total}건 시맨틱 매칭")
+            logger.info(f"[Stage 1] Vertex AI Search 완료: {total}건 매칭 ({len(_all_results)}건 컨텍스트)")
             return ctx
 
         except Exception as e:
             logger.warning(f"[Stage 1] Vertex AI Search 1차 실패, 1초 후 재시도: {e}")
             await asyncio.sleep(1.0)
             try:
-                matched = await _vertex_search_fn(query, top_k=8)
-                ctx.matched_laws = matched or []
-                if _vertex_context_fn:
-                    ctx.context_text = await _vertex_context_fn(query, top_k=30)
-                ctx.cache_context = ""  # 중복 호출 제거
+                _all_results = await _vertex_search_fn(query, top_k=30)
+                _all_results = _all_results or []
+                ctx.matched_laws = _all_results[:8]
+                if _vertex_context_fn and _all_results:
+                    ctx.context_text = await _vertex_context_fn(
+                        query, top_k=30, sources=_all_results,
+                    )
+                ctx.cache_context = ""
                 logger.info(f"[Stage 1] Vertex AI Search 재시도 성공: {len(ctx.matched_laws)}건")
                 return ctx
             except Exception as e2:
@@ -2575,6 +2570,9 @@ async def _run_legal_pipeline(
     if USE_VERTEX_SEARCH and _vertex_check_grounding_fn and rag_context and rag_context.matched_laws:
         grounding_task = asyncio.create_task(
             _vertex_check_grounding_fn(final_text, rag_context.matched_laws)
+        )
+        grounding_task.add_done_callback(
+            lambda t: logger.warning(f"⚠️ [CheckGrounding] 예외: {t.exception()}") if t.exception() else None
         )
 
     try:
