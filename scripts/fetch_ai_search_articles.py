@@ -25,7 +25,7 @@ import urllib.error
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 DRF_BASE = "https://www.law.go.kr/DRF/lawSearch.do"
-OC = "choepeter"
+OC = os.getenv("LAWGO_DRF_OC", "choepeter")
 
 OUTPUT_DIR = os.path.join(BASE_DIR, "vertex_expansion", "ai_search")
 RAW_DIR = os.path.join(OUTPUT_DIR, "raw")
@@ -218,7 +218,14 @@ def step_transform():
                         "article_title": article_title or "",
                         "date": str(enact_date),
                         "keywords": f"{law_name} {article_title} {keyword}",
-                        "key_articles_json": "[]",
+                        "key_articles_json": json.dumps(
+                            [{"조문": f"제{article_no}조", "제목": article_title or ""}],
+                            ensure_ascii=False,
+                        ),
+                        "key_article_texts_json": json.dumps(
+                            [article_content[:500]],
+                            ensure_ascii=False,
+                        ),
                         "key_precedents_json": "[]",
                         "key_qa_json": "[]",
                         "qa_count": 0,

@@ -89,8 +89,9 @@ def _make_mock_search_result(ssot_type, law_name, label="현행법령"):
 class TestVertexSearchClient:
     """connectors/vertex_search_client.py mock 테스트."""
 
+    @patch("connectors.vertex_search_client._rerank_results", side_effect=lambda q, r: r)
     @patch("connectors.vertex_search_client._get_client")
-    def test_sync_search_returns_results(self, mock_get_client):
+    def test_sync_search_returns_results(self, mock_get_client, mock_rerank):
         """_sync_search가 올바른 형식의 결과를 반환하는지 확인."""
         mock_client = MagicMock()
         mock_serving_config = "projects/lawmadi-db/locations/global/..."
@@ -99,6 +100,7 @@ class TestVertexSearchClient:
         mock_response.results = [
             _make_mock_search_result("law", "근로기준법"),
             _make_mock_search_result("prec", "민법"),
+            _make_mock_search_result("law", "민사소송법"),
         ]
         mock_client.search.return_value = mock_response
         mock_get_client.return_value = (mock_client, mock_serving_config)
@@ -106,7 +108,7 @@ class TestVertexSearchClient:
         from connectors.vertex_search_client import _sync_search
         results = _sync_search("최저임금 관련 법률", top_k=5)
 
-        assert len(results) == 2
+        assert len(results) == 3
         assert results[0]["type"] == "law"
         assert results[0]["law"] == "근로기준법"
         assert results[0]["label"] == "현행법령"
@@ -115,6 +117,8 @@ class TestVertexSearchClient:
         assert len(results[0]["key_articles"]) == 1
         assert results[0]["key_articles"][0]["조문"] == "제1조"
         assert isinstance(results[0]["score"], float)
+        # reranking mock 호출 확인 (3건 이상)
+        mock_rerank.assert_called_once()
 
     @patch("connectors.vertex_search_client._get_client")
     def test_sync_search_empty_on_error(self, mock_get_client):
@@ -134,7 +138,7 @@ class TestVertexSearchClient:
         mock_sync.return_value = [{"type": "law", "law": "민법"}]
 
         from connectors.vertex_search_client import search_legal_documents
-        results = asyncio.get_event_loop().run_until_complete(
+        results = asyncio.run(
             search_legal_documents("민법 제750조", top_k=5)
         )
 
@@ -156,7 +160,7 @@ class TestVertexSearchClient:
         ]
 
         from connectors.vertex_search_client import build_vertex_context
-        ctx = asyncio.get_event_loop().run_until_complete(
+        ctx = asyncio.run(
             build_vertex_context("최저임금")
         )
 
@@ -165,6 +169,29 @@ class TestVertexSearchClient:
         assert "조문:" in ctx
         assert "판례:" in ctx
         assert "참고Q:" in ctx
+
+    @patch("connectors.vertex_search_client.search_legal_documents")
+    def test_build_vertex_context_with_sources(self, mock_search):
+        """sources 전달 시 추가 API 호출 없이 컨텍스트 생성."""
+        sources = [
+            {
+                "law": "민법",
+                "label": "현행법령",
+                "key_article_texts": ["제750조(불법행위) ..."],
+                "key_precedents": [],
+                "key_qa": [],
+            }
+        ]
+
+        from connectors.vertex_search_client import build_vertex_context
+        ctx = asyncio.run(
+            build_vertex_context("손해배상", sources=sources)
+        )
+
+        assert "민법" in ctx
+        assert "제750조" in ctx
+        # search_legal_documents가 호출되지 않아야 함
+        mock_search.assert_not_called()
 
     @patch("connectors.vertex_search_client.search_legal_documents")
     def test_build_vertex_cache_context(self, mock_search):
@@ -183,7 +210,7 @@ class TestVertexSearchClient:
         ]
 
         from connectors.vertex_search_client import build_vertex_cache_context
-        ctx = asyncio.get_event_loop().run_until_complete(
+        ctx = asyncio.run(
             build_vertex_cache_context("손해배상")
         )
 
@@ -198,11 +225,18 @@ class TestVertexSearchClient:
         mock_search.return_value = []
 
         from connectors.vertex_search_client import build_vertex_context
-        ctx = asyncio.get_event_loop().run_until_complete(
+        ctx = asyncio.run(
             build_vertex_context("알수없는쿼리")
         )
 
         assert ctx == ""
+
+    def test_check_grounding_empty_input(self):
+        """빈 입력 시 support_score=-1.0 (미검증 상태) 반환."""
+        from connectors.vertex_search_client import check_grounding
+        result = asyncio.run(check_grounding("", []))
+        assert result["support_score"] == -1.0
+        assert result["total_claims"] == 0
 
 
 # ---------------------------------------------------------------------------

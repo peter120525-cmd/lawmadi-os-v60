@@ -157,9 +157,15 @@ def upload_to_gcs():
     print("✅ GCS 업로드 완료")
 
 
-def import_to_datastore():
+def import_to_datastore(mode: str = "FULL"):
     """GCS JSONL → Vertex AI Search Data Store 임포트."""
-    print(f"\n📥 Data Store 임포트 시작...")
+    if mode == "FULL":
+        print("\n⚠️  FULL 모드: 기존 데이터스토어의 모든 문서가 교체됩니다.")
+        confirm = input("   계속하시겠습니까? (yes/no): ").strip().lower()
+        if confirm != "yes":
+            print("   임포트 취소됨.")
+            return None
+    print(f"\n📥 Data Store 임포트 시작 (mode={mode})...")
 
     import_url = (
         f"https://discoveryengine.googleapis.com/v1/"
@@ -183,7 +189,7 @@ def import_to_datastore():
             "inputUris": [GCS_PATH],
             "dataSchema": "document",
         },
-        "reconciliationMode": "FULL",
+        "reconciliationMode": mode,
     }
 
     curl_result = subprocess.run(
@@ -213,6 +219,10 @@ def main():
     parser = argparse.ArgumentParser(description="law_cache → Vertex AI Search 변환/임포트")
     parser.add_argument("--transform-only", action="store_true", help="JSONL 변환만 수행")
     parser.add_argument("--import-only", action="store_true", help="기존 JSONL로 임포트만 수행")
+    parser.add_argument(
+        "--mode", choices=["FULL", "INCREMENTAL"], default="FULL",
+        help="reconciliationMode (FULL=전체교체, INCREMENTAL=추가만, 기본: FULL)",
+    )
     args = parser.parse_args()
 
     if args.import_only:
@@ -220,7 +230,7 @@ def main():
             print(f"❌ {OUTPUT_FILE} 미존재. --transform-only 먼저 실행하세요.")
             sys.exit(1)
         upload_to_gcs()
-        import_to_datastore()
+        import_to_datastore(mode=args.mode)
         return
 
     doc_count = transform()
@@ -232,7 +242,7 @@ def main():
         return
 
     upload_to_gcs()
-    import_to_datastore()
+    import_to_datastore(mode=args.mode)
 
 
 if __name__ == "__main__":

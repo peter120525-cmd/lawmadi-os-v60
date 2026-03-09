@@ -171,7 +171,11 @@ def _sync_search(query: str, top_k: int = 10, ssot_type_filter: str = "") -> Lis
         try:
             derived = getattr(doc, "derived_struct_data", None)
             if derived:
-                derived_dict = dict(derived) if hasattr(derived, '__iter__') else {}
+                # protobuf MapComposite → dict 안전 변환
+                try:
+                    derived_dict = dict(derived.items()) if hasattr(derived, "items") else dict(derived)
+                except Exception:
+                    derived_dict = {}
                 for ea in derived_dict.get("extractive_answers", []):
                     ea_content = ea.get("content", "") if isinstance(ea, dict) else getattr(ea, "content", "")
                     if ea_content:
@@ -192,7 +196,10 @@ def _sync_search(query: str, top_k: int = 10, ssot_type_filter: str = "") -> Lis
         try:
             derived = getattr(doc, "derived_struct_data", None)
             if derived:
-                derived_dict = dict(derived) if hasattr(derived, '__iter__') else {}
+                try:
+                    derived_dict = dict(derived.items()) if hasattr(derived, "items") else dict(derived)
+                except Exception:
+                    derived_dict = {}
                 snippets = derived_dict.get("snippets", [])
                 if snippets:
                     s0 = snippets[0]
@@ -257,11 +264,12 @@ def _rerank_results(query: str, results: List[Dict]) -> List[Dict]:
 
         response = rank_client.rank(request, timeout=5.0)
 
-        # 재정렬된 순서로 결과 재배치
+        # 재정렬된 순서로 결과 재배치 (원본 score 보존)
         reranked = []
         for record in response.records:
             idx = int(record.id)
             item = results[idx].copy()
+            item["_original_score"] = item.get("score", 0)
             item["score"] = record.score
             reranked.append(item)
 
@@ -445,7 +453,7 @@ async def check_grounding(
         }
     """
     if not answer_text or not rag_sources:
-        return {"support_score": 1.0, "total_claims": 0, "grounded_claims": 0, "claims": []}
+        return {"support_score": -1.0, "total_claims": 0, "grounded_claims": 0, "claims": []}
 
     # RAG 검색 결과를 GroundingFact 형식으로 변환
     facts = []
@@ -473,7 +481,7 @@ async def check_grounding(
             })
 
     if not facts:
-        return {"support_score": 1.0, "total_claims": 0, "grounded_claims": 0, "claims": []}
+        return {"support_score": -1.0, "total_claims": 0, "grounded_claims": 0, "claims": []}
 
     try:
         result = await asyncio.to_thread(
