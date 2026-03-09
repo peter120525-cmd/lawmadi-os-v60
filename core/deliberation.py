@@ -20,10 +20,10 @@ from utils.helpers import _safe_extract_gemini_text, _remove_think_blocks
 
 logger = logging.getLogger("LawmadiOS.Deliberation")
 
-# 협의 타임아웃 (초)
-_DELIBERATION_TIMEOUT = 8
-_HANDOFF_TIMEOUT = 8
-_TURN_TIMEOUT = 5  # 개별 턴 타임아웃 (초)
+# 협의 타임아웃 (초) — 파이프라인과 병렬 실행이므로 전체 응답 시간에 영향 없음
+_DELIBERATION_TIMEOUT = 30
+_HANDOFF_TIMEOUT = 15
+_TURN_TIMEOUT = 4  # 개별 턴 타임아웃 (초)
 
 # 이름 → ID 역매핑 캐시
 _NAME_TO_ID: Dict[str, str] = {}

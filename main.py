@@ -686,7 +686,7 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
             return True
 
     # ── 2) DB 세션 유저 → 크레딧/무료 기반 판단 ──
-    session_token = request.cookies.get("lm_session", "").strip()
+    session_token = request.cookies.get("__session", "").strip()
     has_session = bool(session_token)
     _db_error = False
 

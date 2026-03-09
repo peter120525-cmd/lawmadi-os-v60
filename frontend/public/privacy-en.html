@@ -807,7 +807,7 @@
                 </thead>
                 <tbody>
                     <tr>
-                        <td>lm_session</td>
+                        <td>__session</td>
                         <td>Essential</td>
                         <td>Maintaining login status after email verification, credit usage</td>
                         <td>30 days</td>
@@ -821,7 +821,7 @@
                 </tbody>
             </table>
             <ul>
-                <li><strong>Essential cookies (lm_session)</strong> are only created after the user completes email verification (OTP) and are protected with the HttpOnly attribute. They are immediately deleted upon logout.</li>
+                <li><strong>Essential cookies (__session)</strong> are only created after the user completes email verification (OTP) and are protected with the HttpOnly attribute. They are immediately deleted upon logout.</li>
                 <li><strong>Analytics cookies (Google Analytics)</strong> are only activated with the user's explicit consent. You can accept or decline via the cookie consent banner at the bottom of the page.</li>
                 <li>You may block cookies in your browser settings, but blocking essential cookies may limit access to credit-based services.</li>
             </ul>
@@ -983,5 +983,6 @@
 <script src="/lawmadi-monitor.js" defer></script>
 <script src="/site-nav.js" defer></script>
 <script src="/site-footer.js" defer></script>
+<script src="/auth-modal.js" defer></script>
 </body>
 </html>
