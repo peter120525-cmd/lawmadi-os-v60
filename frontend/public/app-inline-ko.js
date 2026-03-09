@@ -932,7 +932,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         }
 
                         if (eventType === 'deliberation_start') {
-                            // 인디케이터 유지 — 협의를 아래에 병렬 표시
+                            // 협의 시작 → 대기창 숨기고 협의 메신저만 표시
+                            this.hideTypingIndicator();
                             this._renderDeliberationStart(payload);
 
                         } else if (eventType === 'deliberation_turn') {
@@ -940,10 +941,12 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
                         } else if (eventType === 'deliberation_end') {
                             this._renderDeliberationEnd(payload);
-                            // 인디케이터는 이미 표시 중이므로 재표시 불필요
+                            // 협의 종료 → 답변 대기 미니 인디케이터
+                            this._showMiniWaiting();
 
                         } else if (eventType === 'handoff') {
-                            // 인디케이터 유지 — 인수인계를 아래에 병렬 표시
+                            // 인수인계 시작 시에도 대기창 숨김
+                            this.hideTypingIndicator();
                             this._renderHandoffTurn(payload);
 
                         } else if (eventType === 'status') {
@@ -960,6 +963,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         } else if (eventType === 'chunk') {
                             if (!accumulatedText) {
                                 this.hideTypingIndicator();
+                                this._hideMiniWaiting();
                                 if (!streamDivAttached) {
                                     this.convArea.appendChild(streamDiv);
                                     streamDivAttached = true;
@@ -2219,6 +2223,21 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             return msg || '알 수 없는 오류가 발생했습니다.';
         },
 
+        // 협의 종료 후 답변 대기 미니 인디케이터
+        _showMiniWaiting() {
+            this._hideMiniWaiting();
+            const mini = document.createElement('div');
+            mini.id = 'mini-waiting';
+            mini.className = 'mini-waiting-indicator';
+            mini.innerHTML = '<div class="delib-typing-dots"><span></span><span></span><span></span></div><span>답변 작성 중...</span>';
+            this.convArea.appendChild(mini);
+            this._smartScroll(false);
+        },
+        _hideMiniWaiting() {
+            const el = document.getElementById('mini-waiting');
+            if (el) el.remove();
+        },
+
         hideTypingIndicator() {
             if (this._typingStepTimers) {
                 this._typingStepTimers.forEach(t => clearTimeout(t));
@@ -2230,6 +2249,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             }
             const typingDiv = document.getElementById('typing-indicator');
             if (typingDiv) typingDiv.remove();
+            this._hideMiniWaiting();
         }
     };
 
