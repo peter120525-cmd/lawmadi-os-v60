@@ -166,7 +166,10 @@ async def _single_leader_call(
                 raise
 
     loop = asyncio.get_running_loop()
-    resp = await loop.run_in_executor(None, _sync_call)
+    resp = await asyncio.wait_for(
+        loop.run_in_executor(None, _sync_call),
+        timeout=_TURN_TIMEOUT + 2,  # executor 자체 timeout (SDK 행 방지)
+    )
 
     text = _safe_extract_gemini_text(resp).strip()
     text = _remove_think_blocks(text).strip()
@@ -290,10 +293,10 @@ async def generate_deliberation(
                   f"{_base}{_q}CSO 서연이 쟁점을 도출하고 분석을 요청했습니다.\n\n당신은 {alt_name}({alt_spec} 전문). "
                   f"자기 분야 관점에서 법적 쟁점을 분석하고 해결 방향을 제시하세요. {_style_ko}")
             r12 = await asyncio.gather(_call(cso_p, p1), _call(alt_p, p2), return_exceptions=True)
-            t1 = r12[0] if isinstance(r12[0], str) and r12[0] else (
+            t1 = r12[0] if len(r12) > 0 and isinstance(r12[0], str) and r12[0] else (
                 f"Let me identify the key issues. This involves {sel_spec}. {alt_name}, please analyze."
                 if _en else f"핵심 쟁점을 정리하겠습니다. {sel_spec} 분야입니다. {alt_name}님, 쟁점 분석 부탁드립니다.")
-            t2 = r12[1] if isinstance(r12[1], str) and r12[1] else (
+            t2 = r12[1] if len(r12) > 1 and isinstance(r12[1], str) and r12[1] else (
                 f"From {alt_spec} perspective, the key issue here is significant."
                 if _en else f"{alt_spec} 관점에서 이 쟁점은 중요한 사안입니다.")
             turns.append({"speaker": _cso, "role": "CSO", "text": t1, "is_final": False})

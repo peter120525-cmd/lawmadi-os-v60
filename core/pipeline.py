@@ -64,12 +64,11 @@ _DRF_VERIFY_RETRY_TIMEOUT = float(os.getenv("DRF_VERIFY_RETRY_TIMEOUT", "10"))
 _DRF_FETCH_TIMEOUT = float(os.getenv("DRF_FETCH_TIMEOUT", "8"))
 _RAG_API_TIMEOUT = float(os.getenv("RAG_API_TIMEOUT", "10"))
 _GEMINI_COMPOSE_TIMEOUT = float(os.getenv("GEMINI_COMPOSE_TIMEOUT", "45"))
-_cb_consecutive_failures: int = 0
-_cb_open_since: float = 0.0  # time.monotonic() when circuit opened
-
 import time as _time
 import threading as _threading
 
+_cb_consecutive_failures: int = 0
+_cb_open_since: float = 0.0  # time.monotonic() when circuit opened
 _cb_lock = _threading.Lock()
 
 
@@ -2687,6 +2686,9 @@ async def _run_legal_pipeline(
                 lm_draft = lm_draft + ban_instruction
             else:
                 lm_draft = ban_instruction
+        # 재시도 timeout: 전체 경과 시간 고려 (최소 5초 보장)
+        _elapsed_total = _time.time() - _pipeline_start if '_pipeline_start' in dir() else 0
+        _retry_timeout = max(5.0, _DRF_VERIFY_RETRY_TIMEOUT - min(_elapsed_total * 0.3, 5.0))
         try:
             retry_text = await _gemini_fallback_compose(
                 query, analysis, rag_context, tools, gemini_history,
@@ -2695,7 +2697,7 @@ async def _run_legal_pipeline(
             )
             if retry_text and len(retry_text.strip()) >= 30:
                 retry_drf = await asyncio.wait_for(
-                    _drf_verify_law_refs(retry_text, lang=lang, prefetch_cache=_drf_prefetch_cache), timeout=_DRF_VERIFY_RETRY_TIMEOUT,
+                    _drf_verify_law_refs(retry_text, lang=lang, prefetch_cache=_drf_prefetch_cache), timeout=_retry_timeout,
                 )
                 retry_result = _apply_fail_closed(retry_text, retry_drf)
                 if retry_result != FAIL_CLOSED_RESPONSE:
