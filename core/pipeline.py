@@ -59,9 +59,11 @@ _CB_THRESHOLD = int(os.getenv("LAWMADILM_CB_THRESHOLD", "5"))
 _CB_OPEN_SEC = float(os.getenv("LAWMADILM_CB_OPEN_SEC", "60"))
 
 # Timeout 설정 (환경변수로 조정 가능, 기본값 유지)
-_DRF_VERIFY_TIMEOUT = float(os.getenv("DRF_VERIFY_TIMEOUT", "20"))
-_DRF_FETCH_TIMEOUT = float(os.getenv("DRF_FETCH_TIMEOUT", "15"))
+_DRF_VERIFY_TIMEOUT = float(os.getenv("DRF_VERIFY_TIMEOUT", "15"))
+_DRF_VERIFY_RETRY_TIMEOUT = float(os.getenv("DRF_VERIFY_RETRY_TIMEOUT", "10"))
+_DRF_FETCH_TIMEOUT = float(os.getenv("DRF_FETCH_TIMEOUT", "12"))
 _RAG_API_TIMEOUT = float(os.getenv("RAG_API_TIMEOUT", "10"))
+_GEMINI_COMPOSE_TIMEOUT = float(os.getenv("GEMINI_COMPOSE_TIMEOUT", "45"))
 _cb_consecutive_failures: int = 0
 _cb_open_since: float = 0.0  # time.monotonic() when circuit opened
 
@@ -909,8 +911,7 @@ async def _stage1_rag_search(query: str, top_k: int = 10) -> RAGContext:
                 ctx.matched_laws = matched or []
                 if _vertex_context_fn:
                     ctx.context_text = await _vertex_context_fn(query, top_k=30)
-                if _vertex_cache_context_fn:
-                    ctx.cache_context = await _vertex_cache_context_fn(query, top_k=30)
+                ctx.cache_context = ""  # 중복 호출 제거
                 logger.info(f"[Stage 1] Vertex AI Search 재시도 성공: {len(ctx.matched_laws)}건")
                 return ctx
             except Exception as e2:
@@ -1403,6 +1404,22 @@ def _extract_articles_from_elaw(raw_response) -> List[Dict]:
     return articles
 
 
+# 법률 참조 regex (모듈 레벨 사전 컴파일 — Stage 4에서 매 호출마다 재컴파일 방지)
+_KR_LAW_REF_RE = re.compile(
+    r'([가-힣]+(?:\s+[가-힣]+)*\s*(?:등에\s+관한\s+)?(?:법률|법|시행령|시행규칙|규정|조례))\s*제(\d+)조(의\d+)?\s*(?:제(\d+)항)?'
+)
+_KR_PREC_REF_RE = re.compile(
+    r'((?:대법원|대법|헌법재판소|헌재|서울고등법원|서울고법|서울중앙지방법원)\s*'
+    r'(\d{4})\s*[.]\s*(\d{1,2})\s*[.]\s*\d{1,2}\s*[.]?\s*선고\s*'
+    r'(\d{2,4}[가-힣]+\d+)\s*(?:판결|결정))'
+)
+_KR_PREC_SIMPLE_RE = re.compile(
+    r'(\d{2,4}'
+    r'(?:헌바|헌마|헌가|헌나|헌라|헌사|헌아|헌자|'
+    r'다|나|가|마|카|타|파|라|바|사|아|자|차|하|'
+    r'두|누|구|무|부|수|우|주|추|후|그|드|스|으)'
+    r'(?:합)?\d{2,6})'
+)
 # 영문 법률 참조 regex (모듈 레벨 컴파일)
 _EN_LAW_REF_RE = re.compile(
     r'([\w][\w\s]*(?:ACT|CODE|DECREE|LAW|RULE|REGULATION))\s*'
@@ -1489,29 +1506,12 @@ async def _drf_verify_law_refs(text: str, lang: str = "", prefetch_cache: Option
     """
     result = VerificationResult()
 
-    # ── 1) 법률 참조 + 판례 참조 동시 추출 (regex, instant) ──
-    # ⚠️ (?:[가-힣]+\s*)+ 는 catastrophic backtracking 유발
-    #    → [가-힣]+(?:\s+[가-힣]+)* 로 교체 (whitespace+로 분리, 중첩 반복 제거)
-    refs = re.findall(
-        r'([가-힣]+(?:\s+[가-힣]+)*\s*(?:등에\s+관한\s+)?(?:법률|법|시행령|시행규칙|규정|조례))\s*제(\d+)조(의\d+)?\s*(?:제(\d+)항)?',
-        text
-    )
+    # ── 1) 법률 참조 + 판례 참조 동시 추출 (사전 컴파일 regex, instant) ──
+    refs = _KR_LAW_REF_RE.findall(text)
 
-    prec_refs = re.findall(
-        r'((?:대법원|대법|헌법재판소|헌재|서울고등법원|서울고법|서울중앙지방법원)\s*'
-        r'(\d{4})\s*[.]\s*(\d{1,2})\s*[.]\s*\d{1,2}\s*[.]?\s*선고\s*'
-        r'(\d{2,4}[가-힣]+\d+)\s*(?:판결|결정))',
-        text
-    )
+    prec_refs = _KR_PREC_REF_RE.findall(text)
     if not prec_refs:
-        prec_refs_simple = re.findall(
-            r'(\d{2,4}'
-            r'(?:헌바|헌마|헌가|헌나|헌라|헌사|헌아|헌자|'
-            r'다|나|가|마|카|타|파|라|바|사|아|자|차|하|'
-            r'두|누|구|무|부|수|우|주|추|후|그|드|스|으)'
-            r'(?:합)?\d{2,6})',
-            text
-        )
+        prec_refs_simple = _KR_PREC_SIMPLE_RE.findall(text)
     else:
         prec_refs_simple = [p[3] for p in prec_refs]
 
@@ -2097,7 +2097,7 @@ async def _gemini_fallback_compose(
     _compressed_context = ""
     if rag_context.context_text:
         _raw_ctx = rag_context.context_text
-        if len(_raw_ctx) > _ctx_budget:
+        if len(_raw_ctx) > _ctx_budget * 1.1:  # 10% 여유 — 근소 초과 시 정렬 스킵
             # matched_laws가 있으면 점수순 상위 결과만으로 컨텍스트 재구성
             if rag_context.matched_laws:
                 _sorted_laws = sorted(rag_context.matched_laws, key=lambda x: x.get("score", 0), reverse=True)
@@ -2299,10 +2299,18 @@ async def _gemini_fallback_compose(
     loop = asyncio.get_running_loop()
     for _attempt in range(3):
         try:
-            resp = await loop.run_in_executor(None, _sync_gemini_call, model_name)
+            resp = await asyncio.wait_for(
+                loop.run_in_executor(None, _sync_gemini_call, model_name),
+                timeout=_GEMINI_COMPOSE_TIMEOUT,
+            )
             text = _safe_extract_gemini_text(resp)
             logger.info(f"[Gemini] 답변 생성 완료 ({len(text)}자, model={model_name}, mode={mode}, vertex={USE_VERTEX_AI})")
             return text
+        except asyncio.TimeoutError:
+            logger.warning(f"[Gemini] 타임아웃 ({_GEMINI_COMPOSE_TIMEOUT}초, attempt={_attempt+1}, model={model_name})")
+            if _attempt < 2:
+                continue
+            raise
         except Exception as e:
             if is_quota_error(e) and _attempt < 2:
                 wait = _RETRY_BASE_SEC * (2 ** _attempt)
@@ -2472,12 +2480,14 @@ async def _run_legal_pipeline(
         if not final_text or len(final_text.strip()) < 30:
             raise RuntimeError("Gemini 빈 응답 (재시도 포함)")
 
-    # -- Stage 3.5: 최소 응답 길이 검증 (법률 응답, 최대 2회 재시도) --
+    # -- Stage 3.5: 최소 응답 길이 검증 (법률 응답, 최대 1회 재시도) --
+    # soft threshold: 목표의 70% 이상이면 수용 (불필요한 재생성 방지)
     is_legal = analysis.get("is_legal", True)
     min_len = MIN_LEGAL_RESPONSE_EXPERT if mode == "expert" else MIN_LEGAL_RESPONSE_GENERAL
+    soft_min = int(min_len * 0.7)  # 70% 이상이면 수용
     retry_count = 0
-    max_retries = 2
-    while is_legal and len(final_text.strip()) < min_len and retry_count < max_retries:
+    max_retries = 1  # 2→1회 (병목 방지: 각 재시도 ~3-5초)
+    while is_legal and len(final_text.strip()) < soft_min and retry_count < max_retries:
         retry_count += 1
         logger.warning(
             f"[Stage 3.5] 법률 응답 길이 부족 ({len(final_text)}자 < {min_len}자, mode={mode}) — 재생성 {retry_count}/{max_retries}"
@@ -2675,7 +2685,7 @@ async def _run_legal_pipeline(
             )
             if retry_text and len(retry_text.strip()) >= 30:
                 retry_drf = await asyncio.wait_for(
-                    _drf_verify_law_refs(retry_text, lang=lang, prefetch_cache=_drf_prefetch_cache), timeout=_DRF_VERIFY_TIMEOUT,
+                    _drf_verify_law_refs(retry_text, lang=lang, prefetch_cache=_drf_prefetch_cache), timeout=_DRF_VERIFY_RETRY_TIMEOUT,
                 )
                 retry_result = _apply_fail_closed(retry_text, retry_drf)
                 if retry_result != FAIL_CLOSED_RESPONSE:

@@ -280,22 +280,29 @@ async def generate_deliberation(
                   f"{_base}{_q}지정 리더: {sel_name}({sel_spec})\n\n"
                   f"당신은 CSO 서연, 회의를 주재합니다. 의뢰인 질문에서 핵심 법적 쟁점을 도출하고, "
                   f"{sel_spec} 전문가가 이 쟁점을 해결하는 데 필요한 이유를 설명한 뒤 {sel_name}님에게 분석을 요청하세요. {_style_ko}")
-        t1 = await _call(cso_p, p1) or (
-            f"Let me identify the key issues. This involves {sel_spec}. {alt_name if has_alt else sel_name}, please analyze."
-            if _en else f"핵심 쟁점을 정리하겠습니다. {sel_spec} 분야입니다. {alt_name if has_alt else sel_name}님, 쟁점 분석 부탁드립니다.")
-        turns.append({"speaker": _cso, "role": "CSO", "text": t1, "is_final": False})
-
         if has_alt:
-            # ── Group 2: T2 (B 쟁점 분석) ──
+            # ── T1 + T2 병렬: CSO 쟁점 도출 + B 쟁점 분석 (순차→병렬 전환, ~2-4초 절감) ──
             p2 = (f"{_base}{_q}CSO identified key issues and asked you to analyze them.\n\nYou are {alt_name} ({alt_spec} expert). "
                   f"Analyze the legal issues from your specialty and suggest how to resolve them. {_style_en}"
                   if _en else
                   f"{_base}{_q}CSO 서연이 쟁점을 도출하고 분석을 요청했습니다.\n\n당신은 {alt_name}({alt_spec} 전문). "
                   f"자기 분야 관점에서 법적 쟁점을 분석하고 해결 방향을 제시하세요. {_style_ko}")
-            t2 = await _call(alt_p, p2) or (
+            r12 = await asyncio.gather(_call(cso_p, p1), _call(alt_p, p2), return_exceptions=True)
+            t1 = r12[0] if isinstance(r12[0], str) and r12[0] else (
+                f"Let me identify the key issues. This involves {sel_spec}. {alt_name}, please analyze."
+                if _en else f"핵심 쟁점을 정리하겠습니다. {sel_spec} 분야입니다. {alt_name}님, 쟁점 분석 부탁드립니다.")
+            t2 = r12[1] if isinstance(r12[1], str) and r12[1] else (
                 f"From {alt_spec} perspective, the key issue here is significant."
                 if _en else f"{alt_spec} 관점에서 이 쟁점은 중요한 사안입니다.")
+            turns.append({"speaker": _cso, "role": "CSO", "text": t1, "is_final": False})
             turns.append({"speaker": alt_name, "role": alt_spec, "text": t2, "is_final": False})
+        else:
+            t1 = await _call(cso_p, p1) or (
+                f"Let me identify the key issues. This involves {sel_spec}. {sel_name}, please analyze."
+                if _en else f"핵심 쟁점을 정리하겠습니다. {sel_spec} 분야입니다. {sel_name}님, 쟁점 분석 부탁드립니다.")
+            turns.append({"speaker": _cso, "role": "CSO", "text": t1, "is_final": False})
+
+        if has_alt:
 
             # ── Group 3: T3 (CSO→A 쟁점 분석 요청) + T4 (A 쟁점 해결 방안) 병렬 ──
             p3 = (f"{alt_name} analyzed the issues. You are CSO Seoyeon. Now ask {sel_name} to share their analysis and resolution approach. {_short_en}"
