@@ -2617,11 +2617,18 @@ async def _run_legal_pipeline(
     if fail_closed_result == FAIL_CLOSED_RESPONSE:
         # DRF API 타임아웃/실패 → 검증 자체 불가 → 면책 문구 부착 후 반환
         if drf_verification and drf_verification.drf_failed:
-            disclaimer = (
-                "\n\n---\n"
-                "※ 이 답변의 법률 조문은 실시간 검증 서버 응답 지연으로 자동 검증이 완료되지 않았습니다. "
-                "정확한 조문은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
-            )
+            if lang == "en":
+                disclaimer = (
+                    "\n\n---\n"
+                    "※ The legal provisions in this response could not be automatically verified due to verification server delays. "
+                    "Please confirm with the [Korean Law Information Center](https://law.go.kr)."
+                )
+            else:
+                disclaimer = (
+                    "\n\n---\n"
+                    "※ 이 답변의 법률 조문은 실시간 검증 서버 응답 지연으로 자동 검증이 완료되지 않았습니다. "
+                    "정확한 조문은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
+                )
             logger.warning("[FAIL_CLOSED] DRF 실패/타임아웃 → 면책 문구 부착 후 반환")
             return final_text + disclaimer, drf_verification
 
@@ -2629,11 +2636,18 @@ async def _run_legal_pipeline(
         stripped_orig = _strip_unverified_sentences(final_text, drf_verification)
         stripped_orig = stripped_orig.strip()
         if len(stripped_orig) >= 300:
-            disclaimer = (
-                "\n\n---\n"
-                "※ 이 답변의 일부 법률 조문은 실시간 검증에서 확인되지 않아 제거되었습니다. "
-                "정확한 조문은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
-            )
+            if lang == "en":
+                disclaimer = (
+                    "\n\n---\n"
+                    "※ Some legal provisions in this response were removed as they could not be verified. "
+                    "Please confirm with the [Korean Law Information Center](https://law.go.kr)."
+                )
+            else:
+                disclaimer = (
+                    "\n\n---\n"
+                    "※ 이 답변의 일부 법률 조문은 실시간 검증에서 확인되지 않아 제거되었습니다. "
+                    "정확한 조문은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
+                )
             logger.info(
                 f"[FAIL_CLOSED 복구] 원본에서 미검증 문장 제거 후 반환 "
                 f"({len(stripped_orig)}자, 제거 {len(drf_verification.unverified_refs)}건)"
@@ -2672,11 +2686,18 @@ async def _run_legal_pipeline(
                     stripped = _strip_unverified_sentences(retry_text, retry_drf)
                     stripped = stripped.strip()
                     if len(stripped) >= 300:
-                        disclaimer = (
-                            "\n\n---\n"
-                            "※ 이 답변의 일부 법률 조문은 실시간 검증에서 확인되지 않아 제거되었습니다. "
-                            "정확한 조문은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
-                        )
+                        if lang == "en":
+                            disclaimer = (
+                                "\n\n---\n"
+                                "※ Some legal provisions in this response were removed as they could not be verified. "
+                                "Please confirm with the [Korean Law Information Center](https://law.go.kr)."
+                            )
+                        else:
+                            disclaimer = (
+                                "\n\n---\n"
+                                "※ 이 답변의 일부 법률 조문은 실시간 검증에서 확인되지 않아 제거되었습니다. "
+                                "정확한 조문은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
+                            )
                         logger.info(
                             f"[FAIL_CLOSED 재시도] 미검증 문장 제거 후 반환 "
                             f"({len(stripped)}자, 제거 {len(retry_drf.unverified_refs)}건)"

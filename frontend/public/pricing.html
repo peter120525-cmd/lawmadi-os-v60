@@ -251,31 +251,31 @@
 
     <!-- OTP Modal -->
     <div id="otpModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
-        <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:20px;padding:36px 28px;max-width:380px;width:90%;text-align:center;position:relative;">
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:36px 28px;max-width:380px;width:90%;text-align:center;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.15);">
             <button id="otpClose" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#94a3b8;font-size:1.5rem;cursor:pointer;">&times;</button>
             <!-- Step 1: Email -->
             <div id="otpStep1">
-                <h3 style="color:#f1f5f9;font-weight:800;margin-bottom:8px;">이메일 인증</h3>
-                <p style="color:#94a3b8;font-size:0.9rem;margin-bottom:20px;">회원가입 없이 이메일만으로 이용 가능합니다</p>
-                <input id="otpEmail" type="email" placeholder="이메일 주소" style="width:100%;padding:14px 16px;background:#0f172a;border:1px solid rgba(255,255,255,0.2);border-radius:12px;color:#f1f5f9;font-size:1rem;margin-bottom:12px;outline:none;">
+                <h3 style="color:#1e293b;font-weight:800;margin-bottom:8px;">이메일 인증</h3>
+                <p style="color:#64748b;font-size:0.9rem;margin-bottom:20px;">회원가입 없이 이메일만으로 이용 가능합니다</p>
+                <input id="otpEmail" type="email" placeholder="이메일 주소" style="width:100%;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;color:#1e293b;font-size:1rem;margin-bottom:12px;outline:none;">
                 <button id="otpSendBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#2563eb,#8b5cf6);border:none;border-radius:12px;color:white;font-size:1rem;font-weight:700;cursor:pointer;">인증번호 발송</button>
                 <p id="otpSendMsg" style="color:#94a3b8;font-size:0.85rem;margin-top:12px;display:none;"></p>
             </div>
             <!-- Step 2: Verify -->
             <div id="otpStep2" style="display:none;">
-                <h3 style="color:#f1f5f9;font-weight:800;margin-bottom:8px;">인증번호 입력</h3>
-                <p style="color:#94a3b8;font-size:0.9rem;margin-bottom:20px;">이메일로 전송된 6자리 코드를 입력하세요</p>
-                <input id="otpCode" type="text" maxlength="6" placeholder="000000" style="width:100%;padding:14px 16px;background:#0f172a;border:1px solid rgba(255,255,255,0.2);border-radius:12px;color:#f1f5f9;font-size:1.5rem;font-weight:900;letter-spacing:8px;text-align:center;margin-bottom:12px;outline:none;">
+                <h3 style="color:#1e293b;font-weight:800;margin-bottom:8px;">인증번호 입력</h3>
+                <p style="color:#64748b;font-size:0.9rem;margin-bottom:20px;">이메일로 전송된 6자리 코드를 입력하세요</p>
+                <input id="otpCode" type="text" maxlength="6" placeholder="000000" style="width:100%;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;color:#1e293b;font-size:1.5rem;font-weight:900;letter-spacing:8px;text-align:center;margin-bottom:12px;outline:none;">
                 <button id="otpVerifyBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:12px;color:white;font-size:1rem;font-weight:700;cursor:pointer;">확인</button>
                 <p id="otpVerifyMsg" style="color:#94a3b8;font-size:0.85rem;margin-top:12px;display:none;"></p>
-                <button id="otpResendBtn" style="background:none;border:none;color:#93c5fd;font-size:0.85rem;cursor:pointer;margin-top:8px;text-decoration:underline;">재발송</button>
+                <button id="otpResendBtn" style="background:none;border:none;color:#2563eb;font-size:0.85rem;cursor:pointer;margin-top:8px;text-decoration:underline;">재발송</button>
             </div>
             <!-- Step 3: Success -->
             <div id="otpStep3" style="display:none;">
-                <div style="font-size:3rem;margin-bottom:12px;">✅</div>
-                <h3 style="color:#f1f5f9;font-weight:800;margin-bottom:8px;">인증 완료</h3>
-                <p style="color:#94a3b8;font-size:0.9rem;margin-bottom:4px;">크레딧 잔액: <span id="otpCredits" style="color:#10b981;font-weight:700;">0</span></p>
-                <p style="color:#94a3b8;font-size:0.85rem;margin-bottom:20px;">결제를 진행합니다...</p>
+                <div style="font-size:3rem;margin-bottom:12px;color:#10b981;">✅</div>
+                <h3 style="color:#1e293b;font-weight:800;margin-bottom:8px;">인증 완료</h3>
+                <p style="color:#64748b;font-size:0.9rem;margin-bottom:4px;">크레딧 잔액: <span id="otpCredits" style="color:#10b981;font-weight:700;">0</span></p>
+                <p style="color:#64748b;font-size:0.85rem;margin-bottom:20px;">결제를 진행합니다...</p>
             </div>
         </div>
     </div>
