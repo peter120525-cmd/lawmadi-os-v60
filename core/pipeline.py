@@ -61,7 +61,7 @@ _CB_OPEN_SEC = float(os.getenv("LAWMADILM_CB_OPEN_SEC", "60"))
 # Timeout 설정 (환경변수로 조정 가능, 기본값 유지)
 _DRF_VERIFY_TIMEOUT = float(os.getenv("DRF_VERIFY_TIMEOUT", "15"))
 _DRF_VERIFY_RETRY_TIMEOUT = float(os.getenv("DRF_VERIFY_RETRY_TIMEOUT", "10"))
-_DRF_FETCH_TIMEOUT = float(os.getenv("DRF_FETCH_TIMEOUT", "12"))
+_DRF_FETCH_TIMEOUT = float(os.getenv("DRF_FETCH_TIMEOUT", "8"))
 _RAG_API_TIMEOUT = float(os.getenv("RAG_API_TIMEOUT", "10"))
 _GEMINI_COMPOSE_TIMEOUT = float(os.getenv("GEMINI_COMPOSE_TIMEOUT", "45"))
 _cb_consecutive_failures: int = 0
@@ -2593,7 +2593,7 @@ async def _run_legal_pipeline(
     # Check Grounding 결과 수집 (DRF와 병렬 실행된 결과)
     if grounding_task:
         try:
-            grounding_result = await asyncio.wait_for(grounding_task, timeout=5.0)
+            grounding_result = await asyncio.wait_for(asyncio.shield(grounding_task), timeout=5.0)
             support_score = grounding_result.get("support_score", -1)
             if support_score >= 0:
                 logger.info(
@@ -2617,6 +2617,9 @@ async def _run_legal_pipeline(
                             "정확한 내용은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
                         )
                     final_text = final_text.rstrip() + grounding_disclaimer
+        except asyncio.TimeoutError:
+            logger.warning("[CheckGrounding] 5초 타임아웃 — task 취소")
+            grounding_task.cancel()
         except Exception as e:
             logger.warning(f"[CheckGrounding] 결과 수집 실패 (무시): {e}")
 
