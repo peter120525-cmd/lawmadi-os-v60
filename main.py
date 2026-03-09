@@ -669,52 +669,55 @@ def _kst_today_start_ts() -> float:
 
 def _check_rate_limit(request: Request) -> Union[bool, dict]:
     """
-    1일 요청 제한 (KST 00:00 리셋) — DB 우선, 인메모리 fallback.
-    통과 시 True, 초과 시 {"blocked": True, "retry_at_kst": "00:00"} 반환.
-    IP는 해시로만 저장 (원본 비노출).
-    관리자 키(X-Admin-Key 헤더)가 유효하면 높은 제한 적용.
-    플랜에 따라 window_limit 동적 적용.
+    요청 제한 (KST 00:00 리셋).
+    통과 시 True, 초과 시 {"blocked": True, "retry_at_kst": ...} 반환.
+
+    우선순위:
+      1) Admin 키 → 무제한
+      2) DB 세션 유저 → 크레딧/일일무료 기반 (IP 카운트 무관)
+      3) 세션 쿠키 있지만 DB 실패 → 관대하게 통과 (유료 유저 보호)
+      4) 비로그인 → IP 기반 제한 (free plan window_limit)
     """
-    _ADMIN_WINDOW_LIMIT = 1000
+    # ── 1) Admin 키 인증 → 무제한 ──
     _admin_key = os.getenv("MCP_API_KEY", "").strip() or os.getenv("INTERNAL_API_KEY", "").strip()
-    is_admin = False
     if _admin_key and len(_admin_key) >= 32:
         req_key = request.headers.get("X-Admin-Key", "").strip()
         if req_key and hmac.compare_digest(req_key, _admin_key):
-            is_admin = True
+            return True
 
-    if is_admin:
-        return True  # Admin 키 인증 시 제한 없음
+    # ── 2) DB 세션 유저 → 크레딧/무료 기반 판단 ──
+    has_session = bool(request.cookies.get("lm_session", ""))
+    user = _get_paddle_user(request) if has_session else None
 
-    plan = _get_user_plan(request)
-    plan_cfg = PLAN_CONFIG.get(plan, PLAN_CONFIG["free"])
-    window_limit = plan_cfg["window_limit"]
-
-    # Credit/free-tier users: check via DB session
-    user = _get_paddle_user(request)
     if user:
         mode = request.headers.get("X-Request-Mode", "general").strip()
         cost = 2 if mode == "expert" else 1
 
         if user.get("credit_balance", 0) >= cost:
-            # Premium user with credits — allow (deduction happens post-response)
-            return True
+            return True  # 유료 유저: 크레딧 충분 → 무조건 통과
 
-        # Free user daily limit
         if user.get("current_plan") == "free":
             if mode == "expert":
                 return {"blocked": True, "retry_at_kst": "credits_required_for_expert"}
             if user.get("daily_free_used", 0) < DAILY_FREE_LIMIT:
-                return True  # daily free allowed (usage tracked post-response)
+                return True  # 무료 일일 한도 내 → 통과
             return {"blocked": True, "retry_at_kst": "daily_limit_reached"}
 
         return {"blocked": True, "retry_at_kst": "credits_exhausted"}
+
+    # ── 3) 세션 쿠키 있지만 DB 조회 실패 → 유료 유저 보호 ──
+    if has_session:
+        return True  # DB 일시 장애 시 유료 유저 차단 방지
+
+    # ── 4) 비로그인 → IP 기반 제한 ──
+    plan_cfg = PLAN_CONFIG.get("free", {})
+    window_limit = plan_cfg.get("window_limit", 2)
 
     ip = _get_client_ip(request)
     ip_hash = _sha256(ip)
     window_seconds = _seconds_until_kst_midnight()
 
-    # ── DB 우선: 멀티인스턴스 환경에서 정확한 카운트 ──
+    # DB 우선
     try:
         from connectors.db_client_v2 import rate_limit_check, rate_limit_hit
         db_key = f"ip:{ip_hash}"
@@ -723,9 +726,9 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
         rate_limit_hit(db_key, window_seconds=window_seconds)
         return True
     except Exception:
-        pass  # DB 불가 시 인메모리 fallback
+        pass
 
-    # ── 인메모리 fallback (오늘 KST 00:00 이후 타임스탬프만 유지) ──
+    # 인메모리 fallback
     now = time.time()
     today_start = _kst_today_start_ts()
     _MAX_TIMESTAMPS_PER_IP = 200
