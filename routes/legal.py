@@ -607,7 +607,7 @@ async def ask(request: Request):
                         _d = so.detect_domains(query)
                         _s = so.select_leaders(query, _d)
                         for sl in _s[:3]:
-                            if sl.get("name") != leader_name:
+                            if sl.get("name") != leader_name and sl.get("_id") != "CCO" and sl.get("_clevel") != "CCO":
                                 _ask_candidates.append({"name": sl.get("name", "?"), "specialty": sl.get("specialty", ""), "leader_id": sl.get("_id", "")})
                     _ask_candidates = _ask_candidates[:3]
                     _delib = await asyncio.wait_for(
@@ -1202,13 +1202,14 @@ async def ask_stream(request: Request):
                     _domains = so.detect_domains(query)
                     _selected = so.select_leaders(query, _domains)
                     for sl in _selected[:3]:
+                        # CCO(유나)는 법률 협의 후보에서 제외
+                        if sl.get("_id") == "CCO" or sl.get("_clevel") == "CCO":
+                            continue
                         _candidate_leaders.append({
                             "name": sl.get("name", "?"),
                             "specialty": sl.get("specialty", ""),
                             "leader_id": sl.get("_id", ""),
                         })
-                # CCO(유나)는 법률 협의 후보에서 제외
-                _candidate_leaders = [c for c in _candidate_leaders if c.get("leader_id") != "CCO"]
                 if not any(c["name"] == _new_leader_name for c in _candidate_leaders):
                     _candidate_leaders.insert(0, {
                         "name": _new_leader_name,
