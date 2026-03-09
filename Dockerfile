@@ -54,6 +54,10 @@ RUN groupadd -r appuser && useradd -r -g appuser -d /app appuser \
 
 USER appuser
 
+# 헬스체크 — Cloud Run + Docker 자체 모니터링 겸용
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health', timeout=4)" || exit 1
+
 # 포트 설정 및 실행
 EXPOSE 8080
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]

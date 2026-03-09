@@ -234,13 +234,13 @@ async def analyze_document(request: Request, file_id: str, analysis_type: str = 
         uploads_dir = Path("uploads").resolve()
         matching_files = [
             f for f in uploads_dir.iterdir()
-            if f.is_file() and f.name.startswith(safe_id)
+            if f.is_file() and (f.name.startswith(safe_id + "_") or f.name == safe_id)
         ]
 
         if not matching_files:
             raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
         if len(matching_files) > 1:
-            logger.warning(f"[Analyze] Multiple file match: {safe_id}, {len(matching_files)} files")
+            logger.warning(f"[Analyze] Multiple file match: {safe_id}, {len(matching_files)} files — 첫 번째 파일 사용")
 
         file_path = matching_files[0].resolve()
         # Path traversal prevention: verify inside uploads directory (symlink defense)

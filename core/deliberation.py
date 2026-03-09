@@ -29,11 +29,15 @@ _TURN_TIMEOUT = 4  # 개별 턴 타임아웃 (초)
 _NAME_TO_ID: Dict[str, str] = {}
 
 # 프롬프트 인젝션 방지: 쿼리 새니타이즈
-_INJECTION_MARKERS = re.compile(r'\[(지시|페르소나|INST|SYSTEM)\]|```|<\/?system>', re.IGNORECASE)
+_INJECTION_MARKERS = re.compile(r'\[(지시|페르소나|INST|SYSTEM)\]|`{1,3}|<\/?system>', re.IGNORECASE)
 
 def _sanitize_query_for_prompt(query: str, lang: str = "") -> str:
-    """사용자 쿼리를 Gemini 프롬프트에 안전하게 삽입하기 위한 새니타이즈."""
-    q = query[:300]
+    """사용자 쿼리를 Gemini 프롬프트에 안전하게 삽입하기 위한 새니타이즈.
+
+    1) 인젝션 마커 및 모든 백틱 제거
+    2) 안전한 triple-backtick 래핑으로 경계 보호
+    """
+    q = query[:300].strip()
     q = _INJECTION_MARKERS.sub('', q)
     if lang == "en":
         return f"Question: ```{q}```\n"

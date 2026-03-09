@@ -28,7 +28,7 @@
 
 ## 1. 헌법적 정의 (Constitutional Definitions)
 
-**최종 업데이트**: 2026-02-13
+**최종 업데이트**: 2026-03-09
 
 ### Article 1: DRF API 형식은 JSON이다
 
@@ -61,7 +61,7 @@ params = {"type": "XML"}    # 절대 금지 - HTML 에러 페이지 반환됨
 - "DRF unexpected Content-Type" 오류
 - 법령 검색 실패
 
-**근거**: 2026-02-13 실증 테스트 결과 확인 (인증키 `choepeter` 작동 검증 완료)
+**근거**: 2026-03-09 실증 테스트 결과 확인 (인증키 `choepeter` 작동 검증 완료)
 
 **적용 파일**: `connectors/drf_client.py:68`
 
@@ -539,7 +539,7 @@ frontend/                ← HTML/CSS/JS 프론트엔드 (Firebase 배포)
 
 ## 17. 알려진 이슈 — 수정 시 참고
 
-**최종 점검일**: 2026-02-13
+**최종 점검일**: 2026-03-09
 
 ### ✅ 해결된 이슈
 
