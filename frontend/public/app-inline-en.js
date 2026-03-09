@@ -871,14 +871,10 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             }
             if (!response.ok) throw new Error(`Server error (${response.status})`);
 
-            // 협의/인수인계 임시 상태 초기화
-            this._delibContainer = null;
-            this._delibTurnIndex = 0;
-            this._handoffContainer = null;
-            this._handoffTurnIndex = 0;
+            // Meeting chat container (speaking/message events)
+            this._meetingContainer = null;
 
-            // Streaming message container (고유 ID로 충돌 방지)
-            // 첫 chunk 도착 시에만 DOM에 추가하여 이중 박스 방지
+            // Answer streaming container (answer_start → answer_chunk → answer_done)
             const streamId = 'streaming-msg-' + Date.now();
             const streamDiv = document.createElement('div');
             streamDiv.className = 'ai-msg';
@@ -897,22 +893,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             const decoder = new TextDecoder();
             let buffer = '';
 
-            const _statusLabels = {
-                'detecting_domain': '🔍 Analyzing question...',
-                'searching_laws': '⚖️ Searching laws & precedents...',
-                'analyzing': '✍️ Generating response...',
-                'parallel_analysis': '👥 Multi-leader parallel analysis...',
-                'verifying': '🔎 Cross-verifying...',
-                'synthesizing': '📝 Generating comprehensive response...'
-            };
-
-            const _statusToStep = {
-                'searching_laws': 'step-3',
-                'analyzing': 'step-4',
-                'verifying': 'step-5',
-            };
-
-            // SSE 이벤트 파싱 헬퍼 (multi-line data 지원)
+            // SSE event parser (multi-line data support)
             const _parseSSE = (rawEvent) => {
                 let eventType = 'message';
                 const dataLines = [];
@@ -928,114 +909,131 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 return { eventType, eventData: dataLines.join('\n') };
             };
 
+            const _handleEvent = (eventType, payload) => {
+                if (eventType === 'speaking') {
+                    if (!this._meetingContainer) {
+                        this._hideSimpleWaiting();
+                        this._meetingContainer = document.createElement('div');
+                        this._meetingContainer.className = 'chat-flow-container';
+                        this.convArea.appendChild(this._meetingContainer);
+                    }
+                    const status = payload.status || 'typing';
+                    if (status === 'entering') {
+                        this._removeChatTypingBubble(this._meetingContainer);
+                        const sysMsg = document.createElement('div');
+                        sysMsg.className = 'chat-flow-status';
+                        sysMsg.textContent = (payload.speaker || '') + ' (' + (payload.role || '') + ') joined the meeting';
+                        this._meetingContainer.appendChild(sysMsg);
+                        this._smartScroll(false);
+                    } else if (status === 'typing') {
+                        this._removeChatTypingBubble(this._meetingContainer);
+                        this._appendChatTypingBubble(this._meetingContainer, payload.speaker || '', payload.role || '');
+                        this._smartScroll(false);
+                    }
+
+                } else if (eventType === 'message') {
+                    if (this._meetingContainer) {
+                        this._removeChatTypingBubble(this._meetingContainer);
+                    } else {
+                        this._hideSimpleWaiting();
+                        this._meetingContainer = document.createElement('div');
+                        this._meetingContainer.className = 'chat-flow-container';
+                        this.convArea.appendChild(this._meetingContainer);
+                    }
+                    const bubble = document.createElement('div');
+                    const isMod = (payload.role === 'CSO');
+                    bubble.className = 'chat-msg-bubble' + (isMod ? ' moderator' : '');
+                    bubble.style.opacity = '0';
+                    bubble.innerHTML = this._buildBubbleBody(payload.speaker || '', payload.role || '', payload.content || payload.text || '');
+                    this._meetingContainer.appendChild(bubble);
+                    requestAnimationFrame(() => { bubble.style.transition = 'opacity 0.3s'; bubble.style.opacity = '1'; });
+                    this._smartScroll(false);
+
+                } else if (eventType === 'answer_start') {
+                    this._removeChatTypingBubbleAll();
+                    if (this._meetingContainer) {
+                        const doneStatus = document.createElement('div');
+                        doneStatus.className = 'chat-flow-status';
+                        doneStatus.textContent = 'Meeting complete';
+                        this._meetingContainer.appendChild(doneStatus);
+                    }
+                    this._hideSimpleWaiting();
+                    leaderName = payload.speaker || '';
+                    leaderSpecialty = payload.role || '';
+                    this._showMiniWaiting((leaderName ? leaderName + ' (' + leaderSpecialty + ') ' : '') + 'is composing the response');
+
+                } else if (eventType === 'answer_chunk') {
+                    accumulatedText += (payload.text || '');
+                    if (!streamDivAttached) {
+                        this._hideMiniWaiting();
+                        this._removeChatTypingBubbleAll();
+                        this.convArea.appendChild(streamDiv);
+                        streamDivAttached = true;
+                    }
+                    streamContent.innerHTML = this._renderStreamingText(accumulatedText);
+                    this._smartScroll(false);
+
+                } else if (eventType === 'answer_done') {
+                    leaderName = payload.leader || leaderName;
+                    leaderSpecialty = payload.leader_specialty || payload.specialty || leaderSpecialty;
+                    fullTextFromServer = payload.response || payload.full_text || accumulatedText;
+                    if (payload.current_leader) {
+                        this.currentLeader = payload.current_leader;
+                        this.isFirstQuestion = false;
+                        try { localStorage.setItem('lawmadi-current-leader', JSON.stringify(payload.current_leader)); } catch(e) {}
+                    }
+
+                } else if (eventType === 'error') {
+                    this.hideTypingIndicator();
+                    streamDiv.remove();
+                    const serverErr = new Error(payload.message || 'Streaming error');
+                    serverErr._serverError = true;
+                    throw serverErr;
+                }
+            };
+
             try {
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
 
                     buffer += decoder.decode(value, { stream: true });
-
-                    // SSE 파싱: 이벤트는 빈 줄(\n\n)로 구분
                     const events = buffer.split('\n\n');
-                    buffer = events.pop() || ''; // 마지막 불완전 이벤트는 버퍼에 유지
+                    buffer = events.pop() || '';
 
                     for (const rawEvent of events) {
                         if (!rawEvent.trim()) continue;
-
                         const { eventType, eventData } = _parseSSE(rawEvent);
                         if (!eventData) continue;
-
                         let payload;
                         try { payload = JSON.parse(eventData); } catch(e) {
                             console.warn('[SSE] JSON parse failed:', eventData.slice(0, 100));
                             continue;
                         }
-
-                        if (eventType === 'deliberation_start') {
-                            this.hideTypingIndicator();
-                            this._renderDeliberationStart(payload);
-
-                        } else if (eventType === 'deliberation_turn') {
-                            this._renderDeliberationTurn(payload);
-
-                        } else if (eventType === 'deliberation_end') {
-                            this._renderDeliberationEnd(payload);
-
-                        } else if (eventType === 'handoff_start') {
-                            this.hideTypingIndicator();
-                            this._renderHandoffStart(payload);
-
-                        } else if (eventType === 'handoff') {
-                            this.hideTypingIndicator();
-                            this._renderHandoffTurn(payload);
-
-                        } else if (eventType === 'status') {
-                            // status event: simple waiting only (6-step indicator removed)
-
-                        } else if (eventType === 'chunk') {
-                            // Final answer streaming (line by line typing)
-                            accumulatedText += (payload.text || '');
-                            if (!streamDivAttached) {
-                                this._flushTurnQueue();
-                                this._hideMiniWaiting();
-                                this._removeChatTypingBubbleAll();
-                                this.convArea.appendChild(streamDiv);
-                                streamDivAttached = true;
-                            }
-                            streamContent.innerHTML = this._renderStreamingText(accumulatedText);
-                            this._smartScroll(false);
-
-                        } else if (eventType === 'done') {
-                            leaderName = payload.leader || '';
-                            leaderSpecialty = payload.leader_specialty || payload.specialty || '';
-                            fullTextFromServer = payload.response || payload.full_text || accumulatedText;
-                            if (payload.current_leader) {
-                                this.currentLeader = payload.current_leader;
-                                this.isFirstQuestion = false;
-                                try { localStorage.setItem('lawmadi-current-leader', JSON.stringify(payload.current_leader)); } catch(e) {}
-                            }
-
-                        } else if (eventType === 'error') {
-                            this.hideTypingIndicator();
-                            streamDiv.remove();
-                            const serverErr = new Error(payload.message || 'Streaming error');
-                            serverErr._serverError = true;
-                            throw serverErr;
-                        }
+                        _handleEvent(eventType, payload);
                     }
                 }
-
-                // 스트림 종료 후 버퍼에 남은 이벤트 처리
                 if (buffer.trim()) {
                     const { eventType, eventData } = _parseSSE(buffer);
                     if (eventData) {
                         try {
                             const payload = JSON.parse(eventData);
-                            if (eventType === 'chunk') {
-                                accumulatedText += (payload.text || '');
-                            } else if (eventType === 'done') {
-                                leaderName = payload.leader || '';
-                                leaderSpecialty = payload.leader_specialty || payload.specialty || '';
-                                fullTextFromServer = payload.response || payload.full_text || accumulatedText;
-                            }
-                        } catch(e) { /* 무시 */ }
+                            _handleEvent(eventType, payload);
+                        } catch(e) { /* ignore */ }
                     }
                 }
             } catch (streamError) {
-                // reader 리소스 정리
-                try { reader.cancel(); } catch(e) { /* 무시 */ }
-                // 스트리밍 div 정리 (아직 DOM에 있으면)
+                try { reader.cancel(); } catch(e) { /* ignore */ }
                 const el = document.getElementById(streamId);
                 if (el) el.remove();
-                throw streamError;  // 상위 catch에서 처리
+                throw streamError;
             }
 
-            // 스트리밍 완료 → 최종 포맷 렌더링
+            // Streaming complete → final format rendering
             this.hideTypingIndicator();
             const finalText = fullTextFromServer || accumulatedText;
             streamDiv.remove();
 
-            // 빈 응답 방어
             if (!finalText.trim()) {
                 throw new Error('No response received from server.');
             }

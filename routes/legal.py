@@ -1070,8 +1070,9 @@ async def ask_stream(request: Request):
                         "\"전세 보증금을 돌려받지 못하고 있어요\" 또는 \"직장에서 부당해고를 당했습니다\"\n\n"
                         "상황을 자세히 알려주실수록 더 정확한 분석이 가능합니다."
                     )
-                yield _sse("chunk", {"text": msg})
-                yield _sse("done", {"leader": "유나", "leader_specialty": "콘텐츠 설계", "latency_ms": 0, "trace_id": trace})
+                yield _sse("answer_start", {"speaker": "유나", "role": "콘텐츠 설계"})
+                yield _sse("answer_chunk", {"text": msg})
+                yield _sse("answer_done", {"leader": "유나", "leader_specialty": "콘텐츠 설계", "latency_ms": 0, "trace_id": trace})
                 return
 
             # 0.3) 응답 캐시 확인
@@ -1079,9 +1080,9 @@ async def ask_stream(request: Request):
             if cached:
                 latency_ms = int((time.time() - start_time) * 1000)
                 logger.info(f"⚡ [Stream Cache HIT] leader={cached.get('leader', '?')} latency={latency_ms}ms")
-                yield _sse("status", {"step": "analyzing", "leader": cached.get("leader", "마디")})
-                yield _sse("chunk", {"text": cached.get("response", "")})
-                yield _sse("done", {
+                yield _sse("answer_start", {"speaker": cached.get("leader", "마디"), "role": cached.get("leader_specialty", "통합")})
+                yield _sse("answer_chunk", {"text": cached.get("response", "")})
+                yield _sse("answer_done", {
                     "leader": cached.get("leader", "마디"),
                     "leader_specialty": cached.get("leader_specialty", "통합"),
                     "latency_ms": latency_ms, "trace_id": trace,
@@ -1113,8 +1114,9 @@ async def ask_stream(request: Request):
                         for label, number in crisis_res.items():
                             lines.append(f"  📞 {label}: {number}")
                         lines.append("\n위 전문 기관으로 지금 바로 연락하세요.")
-                    yield _sse("chunk", {"text": "\n".join(lines)})
-                    yield _sse("done", {"leader": "SAFETY", "specialty": "", "latency_ms": 0, "trace_id": trace})
+                    yield _sse("answer_start", {"speaker": "SAFETY", "role": ""})
+                    yield _sse("answer_chunk", {"text": "\n".join(lines)})
+                    yield _sse("answer_done", {"leader": "SAFETY", "specialty": "", "latency_ms": 0, "trace_id": trace})
                     return
                 if check_result is False:
                     blocked_msg = "🚫 Blocked by security policy." if lang == "en" else "🚫 보안 정책에 의해 차단되었습니다."
@@ -1163,14 +1165,15 @@ async def ask_stream(request: Request):
             # ─── 비법률 질문: 유나(CCO) Gemini 응답 ───
             if not is_legal:
                 msg = await _generate_yuna_response(query, lang)
-                yield _sse("chunk", {"text": msg})
+                yield _sse("answer_start", {"speaker": "유나", "role": "콘텐츠 설계"})
+                yield _sse("answer_chunk", {"text": msg})
                 final_text = msg
                 leader_name = "유나"
                 leader_specialty = "콘텐츠 설계"
                 latency_ms = int((time.time() - start_time) * 1000)
                 with _METRICS_LOCK:
                     _METRICS["requests"] += 1
-                yield _sse("done", {
+                yield _sse("answer_done", {
                     "leader": "유나", "leader_specialty": "콘텐츠 설계",
                     "latency_ms": latency_ms, "trace_id": trace,
                     "swarm_mode": False, "response": msg, "status": "SUCCESS",
@@ -1220,22 +1223,19 @@ async def ask_stream(request: Request):
 
             # ─── 경로 A: C-Level 직접 호출 (검증 후 스트리밍) ───
             if clevel_decision and clevel_decision.get("mode") == "direct":
-                # C-Level: 협의 먼저 직렬, 파이프라인 이후
+                # C-Level: 회의 먼저 직렬, 파이프라인 이후
                 if _delib_mode == "full" and _candidate_leaders:
                     try:
-                        yield _sse("deliberation_start", {"leaders": _candidate_leaders, "moderator": "서연"})
-                        async for turn in generate_deliberation_stream(gc, query, _candidate_leaders, lang):
-                            yield _sse("deliberation_turn", turn)
-                        yield _sse("deliberation_end", {"selected_leader": _new_leader_name, "selected_leader_specialty": analysis.get("leader_specialty", "통합")})
+                        async for evt in generate_deliberation_stream(gc, query, _candidate_leaders, lang):
+                            yield _sse(evt.get("type", "speaking"), evt)
                     except Exception as delib_err:
                         logger.warning(f"[Deliberation] 스킵: {type(delib_err).__name__}: {delib_err}")
                 elif _delib_mode == "handoff":
                     try:
                         _cur = req_current_leader if isinstance(req_current_leader, dict) else {"name": "마디", "specialty": "통합"}
                         _new = {"name": _new_leader_name, "specialty": analysis.get("leader_specialty", "통합"), "leader_id": analysis.get("leader_id", "")}
-                        yield _sse("handoff_start", {"current": _cur.get("name", "?"), "new": _new_leader_name})
-                        async for turn in generate_handoff_stream(gc, query, _cur, _new, lang):
-                            yield _sse("handoff", turn)
+                        async for evt in generate_handoff_stream(gc, query, _cur, _new, lang):
+                            yield _sse(evt.get("type", "speaking"), evt)
                     except Exception as handoff_err:
                         logger.warning(f"[Handoff] 스킵: {type(handoff_err).__name__}: {handoff_err}")
 
@@ -1244,7 +1244,7 @@ async def ask_stream(request: Request):
                 leader_name = clevel.executives.get(exec_id, {}).get("name", exec_id)
                 leader_specialty = clevel.executives.get(exec_id, {}).get("role", exec_id)
 
-                yield _sse("status", {"step": "analyzing", "leader": leader_name})
+                yield _sse("answer_start", {"speaker": leader_name, "role": leader_specialty})
 
                 chat = gc.chats.create(
                     model=model_name,
@@ -1265,17 +1265,16 @@ async def ask_stream(request: Request):
                 ):
                     accumulated += text_part
 
-                yield _sse("status", {"step": "verifying", "leader": leader_name})
                 drf_verification = await run_pipeline_stage3(accumulated, lang=lang)
                 accumulated = _apply_fail_closed(accumulated, drf_verification)
 
                 _is_fc = (FAIL_CLOSED_RESPONSE in accumulated) or (accumulated.strip() == FAIL_CLOSED_RESPONSE.strip())
                 if _is_fc:
-                    yield _sse("chunk", {"text": FAIL_CLOSED_RESPONSE})
+                    yield _sse("answer_chunk", {"text": FAIL_CLOSED_RESPONSE})
                     latency_ms = int((time.time() - start_time) * 1000)
                     with _METRICS_LOCK:
                         _METRICS["requests"] += 1
-                    yield _sse("done", {
+                    yield _sse("answer_done", {
                         "leader": leader_name, "leader_specialty": leader_specialty,
                         "latency_ms": latency_ms, "trace_id": trace,
                         "swarm_mode": False, "response": FAIL_CLOSED_RESPONSE, "status": "FAIL_CLOSED",
@@ -1290,7 +1289,7 @@ async def ask_stream(request: Request):
                 _lines = accumulated.split("\n")
                 for _li, _line in enumerate(_lines):
                     _ltext = _line if _li == len(_lines) - 1 else _line + "\n"
-                    yield _sse("chunk", {"text": _ltext})
+                    yield _sse("answer_chunk", {"text": _ltext})
                     if _li < len(_lines) - 1:
                         await asyncio.sleep(0.04)
 
@@ -1308,20 +1307,16 @@ async def ask_stream(request: Request):
                     _event_queue = asyncio.Queue()
 
                     async def _delib_producer():
-                        """협의/인수인계 이벤트를 Queue에 넣는 producer."""
+                        """회의 speaking/message 이벤트를 Queue에 넣는 producer."""
                         try:
                             if _delib_mode == "full" and _candidate_leaders:
-                                await _event_queue.put(("deliberation_start", {"leaders": _candidate_leaders, "moderator": "서연"}))
-                                async for turn in generate_deliberation_stream(gc, query, _candidate_leaders, lang):
-                                    await _event_queue.put(("deliberation_turn", turn))
-                                await _event_queue.put(("deliberation_end", {"selected_leader": _new_leader_name, "selected_leader_specialty": analysis.get("leader_specialty", "통합")}))
+                                async for evt in generate_deliberation_stream(gc, query, _candidate_leaders, lang):
+                                    await _event_queue.put((evt.get("type", "speaking"), evt))
                             elif _delib_mode == "handoff":
                                 _cur = req_current_leader if isinstance(req_current_leader, dict) else {"name": "마디", "specialty": "통합"}
                                 _new_l = {"name": _new_leader_name, "specialty": analysis.get("leader_specialty", "통합"), "leader_id": analysis.get("leader_id", "")}
-                                # handoff_start를 먼저 전송하여 클라이언트 UI 즉시 전환
-                                await _event_queue.put(("handoff_start", {"current": _cur.get("name", "?"), "new": _new_leader_name}))
-                                async for turn in generate_handoff_stream(gc, query, _cur, _new_l, lang):
-                                    await _event_queue.put(("handoff", turn))
+                                async for evt in generate_handoff_stream(gc, query, _cur, _new_l, lang):
+                                    await _event_queue.put((evt.get("type", "speaking"), evt))
                         except Exception as e:
                             logger.warning(f"[Deliberation:Parallel] 스킵: {type(e).__name__}: {e}")
                         await _event_queue.put(("_delib_done", None))
@@ -1331,15 +1326,12 @@ async def ask_stream(request: Request):
                     async def _pipeline_producer():
                         """파이프라인을 실행하고 결과를 dict에 저장하는 producer."""
                         try:
-                            await _event_queue.put(("status", {"step": "searching_laws", "leader": leader_name}))
-                            await _event_queue.put(("status", {"step": "analyzing", "leader": leader_name}))
                             _ft, _drf = await _run_legal_pipeline(
                                 query, analysis, tools, gemini_history,
                                 now_kst, ssot_available,
                                 lang=lang, mode=stream_mode,
                                 rag_context=rag_context_pre,
                             )
-                            await _event_queue.put(("status", {"step": "verifying", "leader": leader_name}))
                             _pipeline_result["final_text"] = _ft
                             _pipeline_result["drf"] = _drf
                         except Exception as e:
@@ -1374,9 +1366,6 @@ async def ask_stream(request: Request):
 
                 # 협의가 불필요한 경우: 기존 직렬 실행
                 else:
-                    yield _sse("status", {"step": "searching_laws", "leader": leader_name})
-                    yield _sse("status", {"step": "analyzing", "leader": leader_name})
-
                     final_text, drf_verification = await _run_legal_pipeline(
                         query, analysis, tools, gemini_history,
                         now_kst, ssot_available,
@@ -1384,17 +1373,15 @@ async def ask_stream(request: Request):
                         rag_context=rag_context_pre,
                     )
 
-                    yield _sse("status", {"step": "verifying", "leader": leader_name})
-
                 # FAIL_CLOSED 체크
                 _is_fc = (FAIL_CLOSED_RESPONSE in final_text) or (final_text.strip() == FAIL_CLOSED_RESPONSE.strip())
                 if _is_fc:
                     logger.warning("[Stream FAIL_CLOSED] 응답 차단됨")
-                    yield _sse("chunk", {"text": FAIL_CLOSED_RESPONSE})
+                    yield _sse("answer_chunk", {"text": FAIL_CLOSED_RESPONSE})
                     latency_ms = int((time.time() - start_time) * 1000)
                     with _METRICS_LOCK:
                         _METRICS["requests"] += 1
-                    yield _sse("done", {
+                    yield _sse("answer_done", {
                         "leader": leader_name, "leader_specialty": leader_specialty,
                         "latency_ms": latency_ms, "trace_id": trace,
                         "swarm_mode": False, "response": FAIL_CLOSED_RESPONSE, "status": "FAIL_CLOSED",
@@ -1405,12 +1392,13 @@ async def ask_stream(request: Request):
                     yield _sse("error", {"message": "⚠️ 시스템 무결성 정책에 의해 답변이 제한되었습니다."})
                     return
 
-                # 줄 단위 점진적 스트리밍 (위→아래 자연스럽게)
+                # answer_start → answer_chunk 스트리밍 → answer_done
+                yield _sse("answer_start", {"speaker": leader_name, "role": leader_specialty})
                 if final_text:
                     _lines = final_text.split("\n")
                     for _li, _line in enumerate(_lines):
                         _ltext = _line if _li == len(_lines) - 1 else _line + "\n"
-                        yield _sse("chunk", {"text": _ltext})
+                        yield _sse("answer_chunk", {"text": _ltext})
                         if _li < len(_lines) - 1:
                             await asyncio.sleep(0.04)
 
@@ -1445,8 +1433,8 @@ async def ask_stream(request: Request):
             if _post_deduct_fn:
                 _post_deduct_fn(request, "general", trace)
 
-            # done 이벤트
-            yield _sse("done", {
+            # answer_done 이벤트
+            yield _sse("answer_done", {
                 "leader": leader_name,
                 "leader_specialty": leader_specialty,
                 "latency_ms": latency_ms,
