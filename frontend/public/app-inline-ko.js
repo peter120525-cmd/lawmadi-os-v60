@@ -2255,14 +2255,20 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             return msg || '알 수 없는 오류가 발생했습니다.';
         },
 
-        // 심플 대기 인디케이터 (6단계 삭제, 미니 dots만)
+        // 대기 메신저 (질문 전송 즉시 서연 CSO 타이핑 표시)
         _showSimpleWaiting() {
             this._hideSimpleWaiting();
-            const el = document.createElement('div');
-            el.id = 'simple-waiting';
-            el.className = 'mini-waiting-indicator';
-            el.innerHTML = '<div class="delib-typing-dots"><span></span><span></span><span></span></div><span>분석 중...</span>';
-            this.convArea.appendChild(el);
+            const container = document.createElement('div');
+            container.id = 'simple-waiting';
+            container.className = 'deliberation-container';
+            container.innerHTML = _sanitize(
+                '<div class="delib-header">' +
+                '<span class="delib-header-dot"></span>' +
+                '<span>회의 준비 중 — 서연(CSO)</span>' +
+                '</div>'
+            );
+            this._appendDelibTypingIndicator(container, '서연');
+            this.convArea.appendChild(container);
             this._smartScroll(true);
         },
         _hideSimpleWaiting() {
