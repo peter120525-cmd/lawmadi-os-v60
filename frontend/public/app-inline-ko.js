@@ -850,14 +850,10 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             }
             if (!response.ok) throw new Error(`서버 오류 (${response.status})`);
 
-            // 협의/인수인계 임시 상태 초기화
-            this._delibContainer = null;
-            this._delibTurnIndex = 0;
-            this._handoffContainer = null;
-            this._handoffTurnIndex = 0;
+            // 회의 채팅 컨테이너 (speaking/message 이벤트용)
+            this._meetingContainer = null;
 
-            // 스트리밍 메시지 컨테이너 생성 (고유 ID로 충돌 방지)
-            // 첫 chunk 도착 시에만 DOM에 추가하여 이중 박스 방지
+            // 답변 스트리밍 컨테이너 (answer_start → answer_chunk → answer_done)
             const streamId = 'streaming-msg-' + Date.now();
             const streamDiv = document.createElement('div');
             streamDiv.className = 'ai-msg';
@@ -876,22 +872,6 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             const decoder = new TextDecoder();
             let buffer = '';
 
-            const _statusLabels = {
-                'detecting_domain': '🔍 질문 분석 중...',
-                'searching_laws': '⚖️ 법령·판례 검색 중...',
-                'analyzing': '✍️ 답변 생성 중...',
-                'parallel_analysis': '👥 다중 리더 병렬 분석 중...',
-                'verifying': '🔎 교차 검증 중...',
-                'synthesizing': '📝 종합 판단 생성 중...'
-            };
-
-            // 서버 status → 인디케이터 step 매핑
-            const _statusToStep = {
-                'searching_laws': 'step-3',
-                'analyzing': 'step-4',
-                'verifying': 'step-5',
-            };
-
             // SSE 이벤트 파싱 헬퍼 (multi-line data 지원)
             const _parseSSE = (rawEvent) => {
                 let eventType = 'message';
@@ -908,111 +888,130 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 return { eventType, eventData: dataLines.join('\n') };
             };
 
+            const _handleEvent = (eventType, payload) => {
+                if (eventType === 'speaking') {
+                    // 회의 컨테이너 없으면 생성
+                    if (!this._meetingContainer) {
+                        this._hideSimpleWaiting();
+                        this._meetingContainer = document.createElement('div');
+                        this._meetingContainer.className = 'chat-flow-container';
+                        this.convArea.appendChild(this._meetingContainer);
+                    }
+                    const status = payload.status || 'typing';
+                    if (status === 'entering') {
+                        // "X(역할) 님이 회의에 참가했습니다" 시스템 메시지
+                        this._removeChatTypingBubble(this._meetingContainer);
+                        const sysMsg = document.createElement('div');
+                        sysMsg.className = 'chat-flow-status';
+                        sysMsg.textContent = (payload.speaker || '') + '(' + (payload.role || '') + ') 님이 회의에 참가했습니다';
+                        this._meetingContainer.appendChild(sysMsg);
+                        this._smartScroll(false);
+                    } else if (status === 'typing') {
+                        this._removeChatTypingBubble(this._meetingContainer);
+                        this._appendChatTypingBubble(this._meetingContainer, payload.speaker || '', payload.role || '');
+                        this._smartScroll(false);
+                    }
+
+                } else if (eventType === 'message') {
+                    // 타이핑 버블 → 메시지 버블로 교체
+                    if (this._meetingContainer) {
+                        this._removeChatTypingBubble(this._meetingContainer);
+                    } else {
+                        this._hideSimpleWaiting();
+                        this._meetingContainer = document.createElement('div');
+                        this._meetingContainer.className = 'chat-flow-container';
+                        this.convArea.appendChild(this._meetingContainer);
+                    }
+                    const bubble = document.createElement('div');
+                    const isMod = (payload.role === 'CSO');
+                    bubble.className = 'chat-msg-bubble' + (isMod ? ' moderator' : '');
+                    bubble.style.opacity = '0';
+                    bubble.innerHTML = this._buildBubbleBody(payload.speaker || '', payload.role || '', payload.content || payload.text || '');
+                    this._meetingContainer.appendChild(bubble);
+                    requestAnimationFrame(() => { bubble.style.transition = 'opacity 0.3s'; bubble.style.opacity = '1'; });
+                    this._smartScroll(false);
+
+                } else if (eventType === 'answer_start') {
+                    // 회의 완료 표시 + 답변 작성 상태
+                    this._removeChatTypingBubbleAll();
+                    if (this._meetingContainer) {
+                        const doneStatus = document.createElement('div');
+                        doneStatus.className = 'chat-flow-status';
+                        doneStatus.textContent = '회의 완료';
+                        this._meetingContainer.appendChild(doneStatus);
+                    }
+                    this._hideSimpleWaiting();
+                    leaderName = payload.speaker || '';
+                    leaderSpecialty = payload.role || '';
+                    // "X(역할) 리더가 답변을 작성하고 있습니다" 표시
+                    this._showMiniWaiting((leaderName ? leaderName + '(' + leaderSpecialty + ') ' : '') + '리더가 답변을 작성하고 있습니다');
+
+                } else if (eventType === 'answer_chunk') {
+                    accumulatedText += (payload.text || '');
+                    if (!streamDivAttached) {
+                        this._hideMiniWaiting();
+                        this._removeChatTypingBubbleAll();
+                        this.convArea.appendChild(streamDiv);
+                        streamDivAttached = true;
+                    }
+                    streamContent.innerHTML = this._renderStreamingText(accumulatedText);
+                    this._smartScroll(false);
+
+                } else if (eventType === 'answer_done') {
+                    leaderName = payload.leader || leaderName;
+                    leaderSpecialty = payload.leader_specialty || payload.specialty || leaderSpecialty;
+                    fullTextFromServer = payload.response || payload.full_text || accumulatedText;
+                    if (payload.current_leader) {
+                        this.currentLeader = payload.current_leader;
+                        this.isFirstQuestion = false;
+                        try { localStorage.setItem('lawmadi-current-leader', JSON.stringify(payload.current_leader)); } catch(e) {}
+                    }
+
+                } else if (eventType === 'error') {
+                    this.hideTypingIndicator();
+                    streamDiv.remove();
+                    const serverErr = new Error(payload.message || '스트리밍 오류');
+                    serverErr._serverError = true;
+                    throw serverErr;
+                }
+            };
+
             try {
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
 
                     buffer += decoder.decode(value, { stream: true });
-
-                    // SSE 파싱: 이벤트는 빈 줄(\n\n)로 구분
                     const events = buffer.split('\n\n');
-                    buffer = events.pop() || ''; // 마지막 불완전 이벤트는 버퍼에 유지
+                    buffer = events.pop() || '';
 
                     for (const rawEvent of events) {
                         if (!rawEvent.trim()) continue;
-
                         const { eventType, eventData } = _parseSSE(rawEvent);
                         if (!eventData) continue;
-
                         let payload;
                         try { payload = JSON.parse(eventData); } catch(e) {
                             console.warn('[SSE] JSON 파싱 실패:', eventData.slice(0, 100));
                             continue;
                         }
-
-                        if (eventType === 'deliberation_start') {
-                            // 협의 시작 → 대기창 숨기고 협의 메신저만 표시
-                            this.hideTypingIndicator();
-                            this._renderDeliberationStart(payload);
-
-                        } else if (eventType === 'deliberation_turn') {
-                            this._renderDeliberationTurn(payload);
-
-                        } else if (eventType === 'deliberation_end') {
-                            this._renderDeliberationEnd(payload);
-
-                        } else if (eventType === 'handoff_start') {
-                            // 인수인계 시작 알림 → 대기창 숨기고 컨테이너 먼저 생성
-                            this.hideTypingIndicator();
-                            this._renderHandoffStart(payload);
-
-                        } else if (eventType === 'handoff') {
-                            this.hideTypingIndicator();
-                            this._renderHandoffTurn(payload);
-
-                        } else if (eventType === 'status') {
-                            // status 이벤트: 심플 대기 표시만 (6단계 인디케이터 삭제됨)
-
-                        } else if (eventType === 'chunk') {
-                            // 최종 답변 스트리밍 (한 줄씩 타이핑)
-                            accumulatedText += (payload.text || '');
-                            if (!streamDivAttached) {
-                                // 턴 큐 즉시 비우기 (남은 턴 한꺼번에 표시)
-                                this._flushTurnQueue();
-                                this._hideMiniWaiting();
-                                this._removeChatTypingBubbleAll();
-                                this.convArea.appendChild(streamDiv);
-                                streamDivAttached = true;
-                            }
-                            streamContent.innerHTML = this._renderStreamingText(accumulatedText);
-                            this._smartScroll(false);
-
-                        } else if (eventType === 'done') {
-                            leaderName = payload.leader || '';
-                            leaderSpecialty = payload.leader_specialty || payload.specialty || '';
-                            fullTextFromServer = payload.response || payload.full_text || accumulatedText;
-
-                            // 현재 리더 상태 업데이트
-                            if (payload.current_leader) {
-                                this.currentLeader = payload.current_leader;
-                                this.isFirstQuestion = false;
-                                try { localStorage.setItem('lawmadi-current-leader', JSON.stringify(payload.current_leader)); } catch(e) {}
-                            }
-
-                        } else if (eventType === 'error') {
-                            this.hideTypingIndicator();
-                            streamDiv.remove();
-                            const serverErr = new Error(payload.message || '스트리밍 오류');
-                            serverErr._serverError = true;
-                            throw serverErr;
-                        }
+                        _handleEvent(eventType, payload);
                     }
                 }
-
                 // 스트림 종료 후 버퍼에 남은 이벤트 처리
                 if (buffer.trim()) {
                     const { eventType, eventData } = _parseSSE(buffer);
                     if (eventData) {
                         try {
                             const payload = JSON.parse(eventData);
-                            if (eventType === 'chunk') {
-                                accumulatedText += (payload.text || '');
-                            } else if (eventType === 'done') {
-                                leaderName = payload.leader || '';
-                                leaderSpecialty = payload.leader_specialty || payload.specialty || '';
-                                fullTextFromServer = payload.response || payload.full_text || accumulatedText;
-                            }
+                            _handleEvent(eventType, payload);
                         } catch(e) { /* 무시 */ }
                     }
                 }
             } catch (streamError) {
-                // reader 리소스 정리
                 try { reader.cancel(); } catch(e) { /* 무시 */ }
-                // 스트리밍 div 정리 (아직 DOM에 있으면)
                 const el = document.getElementById(streamId);
                 if (el) el.remove();
-                throw streamError;  // 상위 catch에서 처리
+                throw streamError;
             }
 
             // 스트리밍 완료 → 최종 포맷 렌더링
@@ -1020,7 +1019,6 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             const finalText = fullTextFromServer || accumulatedText;
             streamDiv.remove();
 
-            // 빈 응답 방어
             if (!finalText.trim()) {
                 throw new Error('서버에서 응답을 받지 못했습니다.');
             }
