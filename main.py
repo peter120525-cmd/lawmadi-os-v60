@@ -686,8 +686,18 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
             return True
 
     # ── 2) DB 세션 유저 → 크레딧/무료 기반 판단 ──
-    has_session = bool(request.cookies.get("lm_session", ""))
-    user = _get_paddle_user(request) if has_session else None
+    session_token = request.cookies.get("lm_session", "").strip()
+    has_session = bool(session_token)
+    _db_error = False
+
+    if has_session:
+        try:
+            user = _get_paddle_user(request)
+        except Exception:
+            user = None
+            _db_error = True  # DB 일시 장애 표시
+    else:
+        user = None
 
     if user:
         mode = request.headers.get("X-Request-Mode", "general").strip()
@@ -705,9 +715,9 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
 
         return {"blocked": True, "retry_at_kst": "credits_exhausted"}
 
-    # ── 3) 세션 쿠키 있지만 DB 조회 실패 → 유료 유저 보호 ──
-    if has_session:
-        return True  # DB 일시 장애 시 유료 유저 차단 방지
+    # ── 3) DB 장애로 유저 조회 실패 → 유료 유저 보호 (토큰 형식 검증 필수) ──
+    if _db_error and has_session and len(session_token) == 64 and all(c in '0123456789abcdef' for c in session_token):
+        return True  # 정상 형식 토큰 + DB 장애 → grace 통과
 
     # ── 4) 비로그인 → IP 기반 제한 ──
     plan_cfg = PLAN_CONFIG.get("free", {})

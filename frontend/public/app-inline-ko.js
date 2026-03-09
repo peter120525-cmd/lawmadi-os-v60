@@ -480,11 +480,11 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 return;
             }
             list.innerHTML = favs.map(f => `
-                <div class="fav-item" data-id="${f.id}">
-                    <button class="fav-delete" data-fav-id="${f.id}" aria-label="삭제: ${this.escapeHtml(f.query).substring(0, 30)}">삭제</button>
+                <div class="fav-item" data-id="${this.escapeHtml(f.id)}">
+                    <button class="fav-delete" data-fav-id="${this.escapeHtml(f.id)}" aria-label="삭제: ${this.escapeHtml(f.query).substring(0, 30)}">삭제</button>
                     <div class="fav-query">${this.escapeHtml(f.query)}</div>
                     <div class="fav-preview">${this.escapeHtml(f.response).substring(0, 100)}...</div>
-                    <div class="fav-date">${f.date}</div>
+                    <div class="fav-date">${this.escapeHtml(f.date || '')}</div>
                 </div>
             `).join('');
 
