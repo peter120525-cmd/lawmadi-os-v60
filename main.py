@@ -145,6 +145,7 @@ from routes.files import router as files_router, set_dependencies as _set_files_
 from routes.user import router as user_router, set_dependencies as _set_user_deps
 from routes.admin import router as admin_router
 from routes.auth import router as auth_router
+from routes.leaders import router as leaders_router, set_dependencies as _set_leaders_deps
 from routes.paddle import (
     router as paddle_router,
     verify_session_token as _verify_paddle_session,
@@ -1251,6 +1252,23 @@ async def startup():
     _set_files_deps(RUNTIME, rate_limiter=limiter)
     _set_user_deps(RUNTIME, rate_limiter=limiter, ask_fn=_legal_ask, search_fn=_legal_search)
 
+    # Leader 1:1 chat
+    _leader_reg = LEADER_REGISTRY.get("swarm_engine_config", {}).get("leader_registry", {})
+    _leader_profiles: Dict[str, Any] = {}
+    try:
+        with open("frontend/public/leader-profiles.json", "r", encoding="utf-8") as f:
+            _leader_profiles = json.load(f)
+    except Exception as e:
+        logger.warning(f"leader-profiles.json load failed: {e}")
+    _set_leaders_deps(
+        RUNTIME, _leader_reg,
+        ensure_genai_client=_ensure_genai_client,
+        check_rate_limit=_check_rate_limit,
+        rate_limit_response=_rate_limit_response,
+        get_client_ip=_get_client_ip,
+        leader_profiles=_leader_profiles,
+    )
+
     METRICS["boot_time"] = _now_iso()
     logger.info(f"✅ Lawmadi OS {OS_VERSION} Online")
 
@@ -1276,6 +1294,7 @@ app.include_router(user_router)
 app.include_router(admin_router)
 app.include_router(auth_router)
 app.include_router(paddle_router)
+app.include_router(leaders_router)
 
 # =============================================================
 # [ULTRA] GLOBAL EXCEPTION HANDLER
