@@ -941,8 +941,6 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
                         } else if (eventType === 'deliberation_end') {
                             this._renderDeliberationEnd(payload);
-                            // 협의 종료 → 답변 대기 미니 인디케이터
-                            this._showMiniWaiting();
 
                         } else if (eventType === 'handoff_start') {
                             // 인수인계 시작 알림 → 대기창 숨기고 컨테이너 먼저 생성
@@ -957,8 +955,16 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                             // status 이벤트: 심플 대기 표시만 (6단계 인디케이터 삭제됨)
 
                         } else if (eventType === 'chunk') {
-                            // 최종 답변 한꺼번에 표시 — 점진적 렌더링 안 함
+                            // 최종 답변 스트리밍 (한 줄씩 타이핑)
                             accumulatedText += (payload.text || '');
+                            if (!streamDivAttached) {
+                                this._hideMiniWaiting();
+                                this._removeChatTypingBubbleAll();
+                                this.convArea.appendChild(streamDiv);
+                                streamDivAttached = true;
+                            }
+                            streamContent.innerHTML = this._renderStreamingText(accumulatedText);
+                            this._smartScroll(false);
 
                         } else if (eventType === 'done') {
                             leaderName = payload.leader || '';
@@ -1794,7 +1800,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             // 협의/인수인계 컨테이너를 AI 메시지 안으로 이동 (응답 후에도 항상 보이도록)
             // leader-response-header(sticky) 바로 아래에 삽입하여 덮이지 않도록 함
             if (sender === 'ai') {
-                const delibEls = Array.from(this.convArea.querySelectorAll(':scope > .deliberation-container, :scope > .handoff-container'));
+                const delibEls = Array.from(this.convArea.querySelectorAll(':scope > .deliberation-container, :scope > .handoff-container, :scope > .chat-flow-container'));
                 if (delibEls.length) {
                     const headerEl = msgDiv.querySelector('.leader-response-header');
                     const summaryEl = msgDiv.querySelector('.response-summary-card');
@@ -1956,11 +1962,11 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
         _buildBubbleBody(name, role, text, turnIndex) {
             const ts = this._getTimeStamp(turnIndex || 0);
-            return `<div class="delib-body">` +
-                `<div class="delib-meta-row"><span class="delib-name">${this.escapeHtml(name)}</span>` +
-                `<span class="delib-role">${this.escapeHtml(role)}</span>` +
-                `<span class="delib-time">${ts}</span></div>` +
-                `<div class="delib-text">${this.escapeHtml(text)}</div></div>`;
+            return `<div class="chat-msg-body">` +
+                `<div class="chat-msg-meta"><span class="chat-msg-name">${this.escapeHtml(name)}</span>` +
+                `<span class="chat-msg-role">${this.escapeHtml(role)}</span>` +
+                `<span class="chat-msg-time">${ts}</span></div>` +
+                `<div class="chat-msg-text">${this.escapeHtml(text)}</div></div>`;
         },
 
         _buildHandoffArrow() {
@@ -1974,26 +1980,17 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         // 스트리밍: deliberation_start 이벤트
         _renderDeliberationStart(payload) {
             const container = document.createElement('div');
-            container.className = 'deliberation-container';
+            container.className = 'chat-flow-container';
             container.id = 'delib-live-' + Date.now();
-            const leaders = payload.leaders || [];
-            const count = leaders.filter(l => l.name !== '서연').length;
-            container.innerHTML = _sanitize(
-                `<div class="delib-header">` +
-                `<span class="delib-header-dot"></span>` +
-                `<span>회의 진행 중 — 서연(CSO) 주재</span>` +
-                (count > 1 ? `<span class="delib-header-count">${count}명 참석</span>` : ``) +
-                `</div>`
-            );
-            // 첫 턴 대기 타이핑 인디케이터
-            this._appendDelibTypingIndicator(container, '서연');
+            // 컨테이너 헤더 없음 — 자연스러운 채팅 흐름
+            this._appendChatTypingBubble(container, '서연', 'CSO');
             this.convArea.appendChild(container);
             this._smartScroll(false);
             this._delibContainer = container;
             this._delibTurnIndex = 0;
         },
 
-        // 스트리밍: deliberation_turn 이벤트 (1초 타이핑 + 타자 효과)
+        // 스트리밍: deliberation_turn 이벤트 (자연스러운 채팅 흐름)
         _renderDeliberationTurn(payload) {
             const container = this._delibContainer;
             if (!container) return;
@@ -2003,85 +2000,75 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             const isFinal = payload.is_final || false;
             const isMod = (name === '서연');
 
-            this._removeDelibTypingIndicator(container);
+            // 이전 타이핑 버블 제거
+            this._removeChatTypingBubble(container);
 
+            // 메시지 버블 생성
             const bubble = document.createElement('div');
-            bubble.className = 'deliberation-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
+            bubble.className = 'chat-msg-bubble' + (isMod ? ' moderator' : '');
             const turnIdx = this._delibTurnIndex || 0;
             const ts = this._getTimeStamp(turnIdx);
-            // 먼저 타이핑 dots로 표시
             bubble.innerHTML = _sanitize(
                 this._buildAvatarHTML(name, 'deliberation') +
-                '<div class="delib-body">' +
-                '<div class="delib-meta-row"><span class="delib-name">' + this.escapeHtml(name) + '</span>' +
-                '<span class="delib-role">' + this.escapeHtml(role) + '</span>' +
-                '<span class="delib-time">' + ts + '</span></div>' +
-                '<div class="delib-text"><div class="delib-typing-dots"><span></span><span></span><span></span></div></div></div>'
+                '<div class="chat-msg-body">' +
+                '<div class="chat-msg-meta"><span class="chat-msg-name">' + this.escapeHtml(name) + '</span>' +
+                '<span class="chat-msg-role">' + this.escapeHtml(role) + '</span>' +
+                '<span class="chat-msg-time">' + ts + '</span></div>' +
+                '<div class="chat-msg-text"></div></div>'
             );
             container.appendChild(bubble);
             this._delibTurnIndex = turnIdx + 1;
             this._smartScroll(false);
 
-            // 1초 후 타자 효과로 텍스트 표시
-            setTimeout(() => {
-                const textEl = bubble.querySelector('.delib-text');
-                if (textEl) {
-                    this._typewriterReveal(textEl, text, () => {
-                        if (!isFinal) {
-                            const nextSpeaker = isMod ? '' : '서연';
-                            this._appendDelibTypingIndicator(container, nextSpeaker);
-                        }
-                        this._smartScroll(false);
-                    });
-                }
-            }, 800);
+            // 타자 효과로 텍스트 표시
+            const textEl = bubble.querySelector('.chat-msg-text');
+            if (textEl) {
+                this._typewriterReveal(textEl, text, () => {
+                    if (!isFinal) {
+                        const nextName = isMod ? '' : '서연';
+                        const nextRole = isMod ? '' : 'CSO';
+                        this._appendChatTypingBubble(container, nextName, nextRole);
+                    }
+                    this._smartScroll(false);
+                });
+            }
         },
 
         // 스트리밍: deliberation_end 이벤트
         _renderDeliberationEnd(payload) {
             const container = this._delibContainer;
             if (!container) return;
-            this._removeDelibTypingIndicator(container);
+            this._removeChatTypingBubble(container);
             const selected = payload.selected_leader || '?';
             const specialty = payload.selected_leader_specialty || '';
-            const summary = document.createElement('div');
-            summary.className = 'delib-conclusion';
-            summary.textContent = `${selected} (${specialty}) 리더가 담당합니다`;
-            container.appendChild(summary);
+            const endMsg = document.createElement('div');
+            endMsg.className = 'chat-flow-status';
+            endMsg.textContent = '회의 완료';
+            container.appendChild(endMsg);
             this._smartScroll(false);
             this._delibContainer = null;
+            // "X 리더가 답변을 작성합니다" 상태 표시
+            this._showMiniWaiting(`${selected}(${specialty}) 리더가 답변을 작성합니다`);
         },
 
-        // 스트리밍: handoff_start 이벤트 → 컨테이너 미리 생성 + 타이핑 인디케이터
+        // 스트리밍: handoff_start 이벤트 → 자연스러운 채팅 흐름
         _renderHandoffStart(payload) {
             if (this._handoffContainer) return;
             const container = document.createElement('div');
-            container.className = 'handoff-container';
-            container.innerHTML = _sanitize(
-                '<div class="handoff-header">' +
-                '<span class="delib-header-dot"></span>' +
-                '<span>리더 인수인계 — 서연(CSO) 주재</span>' +
-                '</div>'
-            );
-            // 첫 턴 대기 타이핑 인디케이터
-            this._appendDelibTypingIndicator(container, '서연');
+            container.className = 'chat-flow-container';
+            // 헤더 없음 — 타이핑 버블만
+            this._appendChatTypingBubble(container, '서연', 'CSO');
             this.convArea.appendChild(container);
             this._handoffContainer = container;
             this._handoffTurnIndex = 0;
             this._smartScroll(false);
         },
 
-        // 스트리밍: handoff 이벤트 (턴별, 6턴 CSO 주재)
+        // 스트리밍: handoff 이벤트 (자연스러운 채팅 흐름)
         _renderHandoffTurn(payload) {
             if (!this._handoffContainer) {
                 const container = document.createElement('div');
-                container.className = 'handoff-container';
-                container.innerHTML = _sanitize(
-                    '<div class="handoff-header">' +
-                    '<span class="delib-header-dot"></span>' +
-                    '<span>리더 인수인계 — 서연(CSO) 주재</span>' +
-                    '</div>'
-                );
+                container.className = 'chat-flow-container';
                 this.convArea.appendChild(container);
                 this._handoffContainer = container;
                 this._handoffTurnIndex = 0;
@@ -2093,58 +2080,55 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             const isFinal = payload.is_final || false;
             const isMod = (name === '서연');
 
-            // 이전 타이핑 인디케이터 제거
-            this._removeDelibTypingIndicator(container);
+            // 이전 타이핑 버블 제거
+            this._removeChatTypingBubble(container);
 
+            // 메시지 버블
             const bubble = document.createElement('div');
-            bubble.className = 'handoff-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
+            bubble.className = 'chat-msg-bubble' + (isMod ? ' moderator' : '');
             const hoTurnIdx = this._handoffTurnIndex || 0;
             const ts = this._getTimeStamp(hoTurnIdx);
-            // 먼저 타이핑 dots로 표시
             bubble.innerHTML = _sanitize(
                 this._buildAvatarHTML(name, 'handoff') +
-                '<div class="delib-body">' +
-                '<div class="delib-meta-row"><span class="delib-name">' + this.escapeHtml(name) + '</span>' +
-                '<span class="delib-role">' + this.escapeHtml(role) + '</span>' +
-                '<span class="delib-time">' + ts + '</span></div>' +
-                '<div class="delib-text"><div class="delib-typing-dots"><span></span><span></span><span></span></div></div></div>'
+                '<div class="chat-msg-body">' +
+                '<div class="chat-msg-meta"><span class="chat-msg-name">' + this.escapeHtml(name) + '</span>' +
+                '<span class="chat-msg-role">' + this.escapeHtml(role) + '</span>' +
+                '<span class="chat-msg-time">' + ts + '</span></div>' +
+                '<div class="chat-msg-text"></div></div>'
             );
             container.appendChild(bubble);
             this._handoffTurnIndex = hoTurnIdx + 1;
             this._smartScroll(false);
 
-            // 1초 후 타자 효과로 텍스트 표시
-            setTimeout(() => {
-                const textEl = bubble.querySelector('.delib-text');
-                if (textEl) {
-                    this._typewriterReveal(textEl, text, () => {
-                        if (!isFinal) {
-                            this._appendDelibTypingIndicator(container, '');
-                        }
-                        this._smartScroll(false);
-                    });
-                }
-            }, 800);
+            // 타자 효과로 텍스트 표시
+            const textEl = bubble.querySelector('.chat-msg-text');
+            if (textEl) {
+                this._typewriterReveal(textEl, text, () => {
+                    if (!isFinal) {
+                        this._appendChatTypingBubble(container, '', '');
+                    } else {
+                        // 마지막 턴: "회의 완료" + "리더가 답변을 작성합니다"
+                        const endMsg = document.createElement('div');
+                        endMsg.className = 'chat-flow-status';
+                        endMsg.textContent = '회의 완료';
+                        container.appendChild(endMsg);
+                        // 담당 리더 이름은 done 이벤트에서 확정 → 일반 대기 표시
+                        this._showMiniWaiting('답변을 작성합니다');
+                    }
+                    this._smartScroll(false);
+                });
+            }
         },
 
         // Classic (/ask) 응답의 deliberation 렌더링
         _renderDeliberation(turns) {
             if (!turns || !turns.length) return;
             const container = document.createElement('div');
-            container.className = 'deliberation-container';
-            const names = [...new Set(turns.map(t => t.speaker))].filter(n => n !== '서연');
-            container.innerHTML = _sanitize(
-                `<div class="delib-header">` +
-                `<span class="delib-header-dot"></span>` +
-                `<span>회의 진행 중 — 서연(CSO) 주재</span>` +
-                (names.length > 1 ? `<span class="delib-header-count">${names.length}명 참석</span>` : ``) +
-                `</div>`
-            );
+            container.className = 'chat-flow-container';
             turns.forEach((turn, idx) => {
                 const isMod = (turn.speaker === '서연');
-                const isFinal = turn.is_final || false;
                 const bubble = document.createElement('div');
-                bubble.className = 'deliberation-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
+                bubble.className = 'chat-msg-bubble' + (isMod ? ' moderator' : '');
                 bubble.style.animationDelay = (idx * 0.25) + 's';
                 bubble.innerHTML = _sanitize(
                     this._buildAvatarHTML(turn.speaker, 'deliberation') +
@@ -2152,26 +2136,23 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 );
                 container.appendChild(bubble);
             });
+            const endMsg = document.createElement('div');
+            endMsg.className = 'chat-flow-status';
+            endMsg.textContent = '회의 완료';
+            container.appendChild(endMsg);
             this.convArea.appendChild(container);
             this._smartScroll(false);
         },
 
-        // Classic (/ask) 응답의 handoff 렌더링 (6턴 CSO 주재)
+        // Classic (/ask) 응답의 handoff 렌더링
         _renderHandoff(turns) {
             if (!turns || !turns.length) return;
             const container = document.createElement('div');
-            container.className = 'handoff-container';
-            container.innerHTML = _sanitize(
-                '<div class="handoff-header">' +
-                '<span class="delib-header-dot"></span>' +
-                '<span>리더 인수인계 — 서연(CSO) 주재</span>' +
-                '</div>'
-            );
+            container.className = 'chat-flow-container';
             turns.forEach((turn, idx) => {
                 const isMod = (turn.speaker === '서연');
-                const isFinal = turn.is_final || false;
                 const bubble = document.createElement('div');
-                bubble.className = 'handoff-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
+                bubble.className = 'chat-msg-bubble' + (isMod ? ' moderator' : '');
                 bubble.style.animationDelay = (idx * 0.25) + 's';
                 bubble.innerHTML = _sanitize(
                     this._buildAvatarHTML(turn.speaker, 'handoff') +
@@ -2179,25 +2160,33 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 );
                 container.appendChild(bubble);
             });
+            const endMsg = document.createElement('div');
+            endMsg.className = 'chat-flow-status';
+            endMsg.textContent = '회의 완료';
+            container.appendChild(endMsg);
             this.convArea.appendChild(container);
             this._smartScroll(false);
         },
 
-        // 협의/인수인계 타이핑 인디케이터 헬퍼
-        _appendDelibTypingIndicator(container, speakerHint) {
-            const indicator = document.createElement('div');
-            indicator.className = 'delib-typing-indicator';
-            const label = speakerHint ? `${speakerHint} 입력 중` : '입력 중';
-            indicator.innerHTML = _sanitize(
-                `<div class="delib-typing-dots"><span></span><span></span><span></span></div>` +
-                `<span>${label}</span>`
+        // 채팅 흐름 타이핑 버블 ("이름(역할) 입력 중...")
+        _appendChatTypingBubble(container, speakerName, speakerRole) {
+            this._removeChatTypingBubble(container);
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-typing-bubble';
+            const label = speakerName ? `${speakerName}${speakerRole ? '(' + speakerRole + ')' : ''} 입력 중` : '입력 중';
+            bubble.innerHTML = _sanitize(
+                '<div class="chat-typing-dots"><span></span><span></span><span></span></div>' +
+                '<span class="chat-typing-label">' + this.escapeHtml(label) + '</span>'
             );
-            container.appendChild(indicator);
+            container.appendChild(bubble);
             this._smartScroll(false);
         },
-        _removeDelibTypingIndicator(container) {
-            const existing = container.querySelector('.delib-typing-indicator');
-            if (existing) existing.remove();
+        _removeChatTypingBubble(container) {
+            const el = container.querySelector('.chat-typing-bubble');
+            if (el) el.remove();
+        },
+        _removeChatTypingBubbleAll() {
+            document.querySelectorAll('.chat-typing-bubble').forEach(el => el.remove());
         },
 
         // ═══ 새 대화 시작 ═══
@@ -2255,19 +2244,13 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             return msg || '알 수 없는 오류가 발생했습니다.';
         },
 
-        // 대기 메신저 (질문 전송 즉시 서연 CSO 타이핑 표시)
+        // 대기 메신저 (질문 전송 즉시 서연 CSO 타이핑 버블)
         _showSimpleWaiting() {
             this._hideSimpleWaiting();
             const container = document.createElement('div');
             container.id = 'simple-waiting';
-            container.className = 'deliberation-container';
-            container.innerHTML = _sanitize(
-                '<div class="delib-header">' +
-                '<span class="delib-header-dot"></span>' +
-                '<span>회의 준비 중 — 서연(CSO)</span>' +
-                '</div>'
-            );
-            this._appendDelibTypingIndicator(container, '서연');
+            container.className = 'chat-flow-container';
+            this._appendChatTypingBubble(container, '서연', 'CSO');
             this.convArea.appendChild(container);
             this._smartScroll(true);
         },
@@ -2277,12 +2260,15 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         },
 
         // 협의 종료 후 답변 대기 미니 인디케이터
-        _showMiniWaiting() {
+        _showMiniWaiting(leaderHint) {
             this._hideMiniWaiting();
             const mini = document.createElement('div');
             mini.id = 'mini-waiting';
-            mini.className = 'mini-waiting-indicator';
-            mini.innerHTML = '<div class="delib-typing-dots"><span></span><span></span><span></span></div><span>답변 작성 중...</span>';
+            mini.className = 'chat-flow-status writing';
+            mini.innerHTML = _sanitize(
+                '<div class="chat-typing-dots"><span></span><span></span><span></span></div>' +
+                '<span>' + this.escapeHtml(leaderHint || '답변 작성 중...') + '</span>'
+            );
             this.convArea.appendChild(mini);
             this._smartScroll(false);
         },
