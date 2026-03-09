@@ -1233,6 +1233,7 @@ async def ask_stream(request: Request):
                     try:
                         _cur = req_current_leader if isinstance(req_current_leader, dict) else {"name": "마디", "specialty": "통합"}
                         _new = {"name": _new_leader_name, "specialty": analysis.get("leader_specialty", "통합"), "leader_id": analysis.get("leader_id", "")}
+                        yield _sse("handoff_start", {"current": _cur.get("name", "?"), "new": _new_leader_name})
                         async for turn in generate_handoff_stream(gc, query, _cur, _new, lang):
                             yield _sse("handoff", turn)
                     except Exception as handoff_err:
@@ -1317,6 +1318,8 @@ async def ask_stream(request: Request):
                             elif _delib_mode == "handoff":
                                 _cur = req_current_leader if isinstance(req_current_leader, dict) else {"name": "마디", "specialty": "통합"}
                                 _new_l = {"name": _new_leader_name, "specialty": analysis.get("leader_specialty", "통합"), "leader_id": analysis.get("leader_id", "")}
+                                # handoff_start를 먼저 전송하여 클라이언트 UI 즉시 전환
+                                await _event_queue.put(("handoff_start", {"current": _cur.get("name", "?"), "new": _new_leader_name}))
                                 async for turn in generate_handoff_stream(gc, query, _cur, _new_l, lang):
                                     await _event_queue.put(("handoff", turn))
                         except Exception as e:

@@ -2259,18 +2259,25 @@ async def _gemini_fallback_compose(
         ]
 
     # ── Selective Thinking (expert=512, general=0) ──
-    thinking_budget = 512 if mode == "expert" else 0
-    thinking_config = genai_types.ThinkingConfig(thinking_budget=thinking_budget)
+    # gemini-2.0-flash 등 thinking 미지원 모델은 ThinkingConfig 생략
+    _model = get_model()
+    _supports_thinking = "2.5" in _model or "3" in _model
+    thinking_config = None
+    if _supports_thinking:
+        thinking_budget = 512 if mode == "expert" else 0
+        thinking_config = genai_types.ThinkingConfig(thinking_budget=thinking_budget)
 
     # ── GenerateContentConfig 조립 ──
-    gen_config = genai_types.GenerateContentConfig(
+    _config_kwargs = dict(
         tools=list(tools) if tools else [],
         system_instruction=instruction,
         max_output_tokens=max_tokens,
         automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
         safety_settings=safety_settings,
-        thinking_config=thinking_config,
     )
+    if thinking_config is not None:
+        _config_kwargs["thinking_config"] = thinking_config
+    gen_config = genai_types.GenerateContentConfig(**_config_kwargs)
 
     # 429/할당량 초과 시 자동 모델 전환 (Pro→Flash→Lite)
     # 사용자 입력을 XML 태그로 구조적 격리 (프롬프트 인젝션 방어)

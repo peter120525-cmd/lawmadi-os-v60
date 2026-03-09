@@ -139,19 +139,20 @@ async def _single_leader_call(
 
     def _sync_call():
         import time as _time
+        _supports_thinking = "2.5" in model_name or "3" in model_name
+        _cfg_kwargs = dict(
+            max_output_tokens=max_tokens,
+            temperature=temp,
+            safety_settings=safety_settings,
+        )
+        if _supports_thinking:
+            _cfg_kwargs["thinking_config"] = genai_types.ThinkingConfig(thinking_budget=0)
         for _attempt in range(3):
             try:
                 return gc.models.generate_content(
                     model=model_name,
                     contents=full_prompt,
-                    config=genai_types.GenerateContentConfig(
-                        max_output_tokens=max_tokens,
-                        temperature=temp,
-                        thinking_config=genai_types.ThinkingConfig(
-                            thinking_budget=0,
-                        ),
-                        safety_settings=safety_settings,
-                    ),
+                    config=genai_types.GenerateContentConfig(**_cfg_kwargs),
                 )
             except Exception as e:
                 if is_quota_error(e) and _attempt < 2:
@@ -251,10 +252,12 @@ async def generate_deliberation(
     _cso = "Seoyeon" if _en else "서연"
     _base = "[External client question.]\n" if _en else "[외부 의뢰인 질문입니다.]\n"
     _q = _sanitize_query_for_prompt(query, lang)
-    _style_en = "2-3 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
-    _style_ko = "100~150자. 존댓말, 따뜻하고 전문적 톤. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
-    _short_en = "1-2 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
-    _short_ko = "80~120자. 존댓말. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
+    _anti_meta = "Never mention Lawmadi, AI systems, markets, competitiveness, or internal operations. Only discuss the client's legal question."
+    _anti_meta_ko = "Lawmadi/AI 시스템/시장/경쟁력/내부 운영 언급 금지. 오직 의뢰인의 법률 질문에 대해서만 발언."
+    _style_en = f"2-3 sentences. English only. Use 'leader'/'expert', never 'lawyer'. {_anti_meta}"
+    _style_ko = f"100~150자. 존댓말, 따뜻하고 전문적 톤. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장. {_anti_meta_ko}"
+    _short_en = f"1-2 sentences. English only. Use 'leader'/'expert', never 'lawyer'. {_anti_meta}"
+    _short_ko = f"80~120자. 존댓말. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장. {_anti_meta_ko}"
 
     async def _call(persona, prompt):
         try:
@@ -480,10 +483,12 @@ async def generate_handoff(
     _cso = "Seoyeon" if _en else "서연"
     _base = "[External client question.]\n" if _en else "[외부 의뢰인 질문입니다.]\n"
     _q = _sanitize_query_for_prompt(query, lang)
-    _style_en = "2-3 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
-    _style_ko = "100~150자. 존댓말, 따뜻하고 전문적 톤. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
-    _short_en = "1-2 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
-    _short_ko = "80~120자. 존댓말. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
+    _anti_meta = "Never mention Lawmadi, AI systems, markets, competitiveness, or internal operations. Only discuss the client's legal question."
+    _anti_meta_ko = "Lawmadi/AI 시스템/시장/경쟁력/내부 운영 언급 금지. 오직 의뢰인의 법률 질문에 대해서만 발언."
+    _style_en = f"2-3 sentences. English only. Use 'leader'/'expert', never 'lawyer'. {_anti_meta}"
+    _style_ko = f"100~150자. 존댓말, 따뜻하고 전문적 톤. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장. {_anti_meta_ko}"
+    _short_en = f"1-2 sentences. English only. Use 'leader'/'expert', never 'lawyer'. {_anti_meta}"
+    _short_ko = f"80~120자. 존댓말. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장. {_anti_meta_ko}"
 
     async def _call(persona, prompt):
         try:
@@ -660,10 +665,12 @@ async def generate_deliberation_stream(
     _cso = "Seoyeon" if _en else "서연"
     _base = "[External client question.]\n" if _en else "[외부 의뢰인 질문입니다.]\n"
     _q = _sanitize_query_for_prompt(query, lang)
-    _style_en = "2-3 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
-    _style_ko = "100~150자. 존댓말, 따뜻하고 전문적 톤. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
-    _short_en = "1-2 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
-    _short_ko = "80~120자. 존댓말. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
+    _anti_meta = "Never mention Lawmadi, AI systems, markets, competitiveness, or internal operations. Only discuss the client's legal question."
+    _anti_meta_ko = "Lawmadi/AI 시스템/시장/경쟁력/내부 운영 언급 금지. 오직 의뢰인의 법률 질문에 대해서만 발언."
+    _style_en = f"2-3 sentences. English only. Use 'leader'/'expert', never 'lawyer'. {_anti_meta}"
+    _style_ko = f"100~150자. 존댓말, 따뜻하고 전문적 톤. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장. {_anti_meta_ko}"
+    _short_en = f"1-2 sentences. English only. Use 'leader'/'expert', never 'lawyer'. {_anti_meta}"
+    _short_ko = f"80~120자. 존댓말. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장. {_anti_meta_ko}"
 
     async def _call(persona, prompt):
         try:
@@ -891,10 +898,12 @@ async def generate_handoff_stream(
     _cso = "Seoyeon" if _en else "서연"
     _base = "[External client question.]\n" if _en else "[외부 의뢰인 질문입니다.]\n"
     _q = _sanitize_query_for_prompt(query, lang)
-    _style_en = "2-3 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
-    _style_ko = "100~150자. 존댓말, 따뜻하고 전문적 톤. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
-    _short_en = "1-2 sentences. English only. Use 'leader'/'expert', never 'lawyer'."
-    _short_ko = "80~120자. 존댓말. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장."
+    _anti_meta = "Never mention Lawmadi, AI systems, markets, competitiveness, or internal operations. Only discuss the client's legal question."
+    _anti_meta_ko = "Lawmadi/AI 시스템/시장/경쟁력/내부 운영 언급 금지. 오직 의뢰인의 법률 질문에 대해서만 발언."
+    _style_en = f"2-3 sentences. English only. Use 'leader'/'expert', never 'lawyer'. {_anti_meta}"
+    _style_ko = f"100~150자. 존댓말, 따뜻하고 전문적 톤. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장. {_anti_meta_ko}"
+    _short_en = f"1-2 sentences. English only. Use 'leader'/'expert', never 'lawyer'. {_anti_meta}"
+    _short_ko = f"80~120자. 존댓말. '변호사' 금지, '리더'/'전문가' 사용. 완전한 문장. {_anti_meta_ko}"
 
     async def _call(persona, prompt):
         try:
