@@ -92,6 +92,9 @@
         document.body.appendChild(modal);
     }
 
+    // ─── Shared references (set by setupOtpModal) ───
+    var showOtpModal = function() {};
+
     // ─── Session Check on Load ───
     function checkSession() {
         fetch(API_BASE + '/api/paddle/me', { credentials: 'include' })
@@ -251,9 +254,7 @@
         var step2 = document.getElementById('authOtpStep2');
         var step3 = document.getElementById('authOtpStep3');
 
-        window._showOtpModal = showOtpModal;
-
-        function showOtpModal() {
+        showOtpModal = function() {
             modal.style.display = 'flex';
             document.body.style.overflow = 'hidden';
             step1.style.display = 'block';

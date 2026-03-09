@@ -243,7 +243,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             const darkToggle = document.getElementById('darkToggle');
             if (darkToggle) darkToggle.onclick = () => this.toggleDarkMode();
             const savedDarkMode = localStorage.getItem('lawmadi-dark-mode');
-            if (savedDarkMode === null || savedDarkMode === 'true') {
+            if (savedDarkMode === 'true') {
                 this.darkMode = true;
                 document.body.classList.add('dark-mode');
                 if (darkToggle) {
