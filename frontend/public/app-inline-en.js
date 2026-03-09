@@ -962,6 +962,10 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                             this._renderDeliberationEnd(payload);
                             this._showMiniWaiting();
 
+                        } else if (eventType === 'handoff_start') {
+                            this.hideTypingIndicator();
+                            this._renderHandoffStart(payload);
+
                         } else if (eventType === 'handoff') {
                             this.hideTypingIndicator();
                             this._renderHandoffTurn(payload);
@@ -1070,8 +1074,11 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             return leaderProfileImages[name] || 'images/leaders/L60-madi.jpg';
         },
 
-        _getTimeStamp() {
+        _getTimeStamp(turnOffset) {
             const now = new Date();
+            if (typeof turnOffset === 'number' && turnOffset > 0) {
+                now.setSeconds(now.getSeconds() + turnOffset * 40);
+            }
             return String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
         },
 
@@ -1079,8 +1086,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             return `<div class="delib-avatar-wrap"><img class="delib-avatar" src="${this._getLeaderAvatar(name)}" alt="${this.escapeHtml(name)}"></div>`;
         },
 
-        _buildBubbleBody(name, role, text) {
-            const ts = this._getTimeStamp();
+        _buildBubbleBody(name, role, text, turnIndex) {
+            const ts = this._getTimeStamp(turnIndex || 0);
             return `<div class="delib-body">` +
                 `<div class="delib-meta-row"><span class="delib-name">${this.escapeHtml(name)}</span>` +
                 `<span class="delib-role">${this.escapeHtml(role)}</span>` +
@@ -1131,9 +1138,10 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
             const bubble = document.createElement('div');
             bubble.className = 'deliberation-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
+            const turnIdx = this._delibTurnIndex || 0;
             bubble.innerHTML = _sanitize(
                 this._buildAvatarHTML(name, 'deliberation') +
-                this._buildBubbleBody(name, role, text)
+                this._buildBubbleBody(name, role, text, turnIdx)
             );
             container.appendChild(bubble);
             this._delibTurnIndex = (this._delibTurnIndex || 0) + 1;
@@ -1158,6 +1166,24 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             container.appendChild(summary);
             this._smartScroll(false);
             this._delibContainer = null;
+        },
+
+        // Streaming: handoff_start event — create container + typing indicator
+        _renderHandoffStart(payload) {
+            if (this._handoffContainer) return;
+            const container = document.createElement('div');
+            container.className = 'handoff-container';
+            container.innerHTML = _sanitize(
+                '<div class="handoff-header">' +
+                '<span class="delib-header-dot"></span>' +
+                '<span>Leader Handoff — Seoyeon (CSO) presiding</span>' +
+                '</div>'
+            );
+            this._appendDelibTypingIndicator(container, 'Seoyeon');
+            this.convArea.appendChild(container);
+            this._handoffContainer = container;
+            this._handoffTurnIndex = 0;
+            this._smartScroll(false);
         },
 
         // Streaming: handoff event (per turn, 6-turn CSO-moderated)
@@ -1186,12 +1212,13 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
             const bubble = document.createElement('div');
             bubble.className = 'handoff-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
+            const hoTurnIdx = this._handoffTurnIndex || 0;
             bubble.innerHTML = _sanitize(
                 this._buildAvatarHTML(name, 'handoff') +
-                this._buildBubbleBody(name, role, text)
+                this._buildBubbleBody(name, role, text, hoTurnIdx)
             );
             container.appendChild(bubble);
-            this._handoffTurnIndex = (this._handoffTurnIndex || 0) + 1;
+            this._handoffTurnIndex = hoTurnIdx + 1;
 
             if (!isFinal) {
                 this._appendDelibTypingIndicator(container, '');
@@ -1220,7 +1247,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 bubble.style.animationDelay = (idx * 0.25) + 's';
                 bubble.innerHTML = _sanitize(
                     this._buildAvatarHTML(turn.speaker, 'deliberation') +
-                    this._buildBubbleBody(turn.speaker, turn.role || '', turn.text || '')
+                    this._buildBubbleBody(turn.speaker, turn.role || '', turn.text || '', idx)
                 );
                 container.appendChild(bubble);
             });
@@ -1247,7 +1274,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 bubble.style.animationDelay = (idx * 0.25) + 's';
                 bubble.innerHTML = _sanitize(
                     this._buildAvatarHTML(turn.speaker, 'handoff') +
-                    this._buildBubbleBody(turn.speaker, turn.role || '', turn.text || '')
+                    this._buildBubbleBody(turn.speaker, turn.role || '', turn.text || '', idx)
                 );
                 container.appendChild(bubble);
             });

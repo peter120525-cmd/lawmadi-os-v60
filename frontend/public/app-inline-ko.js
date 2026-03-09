@@ -944,8 +944,12 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                             // 협의 종료 → 답변 대기 미니 인디케이터
                             this._showMiniWaiting();
 
+                        } else if (eventType === 'handoff_start') {
+                            // 인수인계 시작 알림 → 대기창 숨기고 컨테이너 먼저 생성
+                            this.hideTypingIndicator();
+                            this._renderHandoffStart(payload);
+
                         } else if (eventType === 'handoff') {
-                            // 인수인계 시작 시에도 대기창 숨김
                             this.hideTypingIndicator();
                             this._renderHandoffTurn(payload);
 
@@ -1960,8 +1964,12 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             return leaderProfileImages[name] || 'images/leaders/L60-madi.jpg';
         },
 
-        _getTimeStamp() {
+        _getTimeStamp(turnOffset) {
             const now = new Date();
+            // 턴별 타임스탬프 오프셋: 각 턴마다 30~50초씩 증가하여 자연스러운 시간 흐름
+            if (typeof turnOffset === 'number' && turnOffset > 0) {
+                now.setSeconds(now.getSeconds() + turnOffset * 40);
+            }
             return String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
         },
 
@@ -1970,8 +1978,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             return `<div class="delib-avatar-wrap"><img class="delib-avatar" src="${this._getLeaderAvatar(name)}" alt="${this.escapeHtml(name)}"></div>`;
         },
 
-        _buildBubbleBody(name, role, text) {
-            const ts = this._getTimeStamp();
+        _buildBubbleBody(name, role, text, turnIndex) {
+            const ts = this._getTimeStamp(turnIndex || 0);
             return `<div class="delib-body">` +
                 `<div class="delib-meta-row"><span class="delib-name">${this.escapeHtml(name)}</span>` +
                 `<span class="delib-role">${this.escapeHtml(role)}</span>` +
@@ -2024,12 +2032,13 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
             const bubble = document.createElement('div');
             bubble.className = 'deliberation-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
+            const turnIdx = this._delibTurnIndex || 0;
             bubble.innerHTML = _sanitize(
                 this._buildAvatarHTML(name, 'deliberation') +
-                this._buildBubbleBody(name, role, text)
+                this._buildBubbleBody(name, role, text, turnIdx)
             );
             container.appendChild(bubble);
-            this._delibTurnIndex = (this._delibTurnIndex || 0) + 1;
+            this._delibTurnIndex = turnIdx + 1;
 
             // 마지막 턴이 아니면 다음 턴 타이핑 인디케이터 표시
             if (!isFinal) {
@@ -2052,6 +2061,25 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             container.appendChild(summary);
             this._smartScroll(false);
             this._delibContainer = null;
+        },
+
+        // 스트리밍: handoff_start 이벤트 → 컨테이너 미리 생성 + 타이핑 인디케이터
+        _renderHandoffStart(payload) {
+            if (this._handoffContainer) return;
+            const container = document.createElement('div');
+            container.className = 'handoff-container';
+            container.innerHTML = _sanitize(
+                '<div class="handoff-header">' +
+                '<span class="delib-header-dot"></span>' +
+                '<span>리더 인수인계 — 서연(CSO) 주재</span>' +
+                '</div>'
+            );
+            // 첫 턴 대기 타이핑 인디케이터
+            this._appendDelibTypingIndicator(container, '서연');
+            this.convArea.appendChild(container);
+            this._handoffContainer = container;
+            this._handoffTurnIndex = 0;
+            this._smartScroll(false);
         },
 
         // 스트리밍: handoff 이벤트 (턴별, 6턴 CSO 주재)
@@ -2081,12 +2109,13 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
             const bubble = document.createElement('div');
             bubble.className = 'handoff-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
+            const hoTurnIdx = this._handoffTurnIndex || 0;
             bubble.innerHTML = _sanitize(
                 this._buildAvatarHTML(name, 'handoff') +
-                this._buildBubbleBody(name, role, text)
+                this._buildBubbleBody(name, role, text, hoTurnIdx)
             );
             container.appendChild(bubble);
-            this._handoffTurnIndex = (this._handoffTurnIndex || 0) + 1;
+            this._handoffTurnIndex = hoTurnIdx + 1;
 
             // 마지막 턴이 아니면 다음 턴 대기 인디케이터
             if (!isFinal) {
@@ -2116,7 +2145,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 bubble.style.animationDelay = (idx * 0.25) + 's';
                 bubble.innerHTML = _sanitize(
                     this._buildAvatarHTML(turn.speaker, 'deliberation') +
-                    this._buildBubbleBody(turn.speaker, turn.role || '', turn.text || '')
+                    this._buildBubbleBody(turn.speaker, turn.role || '', turn.text || '', idx)
                 );
                 container.appendChild(bubble);
             });
@@ -2143,7 +2172,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 bubble.style.animationDelay = (idx * 0.25) + 's';
                 bubble.innerHTML = _sanitize(
                     this._buildAvatarHTML(turn.speaker, 'handoff') +
-                    this._buildBubbleBody(turn.speaker, turn.role || '', turn.text || '')
+                    this._buildBubbleBody(turn.speaker, turn.role || '', turn.text || '', idx)
                 );
                 container.appendChild(bubble);
             });
