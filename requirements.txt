@@ -9,7 +9,7 @@ httpx>=0.27.0,<1.0  # LawmadiLM API 비동기 호출
 cloud-sql-python-connector[pg8000]==1.20.0
 pg8000==1.31.5
 PyPDF2==3.0.1
-python-multipart>=0.0.12  # FastAPI 파일 업로드 지원 (CVE-2024-24762 패치)
+python-multipart>=0.0.17  # FastAPI 파일 업로드 지원 (CVE-2024-24762 패치)
 fpdf2==2.8.3  # PDF 법률문서 내보내기
 slowapi==0.1.9  # Rate limiting
 aiofiles==24.1.0  # 비동기 파일 I/O
