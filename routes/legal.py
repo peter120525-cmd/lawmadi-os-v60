@@ -423,8 +423,17 @@ async def ask(request: Request):
         analysis_result, rag_context = await asyncio.gather(
             _gemini_analyze_query(query),
             run_pipeline_stage1(query),
+            return_exceptions=True,
         )
         _classify_ms = int((time.time() - _t_classify) * 1000)
+
+        # 예외 객체 방어
+        if isinstance(analysis_result, Exception):
+            logger.warning(f"[Classify] 분류 실패: {analysis_result}")
+            analysis_result = None
+        if isinstance(rag_context, Exception):
+            logger.warning(f"[RAG] Stage1 실패: {rag_context}")
+            rag_context = None
 
         analysis = analysis_result
         _routing_method = "gemini"
@@ -702,6 +711,8 @@ async def ask(request: Request):
         # -------------------------------------------------
         # 5.5) FAIL_CLOSED 감지 + 담당 리더 정보 헤더 삽입
         # -------------------------------------------------
+        if not isinstance(final_text, str):
+            final_text = str(final_text) if final_text else ""
         _is_fail_closed = (FAIL_CLOSED_RESPONSE in final_text) or (final_text.strip() == FAIL_CLOSED_RESPONSE.strip())
 
         if lang == "en":
@@ -851,7 +862,8 @@ async def ask(request: Request):
             except Exception as log_error:
                 logger.warning(f"⚠️ [ChatHistory] 백그라운드 저장 실패 (무시): {log_error}")
 
-        asyncio.create_task(_background_verify_and_save())
+        _bg_task = asyncio.create_task(_background_verify_and_save())
+        _bg_task.add_done_callback(lambda t: logger.warning(f"⚠️ [BG verify] 예외: {t.exception()}") if t.exception() else None)
 
         # 후처리: think 블록 → 표 → 구분선 제거
         final_text_clean = _remove_think_blocks(final_text)
@@ -1021,12 +1033,17 @@ async def ask_stream(request: Request):
                                     text_part += part.text
                         if text_part:
                             q.put_nowait(text_part)
-                    q.put_nowait(None)
                 except Exception as e:
                     q.put_nowait(e)
+                finally:
+                    q.put_nowait(None)  # 항상 종료 sentinel 전송
             asyncio.get_running_loop().run_in_executor(None, _consume)
             while True:
-                item = await q.get()
+                try:
+                    item = await asyncio.wait_for(q.get(), timeout=60.0)
+                except asyncio.TimeoutError:
+                    logger.error("[_async_stream_chunks] 60초 타임아웃 — 스트림 종료")
+                    break
                 if item is None:
                     break
                 if isinstance(item, Exception):
@@ -1144,7 +1161,15 @@ async def ask_stream(request: Request):
             analysis_result, rag_context_pre = await asyncio.gather(
                 _gemini_analyze_query(query),
                 run_pipeline_stage1(query),
+                return_exceptions=True,
             )
+            # 예외 객체 방어
+            if isinstance(analysis_result, Exception):
+                logger.warning(f"[Stream Classify] 분류 실패: {analysis_result}")
+                analysis_result = None
+            if isinstance(rag_context_pre, Exception):
+                logger.warning(f"[Stream RAG] Stage1 실패: {rag_context_pre}")
+                rag_context_pre = None
             analysis = analysis_result
             if not analysis:
                 analysis = _fallback_tier_classification(query, lang=lang)
@@ -1354,29 +1379,51 @@ async def ask_stream(request: Request):
                         finally:
                             await _event_queue.put(("_pipeline_done", None))
 
-                    # 두 producer를 병렬 실행
+                    # 두 producer를 병렬 실행 (전체 90초 타임아웃)
                     _delib_task = asyncio.create_task(_delib_producer())
                     _pipeline_task = asyncio.create_task(_pipeline_producer())
+                    _parallel_deadline = asyncio.get_event_loop().time() + 90.0
 
                     _delib_finished = False
                     _pipeline_finished = False
 
-                    while not (_delib_finished and _pipeline_finished):
-                        evt_type, evt_data = await _event_queue.get()
-                        if evt_type == "_delib_done":
-                            _delib_finished = True
-                            continue
-                        if evt_type == "_pipeline_done":
-                            _pipeline_finished = True
-                            continue
-                        yield _sse(evt_type, evt_data)
+                    try:
+                        while not (_delib_finished and _pipeline_finished):
+                            _remaining = _parallel_deadline - asyncio.get_event_loop().time()
+                            if _remaining <= 0:
+                                logger.error("[Parallel] 전체 타임아웃 (90초)")
+                                break
+                            try:
+                                evt_type, evt_data = await asyncio.wait_for(
+                                    _event_queue.get(), timeout=min(_remaining, 30.0)
+                                )
+                            except asyncio.TimeoutError:
+                                logger.warning("[Parallel] Queue 대기 타임아웃 — 루프 탈출")
+                                break
+                            if evt_type == "_delib_done":
+                                _delib_finished = True
+                                continue
+                            if evt_type == "_pipeline_done":
+                                _pipeline_finished = True
+                                continue
+                            yield _sse(evt_type, evt_data)
+                    finally:
+                        # 미완료 task 취소
+                        for _t in (_delib_task, _pipeline_task):
+                            if not _t.done():
+                                _t.cancel()
+                        # 완료된 task 예외 수거
+                        for _t in (_delib_task, _pipeline_task):
+                            try:
+                                await _t
+                            except (asyncio.CancelledError, Exception):
+                                pass
 
-                    # 두 task가 모두 종료될 때까지 대기 (예외 전파)
-                    await _delib_task
-                    await _pipeline_task
-
-                    final_text = _pipeline_result.get("final_text", "")
+                    _pr_text = _pipeline_result.get("final_text", "")
+                    final_text = _pr_text if isinstance(_pr_text, str) else ""
                     drf_verification = _pipeline_result.get("drf")
+                    if drf_verification and not hasattr(drf_verification, "all_passed"):
+                        drf_verification = None  # 비정상 타입 방어
 
                 # 협의가 불필요한 경우: 기존 직렬 실행
                 else:
@@ -1386,6 +1433,10 @@ async def ask_stream(request: Request):
                         lang=lang, mode=stream_mode,
                         rag_context=rag_context_pre,
                     )
+
+                # 타입 안전: final_text가 문자열이 아닌 경우 방어
+                if not isinstance(final_text, str):
+                    final_text = str(final_text) if final_text else ""
 
                 # FAIL_CLOSED 체크
                 _is_fc = (FAIL_CLOSED_RESPONSE in final_text) or (final_text.strip() == FAIL_CLOSED_RESPONSE.strip())
@@ -1522,7 +1573,8 @@ async def ask_stream(request: Request):
                 except Exception as e:
                     logger.warning(f"⚠️ [Stream ChatHistory] 실패 (무시): {e}")
 
-            asyncio.create_task(_bg_verify())
+            _bg_task = asyncio.create_task(_bg_verify())
+            _bg_task.add_done_callback(lambda t: logger.warning(f"⚠️ [Stream BG verify] 예외: {t.exception()}") if t.exception() else None)
 
         except Exception as e:
             with _METRICS_LOCK:
@@ -1535,6 +1587,11 @@ async def ask_stream(request: Request):
             else:
                 user_msg = _classify_gemini_error_fn(e, ref)
             yield _sse("error", {"message": user_msg})
+            yield _sse("answer_done", {
+                "leader": leader_name, "leader_specialty": leader_specialty,
+                "latency_ms": int((time.time() - start_time) * 1000),
+                "trace_id": trace, "status": "ERROR",
+            })
 
     return StreamingResponse(
         _sse_generator(),
