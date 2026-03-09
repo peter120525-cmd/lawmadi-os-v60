@@ -1207,6 +1207,8 @@ async def ask_stream(request: Request):
                             "specialty": sl.get("specialty", ""),
                             "leader_id": sl.get("_id", ""),
                         })
+                # CCO(유나)는 법률 협의 후보에서 제외
+                _candidate_leaders = [c for c in _candidate_leaders if c.get("leader_id") != "CCO"]
                 if not any(c["name"] == _new_leader_name for c in _candidate_leaders):
                     _candidate_leaders.insert(0, {
                         "name": _new_leader_name,
