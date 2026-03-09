@@ -952,6 +952,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         }
 
                         if (eventType === 'deliberation_start') {
+                            this.hideTypingIndicator();
                             this._renderDeliberationStart(payload);
 
                         } else if (eventType === 'deliberation_turn') {
@@ -959,8 +960,10 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
                         } else if (eventType === 'deliberation_end') {
                             this._renderDeliberationEnd(payload);
+                            this._showMiniWaiting();
 
                         } else if (eventType === 'handoff') {
+                            this.hideTypingIndicator();
                             this._renderHandoffTurn(payload);
 
                         } else if (eventType === 'status') {
@@ -976,6 +979,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         } else if (eventType === 'chunk') {
                             if (!accumulatedText) {
                                 this.hideTypingIndicator();
+                                this._hideMiniWaiting();
                                 if (!streamDivAttached) {
                                     this.convArea.appendChild(streamDiv);
                                     streamDivAttached = true;
@@ -2224,6 +2228,20 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             return msg || 'An unknown error occurred.';
         },
 
+        _showMiniWaiting() {
+            this._hideMiniWaiting();
+            const mini = document.createElement('div');
+            mini.id = 'mini-waiting';
+            mini.className = 'mini-waiting-indicator';
+            mini.innerHTML = '<div class="delib-typing-dots"><span></span><span></span><span></span></div><span>Composing response...</span>';
+            this.convArea.appendChild(mini);
+            this._smartScroll(false);
+        },
+        _hideMiniWaiting() {
+            const el = document.getElementById('mini-waiting');
+            if (el) el.remove();
+        },
+
         hideTypingIndicator() {
             if (this._typingStepTimers) {
                 this._typingStepTimers.forEach(t => clearTimeout(t));
@@ -2235,6 +2253,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             }
             const typingDiv = document.getElementById('typing-indicator');
             if (typingDiv) typingDiv.remove();
+            this._hideMiniWaiting();
         }
     };
 
