@@ -2192,14 +2192,20 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             return msg || 'An unknown error occurred.';
         },
 
-        // Simple waiting indicator (6-step removed, mini dots only)
+        // Waiting messenger (show Seoyeon CSO typing immediately on query send)
         _showSimpleWaiting() {
             this._hideSimpleWaiting();
-            const el = document.createElement('div');
-            el.id = 'simple-waiting';
-            el.className = 'mini-waiting-indicator';
-            el.innerHTML = '<div class="delib-typing-dots"><span></span><span></span><span></span></div><span>Analyzing...</span>';
-            this.convArea.appendChild(el);
+            const container = document.createElement('div');
+            container.id = 'simple-waiting';
+            container.className = 'deliberation-container';
+            container.innerHTML = _sanitize(
+                '<div class="delib-header">' +
+                '<span class="delib-header-dot"></span>' +
+                '<span>Preparing — Seoyeon (CSO)</span>' +
+                '</div>'
+            );
+            this._appendDelibTypingIndicator(container, 'Seoyeon');
+            this.convArea.appendChild(container);
             this._smartScroll(true);
         },
         _hideSimpleWaiting() {
