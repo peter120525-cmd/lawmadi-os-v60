@@ -1195,7 +1195,6 @@ async def startup():
         from connectors.vertex_search_client import (
             search_legal_documents as _vertex_search,
             build_vertex_context as _vertex_ctx,
-            build_vertex_cache_context as _vertex_cache_ctx,
             check_grounding as _vertex_check_grounding,
         )
         _set_pipeline_law_cache(
@@ -1205,27 +1204,20 @@ async def startup():
             build_ssot_context_fn=None,
         )
         from core.pipeline import set_vertex_search_fns as _set_vertex_fns
-        _set_vertex_fns(_vertex_search, _vertex_ctx, _vertex_cache_ctx, _vertex_check_grounding)
+        # cache_context_fn=None — build_vertex_cache_context 미사용 (중복 API 호출 방지)
+        _set_vertex_fns(_vertex_search, _vertex_ctx, None, _vertex_check_grounding)
         logger.info("🔍 Pipeline wired with Vertex AI Search functions")
     else:
         _set_pipeline_law_cache(LAW_CACHE, build_cache_context, match_ssot_sources, build_ssot_context)
 
-    # Vertex Search 모드에서 match_ssot_sources 래퍼 생성
+    # Vertex Search 모드에서 match_ssot_sources 래퍼 — _sync_search 직접 사용
     if USE_VERTEX_SEARCH:
-        import asyncio as _asyncio
-        from connectors.vertex_search_client import search_legal_documents as _vertex_search_fn
+        from connectors.vertex_search_client import _sync_search as _vertex_sync_search
 
         def _vertex_match_ssot_sync(query, top_k=8):
             """Vertex AI Search 동기 래퍼 (routes/legal.py 호환)."""
             try:
-                loop = _asyncio.get_event_loop()
-                if loop.is_running():
-                    import concurrent.futures
-                    with concurrent.futures.ThreadPoolExecutor() as pool:
-                        future = pool.submit(_asyncio.run, _vertex_search_fn(query, top_k))
-                        return future.result(timeout=10)
-                else:
-                    return _asyncio.run(_vertex_search_fn(query, top_k))
+                return _vertex_sync_search(query, top_k=top_k)
             except Exception as e:
                 logger.warning(f"[VertexSearch] 동기 래퍼 실패: {e}")
                 return match_ssot_sources(query, top_k)  # 폴백
