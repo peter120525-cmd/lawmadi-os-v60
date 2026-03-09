@@ -700,7 +700,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             this._requestTimeoutId = timeoutId;
 
             const _startTime = performance.now();
-            this.showTypingIndicator();
+            this._showSimpleWaiting();
 
             try {
                 if (this.USE_STREAMING) {
@@ -971,33 +971,11 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                             this._renderHandoffTurn(payload);
 
                         } else if (eventType === 'status') {
-                            const stepKey = payload.step || '';
-                            const statusText = _statusLabels[stepKey] || stepKey;
-                            const leaderInfo = payload.leader ? ` (${leaderRomanNames[payload.leader] || payload.leader})` : '';
-                            const targetStepId = _statusToStep[stepKey];
-                            if (targetStepId) {
-                                this._advanceTypingStep(targetStepId);
-                            }
-                            this._updateTypingStatus(statusText + leaderInfo);
+                            // status event: simple waiting only (6-step indicator removed)
 
                         } else if (eventType === 'chunk') {
-                            if (!accumulatedText) {
-                                this.hideTypingIndicator();
-                                this._hideMiniWaiting();
-                                if (!streamDivAttached) {
-                                    this.convArea.appendChild(streamDiv);
-                                    streamDivAttached = true;
-                                }
-                            }
+                            // Final answer shown all at once — no progressive rendering
                             accumulatedText += (payload.text || '');
-                            if (!this._chunkRafPending) {
-                                this._chunkRafPending = true;
-                                requestAnimationFrame(() => {
-                                    streamContent.innerHTML = _sanitize(this._renderStreamingText(accumulatedText));
-                                    this._smartScroll(false);
-                                    this._chunkRafPending = false;
-                                });
-                            }
 
                         } else if (eventType === 'done') {
                             leaderName = payload.leader || '';
@@ -1139,18 +1117,33 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             const bubble = document.createElement('div');
             bubble.className = 'deliberation-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
             const turnIdx = this._delibTurnIndex || 0;
+            const ts = this._getTimeStamp(turnIdx);
+            // Show typing dots first
             bubble.innerHTML = _sanitize(
                 this._buildAvatarHTML(name, 'deliberation') +
-                this._buildBubbleBody(name, role, text, turnIdx)
+                '<div class="delib-body">' +
+                '<div class="delib-meta-row"><span class="delib-name">' + this.escapeHtml(name) + '</span>' +
+                '<span class="delib-role">' + this.escapeHtml(role) + '</span>' +
+                '<span class="delib-time">' + ts + '</span></div>' +
+                '<div class="delib-text"><div class="delib-typing-dots"><span></span><span></span><span></span></div></div></div>'
             );
             container.appendChild(bubble);
-            this._delibTurnIndex = (this._delibTurnIndex || 0) + 1;
-
-            if (!isFinal) {
-                const nextSpeaker = isMod ? '' : 'Seoyeon';
-                this._appendDelibTypingIndicator(container, nextSpeaker);
-            }
+            this._delibTurnIndex = turnIdx + 1;
             this._smartScroll(false);
+
+            // Typewriter effect after 800ms
+            setTimeout(() => {
+                const textEl = bubble.querySelector('.delib-text');
+                if (textEl) {
+                    this._typewriterReveal(textEl, text, () => {
+                        if (!isFinal) {
+                            const nextSpeaker = isMod ? '' : 'Seoyeon';
+                            this._appendDelibTypingIndicator(container, nextSpeaker);
+                        }
+                        this._smartScroll(false);
+                    });
+                }
+            }, 800);
         },
 
         // Streaming: deliberation_end event
@@ -1208,22 +1201,38 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             const isFinal = payload.is_final || false;
             const isMod = (name === 'Seoyeon' || name === '서연');
 
+            // Remove previous typing indicator
             this._removeDelibTypingIndicator(container);
 
             const bubble = document.createElement('div');
             bubble.className = 'handoff-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
             const hoTurnIdx = this._handoffTurnIndex || 0;
+            const ts = this._getTimeStamp(hoTurnIdx);
+            // Show typing dots first
             bubble.innerHTML = _sanitize(
                 this._buildAvatarHTML(name, 'handoff') +
-                this._buildBubbleBody(name, role, text, hoTurnIdx)
+                '<div class="delib-body">' +
+                '<div class="delib-meta-row"><span class="delib-name">' + this.escapeHtml(name) + '</span>' +
+                '<span class="delib-role">' + this.escapeHtml(role) + '</span>' +
+                '<span class="delib-time">' + ts + '</span></div>' +
+                '<div class="delib-text"><div class="delib-typing-dots"><span></span><span></span><span></span></div></div></div>'
             );
             container.appendChild(bubble);
             this._handoffTurnIndex = hoTurnIdx + 1;
-
-            if (!isFinal) {
-                this._appendDelibTypingIndicator(container, '');
-            }
             this._smartScroll(false);
+
+            // Typewriter effect after 800ms
+            setTimeout(() => {
+                const textEl = bubble.querySelector('.delib-text');
+                if (textEl) {
+                    this._typewriterReveal(textEl, text, () => {
+                        if (!isFinal) {
+                            this._appendDelibTypingIndicator(container, '');
+                        }
+                        this._smartScroll(false);
+                    });
+                }
+            }, 800);
         },
 
         // Classic (/ask) deliberation rendering
@@ -2128,78 +2137,6 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             msgDiv.appendChild(copyBtn);
         },
 
-        // ═══ 향상된 로딩 애니메이션 ═══
-        showTypingIndicator() {
-            const typingId = 'typing-indicator';
-            if (document.getElementById(typingId)) return typingId;
-
-            const typingDiv = document.createElement('div');
-            typingDiv.id = typingId;
-            typingDiv.className = 'typing-indicator';
-            typingDiv.innerHTML = `
-                <div class="typing-dots">
-                    <span></span><span></span><span></span>
-                </div>
-                <div class="typing-progress">
-                    <div class="typing-step active" id="step-1">
-                        <span class="step-icon">🔍</span> Analyzing question...
-                    </div>
-                    <div class="typing-step" id="step-2">
-                        <span class="step-icon">👥</span> Assigning expert leader...
-                    </div>
-                    <div class="typing-step" id="step-3">
-                        <span class="step-icon">⚖️</span> Searching laws & precedents...
-                    </div>
-                    <div class="typing-step" id="step-4">
-                        <span class="step-icon">✍️</span> Generating response...
-                    </div>
-                    <div class="typing-step" id="step-5">
-                        <span class="step-icon">🔎</span> Cross-verifying...
-                    </div>
-                    <div class="typing-step" id="step-6">
-                        <span class="step-icon">📋</span> Finalizing...
-                    </div>
-                    <div class="typing-elapsed" id="typing-elapsed" style="margin-top:6px;font-size:0.7rem;color:var(--text-muted);opacity:0.7;">0s elapsed</div>
-                </div>
-            `;
-            this.convArea.appendChild(typingDiv);
-            this._smartScroll(true);
-
-            // 단계별 진행 애니메이션
-            this._typingStepTimers = [];
-            const steps = [
-                { id: 'step-1', delay: 0 },
-                { id: 'step-2', delay: 1500 },
-                { id: 'step-3', delay: 3500 },
-                { id: 'step-4', delay: 6000 },
-                { id: 'step-5', delay: 12000 },
-                { id: 'step-6', delay: 20000 }
-            ];
-            steps.forEach((step, idx) => {
-                const timer = setTimeout(() => {
-                    const el = document.getElementById(step.id);
-                    if (el) {
-                        el.classList.add('active');
-                        if (idx > 0) {
-                            const prev = document.getElementById(steps[idx - 1].id);
-                            if (prev) { prev.classList.remove('active'); prev.classList.add('done'); }
-                        }
-                    }
-                }, step.delay);
-                this._typingStepTimers.push(timer);
-            });
-
-            // 경과 시간 카운터
-            let elapsed = 0;
-            this._elapsedTimer = setInterval(() => {
-                elapsed++;
-                const el = document.getElementById('typing-elapsed');
-                if (el) el.textContent = `${elapsed}s elapsed`;
-            }, 1000);
-
-            return typingId;
-        },
-
         // ═══ 새 대화 시작 ═══
         resetConversation() {
             this.conversationHistory = [];
@@ -2255,6 +2192,22 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             return msg || 'An unknown error occurred.';
         },
 
+        // Simple waiting indicator (6-step removed, mini dots only)
+        _showSimpleWaiting() {
+            this._hideSimpleWaiting();
+            const el = document.createElement('div');
+            el.id = 'simple-waiting';
+            el.className = 'mini-waiting-indicator';
+            el.innerHTML = '<div class="delib-typing-dots"><span></span><span></span><span></span></div><span>Analyzing...</span>';
+            this.convArea.appendChild(el);
+            this._smartScroll(true);
+        },
+        _hideSimpleWaiting() {
+            const el = document.getElementById('simple-waiting');
+            if (el) el.remove();
+        },
+
+        // Mini waiting indicator after deliberation ends
         _showMiniWaiting() {
             this._hideMiniWaiting();
             const mini = document.createElement('div');
@@ -2269,18 +2222,35 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             if (el) el.remove();
         },
 
+        // Typewriter effect (typing feel)
+        _typewriterReveal(element, text, onComplete) {
+            element.innerHTML = '';
+            element.textContent = '';
+            let i = 0;
+            const len = text.length;
+            const chunkSize = Math.max(1, Math.ceil(len / 30));
+            const timer = setInterval(() => {
+                i = Math.min(i + chunkSize, len);
+                element.textContent = text.substring(0, i);
+                this._smartScroll(false);
+                if (i >= len) {
+                    clearInterval(timer);
+                    if (onComplete) onComplete();
+                }
+            }, 30);
+        },
+
         hideTypingIndicator() {
-            if (this._typingStepTimers) {
-                this._typingStepTimers.forEach(t => clearTimeout(t));
-                this._typingStepTimers = [];
-            }
-            if (this._elapsedTimer) {
-                clearInterval(this._elapsedTimer);
-                this._elapsedTimer = null;
-            }
+            this._hideSimpleWaiting();
+            this._hideMiniWaiting();
             const typingDiv = document.getElementById('typing-indicator');
             if (typingDiv) typingDiv.remove();
-            this._hideMiniWaiting();
+        },
+
+        // Backwards compat: showTypingIndicator → _showSimpleWaiting
+        showTypingIndicator() {
+            this._showSimpleWaiting();
+            return 'simple-waiting';
         }
     };
 

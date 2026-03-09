@@ -681,7 +681,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             this._requestTimeoutId = timeoutId;
 
             const _startTime = performance.now();
-            this.showTypingIndicator();
+            this._showSimpleWaiting();
 
             try {
                 if (this.USE_STREAMING) {
@@ -954,35 +954,11 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                             this._renderHandoffTurn(payload);
 
                         } else if (eventType === 'status') {
-                            const stepKey = payload.step || '';
-                            const statusText = _statusLabels[stepKey] || stepKey;
-                            const leaderInfo = payload.leader ? ` (${payload.leader})` : '';
-                            // 서버 이벤트 기반 step 진행 (타이머 무관)
-                            const targetStepId = _statusToStep[stepKey];
-                            if (targetStepId) {
-                                this._advanceTypingStep(targetStepId);
-                            }
-                            this._updateTypingStatus(statusText + leaderInfo);
+                            // status 이벤트: 심플 대기 표시만 (6단계 인디케이터 삭제됨)
 
                         } else if (eventType === 'chunk') {
-                            if (!accumulatedText) {
-                                this.hideTypingIndicator();
-                                this._hideMiniWaiting();
-                                if (!streamDivAttached) {
-                                    this.convArea.appendChild(streamDiv);
-                                    streamDivAttached = true;
-                                }
-                            }
+                            // 최종 답변 한꺼번에 표시 — 점진적 렌더링 안 함
                             accumulatedText += (payload.text || '');
-                            // rAF 기반 렌더링 (줄 단위 chunk에서 과도한 DOM 갱신 방지)
-                            if (!this._chunkRafPending) {
-                                this._chunkRafPending = true;
-                                requestAnimationFrame(() => {
-                                    streamContent.innerHTML = _sanitize(this._renderStreamingText(accumulatedText));
-                                    this._smartScroll(false);
-                                    this._chunkRafPending = false;
-                                });
-                            }
 
                         } else if (eventType === 'done') {
                             leaderName = payload.leader || '';
@@ -2017,7 +1993,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             this._delibTurnIndex = 0;
         },
 
-        // 스트리밍: deliberation_turn 이벤트
+        // 스트리밍: deliberation_turn 이벤트 (1초 타이핑 + 타자 효과)
         _renderDeliberationTurn(payload) {
             const container = this._delibContainer;
             if (!container) return;
@@ -2027,25 +2003,38 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             const isFinal = payload.is_final || false;
             const isMod = (name === '서연');
 
-            // 이전 타이핑 인디케이터 제거
             this._removeDelibTypingIndicator(container);
 
             const bubble = document.createElement('div');
             bubble.className = 'deliberation-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
             const turnIdx = this._delibTurnIndex || 0;
+            const ts = this._getTimeStamp(turnIdx);
+            // 먼저 타이핑 dots로 표시
             bubble.innerHTML = _sanitize(
                 this._buildAvatarHTML(name, 'deliberation') +
-                this._buildBubbleBody(name, role, text, turnIdx)
+                '<div class="delib-body">' +
+                '<div class="delib-meta-row"><span class="delib-name">' + this.escapeHtml(name) + '</span>' +
+                '<span class="delib-role">' + this.escapeHtml(role) + '</span>' +
+                '<span class="delib-time">' + ts + '</span></div>' +
+                '<div class="delib-text"><div class="delib-typing-dots"><span></span><span></span><span></span></div></div></div>'
             );
             container.appendChild(bubble);
             this._delibTurnIndex = turnIdx + 1;
-
-            // 마지막 턴이 아니면 다음 턴 타이핑 인디케이터 표시
-            if (!isFinal) {
-                const nextSpeaker = isMod ? '' : '서연';
-                this._appendDelibTypingIndicator(container, nextSpeaker);
-            }
             this._smartScroll(false);
+
+            // 1초 후 타자 효과로 텍스트 표시
+            setTimeout(() => {
+                const textEl = bubble.querySelector('.delib-text');
+                if (textEl) {
+                    this._typewriterReveal(textEl, text, () => {
+                        if (!isFinal) {
+                            const nextSpeaker = isMod ? '' : '서연';
+                            this._appendDelibTypingIndicator(container, nextSpeaker);
+                        }
+                        this._smartScroll(false);
+                    });
+                }
+            }, 800);
         },
 
         // 스트리밍: deliberation_end 이벤트
@@ -2110,18 +2099,32 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             const bubble = document.createElement('div');
             bubble.className = 'handoff-bubble' + (isMod ? ' moderator' : '') + (isFinal ? ' final-selection' : '');
             const hoTurnIdx = this._handoffTurnIndex || 0;
+            const ts = this._getTimeStamp(hoTurnIdx);
+            // 먼저 타이핑 dots로 표시
             bubble.innerHTML = _sanitize(
                 this._buildAvatarHTML(name, 'handoff') +
-                this._buildBubbleBody(name, role, text, hoTurnIdx)
+                '<div class="delib-body">' +
+                '<div class="delib-meta-row"><span class="delib-name">' + this.escapeHtml(name) + '</span>' +
+                '<span class="delib-role">' + this.escapeHtml(role) + '</span>' +
+                '<span class="delib-time">' + ts + '</span></div>' +
+                '<div class="delib-text"><div class="delib-typing-dots"><span></span><span></span><span></span></div></div></div>'
             );
             container.appendChild(bubble);
             this._handoffTurnIndex = hoTurnIdx + 1;
-
-            // 마지막 턴이 아니면 다음 턴 대기 인디케이터
-            if (!isFinal) {
-                this._appendDelibTypingIndicator(container, '');
-            }
             this._smartScroll(false);
+
+            // 1초 후 타자 효과로 텍스트 표시
+            setTimeout(() => {
+                const textEl = bubble.querySelector('.delib-text');
+                if (textEl) {
+                    this._typewriterReveal(textEl, text, () => {
+                        if (!isFinal) {
+                            this._appendDelibTypingIndicator(container, '');
+                        }
+                        this._smartScroll(false);
+                    });
+                }
+            }, 800);
         },
 
         // Classic (/ask) 응답의 deliberation 렌더링
@@ -2252,6 +2255,21 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             return msg || '알 수 없는 오류가 발생했습니다.';
         },
 
+        // 심플 대기 인디케이터 (6단계 삭제, 미니 dots만)
+        _showSimpleWaiting() {
+            this._hideSimpleWaiting();
+            const el = document.createElement('div');
+            el.id = 'simple-waiting';
+            el.className = 'mini-waiting-indicator';
+            el.innerHTML = '<div class="delib-typing-dots"><span></span><span></span><span></span></div><span>분석 중...</span>';
+            this.convArea.appendChild(el);
+            this._smartScroll(true);
+        },
+        _hideSimpleWaiting() {
+            const el = document.getElementById('simple-waiting');
+            if (el) el.remove();
+        },
+
         // 협의 종료 후 답변 대기 미니 인디케이터
         _showMiniWaiting() {
             this._hideMiniWaiting();
@@ -2267,18 +2285,35 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             if (el) el.remove();
         },
 
+        // 타자 효과 (타이핑 느낌)
+        _typewriterReveal(element, text, onComplete) {
+            element.innerHTML = '';
+            element.textContent = '';
+            let i = 0;
+            const len = text.length;
+            const chunkSize = Math.max(1, Math.ceil(len / 30));
+            const timer = setInterval(() => {
+                i = Math.min(i + chunkSize, len);
+                element.textContent = text.substring(0, i);
+                this._smartScroll(false);
+                if (i >= len) {
+                    clearInterval(timer);
+                    if (onComplete) onComplete();
+                }
+            }, 30);
+        },
+
         hideTypingIndicator() {
-            if (this._typingStepTimers) {
-                this._typingStepTimers.forEach(t => clearTimeout(t));
-                this._typingStepTimers = [];
-            }
-            if (this._elapsedTimer) {
-                clearInterval(this._elapsedTimer);
-                this._elapsedTimer = null;
-            }
+            this._hideSimpleWaiting();
+            this._hideMiniWaiting();
             const typingDiv = document.getElementById('typing-indicator');
             if (typingDiv) typingDiv.remove();
-            this._hideMiniWaiting();
+        },
+
+        // 하위호환: showTypingIndicator → _showSimpleWaiting
+        showTypingIndicator() {
+            this._showSimpleWaiting();
+            return 'simple-waiting';
         }
     };
 
