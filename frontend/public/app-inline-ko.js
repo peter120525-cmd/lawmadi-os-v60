@@ -2253,9 +2253,9 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 if (action === 'chat') {
                     window.location.href = '/';
                 } else if (action === 'leaders') {
-                    window.location.href = 'leaders.html';
+                    window.location.href = '/leaders';
                 } else if (action === 'clevel') {
-                    window.location.href = 'clevel.html';
+                    window.location.href = '/clevel';
                 } else if (action === 'more') {
                     const sheet = document.getElementById('moreSheet');
                     const sheetOverlay = document.getElementById('moreSheetOverlay');
