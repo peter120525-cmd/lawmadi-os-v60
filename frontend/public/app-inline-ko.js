@@ -181,6 +181,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 this.updateSendBtnState();
             });
 
+            this._isSending = false;
             this.sendBtn.onclick = () => this.dispatchPacket();
             this.userInput.onkeydown = (e) => {
                 if(e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
@@ -246,12 +247,15 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                     moreMenuDropdown.style.display = open ? 'none' : 'block';
                     moreMenuBtn.setAttribute('aria-expanded', !open);
                 };
-                document.addEventListener('click', (e) => {
-                    if (!moreMenuDropdown.contains(e.target) && e.target !== moreMenuBtn) {
-                        moreMenuDropdown.style.display = 'none';
-                        moreMenuBtn.setAttribute('aria-expanded', 'false');
-                    }
-                });
+                if (!window._lawmadiMoreMenuListenerAdded) {
+                    document.addEventListener('click', (e) => {
+                        if (!moreMenuDropdown.contains(e.target) && e.target !== moreMenuBtn) {
+                            moreMenuDropdown.style.display = 'none';
+                            moreMenuBtn.setAttribute('aria-expanded', 'false');
+                        }
+                    });
+                    window._lawmadiMoreMenuListenerAdded = true;
+                }
             }
 
             // 대화 이력 복원 (항목 #13)
@@ -279,10 +283,11 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             // 스크롤 투 바텀 버튼
             if (this.scrollBottomBtn) {
                 this.scrollBottomBtn.onclick = () => this._smartScroll(true);
-                this.convArea.addEventListener('scroll', () => {
+                this._scrollHandler = () => {
                     const show = !this._isNearBottom() && !this.convArea.classList.contains('hidden');
                     this.scrollBottomBtn.classList.toggle('visible', show);
-                });
+                };
+                this.convArea.addEventListener('scroll', this._scrollHandler);
             }
 
             // retry 버튼 이벤트 위임 (CSP: inline onclick 제거)
@@ -644,10 +649,12 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
         // ═══ 메인 디스패치 (대화 이력 + 에러 재시도) ═══
         async dispatchPacket(retryCount = 0) {
+            if (this._isSending) return;
             const query = retryCount > 0 ? this.lastQuery : this.userInput.value.trim();
             const hasFile = this.uploadedFile !== null;
 
             if (!query && !hasFile) return;
+            this._isSending = true;
 
             this.switchToChatMode();
 
@@ -746,6 +753,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         </button>
                     </div>
                 `);
+            } finally {
+                this._isSending = false;
             }
         },
 
@@ -2286,6 +2295,9 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
         // ═══ 새 대화 시작 ═══
         resetConversation() {
+            if (this._scrollHandler) {
+                this.convArea.removeEventListener('scroll', this._scrollHandler);
+            }
             this.conversationHistory = [];
             this.convArea.innerHTML = '';
             this.lastQuery = null;
@@ -2301,7 +2313,10 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             this.userInput.style.height = 'auto';
             this.updateCharCounter();
             this.updateSendBtnState();
-            if (this.scrollBottomBtn) this.scrollBottomBtn.classList.remove('visible');
+            if (this.scrollBottomBtn) {
+                this.scrollBottomBtn.classList.remove('visible');
+                if (this._scrollHandler) this.convArea.addEventListener('scroll', this._scrollHandler);
+            }
         },
 
         // ═══ 글자 수 카운터 ═══

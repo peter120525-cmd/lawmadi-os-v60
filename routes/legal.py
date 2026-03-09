@@ -1095,6 +1095,7 @@ async def ask_stream(request: Request):
             # 0.5) Gemini 키
             if not os.getenv("GEMINI_KEY"):
                 yield _sse("error", {"message": "⚠️ GEMINI_KEY 미설정으로 추론이 비활성화되었습니다."})
+                yield _sse("answer_done", {"leader": "", "leader_specialty": "", "latency_ms": 0, "trace_id": trace, "status": "ERROR"})
                 return
 
             # 1) Security Guard
@@ -1121,6 +1122,7 @@ async def ask_stream(request: Request):
                 if check_result is False:
                     blocked_msg = "🚫 Blocked by security policy." if lang == "en" else "🚫 보안 정책에 의해 차단되었습니다."
                     yield _sse("error", {"message": blocked_msg})
+                    yield _sse("answer_done", {"leader": "", "leader_specialty": "", "latency_ms": 0, "trace_id": trace, "status": "ERROR"})
                     return
 
             # 2) C-Level
@@ -1283,6 +1285,7 @@ async def ask_stream(request: Request):
 
                 if not validate_constitutional_compliance(accumulated):
                     yield _sse("error", {"message": "⚠️ 시스템 무결성 정책에 의해 답변이 제한되었습니다."})
+                    yield _sse("answer_done", {"leader": leader_name, "leader_specialty": leader_specialty, "latency_ms": int((time.time() - start_time) * 1000), "trace_id": trace, "status": "ERROR"})
                     return
 
                 # 줄 단위 점진적 스트리밍 (위→아래 자연스럽게)
@@ -1319,26 +1322,35 @@ async def ask_stream(request: Request):
                                     await _event_queue.put((evt.get("type", "speaking"), evt))
                         except Exception as e:
                             logger.warning(f"[Deliberation:Parallel] 스킵: {type(e).__name__}: {e}")
-                        await _event_queue.put(("_delib_done", None))
+                        finally:
+                            await _event_queue.put(("_delib_done", None))
 
                     _pipeline_result = {}
 
                     async def _pipeline_producer():
                         """파이프라인을 실행하고 결과를 dict에 저장하는 producer."""
                         try:
-                            _ft, _drf = await _run_legal_pipeline(
-                                query, analysis, tools, gemini_history,
-                                now_kst, ssot_available,
-                                lang=lang, mode=stream_mode,
-                                rag_context=rag_context_pre,
+                            _ft, _drf = await asyncio.wait_for(
+                                _run_legal_pipeline(
+                                    query, analysis, tools, gemini_history,
+                                    now_kst, ssot_available,
+                                    lang=lang, mode=stream_mode,
+                                    rag_context=rag_context_pre,
+                                ),
+                                timeout=60.0,
                             )
                             _pipeline_result["final_text"] = _ft
                             _pipeline_result["drf"] = _drf
+                        except asyncio.TimeoutError:
+                            logger.error("[Pipeline:Parallel] 타임아웃 (60초)")
+                            _pipeline_result["final_text"] = ""
+                            _pipeline_result["drf"] = None
                         except Exception as e:
                             logger.error(f"[Pipeline:Parallel] 실패: {type(e).__name__}: {e}")
                             _pipeline_result["final_text"] = ""
                             _pipeline_result["drf"] = None
-                        await _event_queue.put(("_pipeline_done", None))
+                        finally:
+                            await _event_queue.put(("_pipeline_done", None))
 
                     # 두 producer를 병렬 실행
                     _delib_task = asyncio.create_task(_delib_producer())
@@ -1390,6 +1402,7 @@ async def ask_stream(request: Request):
 
                 if not validate_constitutional_compliance(final_text):
                     yield _sse("error", {"message": "⚠️ 시스템 무결성 정책에 의해 답변이 제한되었습니다."})
+                    yield _sse("answer_done", {"leader": leader_name, "leader_specialty": leader_specialty, "latency_ms": int((time.time() - start_time) * 1000), "trace_id": trace, "status": "ERROR"})
                     return
 
                 # answer_start → answer_chunk 스트리밍 → answer_done
