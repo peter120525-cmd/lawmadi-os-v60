@@ -37,21 +37,37 @@ def validate_constitutional_compliance(response_text: str) -> bool:
         return False
 
     # 4) 법조문 참조 없는 단정적 법률 주장 차단
+    #    — 단정 표현이 3개 이상 있으면서 법적 출처가 전혀 없는 경우만 차단
+    #    — 1~2개 단정은 법률 분석 맥락에서 자연스러우므로 허용
     legal_assertion_patterns = [
         r"(?:위법|불법|합법|적법)(?:입니다|합니다|이다)",
         r"(?:의무|권리)가\s*(?:있습니다|없습니다|발생합니다)",
         r"(?:처벌|처분|제재)(?:을\s*)?(?:받습니다|됩니다|받게\s*됩니다)",
     ]
-    has_legal_assertion = any(re.search(p, t) for p in legal_assertion_patterns)
-    has_legal_source = bool(re.search(
-        r'제\s?\d+\s?조|판례|대법원|헌법재판소|법령|법률\s+제\d+호'
-        r'|민법|형법|상법|의료법|근로기준법|도로교통법|주택임대차보호법'
-        r'|개인정보\s*보호법|소비자기본법|국가배상법|행정소송법|가사소송법'
-        r'|Article\s+\d+|Act\s+No\.\s*\d+|관련\s*법률|관련\s*법령|해당\s*법률',
-        t
-    ))
-    if has_legal_assertion and not has_legal_source:
-        return False
+    assertion_count = sum(
+        len(re.findall(p, t)) for p in legal_assertion_patterns
+    )
+    if assertion_count >= 3:
+        has_legal_source = bool(re.search(
+            # 조문 번호
+            r'제\s?\d+\s?조'
+            # 법원/기관
+            r'|판례|대법원|헌법재판소|고등법원|지방법원'
+            # 법령 번호
+            r'|법령|법률\s+제\d+호'
+            # 한국 주요 법률명 (~법, ~령, ~규칙)
+            r'|[가-힣]{2,}법(?:\s|에|을|의|이|상|으로|과|및|,|\))'
+            r'|[가-힣]{2,}령(?:\s|에|을|의|이|상|으로)'
+            # 영문 법률 참조
+            r'|Article\s+\d+|Act\s+No\.\s*\d+'
+            # 법률 맥락 표현
+            r'|관련\s*법[률령]|해당\s*법[률령]|따른\s*법[률령]'
+            r'|법적\s*근거|법률\s*근거|법령\s*근거'
+            r'|손해배상|과실\s*비율|불법\s*행위',
+            t
+        ))
+        if not has_legal_source:
+            return False
 
     # 5) 불법 행위 조장 차단
     illegal_incitement = [
