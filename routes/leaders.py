@@ -12,7 +12,8 @@ from typing import Any, Callable, Dict, List, Optional
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from core.constants import GEMINI_MODEL
+from core.leader_intake import run_leader_triage
+from core.model_fallback import get_model
 
 router = APIRouter()
 logger = logging.getLogger("LawmadiOS.Leaders")
@@ -324,6 +325,42 @@ async def chat_leader(request: Request):
             # Gemini client
             gc = _ensure_genai_client_fn(_RUNTIME)
 
+            # ── 인테이크 트리아지 (리더가 질문 코치 역할) ──
+            persona = _LEADER_PERSONAS.get(leader_id, {})
+            leader_info = {"name": leader_name, "specialty": leader_specialty}
+            triage = await run_leader_triage(
+                gc, query, history, leader_info, persona, lang=lang,
+            )
+            triage_action = triage.get("action", "fallback")
+            triage_text = triage.get("text", "")
+
+            if triage_action in ("referral", "ask", "prompt") and triage_text:
+                # 트리아지 결과 직접 스트리밍 (파이프라인 미사용)
+                yield _sse("answer_chunk", {"text": triage_text})
+
+                # prompt 액션: 정리된 프롬프트를 일반 질문으로 유도
+                if triage_action == "prompt":
+                    guide = (
+                        "\n\n---\n*Copy the above prompt and use it in a General Question for detailed legal analysis.*"
+                        if lang == "en" else
+                        "\n\n---\n*위 정리된 프롬프트를 복사하여 **일반 질문**에서 사용하시면 상세한 법률 분석을 받으실 수 있습니다.*"
+                    )
+                    yield _sse("answer_chunk", {"text": guide})
+
+                # Disclaimer
+                disclaimer = DISCLAIMER_EN if lang == "en" else DISCLAIMER_KO
+                yield _sse("answer_chunk", {"text": disclaimer})
+
+                yield _sse("answer_done", {
+                    "leader": leader_name,
+                    "leader_id": leader_id,
+                    "leader_specialty": leader_specialty,
+                    "intake_action": triage_action,
+                    "status": "OK",
+                })
+                return
+
+            # ── fallback: 일반 스트리밍 채팅 ──
             # Build history
             gemini_history = _convert_history(history)
 
@@ -332,8 +369,9 @@ async def chat_leader(request: Request):
             sys_instruction = _build_system_instruction(leader_id, entry, lang, is_first_turn=is_first_turn)
 
             # Create chat + stream
+            model_name = get_model(mode="leader_chat")
             chat = gc.chats.create(
-                model=GEMINI_MODEL,
+                model=model_name,
                 config={"system_instruction": sys_instruction},
                 history=gemini_history,
             )
