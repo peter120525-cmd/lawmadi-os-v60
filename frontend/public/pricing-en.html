@@ -76,6 +76,7 @@
         .price-card .buy-btn { display: block; width: 100%; padding: 14px; background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%); border: none; border-radius: 12px; color: white; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.3s; }
         .price-card .buy-btn:hover { transform: scale(1.02); box-shadow: 0 4px 20px rgba(74,155,110,0.4); }
         .price-card .buy-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .price-card .buy-flow { font-size: 0.75rem; color: var(--text-secondary); margin-top: 10px; opacity: 0.7; }
 
         /* How It Works */
         .how-section { background: rgba(26,46,34,0.7); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 36px 32px; margin-bottom: 40px; animation: fadeInUp 0.8s ease; }
@@ -214,6 +215,7 @@
             <div class="limit">2</div>
             <div class="limit-label">Free queries per day (resets at 00:00 KST)</div>
             <p>No sign-up required. Experience 60 expert legal leaders and real-time verification with the Korea National Law Information Center for free.</p>
+            <a href="/en" style="display:inline-block;margin-top:16px;padding:12px 28px;background:linear-gradient(135deg,var(--primary),var(--purple));border-radius:12px;color:white;font-weight:700;text-decoration:none;font-size:0.95rem;transition:all 0.3s;">Ask Now</a>
         </div>
 
         <!-- Credit Packs -->
@@ -224,23 +226,62 @@
                 <div class="price"><span class="currency">$</span>1.50</div>
                 <div class="per-unit">$0.075 per query</div>
                 <button class="buy-btn" data-pack="starter">Buy Now</button>
+                <div class="buy-flow">Email verify → Payment</div>
             </div>
             <div class="price-card popular">
                 <div class="pack-name">Standard</div>
                 <div class="credits">100 <small>credits</small></div>
                 <div class="price"><span class="currency">$</span>4.99</div>
                 <div class="per-unit">$0.050 per query</div>
-                <div class="discount">33% OFF</div>
+                <div class="discount">33% OFF vs Starter</div>
                 <button class="buy-btn" data-pack="standard">Buy Now</button>
+                <div class="buy-flow">Email verify → Payment</div>
             </div>
             <div class="price-card">
                 <div class="pack-name">Pro</div>
                 <div class="credits">300 <small>credits</small></div>
                 <div class="price"><span class="currency">$</span>9.99</div>
                 <div class="per-unit">$0.033 per query</div>
-                <div class="discount">56% OFF</div>
+                <div class="discount">56% OFF vs Starter</div>
                 <button class="buy-btn" data-pack="pro">Buy Now</button>
+                <div class="buy-flow">Email verify → Payment</div>
             </div>
+        </div>
+
+        <!-- Query Type Comparison -->
+        <div class="info-card" style="margin-bottom:40px;">
+            <h3>Standard Query vs Expert Answer</h3>
+            <table style="width:100%;border-collapse:collapse;margin-top:16px;font-size:0.9rem;">
+                <thead>
+                    <tr style="border-bottom:2px solid rgba(255,255,255,0.15);">
+                        <th style="text-align:left;padding:10px 12px;color:var(--text-secondary);font-weight:600;"></th>
+                        <th style="text-align:center;padding:10px 12px;font-weight:700;">Standard (1 Credit)</th>
+                        <th style="text-align:center;padding:10px 12px;font-weight:700;color:#B8922D;">Expert (2 Credits)</th>
+                    </tr>
+                </thead>
+                <tbody style="color:var(--text-secondary);">
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                        <td style="padding:10px 12px;font-weight:600;">Analysis</td>
+                        <td style="text-align:center;padding:10px 12px;">Auto-matched single leader</td>
+                        <td style="text-align:center;padding:10px 12px;">Chosen leader, in-depth analysis</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                        <td style="padding:10px 12px;font-weight:600;">Verification</td>
+                        <td style="text-align:center;padding:10px 12px;">National law database check</td>
+                        <td style="text-align:center;padding:10px 12px;">Full cross-reference verification</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+                        <td style="padding:10px 12px;font-weight:600;">Response</td>
+                        <td style="text-align:center;padding:10px 12px;">Key summary</td>
+                        <td style="text-align:center;padding:10px 12px;">Detailed analysis + case references</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:10px 12px;font-weight:600;">Best for</td>
+                        <td style="text-align:center;padding:10px 12px;">Quick legal checks</td>
+                        <td style="text-align:center;padding:10px 12px;">Important legal decisions</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
 
         <!-- How It Works -->
