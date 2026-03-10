@@ -1002,6 +1002,10 @@ async def ask_stream(request: Request):
             req_current_leader = {"leader_id": req_leader_id}  # leader_id만으로도 1:1 채팅 식별
         req_is_first_question = bool(data.get("is_first_question", True))
 
+        # 1:1 채팅이면 stream_mode를 leader_chat으로 설정 (lite 모델 사용)
+        if req_current_leader and stream_mode == "general":
+            stream_mode = "leader_chat"
+
         # 리더 1:1 채팅일 때만 일일 5회 제한 (일반 스트리밍은 제한 없음)
         if req_current_leader and _check_leader_chat_limit_fn:
             lc_check = _check_leader_chat_limit_fn(request)
