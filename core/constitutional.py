@@ -43,7 +43,13 @@ def validate_constitutional_compliance(response_text: str) -> bool:
         r"(?:처벌|처분|제재)(?:을\s*)?(?:받습니다|됩니다|받게\s*됩니다)",
     ]
     has_legal_assertion = any(re.search(p, t) for p in legal_assertion_patterns)
-    has_legal_source = bool(re.search(r'제\s?\d+\s?조|판례|대법원|헌법재판소|법령|법률\s+제\d+호', t))
+    has_legal_source = bool(re.search(
+        r'제\s?\d+\s?조|판례|대법원|헌법재판소|법령|법률\s+제\d+호'
+        r'|민법|형법|상법|의료법|근로기준법|도로교통법|주택임대차보호법'
+        r'|개인정보\s*보호법|소비자기본법|국가배상법|행정소송법|가사소송법'
+        r'|Article\s+\d+|Act\s+No\.\s*\d+|관련\s*법률|관련\s*법령|해당\s*법률',
+        t
+    ))
     if has_legal_assertion and not has_legal_source:
         return False
 
