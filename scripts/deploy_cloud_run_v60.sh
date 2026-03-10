@@ -57,6 +57,7 @@ gcloud run deploy ${SERVICE_NAME} \
   --min-instances 1 \
   --max-instances 5 \
   --port 8080 \
+  --add-cloudsql-instances=lawmadi-db:asia-northeast3:lawmadi-db-v1 \
   --set-env-vars "ENABLE_LAWMADILM=false,LAWMADILM_TIMEOUT=3,USE_VERTEX_AI=true,USE_VERTEX_SEARCH=true,GCP_PROJECT_ID=lawmadi-db,VERTEX_SEARCH_DATA_STORE_ID=lawmadi-legal-cache,VERTEX_SEARCH_ENGINE_ID=lawmadi-search-engine,VERTEX_PROJECT=lawmadi-db,VERTEX_LOCATION=asia-northeast3,SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,PADDLE_ENVIRONMENT=sandbox,DAILY_FREE_LIMIT=2,SESSION_EXPIRY_DAYS=30" \
   --set-secrets "GEMINI_KEY=GEMINI_KEY:latest,LAWGO_DRF_OC=LAWGO_DRF_OC:latest,DATABASE_URL=DATABASE_URL:latest,CLOUD_SQL_INSTANCE=CLOUD_SQL_INSTANCE:latest,DB_USER=DB_USER:latest,DB_PASS=DB_PASS:latest,DB_NAME=DB_NAME:latest,MCP_API_KEY=MCP_API_KEY:latest,API_KEYS=API_KEYS:latest,INTERNAL_API_KEY=INTERNAL_API_KEY:latest,PREMIUM_KEYS=PREMIUM_KEYS:latest,SMTP_PASSWORD=SMTP_PASSWORD:latest,PADDLE_CLIENT_TOKEN=PADDLE_CLIENT_TOKEN:latest,SMTP_USER=SMTP_USER:latest,SMTP_FROM=SMTP_FROM:latest"
 
