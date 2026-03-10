@@ -9,9 +9,13 @@
 
     var isMainPage = /\/(index|index-en)?(\.html)?$/.test(location.pathname) || location.pathname === '/' || location.pathname === '/en';
     var isRefundPage = /\/refund(-en)?(\.html)?$/.test(location.pathname);
+    var isChatPage = /\/leader-chat(\.html)?$/.test(location.pathname);
+    var isPricingPage = /\/pricing(-en)?(\.html)?$/.test(location.pathname);
 
-    // 메인 페이지, 환불 정책 페이지에서는 footer 생략
-    if (isMainPage || isRefundPage) return;
+    // 메인/환불/채팅/요금제 페이지에서는 footer 생략
+    // 채팅: 전체화면 채팅 UI (footer가 채팅 영역 축소)
+    // 요금제: 자체 <footer>에 사업자 정보 포함 (전자상거래법)
+    if (isMainPage || isRefundPage || isChatPage || isPricingPage) return;
 
     var isEn = location.pathname.indexOf('-en') !== -1 || location.pathname.indexOf('/en') !== -1;
 
