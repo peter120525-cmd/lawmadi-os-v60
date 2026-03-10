@@ -109,8 +109,8 @@ class TestConstitutionalCompliance:
         assert validate_constitutional_compliance(text) is False
 
     def test_legal_assertion_without_source(self):
-        """법조문 참조 없이 단정적 법률 주장을 하면 차단"""
-        text = "이것은 명백히 위법입니다. 즉시 신고하셔야 합니다."
+        """법조문 참조 없이 단정적 법률 주장 3개 이상이면 차단"""
+        text = "이것은 명백히 위법입니다. 의무가 있습니다. 처벌을 받습니다."
         assert validate_constitutional_compliance(text) is False
 
     def test_legal_assertion_with_source(self):
