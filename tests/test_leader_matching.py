@@ -511,10 +511,10 @@ class TestAnswerQuality:
     def test_placeholder_blocked(self, response):
         assert validate_constitutional_compliance(response) is False
 
-    # 6-6. 근거 없는 법적 단정 차단
+    # 6-6. 근거 없는 법적 단정 차단 (3개 이상 단정 + 법적 출처 없음)
     def test_unsourced_legal_assertion_blocked(self):
-        # 법적 단정이 있지만 법조문 인용이 없는 경우
-        response = "이 행위는 위법입니다. 처벌을 받습니다."
+        # 법적 단정이 3개 이상이지만 법조문 인용이 없는 경우
+        response = "이 행위는 위법입니다. 의무가 있습니다. 처벌을 받습니다."
         assert validate_constitutional_compliance(response) is False
 
     # 6-7. 법조문이 있으면 단정도 허용
