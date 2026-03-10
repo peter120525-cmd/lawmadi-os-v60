@@ -505,6 +505,15 @@
         body:not(.dark-mode) .solve-item h4 { color: #1A2E22; }
         body:not(.dark-mode) .expertise-label { color: #1A2E22; }
         body:not(.dark-mode) .cta-secondary { background: rgba(0,0,0,0.06); border: 1px solid #D4E4DA; color: #1A2E22; box-shadow: none; }
+        body:not(.dark-mode) .identity-box { background: rgba(61,139,94,0.06); border-left-color: #3D8B5E; }
+        body:not(.dark-mode) .solve-item { background: rgba(61,139,94,0.06); }
+        body:not(.dark-mode) .expertise-item { background: rgba(61,139,94,0.06); border-color: #D4E4DA; }
+        body:not(.dark-mode) .expertise-item:hover { background: rgba(61,139,94,0.12); border-color: #4A9B6E; }
+        body:not(.dark-mode) .hero-gradient { background: linear-gradient(180deg, rgba(244,248,245,0.3) 0%, rgba(244,248,245,0.7) 60%, rgba(244,248,245,1) 100%); }
+        body:not(.dark-mode) .vision-card { background: rgba(61,139,94,0.06); border-color: #D4E4DA; }
+        body:not(.dark-mode) .vision-card p { color: #1A2E22; }
+        .lang-toggle { position:fixed;top:16px;right:16px;background:rgba(255,255,255,0.15);color:#fff;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;z-index:1000;backdrop-filter:blur(8px); }
+        body:not(.dark-mode) .lang-toggle { background: rgba(0,0,0,0.06); color: #1A2E22; }
 
         @media (min-width: 1440px) {
             .profile-content { max-width: 1040px; }
@@ -535,7 +544,7 @@
     <script src="/cookie-consent.js"></script>
 </head>
 <body>
-    <a id="langToggle" href="/leader-profile" style="position:fixed;top:16px;right:16px;background:rgba(255,255,255,0.15);color:#fff;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;z-index:1000;backdrop-filter:blur(8px);">KO</a>
+    <a id="langToggle" class="lang-toggle" href="/leader-profile">KO</a>
     <div class="animated-bg">
         <div class="floating-shape shape1"></div>
         <div class="floating-shape shape2"></div>
