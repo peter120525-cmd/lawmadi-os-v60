@@ -35,11 +35,11 @@
     function showBanner() {
         var banner = document.createElement('div');
         banner.id = 'cookieBanner';
-        banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#1e293b;color:#e2e8f0;padding:14px 20px;display:flex;align-items:center;justify-content:center;gap:12px;z-index:99999;font-size:14px;flex-wrap:wrap;box-shadow:0 -2px 10px rgba(0,0,0,0.3);';
+        banner.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#1A2E22;color:#D4E4DA;padding:14px 20px;display:flex;align-items:center;justify-content:center;gap:12px;z-index:99999;font-size:14px;flex-wrap:wrap;box-shadow:0 -2px 10px rgba(0,0,0,0.3);';
         banner.innerHTML =
-            '<span>' + text.msg + ' <a href="' + policyUrl + '" style="color:#60a5fa;text-decoration:underline;">' + text.policy + '</a></span>' +
-            '<button id="cookieAccept" style="background:#2563eb;color:white;border:none;padding:8px 18px;border-radius:6px;cursor:pointer;font-weight:600;">' + text.accept + '</button>' +
-            '<button id="cookieReject" style="background:transparent;color:#94a3b8;border:1px solid #475569;padding:8px 18px;border-radius:6px;cursor:pointer;">' + text.reject + '</button>';
+            '<span>' + text.msg + ' <a href="' + policyUrl + '" style="color:#8DD4AA;text-decoration:underline;">' + text.policy + '</a></span>' +
+            '<button id="cookieAccept" style="background:#3D8B5E;color:white;border:none;padding:8px 18px;border-radius:6px;cursor:pointer;font-weight:600;">' + text.accept + '</button>' +
+            '<button id="cookieReject" style="background:transparent;color:#7A9A88;border:1px solid #4A6B56;padding:8px 18px;border-radius:6px;cursor:pointer;">' + text.reject + '</button>';
         document.body.appendChild(banner);
 
         document.getElementById('cookieAccept').addEventListener('click', function() {

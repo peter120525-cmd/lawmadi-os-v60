@@ -562,8 +562,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             if (existing) existing.remove();
             const toast = document.createElement('div');
             toast.id = 'upload-coming-soon';
-            toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#1e293b,#334155);color:#f1f5f9;padding:16px 28px;border-radius:14px;border:1px solid rgba(139,92,246,0.4);box-shadow:0 8px 32px rgba(0,0,0,0.3);z-index:9999;display:flex;align-items:center;gap:12px;font-size:0.95rem;font-weight:600;animation:expertFadeIn 0.3s ease;max-width:90vw;';
-            toast.innerHTML = '<span class="material-symbols-outlined" style="color:#8b5cf6;font-size:1.5rem;">upload_file</span><div><div>파일 업로드 — <span style="color:#f59e0b;">서비스 예정</span></div><div style="font-size:0.8rem;font-weight:400;color:#94a3b8;margin-top:4px;">업로드 파일 1MB 제한 · JPG, PNG, WEBP, PDF 지원</div></div>';
+            toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#1A2E22,#2D4038);color:#E4EDE8;padding:16px 28px;border-radius:14px;border:1px solid rgba(109,187,143,0.4);box-shadow:0 8px 32px rgba(0,0,0,0.3);z-index:9999;display:flex;align-items:center;gap:12px;font-size:0.95rem;font-weight:600;animation:expertFadeIn 0.3s ease;max-width:90vw;';
+            toast.innerHTML = '<span class="material-symbols-outlined" style="color:#6DBB8F;font-size:1.5rem;">upload_file</span><div><div>파일 업로드 — <span style="color:#B8922D;">서비스 예정</span></div><div style="font-size:0.8rem;font-weight:400;color:#7A9A88;margin-top:4px;">업로드 파일 1MB 제한 · JPG, PNG, WEBP, PDF 지원</div></div>';
             document.body.appendChild(toast);
             setTimeout(() => {
                 toast.style.transition = 'opacity 0.4s';
@@ -734,7 +734,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 // 서버 에러 (event: error)는 재시도 없이 바로 표시
                 if (error._serverError) {
                     this.appendMessage('ai', `
-                        <div style="color: #ef4444;">
+                        <div style="color: #C45454;">
                             <p><strong>${this.escapeHtml(error.message)}</strong></p>
                             <button class="retry-btn" data-action="retry">
                                 <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
@@ -748,7 +748,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 // 네트워크 오류만 자동 재시도
                 if (retryCount < this.MAX_RETRY) {
                     const waitSec = (retryCount + 1) * 2;
-                    this.appendMessage('ai', `<p style="color: #f59e0b;">네트워크 오류 발생. ${waitSec}초 후 자동 재시도합니다... (${retryCount + 1}/${this.MAX_RETRY})</p>`);
+                    this.appendMessage('ai', `<p style="color: #B8922D;">네트워크 오류 발생. ${waitSec}초 후 자동 재시도합니다... (${retryCount + 1}/${this.MAX_RETRY})</p>`);
                     await new Promise(r => setTimeout(r, waitSec * 1000));
                     // 재시도 메시지 제거
                     const lastMsg = this.convArea.lastElementChild;
@@ -759,7 +759,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 // 최종 실패: 사용자 친화적 에러 메시지 + 재시도 버튼
                 const friendlyMsg = this._friendlyError(error);
                 this.appendMessage('ai', `
-                    <div style="color: #ef4444;">
+                    <div style="color: #C45454;">
                         <p><strong>${this.escapeHtml(friendlyMsg)}</strong></p>
                         <button class="retry-btn" data-action="retry">
                             <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
@@ -799,9 +799,9 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             if (response.status === 429) {
                 this.hideTypingIndicator();
                 var limitMsg = '<p>일일 무료 이용 한도에 도달했습니다.</p>'
-                    + '<p style="margin-top:8px;"><a href="/pricing" style="color:#2563eb;font-weight:700;text-decoration:underline;">크레딧 구매</a>하시면 계속 이용 가능합니다.</p>';
+                    + '<p style="margin-top:8px;"><a href="/pricing" style="color:#3D8B5E;font-weight:700;text-decoration:underline;">크레딧 구매</a>하시면 계속 이용 가능합니다.</p>';
                 if (window.__lawmadiAuth && !window.__lawmadiAuth.authenticated) {
-                    limitMsg += '<p style="margin-top:4px;font-size:0.9em;color:#64748b;">이미 크레딧을 구매하셨다면 헤더의 <strong>Login</strong> 버튼으로 로그인하세요.</p>';
+                    limitMsg += '<p style="margin-top:4px;font-size:0.9em;color:#5D7D6D;">이미 크레딧을 구매하셨다면 헤더의 <strong>Login</strong> 버튼으로 로그인하세요.</p>';
                 }
                 try {
                     const errData = await response.json();
@@ -860,9 +860,9 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             if (response.status === 429) {
                 this.hideTypingIndicator();
                 var limitMsg = '<p>일일 무료 이용 한도에 도달했습니다.</p>'
-                    + '<p style="margin-top:8px;"><a href="/pricing" style="color:#2563eb;font-weight:700;text-decoration:underline;">크레딧 구매</a>하시면 계속 이용 가능합니다.</p>';
+                    + '<p style="margin-top:8px;"><a href="/pricing" style="color:#3D8B5E;font-weight:700;text-decoration:underline;">크레딧 구매</a>하시면 계속 이용 가능합니다.</p>';
                 if (window.__lawmadiAuth && !window.__lawmadiAuth.authenticated) {
-                    limitMsg += '<p style="margin-top:4px;font-size:0.9em;color:#64748b;">이미 크레딧을 구매하셨다면 헤더의 <strong>Login</strong> 버튼으로 로그인하세요.</p>';
+                    limitMsg += '<p style="margin-top:4px;font-size:0.9em;color:#5D7D6D;">이미 크레딧을 구매하셨다면 헤더의 <strong>Login</strong> 버튼으로 로그인하세요.</p>';
                 }
                 try {
                     const errData = await response.json();
@@ -1252,7 +1252,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 html += `<h3>📋 주요 조항</h3>`;
                 analysis.key_terms.forEach((term, idx) => {
                     html += `<p><strong>${idx + 1}. ${esc(term.term)}</strong></p><p>${esc(term.content)}</p>`;
-                    if (term.issue) html += `<p style="color: #f59e0b;">${esc(term.issue)}</p>`;
+                    if (term.issue) html += `<p style="color: #B8922D;">${esc(term.issue)}</p>`;
                 });
             }
 
@@ -1668,11 +1668,11 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                     const _userBal = _authUser ? (_authUser.credit_balance || 0) : -1;
                     const _isFreeNoCredit = _authUser && _userBal === 0 && _authUser.current_plan === 'free';
                     if (_isFreeNoCredit || (_authUser && _userBal >= 0 && _userBal < 2)) {
-                        expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기 <span style="font-size:0.75em;background:rgba(239,68,68,0.15);color:#ef4444;padding:2px 8px;border-radius:6px;margin-left:4px;">크레딧 부족</span>';
+                        expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기 <span style="font-size:0.75em;background:rgba(196,84,84,0.15);color:#C45454;padding:2px 8px;border-radius:6px;margin-left:4px;">크레딧 부족</span>';
                         expertCta.disabled = true;
                         expertCta.title = '크레딧을 충전하면 이용할 수 있습니다 (2 Credit 필요)';
                     } else {
-                        expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기 <span style="font-size:0.75em;background:rgba(139,92,246,0.15);padding:2px 8px;border-radius:6px;margin-left:4px;">2 Credit</span>';
+                        expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기 <span style="font-size:0.75em;background:rgba(109,187,143,0.15);padding:2px 8px;border-radius:6px;margin-left:4px;">2 Credit</span>';
                     }
                     expertCta.onclick = async () => {
                         // 로그인 확인
@@ -1775,10 +1775,10 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                             clearInterval(ewElapsed);
                             waitingDiv.remove();
                             expertCta.disabled = false;
-                            expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기 <span style="font-size:0.75em;background:rgba(139,92,246,0.15);padding:2px 8px;border-radius:6px;margin-left:4px;">2 Credit</span>';
+                            expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기 <span style="font-size:0.75em;background:rgba(109,187,143,0.15);padding:2px 8px;border-radius:6px;margin-left:4px;">2 Credit</span>';
                             // 크레딧 부족 에러인 경우
                             if (e.message && e.message.includes('402')) {
-                                expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기 <span style="font-size:0.75em;background:rgba(239,68,68,0.15);color:#ef4444;padding:2px 8px;border-radius:6px;margin-left:4px;">크레딧 부족</span>';
+                                expertCta.innerHTML = '<span class="material-symbols-outlined">verified</span> 전문가용 답변 받기 <span style="font-size:0.75em;background:rgba(196,84,84,0.15);color:#C45454;padding:2px 8px;border-radius:6px;margin-left:4px;">크레딧 부족</span>';
                                 expertCta.disabled = true;
                             }
                             console.error('Expert verification failed:', e);
@@ -1916,19 +1916,19 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             copyBtn.style.cssText = `
                 position: absolute; top: 12px; right: 12px;
                 background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px);
-                border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px;
+                border: 1px solid #D4E4DA; border-radius: 8px; padding: 8px;
                 cursor: pointer; display: flex; align-items: center; justify-content: center;
                 opacity: 0.7; transition: all 0.2s ease;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.1); z-index: 10;
             `;
 
-            copyBtn.onmouseenter = () => { copyBtn.style.opacity = '1'; copyBtn.style.background = 'rgba(37, 99, 235, 0.1)'; copyBtn.style.borderColor = '#2563eb'; };
-            copyBtn.onmouseleave = () => { copyBtn.style.opacity = '0.7'; copyBtn.style.background = 'rgba(255, 255, 255, 0.9)'; copyBtn.style.borderColor = '#e5e7eb'; };
+            copyBtn.onmouseenter = () => { copyBtn.style.opacity = '1'; copyBtn.style.background = 'rgba(61, 139, 94, 0.1)'; copyBtn.style.borderColor = '#3D8B5E'; };
+            copyBtn.onmouseleave = () => { copyBtn.style.opacity = '0.7'; copyBtn.style.background = 'rgba(255, 255, 255, 0.9)'; copyBtn.style.borderColor = '#D4E4DA'; };
 
             copyBtn.onclick = async () => {
                 try {
                     await navigator.clipboard.writeText(msgDiv.innerText);
-                    copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px; color: #10b981;">check</span>';
+                    copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px; color: #3D8B5E;">check</span>';
                     copyBtn.style.opacity = '1';
                     setTimeout(() => { copyBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 18px;">content_copy</span>'; copyBtn.style.opacity = '0.7'; }, 2000);
                 } catch (err) { console.error('복사 실패:', err); }

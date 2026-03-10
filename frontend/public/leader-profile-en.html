@@ -23,13 +23,13 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            --primary: #2563eb;
-            --gold: #f59e0b;
-            --bg-dark: #0f172a;
-            --bg-card: #1e293b;
-            --text-primary: #f1f5f9;
-            --text-secondary: #cbd5e1;
-            --accent: #3b82f6;
+            --primary: #3D8B5E;
+            --gold: #B8922D;
+            --bg-dark: #101A15;
+            --bg-card: #1A2E22;
+            --text-primary: #E4EDE8;
+            --text-secondary: #8BAA9A;
+            --accent: #4A9B6E;
         }
 
         body {
@@ -57,9 +57,9 @@
             animation: float 25s infinite ease-in-out;
         }
 
-        .shape1 { width: 350px; height: 350px; background: #3b82f6; top: 8%; left: 8%; animation-delay: 0s; }
-        .shape2 { width: 250px; height: 250px; background: #f59e0b; top: 55%; right: 8%; animation-delay: 7s; }
-        .shape3 { width: 300px; height: 300px; background: #8b5cf6; bottom: 8%; left: 45%; animation-delay: 14s; }
+        .shape1 { width: 350px; height: 350px; background: #4A9B6E; top: 8%; left: 8%; animation-delay: 0s; }
+        .shape2 { width: 250px; height: 250px; background: #B8922D; top: 55%; right: 8%; animation-delay: 7s; }
+        .shape3 { width: 300px; height: 300px; background: #6DBB8F; bottom: 8%; left: 45%; animation-delay: 14s; }
 
         @keyframes float {
             0%, 100% { transform: translate(0, 0) rotate(0deg); }
@@ -92,9 +92,9 @@
             top: 0; left: 0;
             width: 100%; height: 100%;
             background: linear-gradient(180deg,
-                rgba(15,23,42,0.3) 0%,
-                rgba(15,23,42,0.7) 60%,
-                rgba(15,23,42,1) 100%);
+                rgba(16,26,21,0.3) 0%,
+                rgba(16,26,21,0.7) 60%,
+                rgba(16,26,21,1) 100%);
         }
 
         .hero-content {
@@ -164,7 +164,7 @@
             align-items: center;
             gap: 8px;
             padding: 12px 24px;
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(16, 26, 21, 0.8);
             -webkit-backdrop-filter: blur(12px);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255,255,255,0.15);
@@ -176,7 +176,7 @@
         }
 
         .back-button:hover {
-            background: rgba(30, 41, 59, 0.9);
+            background: rgba(26, 46, 34, 0.9);
             transform: translateX(-4px);
         }
 
@@ -219,7 +219,7 @@
         }
 
         .section-card {
-            background: rgba(30, 41, 59, 0.7);
+            background: rgba(26, 46, 34, 0.7);
             -webkit-backdrop-filter: blur(16px);
             backdrop-filter: blur(16px);
             border: 1px solid rgba(255,255,255,0.08);
@@ -288,9 +288,9 @@
             font-size: 1.3rem;
         }
 
-        .solve-item:nth-child(1) .solve-icon { background: rgba(239,68,68,0.15); color: #ef4444; }
-        .solve-item:nth-child(2) .solve-icon { background: rgba(245,158,11,0.15); color: #f59e0b; }
-        .solve-item:nth-child(3) .solve-icon { background: rgba(16,185,129,0.15); color: #10b981; }
+        .solve-item:nth-child(1) .solve-icon { background: rgba(196,84,84,0.15); color: #C45454; }
+        .solve-item:nth-child(2) .solve-icon { background: rgba(184,146,45,0.15); color: #B8922D; }
+        .solve-item:nth-child(3) .solve-icon { background: rgba(61,139,94,0.15); color: #3D8B5E; }
 
         .solve-item h4 {
             font-size: 0.9rem;
@@ -325,14 +325,14 @@
 
         .expertise-item:hover {
             background: rgba(0,0,0,0.3);
-            border-color: rgba(59,130,246,0.2);
+            border-color: rgba(74,155,110,0.2);
         }
 
         .expertise-icon {
             width: 42px;
             height: 42px;
             border-radius: 10px;
-            background: rgba(59,130,246,0.12);
+            background: rgba(74,155,110,0.12);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -366,8 +366,8 @@
 
         /* Vision special */
         .vision-card {
-            background: linear-gradient(135deg, rgba(59,130,246,0.1) 0%, rgba(139,92,246,0.1) 100%);
-            border-color: rgba(59,130,246,0.2);
+            background: linear-gradient(135deg, rgba(74,155,110,0.1) 0%, rgba(109,187,143,0.1) 100%);
+            border-color: rgba(74,155,110,0.2);
         }
 
         .vision-card p {
@@ -395,12 +395,12 @@
             font-weight: 700;
             text-decoration: none;
             transition: all 0.3s;
-            box-shadow: 0 8px 24px rgba(59,130,246,0.3);
+            box-shadow: 0 8px 24px rgba(74,155,110,0.3);
         }
 
         .cta-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 12px 32px rgba(59,130,246,0.4);
+            box-shadow: 0 12px 32px rgba(74,155,110,0.4);
         }
 
         /* Loading / Error */
@@ -481,22 +481,22 @@
         }
 
         /* ─── Light Mode ─── */
-        body:not(.dark-mode) { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%); color: #1e293b; --text-secondary: #64748b; }
-        body:not(.dark-mode) .profile-section { background: rgba(255,255,255,0.8); border-color: #e2e8f0; }
-        body:not(.dark-mode) .section-card { background: #fff; border-color: #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        body:not(.dark-mode) .section-card:hover { border-color: #3b82f6; box-shadow: 0 4px 16px rgba(59,130,246,0.15); }
-        body:not(.dark-mode) .section-label { color: #2563eb; }
-        body:not(.dark-mode) .hero-section { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); }
-        body:not(.dark-mode) .hero-name { color: #1e293b; }
-        body:not(.dark-mode) .hero-role { color: #64748b; }
-        body:not(.dark-mode) .hero-statement { color: #475569; }
-        body:not(.dark-mode) .hero-badge { background: rgba(37,99,235,0.1); color: #2563eb; }
-        body:not(.dark-mode) .identity-grid { color: #1e293b; }
-        body:not(.dark-mode) .solve-grid { color: #1e293b; }
-        body:not(.dark-mode) .expertise-grid { color: #1e293b; }
-        body:not(.dark-mode) .cta-section { background: rgba(255,255,255,0.8); border-color: #e2e8f0; }
-        body:not(.dark-mode) .cta-button { background: #2563eb; color: #fff; }
-        body:not(.dark-mode) .back-button { background: rgba(0,0,0,0.05); border-color: #e2e8f0; color: #1e293b; }
+        body:not(.dark-mode) { background: linear-gradient(135deg, #F4F8F5 0%, #D4E4DA 50%, #8BAA9A 100%); color: #1A2E22; --text-secondary: #5D7D6D; }
+        body:not(.dark-mode) .profile-section { background: rgba(255,255,255,0.8); border-color: #D4E4DA; }
+        body:not(.dark-mode) .section-card { background: #fff; border-color: #D4E4DA; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        body:not(.dark-mode) .section-card:hover { border-color: #4A9B6E; box-shadow: 0 4px 16px rgba(74,155,110,0.15); }
+        body:not(.dark-mode) .section-label { color: #3D8B5E; }
+        body:not(.dark-mode) .hero-section { background: linear-gradient(135deg, #F4F8F5 0%, #D4E4DA 100%); }
+        body:not(.dark-mode) .hero-name { color: #1A2E22; }
+        body:not(.dark-mode) .hero-role { color: #5D7D6D; }
+        body:not(.dark-mode) .hero-statement { color: #4A6B56; }
+        body:not(.dark-mode) .hero-badge { background: rgba(61,139,94,0.1); color: #3D8B5E; }
+        body:not(.dark-mode) .identity-grid { color: #1A2E22; }
+        body:not(.dark-mode) .solve-grid { color: #1A2E22; }
+        body:not(.dark-mode) .expertise-grid { color: #1A2E22; }
+        body:not(.dark-mode) .cta-section { background: rgba(255,255,255,0.8); border-color: #D4E4DA; }
+        body:not(.dark-mode) .cta-button { background: #3D8B5E; color: #fff; }
+        body:not(.dark-mode) .back-button { background: rgba(0,0,0,0.05); border-color: #D4E4DA; color: #1A2E22; }
 
         @media (min-width: 1440px) {
             .profile-content { max-width: 1040px; }
@@ -511,7 +511,7 @@
         }
         body.is-inapp-browser .section-card {
             -webkit-backdrop-filter: blur(12px);
-            background: rgba(30, 41, 59, 0.95);
+            background: rgba(26, 46, 34, 0.95);
         }
         body:not(.dark-mode).is-inapp-browser .section-card {
             background: rgba(255, 255, 255, 0.98);

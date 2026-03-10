@@ -28,7 +28,7 @@
                 // 결제 시스템 준비중 안내 (sandbox 모드)
                 if (cfg.environment === 'sandbox') {
                     var banner = document.createElement('div');
-                    banner.style.cssText = 'background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;padding:14px 20px;border-radius:12px;margin:0 auto 20px;max-width:800px;text-align:center;font-size:0.9rem;font-weight:600;border:1px solid #f59e0b;';
+                    banner.style.cssText = 'background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;padding:14px 20px;border-radius:12px;margin:0 auto 20px;max-width:800px;text-align:center;font-size:0.9rem;font-weight:600;border:1px solid #B8922D;';
                     banner.innerHTML = '<span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;margin-right:6px;">construction</span>'
                         + (pageLang === 'en'
                             ? 'Payment system is being prepared. Credit purchases will be available soon.'
@@ -251,7 +251,7 @@
     if (location.search.indexOf('success=1') !== -1) {
         history.replaceState(null, '', location.pathname);
         var toast = document.createElement('div');
-        toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#10b981;color:white;padding:16px 32px;border-radius:12px;font-weight:700;z-index:10000;animation:fadeInDown 0.5s ease;';
+        toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#3D8B5E;color:white;padding:16px 32px;border-radius:12px;font-weight:700;z-index:10000;animation:fadeInDown 0.5s ease;';
         toast.textContent = pageLang === 'en' ? 'Payment complete! Credits have been added.' : '결제가 완료되었습니다! 크레딧이 충전되었습니다.';
         document.body.appendChild(toast);
         setTimeout(function() { toast.remove(); }, 5000);
@@ -264,7 +264,7 @@
         var el = document.getElementById(id);
         el.textContent = text;
         el.style.display = 'block';
-        el.style.color = isError ? '#ef4444' : '#10b981';
+        el.style.color = isError ? '#C45454' : '#3D8B5E';
     }
 
     // Init

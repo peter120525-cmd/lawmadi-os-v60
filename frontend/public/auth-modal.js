@@ -28,23 +28,23 @@
             + '.auth-float-wrap{position:fixed;top:12px;right:16px;z-index:8000;}'
             + '.auth-header-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;'
             + 'border-radius:20px;font-size:0.85rem;font-weight:600;cursor:pointer;'
-            + 'border:1px solid rgba(37,99,235,0.3);background:rgba(255,255,255,0.95);'
-            + 'color:#2563eb;box-shadow:0 2px 12px rgba(0,0,0,0.08);transition:all 0.2s;'
+            + 'border:1px solid rgba(61,139,94,0.3);background:rgba(255,255,255,0.95);'
+            + 'color:#3D8B5E;box-shadow:0 2px 12px rgba(0,0,0,0.08);transition:all 0.2s;'
             + 'backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);}'
-            + '.auth-header-btn:hover{box-shadow:0 4px 16px rgba(37,99,235,0.15);border-color:#2563eb;}'
-            + '.auth-header-btn.auth-logged-in{background:rgba(255,255,255,0.95);color:#1e293b;border-color:#e2e8f0;}'
-            + '.auth-credit-num{font-weight:800;color:#2563eb;}'
-            + '.auth-email-short{color:#64748b;font-size:0.78rem;}'
+            + '.auth-header-btn:hover{box-shadow:0 4px 16px rgba(61,139,94,0.15);border-color:#3D8B5E;}'
+            + '.auth-header-btn.auth-logged-in{background:rgba(255,255,255,0.95);color:#1A2E22;border-color:#D4E4DA;}'
+            + '.auth-credit-num{font-weight:800;color:#3D8B5E;}'
+            + '.auth-email-short{color:#5D7D6D;font-size:0.78rem;}'
             + '#authDropdown{position:absolute;top:calc(100% + 8px);right:0;background:#fff;'
-            + 'border:1px solid #e2e8f0;border-radius:14px;min-width:220px;box-shadow:0 8px 30px rgba(0,0,0,0.12);'
+            + 'border:1px solid #D4E4DA;border-radius:14px;min-width:220px;box-shadow:0 8px 30px rgba(0,0,0,0.12);'
             + 'overflow:hidden;z-index:8001;}'
-            + '.auth-dd-email{padding:12px 16px 4px;font-size:0.82rem;color:#64748b;}'
-            + '.auth-dd-credits{padding:4px 16px 12px;font-size:0.9rem;color:#1e293b;border-bottom:1px solid #e2e8f0;}'
+            + '.auth-dd-email{padding:12px 16px 4px;font-size:0.82rem;color:#5D7D6D;}'
+            + '.auth-dd-credits{padding:4px 16px 12px;font-size:0.9rem;color:#1A2E22;border-bottom:1px solid #D4E4DA;}'
             + '.auth-dd-item{display:flex;align-items:center;gap:8px;width:100%;padding:10px 16px;'
-            + 'border:none;background:none;font-size:0.88rem;color:#1e293b;cursor:pointer;text-decoration:none;}'
-            + '.auth-dd-item:hover{background:#f1f5f9;}'
-            + '.auth-dd-logout{color:#ef4444 !important;}'
-            + '.auth-dd-logout:hover{background:#fef2f2 !important;}';
+            + 'border:none;background:none;font-size:0.88rem;color:#1A2E22;cursor:pointer;text-decoration:none;}'
+            + '.auth-dd-item:hover{background:#E4EDE8;}'
+            + '.auth-dd-logout{color:#C45454 !important;}'
+            + '.auth-dd-logout:hover{background:#F5F0F0 !important;}';
         document.head.appendChild(style);
 
         var wrap = document.createElement('div');
@@ -66,27 +66,27 @@
         modal.setAttribute('aria-label', 'Email Login');
         modal.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);align-items:center;justify-content:center;';
         modal.innerHTML = ''
-            + '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:36px 28px;max-width:380px;width:90%;text-align:center;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.15);">'
-            + '<button id="authOtpClose" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#64748b;font-size:1.5rem;cursor:pointer;">&times;</button>'
+            + '<div style="background:#fff;border:1px solid #D4E4DA;border-radius:20px;padding:36px 28px;max-width:380px;width:90%;text-align:center;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.15);">'
+            + '<button id="authOtpClose" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#5D7D6D;font-size:1.5rem;cursor:pointer;">&times;</button>'
             + '<div id="authOtpStep1">'
-            + '<h3 style="color:#1e293b;font-weight:800;margin-bottom:8px;">Email Login</h3>'
-            + '<p style="color:#64748b;font-size:0.9rem;margin-bottom:20px;">No signup needed. Just verify your email.</p>'
-            + '<input id="authOtpEmail" type="email" placeholder="Email" style="width:100%;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;color:#1e293b;font-size:1rem;margin-bottom:12px;outline:none;">'
-            + '<button id="authOtpSendBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#2563eb,#8b5cf6);border:none;border-radius:12px;color:white;font-size:1rem;font-weight:700;cursor:pointer;">Send Code</button>'
-            + '<p id="authOtpSendMsg" style="color:#64748b;font-size:0.85rem;margin-top:12px;display:none;"></p>'
+            + '<h3 style="color:#1A2E22;font-weight:800;margin-bottom:8px;">Email Login</h3>'
+            + '<p style="color:#5D7D6D;font-size:0.9rem;margin-bottom:20px;">No signup needed. Just verify your email.</p>'
+            + '<input id="authOtpEmail" type="email" placeholder="Email" style="width:100%;padding:14px 16px;background:#F4F8F5;border:1px solid #D4E4DA;border-radius:12px;color:#1A2E22;font-size:1rem;margin-bottom:12px;outline:none;">'
+            + '<button id="authOtpSendBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#3D8B5E,#6DBB8F);border:none;border-radius:12px;color:white;font-size:1rem;font-weight:700;cursor:pointer;">Send Code</button>'
+            + '<p id="authOtpSendMsg" style="color:#5D7D6D;font-size:0.85rem;margin-top:12px;display:none;"></p>'
             + '</div>'
             + '<div id="authOtpStep2" style="display:none;">'
-            + '<h3 style="color:#1e293b;font-weight:800;margin-bottom:8px;">Enter Code</h3>'
-            + '<p style="color:#64748b;font-size:0.9rem;margin-bottom:20px;">Enter the 6-digit code from your email</p>'
-            + '<input id="authOtpCode" type="text" maxlength="6" placeholder="000000" inputmode="numeric" autocomplete="one-time-code" style="width:100%;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;color:#1e293b;font-size:1.5rem;font-weight:900;letter-spacing:8px;text-align:center;margin-bottom:12px;outline:none;">'
-            + '<button id="authOtpVerifyBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:12px;color:white;font-size:1rem;font-weight:700;cursor:pointer;">Verify</button>'
-            + '<p id="authOtpVerifyMsg" style="color:#64748b;font-size:0.85rem;margin-top:12px;display:none;"></p>'
-            + '<button id="authOtpResendBtn" style="background:none;border:none;color:#2563eb;font-size:0.85rem;cursor:pointer;margin-top:8px;text-decoration:underline;">Resend</button>'
+            + '<h3 style="color:#1A2E22;font-weight:800;margin-bottom:8px;">Enter Code</h3>'
+            + '<p style="color:#5D7D6D;font-size:0.9rem;margin-bottom:20px;">Enter the 6-digit code from your email</p>'
+            + '<input id="authOtpCode" type="text" maxlength="6" placeholder="000000" inputmode="numeric" autocomplete="one-time-code" style="width:100%;padding:14px 16px;background:#F4F8F5;border:1px solid #D4E4DA;border-radius:12px;color:#1A2E22;font-size:1.5rem;font-weight:900;letter-spacing:8px;text-align:center;margin-bottom:12px;outline:none;">'
+            + '<button id="authOtpVerifyBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#3D8B5E,#2D7A4E);border:none;border-radius:12px;color:white;font-size:1rem;font-weight:700;cursor:pointer;">Verify</button>'
+            + '<p id="authOtpVerifyMsg" style="color:#5D7D6D;font-size:0.85rem;margin-top:12px;display:none;"></p>'
+            + '<button id="authOtpResendBtn" style="background:none;border:none;color:#3D8B5E;font-size:0.85rem;cursor:pointer;margin-top:8px;text-decoration:underline;">Resend</button>'
             + '</div>'
             + '<div id="authOtpStep3" style="display:none;">'
-            + '<div style="font-size:3rem;margin-bottom:12px;color:#10b981;">&#10003;</div>'
-            + '<h3 style="color:#1e293b;font-weight:800;margin-bottom:8px;">Verified!</h3>'
-            + '<p style="color:#64748b;font-size:0.9rem;margin-bottom:4px;">Credits: <span id="authOtpCredits" style="color:#10b981;font-weight:700;">0</span></p>'
+            + '<div style="font-size:3rem;margin-bottom:12px;color:#3D8B5E;">&#10003;</div>'
+            + '<h3 style="color:#1A2E22;font-weight:800;margin-bottom:8px;">Verified!</h3>'
+            + '<p style="color:#5D7D6D;font-size:0.9rem;margin-bottom:4px;">Credits: <span id="authOtpCredits" style="color:#3D8B5E;font-weight:700;">0</span></p>'
             + '</div>'
             + '</div>';
         document.body.appendChild(modal);
@@ -172,7 +172,7 @@
         menu.innerHTML = '<div class="auth-dd-email">' + _escText(authState.email) + '</div>'
             + '<div class="auth-dd-credits"><span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">toll</span> '
             + 'Credits: <strong>' + bal + '</strong></div>'
-            + '<div id="authDdHistory" class="auth-dd-history" style="display:none;max-height:180px;overflow-y:auto;font-size:0.78rem;border-top:1px solid var(--border,#e2e8f0);padding:8px 12px;"></div>'
+            + '<div id="authDdHistory" class="auth-dd-history" style="display:none;max-height:180px;overflow-y:auto;font-size:0.78rem;border-top:1px solid var(--border,#D4E4DA);padding:8px 12px;"></div>'
             + '<button class="auth-dd-item" id="authHistoryBtn">'
             + '<span class="material-symbols-outlined" style="font-size:1rem;">receipt_long</span> '
             + (pageLang === 'en' ? 'Credit History' : '크레딧 내역') + '</button>'
@@ -190,20 +190,20 @@
         document.getElementById('authHistoryBtn').addEventListener('click', function() {
             var histDiv = document.getElementById('authDdHistory');
             if (histDiv.style.display !== 'none') { histDiv.style.display = 'none'; return; }
-            histDiv.innerHTML = '<div style="color:var(--text-muted,#64748b);padding:4px 0;">Loading...</div>';
+            histDiv.innerHTML = '<div style="color:var(--text-muted,#5D7D6D);padding:4px 0;">Loading...</div>';
             histDiv.style.display = 'block';
             fetch(API_BASE + '/api/paddle/credits/history', { credentials: 'include' })
                 .then(function(r) { return r.json(); })
                 .then(function(d) {
                     if (!d.history || d.history.length === 0) {
-                        histDiv.innerHTML = '<div style="color:var(--text-muted,#64748b);padding:4px 0;">'
+                        histDiv.innerHTML = '<div style="color:var(--text-muted,#5D7D6D);padding:4px 0;">'
                             + (pageLang === 'en' ? 'No history yet' : '내역이 없습니다') + '</div>';
                         return;
                     }
                     var html = '';
                     d.history.forEach(function(h) {
                         var isDeduct = h.amount < 0;
-                        var color = isDeduct ? '#ef4444' : '#10b981';
+                        var color = isDeduct ? '#C45454' : '#3D8B5E';
                         var sign = isDeduct ? '' : '+';
                         var typeLabel = h.type === 'expert_deduct' ? (pageLang === 'en' ? 'Expert' : '전문가') :
                             h.type === 'question_deduct' ? (pageLang === 'en' ? 'Query' : '질문') :
@@ -217,7 +217,7 @@
                     histDiv.innerHTML = html;
                 })
                 .catch(function() {
-                    histDiv.innerHTML = '<div style="color:#ef4444;padding:4px 0;">Error</div>';
+                    histDiv.innerHTML = '<div style="color:#C45454;padding:4px 0;">Error</div>';
                 });
         });
 
@@ -389,7 +389,7 @@
         if (!el) return;
         el.textContent = text;
         el.style.display = 'block';
-        el.style.color = isError ? '#ef4444' : '#10b981';
+        el.style.color = isError ? '#C45454' : '#3D8B5E';
     }
 
     // ─── Init ───

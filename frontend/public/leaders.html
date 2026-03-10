@@ -13,7 +13,7 @@
     <meta property="og:image" content="https://lawmadi-db.web.app/og-image.png" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="theme-color" content="#1a1a2e" />
+    <meta name="theme-color" content="#3D8B5E" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="icon" type="image/png" href="/icon-192.png" />
     <link rel="alternate" hreflang="en" href="https://lawmadi-db.web.app/leaders-en" />
@@ -28,20 +28,20 @@
         }
 
         :root {
-            --primary: #2563eb;
-            --gold: #f59e0b;
-            --purple: #8b5cf6;
-            --green: #10b981;
-            --red: #ef4444;
-            --bg-dark: #0f172a;
-            --bg-card: #1e293b;
-            --text-primary: #f1f5f9;
-            --text-secondary: #cbd5e1;
+            --primary: #3D8B5E;
+            --gold: #B8922D;
+            --purple: #6DBB8F;
+            --green: #3D8B5E;
+            --red: #C45454;
+            --bg-dark: #101A15;
+            --bg-card: #1A2E22;
+            --text-primary: #E4EDE8;
+            --text-secondary: #8BAA9A;
         }
 
         body {
             font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            background: linear-gradient(135deg, #101A15 0%, #1A2E22 50%, #2D4038 100%);
             min-height: 100vh;
             color: var(--text-primary);
             overflow-x: hidden;
@@ -66,8 +66,8 @@
             width: 100%;
             height: 100%;
             background-image:
-                linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+                linear-gradient(rgba(74, 155, 110, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(74, 155, 110, 0.03) 1px, transparent 1px);
             background-size: 50px 50px;
             animation: gridMove 20s linear infinite;
         }
@@ -84,9 +84,9 @@
             animation: float 25s infinite ease-in-out;
         }
 
-        .shape1 { width: 400px; height: 400px; background: #3b82f6; top: 5%; left: 5%; animation-delay: 0s; }
-        .shape2 { width: 300px; height: 300px; background: #f59e0b; top: 50%; right: 5%; animation-delay: 8s; }
-        .shape3 { width: 350px; height: 350px; background: #8b5cf6; bottom: 5%; left: 40%; animation-delay: 16s; }
+        .shape1 { width: 400px; height: 400px; background: #4A9B6E; top: 5%; left: 5%; animation-delay: 0s; }
+        .shape2 { width: 300px; height: 300px; background: #B8922D; top: 50%; right: 5%; animation-delay: 8s; }
+        .shape3 { width: 350px; height: 350px; background: #6DBB8F; bottom: 5%; left: 40%; animation-delay: 16s; }
 
         @keyframes float {
             0%, 100% { transform: translate(0, 0) rotate(0deg); }
@@ -107,7 +107,7 @@
         .header {
             position: sticky;
             top: 0;
-            background: rgba(15, 23, 42, 0.9);
+            background: rgba(16, 26, 21, 0.9);
             -webkit-backdrop-filter: blur(20px);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -152,19 +152,19 @@
         .header-badge {
             display: inline-block;
             padding: 8px 20px;
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            background: linear-gradient(135deg, #4A9B6E 0%, #6DBB8F 100%);
             border-radius: 20px;
             font-size: 0.85rem;
             font-weight: 700;
             letter-spacing: 1px;
             margin-bottom: 12px;
-            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 4px 20px rgba(74, 155, 110, 0.3);
         }
 
         .header h1 {
             font-size: 2.5rem;
             font-weight: 900;
-            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+            background: linear-gradient(135deg, #fff 0%, #8BAA9A 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -180,7 +180,7 @@
         .search-box {
             width: 100%;
             padding: 16px 24px;
-            background: rgba(30, 41, 59, 0.8);
+            background: rgba(26, 46, 34, 0.8);
             -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             border: 2px solid rgba(255, 255, 255, 0.1);
@@ -195,7 +195,7 @@
         .search-box:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+            box-shadow: 0 0 0 4px rgba(74, 155, 110, 0.1);
         }
 
         .search-box::placeholder {
@@ -211,7 +211,7 @@
         .filter-tab {
             padding: 12px 20px;
             min-height: 44px;
-            background: rgba(30, 41, 59, 0.6);
+            background: rgba(26, 46, 34, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
             color: var(--text-secondary);
@@ -222,7 +222,7 @@
         }
 
         .filter-tab:hover {
-            background: rgba(30, 41, 59, 0.8);
+            background: rgba(26, 46, 34, 0.8);
             border-color: var(--primary);
         }
 
@@ -230,7 +230,7 @@
             background: var(--primary);
             border-color: var(--primary);
             color: white;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 4px 12px rgba(74, 155, 110, 0.3);
         }
 
         /* C-Level Section */
@@ -252,7 +252,7 @@
             content: '';
             width: 6px;
             height: 32px;
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            background: linear-gradient(135deg, #B8922D 0%, #A07830 100%);
             border-radius: 3px;
         }
 
@@ -264,7 +264,7 @@
         }
 
         .clevel-card {
-            background: rgba(30, 41, 59, 0.8);
+            background: rgba(26, 46, 34, 0.8);
             -webkit-backdrop-filter: blur(20px);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -299,9 +299,9 @@
         }
 
 
-        .clevel-card.cso { --clevel-color: #3b82f6; }
-        .clevel-card.cto { --clevel-color: #f59e0b; }
-        .clevel-card.cco { --clevel-color: #8b5cf6; }
+        .clevel-card.cso { --clevel-color: #4A9B6E; }
+        .clevel-card.cto { --clevel-color: #B8922D; }
+        .clevel-card.cco { --clevel-color: #6DBB8F; }
 
         .clevel-header {
             display: flex;
@@ -360,7 +360,7 @@
 
         .leader-card {
             position: relative;
-            background: rgba(30, 41, 59, 0.6);
+            background: rgba(26, 46, 34, 0.6);
             -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.15);
@@ -371,10 +371,10 @@
         }
 
         .leader-card:hover {
-            background: rgba(30, 41, 59, 0.9);
+            background: rgba(26, 46, 34, 0.9);
             border-color: var(--primary);
             transform: translateY(-4px);
-            box-shadow: 0 12px 32px rgba(0,0,0,0.2), 0 0 0 1px rgba(59,130,246,0.2);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.2), 0 0 0 1px rgba(74,155,110,0.2);
         }
 
         .leader-header {
@@ -441,8 +441,8 @@
         .leader-specialty {
             display: inline-block;
             padding: 6px 12px;
-            background: rgba(59, 130, 246, 0.2);
-            border: 1px solid rgba(59, 130, 246, 0.3);
+            background: rgba(74, 155, 110, 0.2);
+            border: 1px solid rgba(74, 155, 110, 0.3);
             border-radius: 8px;
             font-size: 0.85rem;
             font-weight: 700;
@@ -469,7 +469,7 @@
             gap: 6px;
             margin-top: 12px;
             padding: 10px 20px;
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            background: linear-gradient(135deg, #3D8B5E 0%, #5AAD7E 100%);
             color: white;
             border: none;
             border-radius: 10px;
@@ -478,12 +478,12 @@
             text-decoration: none;
             cursor: pointer;
             transition: all 0.3s;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            box-shadow: 0 4px 12px rgba(61, 139, 94, 0.3);
         }
 
         .leader-chat-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+            box-shadow: 0 6px 20px rgba(61, 139, 94, 0.4);
         }
 
         /* Stats Section */
@@ -506,7 +506,7 @@
         .stat-number {
             font-size: 2.5rem;
             font-weight: 900;
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            background: linear-gradient(135deg, #4A9B6E 0%, #6DBB8F 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -635,24 +635,24 @@
         }
 
         /* ─── Light Mode ─── */
-        body:not(.dark-mode) { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%); color: #1e293b; --text-secondary: #64748b; }
-        body:not(.dark-mode) .header { background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid #e2e8f0; }
-        body:not(.dark-mode) .header h1 { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        body:not(.dark-mode) .leader-card { background: #fff; border-color: #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        body:not(.dark-mode) .leader-card:hover { border-color: #3b82f6; box-shadow: 0 4px 16px rgba(59,130,246,0.15); }
-        body:not(.dark-mode) .clevel-card { background: #fff; border-color: #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-        body:not(.dark-mode) .filter-tab { background: rgba(0,0,0,0.05); color: #475569; border-color: transparent; }
-        body:not(.dark-mode) .filter-tab.active, body:not(.dark-mode) .filter-tab:hover { background: #2563eb; color: #fff; }
-        body:not(.dark-mode) .leader-name { color: #1e293b; }
-        body:not(.dark-mode) .leader-profile, body:not(.dark-mode) .leader-role { color: #64748b; }
-        body:not(.dark-mode) .search-box { background: rgba(255,255,255,0.8); border-color: #e2e8f0; color: #1e293b; }
-        body:not(.dark-mode) .section-title { color: #1e293b; }
-        body:not(.dark-mode) .back-button { background: rgba(0,0,0,0.05); border-color: #e2e8f0; color: #1e293b; }
-        body:not(.dark-mode) .stats-section { background: rgba(255,255,255,0.8); border-color: #e2e8f0; }
-        body:not(.dark-mode) .stat-number { background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        body:not(.dark-mode) .stat-label { color: #475569; }
-        body:not(.dark-mode) .clevel-info h3 { color: #1e293b; }
-        body:not(.dark-mode) .clevel-profile { color: #64748b; }
+        body:not(.dark-mode) { background: linear-gradient(135deg, #F4F8F5 0%, #D4E4DA 50%, #8BAA9A 100%); color: #1A2E22; --text-secondary: #5D7D6D; }
+        body:not(.dark-mode) .header { background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid #D4E4DA; }
+        body:not(.dark-mode) .header h1 { background: linear-gradient(135deg, #1A2E22 0%, #2D4038 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        body:not(.dark-mode) .leader-card { background: #fff; border-color: #D4E4DA; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        body:not(.dark-mode) .leader-card:hover { border-color: #4A9B6E; box-shadow: 0 4px 16px rgba(74,155,110,0.15); }
+        body:not(.dark-mode) .clevel-card { background: #fff; border-color: #D4E4DA; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        body:not(.dark-mode) .filter-tab { background: rgba(0,0,0,0.05); color: #4A6B56; border-color: transparent; }
+        body:not(.dark-mode) .filter-tab.active, body:not(.dark-mode) .filter-tab:hover { background: #3D8B5E; color: #fff; }
+        body:not(.dark-mode) .leader-name { color: #1A2E22; }
+        body:not(.dark-mode) .leader-profile, body:not(.dark-mode) .leader-role { color: #5D7D6D; }
+        body:not(.dark-mode) .search-box { background: rgba(255,255,255,0.8); border-color: #D4E4DA; color: #1A2E22; }
+        body:not(.dark-mode) .section-title { color: #1A2E22; }
+        body:not(.dark-mode) .back-button { background: rgba(0,0,0,0.05); border-color: #D4E4DA; color: #1A2E22; }
+        body:not(.dark-mode) .stats-section { background: rgba(255,255,255,0.8); border-color: #D4E4DA; }
+        body:not(.dark-mode) .stat-number { background: linear-gradient(135deg, #1A5E3A 0%, #5AAD7E 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        body:not(.dark-mode) .stat-label { color: #4A6B56; }
+        body:not(.dark-mode) .clevel-info h3 { color: #1A2E22; }
+        body:not(.dark-mode) .clevel-profile { color: #5D7D6D; }
 
         @media (min-width: 1440px) {
             .leaders-grid { grid-template-columns: repeat(4, 1fr); }
@@ -669,28 +669,28 @@
         }
         body.is-inapp-browser .header {
             -webkit-backdrop-filter: blur(20px);
-            background: rgba(15, 23, 42, 0.98);
+            background: rgba(16, 26, 21, 0.98);
         }
         body:not(.dark-mode).is-inapp-browser .header {
             background: rgba(255, 255, 255, 0.98);
         }
         body.is-inapp-browser .leader-card {
             -webkit-backdrop-filter: blur(10px);
-            background: rgba(30, 41, 59, 0.95);
+            background: rgba(26, 46, 34, 0.95);
         }
         body:not(.dark-mode).is-inapp-browser .leader-card {
             background: rgba(255, 255, 255, 0.98);
         }
         body.is-inapp-browser .clevel-card {
             -webkit-backdrop-filter: blur(10px);
-            background: rgba(30, 41, 59, 0.95);
+            background: rgba(26, 46, 34, 0.95);
         }
         body:not(.dark-mode).is-inapp-browser .clevel-card {
             background: rgba(255, 255, 255, 0.98);
         }
         body.is-inapp-browser .search-box {
             -webkit-backdrop-filter: blur(10px);
-            background: rgba(30, 41, 59, 0.95);
+            background: rgba(26, 46, 34, 0.95);
         }
         body:not(.dark-mode).is-inapp-browser .search-box {
             background: rgba(255, 255, 255, 0.95);

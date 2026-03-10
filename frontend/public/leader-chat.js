@@ -55,13 +55,13 @@
             banner.textContent = pageLang === 'en'
                 ? 'Free daily limit reached. Additional uses require 2 credits per 5 chats.'
                 : '오늘 무료 ' + DAILY_FREE + '회를 모두 사용했습니다. 추가 5회당 2크레딧이 필요합니다.';
-            banner.style.background = '#fef2f2'; banner.style.color = '#dc2626';
+            banner.style.background = '#F5F0F0'; banner.style.color = '#B04444';
         } else if (remain <= 2) {
             banner.style.display = 'block';
             banner.textContent = pageLang === 'en'
                 ? remain + ' free chat(s) remaining today'
                 : '오늘 무료 채팅 ' + remain + '회 남음';
-            banner.style.background = '#fffbeb'; banner.style.color = '#d97706';
+            banner.style.background = '#F7F5EC'; banner.style.color = '#A07830';
         } else {
             banner.style.display = 'none';
         }
@@ -296,7 +296,7 @@
                         if (!streamBubble) {
                             streamBubble = appendMessage('ai', '');
                         }
-                        streamBubble.innerHTML = '<span style="color:#ef4444;">' + esc(errMsg) + '</span>';
+                        streamBubble.innerHTML = '<span style="color:#C45454;">' + esc(errMsg) + '</span>';
                     }
                 }
             }
@@ -304,7 +304,7 @@
             hideTyping();
             showError(e.message || '네트워크 오류가 발생했습니다.');
             if (!streamBubble) {
-                appendMessage('ai', '<span style="color:#ef4444;">연결 오류가 발생했습니다. 다시 시도해 주세요.</span>');
+                appendMessage('ai', '<span style="color:#C45454;">연결 오류가 발생했습니다. 다시 시도해 주세요.</span>');
             }
         } finally {
             isSending = false;
@@ -349,8 +349,8 @@
             '<img class="welcome-avatar" src="' + esc(leaderAvatarSrc) + '" alt="' + esc(name) + '">' +
             '<h3>' + esc(name) + '</h3>' +
             '<p>' + esc(specialty) + (pageLang === 'en' ? ' AI Leader' : ' 전문 AI 리더') + '</p>' +
-            (hero ? '<p style="margin-top:12px;font-style:italic;color:#64748b;">"' + esc(hero) + '"</p>' : '') +
-            '<p style="margin-top:16px;font-size:0.85rem;color:#64748b;">' +
+            (hero ? '<p style="margin-top:12px;font-style:italic;color:#5D7D6D;">"' + esc(hero) + '"</p>' : '') +
+            '<p style="margin-top:16px;font-size:0.85rem;color:#5D7D6D;">' +
             (pageLang === 'en' ? 'Feel free to ask any legal questions.' : '궁금한 법률 문제를 자유롭게 질문해 주세요.') + '</p>';
         chatViewport.appendChild(welcomeDiv);
     }
@@ -371,8 +371,8 @@
 
         if (!leaderId) {
             pageLoading.innerHTML = pageLang === 'en'
-                ? '<p style="color:#ef4444;">No leader ID specified. <a href="/leaders-en">View leaders</a></p>'
-                : '<p style="color:#ef4444;">리더 ID가 지정되지 않았습니다. <a href="/leaders">리더 목록</a>으로 이동해 주세요.</p>';
+                ? '<p style="color:#C45454;">No leader ID specified. <a href="/leaders-en">View leaders</a></p>'
+                : '<p style="color:#C45454;">리더 ID가 지정되지 않았습니다. <a href="/leaders">리더 목록</a>으로 이동해 주세요.</p>';
             return;
         }
 
@@ -399,8 +399,8 @@
 
             if (!leaderBasic) {
                 pageLoading.innerHTML = pageLang === 'en'
-                    ? '<p style="color:#ef4444;">Leader not found. <a href="/leaders-en">View leaders</a></p>'
-                    : '<p style="color:#ef4444;">존재하지 않는 리더입니다. <a href="/leaders">리더 목록</a>으로 이동해 주세요.</p>';
+                    ? '<p style="color:#C45454;">Leader not found. <a href="/leaders-en">View leaders</a></p>'
+                    : '<p style="color:#C45454;">존재하지 않는 리더입니다. <a href="/leaders">리더 목록</a>으로 이동해 주세요.</p>';
                 return;
             }
 
@@ -444,8 +444,8 @@
         } catch(e) {
             console.error('Leader chat init error:', e);
             pageLoading.innerHTML = pageLang === 'en'
-                ? '<p style="color:#ef4444;">Failed to load data. <a href="/leaders-en">View leaders</a></p>'
-                : '<p style="color:#ef4444;">데이터를 불러오지 못했습니다. <a href="/leaders">리더 목록</a>으로 이동해 주세요.</p>';
+                ? '<p style="color:#C45454;">Failed to load data. <a href="/leaders-en">View leaders</a></p>'
+                : '<p style="color:#C45454;">데이터를 불러오지 못했습니다. <a href="/leaders">리더 목록</a>으로 이동해 주세요.</p>';
         }
     }
 
