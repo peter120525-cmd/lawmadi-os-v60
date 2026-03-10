@@ -8,6 +8,7 @@
     var CHAT_API = '/api/chat-leader';
     var MAX_HISTORY = 20;
     var MAX_QUERY = 4000;
+    var pageLang = (new URLSearchParams(window.location.search).get('lang') === 'en') ? 'en' : 'ko';
 
     // ── Category grouping for filters ──
     // (kept for future use if needed; currently leader-chat is single-leader)
@@ -28,6 +29,43 @@
     var leaderProfile = null;
     var leaderAvatarSrc = '';
     var isSending = false;
+    var DAILY_FREE = 5;
+
+    // ── Chat usage counter (session-based, approximate) ──
+    function _getChatCount() {
+        try {
+            var d = new Date(); var key = 'lc_count_' + d.getFullYear() + (d.getMonth()+1) + d.getDate();
+            return parseInt(sessionStorage.getItem(key) || '0', 10);
+        } catch(e) { return 0; }
+    }
+    function _incChatCount() {
+        try {
+            var d = new Date(); var key = 'lc_count_' + d.getFullYear() + (d.getMonth()+1) + d.getDate();
+            var c = parseInt(sessionStorage.getItem(key) || '0', 10) + 1;
+            sessionStorage.setItem(key, String(c));
+            _updateUsageBanner(c);
+        } catch(e) {}
+    }
+    function _updateUsageBanner(count) {
+        var banner = document.getElementById('usageBanner');
+        if (!banner) return;
+        var remain = DAILY_FREE - count;
+        if (remain <= 0) {
+            banner.style.display = 'block';
+            banner.textContent = pageLang === 'en'
+                ? 'Free daily limit reached. Additional uses require 2 credits per 5 chats.'
+                : '오늘 무료 ' + DAILY_FREE + '회를 모두 사용했습니다. 추가 5회당 2크레딧이 필요합니다.';
+            banner.style.background = '#fef2f2'; banner.style.color = '#dc2626';
+        } else if (remain <= 2) {
+            banner.style.display = 'block';
+            banner.textContent = pageLang === 'en'
+                ? remain + ' free chat(s) remaining today'
+                : '오늘 무료 채팅 ' + remain + '회 남음';
+            banner.style.background = '#fffbeb'; banner.style.color = '#d97706';
+        } else {
+            banner.style.display = 'none';
+        }
+    }
 
     // ── Dark mode sync ──
     (function() {
@@ -190,14 +228,20 @@
 
             if (response.status === 429) {
                 hideTyping();
-                appendMessage('ai', '<p>일일 무료 이용 한도에 도달했습니다. <a href="/pricing">크레딧 구매</a>하시면 계속 이용 가능합니다.</p>');
+                try {
+                    var errData = await response.json();
+                    var errMsg = errData.error || '일일 무료 이용 한도에 도달했습니다.';
+                    appendMessage('ai', '<p>' + esc(errMsg) + ' <a href="/pricing">크레딧 구매</a></p>');
+                } catch(e) {
+                    appendMessage('ai', '<p>' + (pageLang === 'en' ? 'Daily free limit reached.' : '일일 무료 이용 한도에 도달했습니다.') + ' <a href="' + (pageLang === 'en' ? '/pricing-en' : '/pricing') + '">' + (pageLang === 'en' ? 'Buy credits' : '크레딧 구매') + '</a></p>');
+                }
                 isSending = false;
                 sendBtn.disabled = false;
                 return;
             }
 
             if (!response.ok) {
-                throw new Error('서버 오류 (' + response.status + ')');
+                throw new Error((pageLang === 'en' ? 'Server error' : '서버 오류') + ' (' + response.status + ')');
             }
 
             var reader = response.body.getReader();
@@ -245,6 +289,7 @@
                         history.push({ role: 'user', content: query });
                         history.push({ role: 'assistant', content: accumulatedText });
                         saveHistory(history);
+                        _incChatCount();
                     } else if (eventType === 'error') {
                         hideTyping();
                         var errMsg = eventData.message || '오류가 발생했습니다.';
@@ -303,9 +348,10 @@
         welcomeDiv.innerHTML =
             '<img class="welcome-avatar" src="' + esc(leaderAvatarSrc) + '" alt="' + esc(name) + '">' +
             '<h3>' + esc(name) + '</h3>' +
-            '<p>' + esc(specialty) + ' 전문 AI 리더</p>' +
-            (hero ? '<p style="margin-top:12px;font-style:italic;color:#94a3b8;">"' + esc(hero) + '"</p>' : '') +
-            '<p style="margin-top:16px;font-size:0.85rem;color:#94a3b8;">궁금한 법률 문제를 자유롭게 질문해 주세요.</p>';
+            '<p>' + esc(specialty) + (pageLang === 'en' ? ' AI Leader' : ' 전문 AI 리더') + '</p>' +
+            (hero ? '<p style="margin-top:12px;font-style:italic;color:#64748b;">"' + esc(hero) + '"</p>' : '') +
+            '<p style="margin-top:16px;font-size:0.85rem;color:#64748b;">' +
+            (pageLang === 'en' ? 'Feel free to ask any legal questions.' : '궁금한 법률 문제를 자유롭게 질문해 주세요.') + '</p>';
         chatViewport.appendChild(welcomeDiv);
     }
 
@@ -314,18 +360,30 @@
         var params = new URLSearchParams(window.location.search);
         leaderId = (params.get('id') || '').toUpperCase();
 
+        // Apply EN UI if needed
+        if (pageLang === 'en') {
+            document.documentElement.lang = 'en';
+            document.title = 'Chat with Leader - Lawmadi OS';
+            userInput.placeholder = 'Type your legal question...';
+            var backBtn = document.querySelector('.back-btn');
+            if (backBtn) { backBtn.href = '/leaders-en'; backBtn.setAttribute('aria-label', 'Back'); }
+        }
+
         if (!leaderId) {
-            pageLoading.innerHTML = '<p style="color:#ef4444;">리더 ID가 지정되지 않았습니다. <a href="/leaders">리더 목록</a>으로 이동해 주세요.</p>';
+            pageLoading.innerHTML = pageLang === 'en'
+                ? '<p style="color:#ef4444;">No leader ID specified. <a href="/leaders-en">View leaders</a></p>'
+                : '<p style="color:#ef4444;">리더 ID가 지정되지 않았습니다. <a href="/leaders">리더 목록</a>으로 이동해 주세요.</p>';
             return;
         }
 
         try {
+            var profileJson = pageLang === 'en' ? 'leader-profiles-en.json' : 'leader-profiles.json';
             var responses = await Promise.all([
                 fetch('leaders.json'),
-                fetch('leader-profiles.json')
+                fetch(profileJson)
             ]);
 
-            if (!responses[0].ok || !responses[1].ok) throw new Error('데이터 로드 실패');
+            if (!responses[0].ok || !responses[1].ok) throw new Error('Data load failed');
 
             var leadersData = await responses[0].json();
             var profilesData = await responses[1].json();
@@ -340,7 +398,9 @@
             leaderProfile = profilesData[leaderId] || null;
 
             if (!leaderBasic) {
-                pageLoading.innerHTML = '<p style="color:#ef4444;">존재하지 않는 리더입니다. <a href="/leaders">리더 목록</a>으로 이동해 주세요.</p>';
+                pageLoading.innerHTML = pageLang === 'en'
+                    ? '<p style="color:#ef4444;">Leader not found. <a href="/leaders-en">View leaders</a></p>'
+                    : '<p style="color:#ef4444;">존재하지 않는 리더입니다. <a href="/leaders">리더 목록</a>으로 이동해 주세요.</p>';
                 return;
             }
 
@@ -354,16 +414,21 @@
             document.getElementById('headerName').textContent = leaderBasic.name || leaderId;
             document.getElementById('headerSpecialty').textContent = leaderBasic.specialty || leaderBasic.role || '';
             document.getElementById('headerPersonality').textContent = (leaderProfile && leaderProfile.hero) || '';
-            document.getElementById('profileLink').href = '/leader-profile?id=' + encodeURIComponent(leaderId);
+            document.getElementById('profileLink').href = (pageLang === 'en' ? '/leader-en?id=' : '/leader-profile?id=') + encodeURIComponent(leaderId);
 
             // Update page title
-            document.title = leaderBasic.name + '과 대화하기 - Lawmadi OS';
+            document.title = pageLang === 'en'
+                ? 'Chat with ' + leaderBasic.name + ' - Lawmadi OS'
+                : leaderBasic.name + '과 대화하기 - Lawmadi OS';
 
             // Show UI
             pageLoading.style.display = 'none';
             profileHeader.style.display = 'flex';
             chatViewport.style.display = 'flex';
             inputArea.style.display = 'block';
+
+            // Show usage banner if near limit
+            _updateUsageBanner(_getChatCount());
 
             // Restore history or show welcome
             var history = loadHistory();
@@ -378,7 +443,9 @@
 
         } catch(e) {
             console.error('Leader chat init error:', e);
-            pageLoading.innerHTML = '<p style="color:#ef4444;">데이터를 불러오지 못했습니다. <a href="/leaders">리더 목록</a>으로 이동해 주세요.</p>';
+            pageLoading.innerHTML = pageLang === 'en'
+                ? '<p style="color:#ef4444;">Failed to load data. <a href="/leaders-en">View leaders</a></p>'
+                : '<p style="color:#ef4444;">데이터를 불러오지 못했습니다. <a href="/leaders">리더 목록</a>으로 이동해 주세요.</p>';
         }
     }
 

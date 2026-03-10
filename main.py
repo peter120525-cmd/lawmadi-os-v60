@@ -1478,6 +1478,7 @@ async def startup():
         check_rate_limit=_check_rate_limit,
         rate_limit_response=_rate_limit_response,
         get_client_ip=_get_client_ip,
+        check_leader_chat_limit=_check_leader_chat_limit,
         leader_profiles=_leader_profiles,
         leader_personas=_leader_personas,
     )

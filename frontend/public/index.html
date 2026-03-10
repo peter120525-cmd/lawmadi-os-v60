@@ -3026,6 +3026,174 @@
             border-top-color: rgba(100,116,139,0.15);
         }
 
+        /* ── 피드백 섹션 ── */
+        .feedback-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-top: 1px solid rgba(148,163,184,0.12);
+        }
+        .fb-prompt {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-right: 4px;
+        }
+        .fb-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 10px 16px;
+            min-height: 44px;
+            border: 1px solid rgba(148,163,184,0.2);
+            background: none;
+            border-radius: 22px;
+            font-size: 0.82rem;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .fb-btn .material-symbols-outlined { font-size: 16px; }
+        .fb-btn:hover { border-color: #3b82f6; color: #3b82f6; background: rgba(59,130,246,0.06); }
+        .fb-btn.selected { pointer-events: none; }
+        .fb-btn.fb-up.selected { border-color: #22c55e; color: #22c55e; background: rgba(34,197,94,0.08); }
+        .fb-btn.fb-down.selected { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,0.08); }
+        .fb-btn:disabled:not(.selected) { opacity: 0.4; pointer-events: none; }
+        body:not(.dark-mode) .fb-prompt { color: #64748b; }
+        body:not(.dark-mode) .fb-btn { color: #64748b; border-color: rgba(100,116,139,0.2); }
+        body:not(.dark-mode) .fb-btn:hover { color: #2563eb; border-color: #2563eb; }
+
+        /* ── 로그인 유도 배너 ── */
+        .login-nudge-banner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 12px;
+            padding: 12px 16px;
+            background: rgba(59,130,246,0.08);
+            border: 1px solid rgba(59,130,246,0.2);
+            border-radius: 10px;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            line-height: 1.5;
+        }
+        .login-nudge-banner .material-symbols-outlined {
+            font-size: 28px;
+            color: #3b82f6;
+            flex-shrink: 0;
+        }
+        .login-nudge-banner strong { color: #e2e8f0; }
+        .login-nudge-banner p { margin: 4px 0 0; font-size: 0.8rem; }
+        .login-nudge-btn {
+            flex-shrink: 0;
+            margin-left: auto;
+            padding: 6px 16px;
+            background: #3b82f6;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .login-nudge-btn:hover { background: #2563eb; }
+        body:not(.dark-mode) .login-nudge-banner {
+            background: rgba(59,130,246,0.06);
+            color: #475569;
+        }
+        body:not(.dark-mode) .login-nudge-banner strong { color: #1e293b; }
+
+        /* ── 라이트모드: 마디 분석 헤더 ── */
+        body:not(.dark-mode) .ai-msg .madi-analysis-header {
+            background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 40%, #c7d2fe 100%);
+            color: #1e293b;
+            border-color: rgba(99, 102, 241, 0.25);
+            box-shadow: 0 4px 16px rgba(99, 102, 241, 0.12), 0 2px 4px rgba(0, 0, 0, 0.06);
+        }
+        body:not(.dark-mode) .ai-msg .madi-analysis-header::before {
+            background: linear-gradient(90deg, #6366f1 0%, #a855f7 50%, #6366f1 100%);
+        }
+        body:not(.dark-mode) .ai-msg .madi-tag {
+            background: rgba(99, 102, 241, 0.12);
+            color: #4338ca;
+        }
+        body:not(.dark-mode) .ai-msg .madi-analysis-header .madi-label {
+            color: #1e293b;
+        }
+
+        /* ── 라이트모드: 핵심 기능 섹션 ── */
+        body:not(.dark-mode) .core-features-section {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
+            border-color: rgba(148, 163, 184, 0.25);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+        }
+        body:not(.dark-mode) .core-features-section::before {
+            background-image:
+                linear-gradient(rgba(99, 102, 241, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(99, 102, 241, 0.04) 1px, transparent 1px);
+        }
+        body:not(.dark-mode) .feature-card-mini {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: rgba(148, 163, 184, 0.2);
+        }
+        body:not(.dark-mode) .feature-card-mini:hover {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+        body:not(.dark-mode) .feature-card-mini strong {
+            color: #1e293b;
+        }
+        body:not(.dark-mode) .feature-card-mini span:last-child {
+            color: #64748b;
+        }
+
+        /* ── 라이트모드: 요금표 섹션 ── */
+        body:not(.dark-mode) .pricing-section {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
+            border-color: rgba(148, 163, 184, 0.25);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+        }
+        body:not(.dark-mode) .pricing-section::before {
+            background-image:
+                linear-gradient(rgba(99, 102, 241, 0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(99, 102, 241, 0.04) 1px, transparent 1px);
+        }
+        body:not(.dark-mode) .pricing-section h3 {
+            color: #1e293b;
+        }
+        body:not(.dark-mode) .pricing-card {
+            background: rgba(255, 255, 255, 0.85);
+            border-color: rgba(148, 163, 184, 0.2);
+        }
+        body:not(.dark-mode) .pricing-card.premium {
+            background-image: linear-gradient(rgba(255,255,255,0.95), rgba(255,255,255,0.95)), linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7);
+        }
+        body:not(.dark-mode) .pricing-card .plan-name {
+            color: #1e293b;
+        }
+        body:not(.dark-mode) .pricing-card .plan-price {
+            color: #0f172a;
+        }
+        body:not(.dark-mode) .pricing-card .plan-price small {
+            color: #64748b;
+        }
+        body:not(.dark-mode) .pricing-card ul li {
+            color: #475569;
+        }
+        body:not(.dark-mode) .pricing-card .plan-cta.free-cta {
+            background: rgba(0, 0, 0, 0.05);
+            color: #64748b;
+        }
+
+        /* ── 라이트모드: #94a3b8 → WCAG AA 대비 수정 ── */
+        body:not(.dark-mode) .delib-time { color: #64748b; }
+        body:not(.dark-mode) .install-prompt-desc { color: #64748b; }
+        body:not(.dark-mode) .install-btn-dismiss { color: #64748b; background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.1); }
+        body:not(.dark-mode) .chat-msg-time { color: #64748b; }
+        body:not(.dark-mode) .msg-timestamp { color: #64748b; }
+
         /* ═══════════════════════════════════════════════════
            답변 하단 CTA (전문가 검증 / 변호사 상담)
         ═══════════════════════════════════════════════════ */
@@ -3063,11 +3231,21 @@
             color: #1e40af;
         }
         .bottom-cta-btn.lawyer:hover { background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%); transform: translateY(-1px); }
+        .bottom-cta-btn.leader-chat {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            color: #065f46;
+        }
+        .bottom-cta-btn.leader-chat:hover { background: linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 100%); transform: translateY(-1px); }
         body.dark-mode .bottom-cta-btn.expert { background: linear-gradient(135deg, #2e1065 0%, #3b0764 100%); color: #c4b5fd; }
         body.dark-mode .bottom-cta-btn.lawyer { background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%); color: #93c5fd; }
+        body.dark-mode .bottom-cta-btn.leader-chat { background: linear-gradient(135deg, #064e3b 0%, #065f46 100%); color: #6ee7b7; }
         @media (max-width: 768px) {
             .ai-bottom-cta { flex-direction: column; gap: 8px; }
             .bottom-cta-btn { padding: 12px 14px; font-size: 0.88rem; }
+            .login-nudge-banner { flex-wrap: wrap; }
+            .login-nudge-btn { width: 100%; text-align: center; margin-left: 0; margin-top: 8px; }
+            .feedback-section { flex-wrap: wrap; }
+            .fb-prompt { width: 100%; margin-bottom: 2px; }
         }
 
         /* ═══════════════════════════════════════════════════
@@ -3983,7 +4161,7 @@
 
         /* ═══ 메시지 타임스탬프 ═══ */
         .msg-timestamp {
-            font-size: 0.65rem;
+            font-size: 0.75rem;
             color: var(--text-muted);
             text-align: right;
             margin-top: 8px;
@@ -5540,7 +5718,7 @@
         .chat-msg-bubble.moderator .chat-msg-name { color:#92400e }
         .chat-msg-role { display:inline-block;font-size:10.5px;font-weight:600;color:#fff;background:linear-gradient(135deg,#6366f1,#818cf8);padding:1px 8px;border-radius:10px;line-height:1.6 }
         .chat-msg-bubble.moderator .chat-msg-role { background:linear-gradient(135deg,#d97706,#f59e0b) }
-        .chat-msg-time { font-size:10.5px;color:#94a3b8;margin-left:auto;flex-shrink:0 }
+        .chat-msg-time { font-size:12px;color:#94a3b8;margin-left:auto;flex-shrink:0 }
         .chat-msg-text { font-size:13.5px;color:#1e1b4b;margin-top:5px;line-height:1.55;background:rgba(255,255,255,.8);border:1px solid rgba(99,102,241,.08);border-radius:12px;padding:10px 14px;word-break:break-word;overflow-wrap:break-word }
         .chat-msg-bubble.moderator .chat-msg-text { background:rgba(255,251,235,.6);border-color:rgba(251,191,36,.15) }
         .chat-typing-bubble { display:flex;align-items:center;gap:10px;padding:10px 16px;margin:6px 0;color:#6366f1;font-size:13px;font-weight:500;opacity:0;animation:bubbleSlideIn .3s ease forwards }
@@ -5726,6 +5904,37 @@
                 opacity: 1 !important;
                 animation: none !important;
             }
+        }
+
+        /* ═══════════════════════════════════════════════════
+           데스크탑 와이드 스크린 최적화
+        ═══════════════════════════════════════════════════ */
+        @media (min-width: 1024px) {
+            .content-viewport { padding: 24px 48px; }
+            .input-container { max-width: 940px; }
+            .examples-section { max-width: 1000px; }
+            .conversation-viewport { padding: 32px 40px; }
+        }
+        @media (min-width: 1440px) {
+            .content-viewport { padding: 28px 60px; }
+            .input-container { max-width: 1020px; }
+            .examples-section { max-width: 1080px; }
+            #landing-content .example-card-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            #landing-content .example-card:nth-child(n+13) {
+                display: flex;
+            }
+            .clevel-section { max-width: 1200px; }
+            .conversation-viewport { padding: 36px 56px; gap: 32px; }
+            .ai-msg { font-size: 20px; padding: 48px 48px 40px; }
+        }
+        @media (min-width: 1920px) {
+            .content-viewport { padding: 32px 80px; }
+            .input-container { max-width: 1100px; }
+            .examples-section { max-width: 1200px; }
+            .clevel-section { max-width: 1320px; }
+            .conversation-viewport { padding: 40px 72px; }
         }
 
     </style>
@@ -6151,7 +6360,7 @@
                     <textarea id="lawyerSummary" maxlength="500" placeholder="상담받고 싶은 내용을 간략히 적어주세요"></textarea>
                 </div>
                 <input type="hidden" id="lawyerLeader" value="">
-                <label class="lawyer-consent-label" style="display:flex;align-items:flex-start;gap:8px;margin:12px 0;font-size:0.82rem;color:#94a3b8;">
+                <label class="lawyer-consent-label" style="display:flex;align-items:flex-start;gap:8px;margin:12px 0;font-size:0.82rem;color:#64748b;">
                   <input type="checkbox" id="lawyerPrivacyConsent" required style="margin-top:3px;">
                   <span>개인정보 수집·이용에 동의합니다. (이름, 전화번호, 상담내용 — 상담 안내 목적, 안내 완료 후 30일 이내 삭제) <a href="/privacy" target="_blank" style="color:#818cf8;">개인정보처리방침</a></span>
                 </label>
@@ -6252,20 +6461,20 @@
 <!-- Auth OTP Modal -->
 <div id="authOtpModal" role="dialog" aria-modal="true" aria-label="Email Login" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
     <div style="background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:36px 28px;max-width:380px;width:90%;text-align:center;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.15);">
-        <button id="authOtpClose" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#94a3b8;font-size:1.5rem;cursor:pointer;">&times;</button>
+        <button id="authOtpClose" style="position:absolute;top:12px;right:16px;background:none;border:none;color:#64748b;font-size:1.5rem;cursor:pointer;">&times;</button>
         <div id="authOtpStep1">
             <h3 style="color:#1e293b;font-weight:800;margin-bottom:8px;">Email Login</h3>
             <p style="color:#64748b;font-size:0.9rem;margin-bottom:20px;">No signup needed. Just verify your email.</p>
             <input id="authOtpEmail" type="email" placeholder="Email" style="width:100%;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;color:#1e293b;font-size:1rem;margin-bottom:12px;outline:none;">
             <button id="authOtpSendBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#2563eb,#8b5cf6);border:none;border-radius:12px;color:white;font-size:1rem;font-weight:700;cursor:pointer;">Send Code</button>
-            <p id="authOtpSendMsg" style="color:#94a3b8;font-size:0.85rem;margin-top:12px;display:none;"></p>
+            <p id="authOtpSendMsg" style="color:#64748b;font-size:0.85rem;margin-top:12px;display:none;"></p>
         </div>
         <div id="authOtpStep2" style="display:none;">
             <h3 style="color:#1e293b;font-weight:800;margin-bottom:8px;">Enter Code</h3>
             <p style="color:#64748b;font-size:0.9rem;margin-bottom:20px;">Enter the 6-digit code from your email</p>
             <input id="authOtpCode" type="text" maxlength="6" placeholder="000000" inputmode="numeric" autocomplete="one-time-code" style="width:100%;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;color:#1e293b;font-size:1.5rem;font-weight:900;letter-spacing:8px;text-align:center;margin-bottom:12px;outline:none;">
             <button id="authOtpVerifyBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#10b981,#059669);border:none;border-radius:12px;color:white;font-size:1rem;font-weight:700;cursor:pointer;">Verify</button>
-            <p id="authOtpVerifyMsg" style="color:#94a3b8;font-size:0.85rem;margin-top:12px;display:none;"></p>
+            <p id="authOtpVerifyMsg" style="color:#64748b;font-size:0.85rem;margin-top:12px;display:none;"></p>
             <button id="authOtpResendBtn" style="background:none;border:none;color:#2563eb;font-size:0.85rem;cursor:pointer;margin-top:8px;text-decoration:underline;">Resend</button>
         </div>
         <div id="authOtpStep3" style="display:none;">

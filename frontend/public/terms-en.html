@@ -176,7 +176,11 @@
             padding: 36px 32px;
             margin-bottom: 24px;
             transition: all 0.3s;
-            animation: fadeInUp 0.8s ease;
+            opacity: 0; transform: translateY(30px);
+        }
+        .article-card.visible {
+            opacity: 1; transform: translateY(0);
+            transition: opacity 0.6s ease, transform 0.6s ease, border-color 0.3s, box-shadow 0.3s;
         }
 
         .article-card:hover {
@@ -291,7 +295,11 @@
         .effective-date {
             text-align: center;
             padding: 40px 20px;
-            animation: fadeInUp 0.8s ease;
+            opacity: 0; transform: translateY(30px);
+        }
+        .effective-date.visible {
+            opacity: 1; transform: translateY(0);
+            transition: opacity 0.6s ease, transform 0.6s ease;
         }
 
         .effective-date p {
@@ -316,7 +324,11 @@
             justify-content: center;
             gap: 24px;
             padding: 40px 20px 0;
-            animation: fadeInUp 0.8s ease;
+            opacity: 0; transform: translateY(30px);
+        }
+        .footer-nav.visible {
+            opacity: 1; transform: translateY(0);
+            transition: opacity 0.6s ease, transform 0.6s ease;
         }
 
         .footer-link {
@@ -354,15 +366,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .article-card:nth-child(2) { animation-delay: 0.05s; }
-        .article-card:nth-child(3) { animation-delay: 0.1s; }
-        .article-card:nth-child(4) { animation-delay: 0.15s; }
-        .article-card:nth-child(5) { animation-delay: 0.2s; }
-        .article-card:nth-child(6) { animation-delay: 0.25s; }
-        .article-card:nth-child(7) { animation-delay: 0.3s; }
-        .article-card:nth-child(8) { animation-delay: 0.35s; }
-        .article-card:nth-child(9) { animation-delay: 0.4s; }
-        .article-card:nth-child(10) { animation-delay: 0.45s; }
 
         /* Responsive */
         @media (max-width: 768px) {
@@ -412,17 +415,56 @@
             }
         }
 
+        @media (max-width: 480px) {
+            .container { padding: 16px 12px 48px; }
+            .header h1 { font-size: 1.6rem; }
+            .header p { font-size: 0.85rem; }
+            .article-card { padding: 18px 14px; }
+            .article-number h2 { font-size: 1rem; }
+        }
+
         /* ─── Light Mode ─── */
-        body:not(.dark-mode) { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%); color: #1e293b; }
+        body:not(.dark-mode) { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%); color: #1e293b; --text-secondary: #64748b; }
+        body:not(.dark-mode) .article-card a, body:not(.dark-mode) .contact-box a { color: #2563eb; }
         body:not(.dark-mode) .header { background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid #e2e8f0; }
         body:not(.dark-mode) .header h1 { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         body:not(.dark-mode) .article-card { background: #fff; border-color: #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.06); color: #1e293b; }
-        body:not(.dark-mode) .highlight-box { background: rgba(37,99,235,0.06); border-color: #bfdbfe; color: #1e293b; }
-        body:not(.dark-mode) .info-box { background: rgba(245,158,11,0.06); border-color: #fde68a; color: #1e293b; }
+        body:not(.dark-mode) .highlight-box { background: rgba(239,68,68,0.06); border-color: #fecaca; color: #1e293b; }
+        body:not(.dark-mode) .highlight-box p { color: #991b1b; }
+        body:not(.dark-mode) .info-box { background: rgba(37,99,235,0.06); border-color: #bfdbfe; color: #1e293b; }
+        body:not(.dark-mode) .info-box p { color: #1e40af; }
         body:not(.dark-mode) .article-number { color: #2563eb; }
         body:not(.dark-mode) .effective-date { background: rgba(255,255,255,0.8); border-color: #e2e8f0; color: #64748b; }
         body:not(.dark-mode) .back-button { background: rgba(0,0,0,0.05); border-color: #e2e8f0; color: #1e293b; }
         body:not(.dark-mode) .footer-link { background: rgba(0,0,0,0.05); border-color: #e2e8f0; color: #1e293b; }
+
+        /* ── In-app browser compat (backdrop-filter fallback for WebViews) ── */
+        body.is-inapp-browser {
+            height: 100vh;
+            height: -webkit-fill-available;
+            position: relative;
+        }
+        body.is-inapp-browser .header {
+            -webkit-backdrop-filter: blur(20px);
+            background: rgba(15, 23, 42, 0.98);
+        }
+        body:not(.dark-mode).is-inapp-browser .header {
+            background: rgba(255, 255, 255, 0.98);
+        }
+        body.is-inapp-browser .article-card {
+            -webkit-backdrop-filter: blur(12px);
+            background: rgba(30, 41, 59, 0.95);
+        }
+        body:not(.dark-mode).is-inapp-browser .article-card {
+            background: rgba(255, 255, 255, 0.98);
+        }
+        body.is-inapp-browser .back-button {
+            -webkit-backdrop-filter: blur(8px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+        body:not(.dark-mode).is-inapp-browser .back-button {
+            background: rgba(0, 0, 0, 0.06);
+        }
     </style>
     <script src="/cookie-consent.js"></script>
 </head>
@@ -585,11 +627,11 @@
                 <li>Paid Credits: Purchase credits to use the Service without daily limits. 1 credit per standard query, 2 credits per expert answer.</li>
                 <li>Credits never expire once purchased.</li>
                 <li>Payments are processed through Paddle (payment processor), which acts as the Merchant of Record and manages taxes and payments.</li>
-                <li>Credits cannot be transferred to others or refunded for cash, except as provided in the <a href="/refund-en" style="color:#93c5fd;">Refund Policy</a>.</li>
+                <li>Credits cannot be transferred to others or refunded for cash, except as provided in the <a href="/refund-en" style="color:#2563eb;">Refund Policy</a>.</li>
                 <li>All displayed prices include applicable taxes (VAT).</li>
             </ul>
             <div class="info-box">
-                <p><span class="material-symbols-outlined">info</span>Credit products and pricing are available on the <a href="/pricing-en" style="color:#93c5fd;">Pricing</a> page.</p>
+                <p><span class="material-symbols-outlined">info</span>Credit products and pricing are available on the <a href="/pricing-en" style="color:#2563eb;">Pricing</a> page.</p>
             </div>
         </div>
 
@@ -677,5 +719,6 @@
 <script src="/site-nav.js" defer></script>
 <script src="/site-footer.js" defer></script>
 <script src="/auth-modal.js" defer></script>
+<script src="/scroll-reveal.js"></script>
 </body>
 </html>

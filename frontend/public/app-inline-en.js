@@ -175,6 +175,9 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         lastRawResponse: null,
         darkMode: false,
         MAX_RETRY: 2,
+        DAILY_FREE: 2,
+        _getQueryCount() { try { var d=new Date(),k='lq_'+d.getFullYear()+(d.getMonth()+1)+d.getDate(); return parseInt(sessionStorage.getItem(k)||'0',10); } catch(e){return 0;} },
+        _incQueryCount() { try { var d=new Date(),k='lq_'+d.getFullYear()+(d.getMonth()+1)+d.getDate(); sessionStorage.setItem(k,String(this._getQueryCount()+1)); } catch(e){} },
         currentAbortController: null,  // AbortController (항목 #12)
         currentLeader: null,  // {name, specialty} — current assigned leader
         isFirstQuestion: true,  // first question flag
@@ -1922,11 +1925,19 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                     g1.appendChild(exportBtn);
                     toolbar.appendChild(g1);
 
-                    const g3 = document.createElement('div');
-                    g3.className = 'toolbar-group';
-                    const fbUp = this._createToolbarBtn('thumb_up', 'Helpful', () => _sendFb('up', fbUp));
-                    const fbDown = this._createToolbarBtn('thumb_down', 'Not helpful', () => _sendFb('down', fbDown));
-                    const _sendFb = async (rating, btn) => {
+                    msgDiv.appendChild(toolbar);
+
+                    // ── Feedback section ──
+                    const fbSection = document.createElement('div');
+                    fbSection.className = 'feedback-section';
+                    fbSection.innerHTML = _sanitize(
+                        '<span class="fb-prompt">Was this answer helpful?</span>'
+                        + '<button class="fb-btn fb-up"><span class="material-symbols-outlined">thumb_up</span> Helpful</button>'
+                        + '<button class="fb-btn fb-down"><span class="material-symbols-outlined">thumb_down</span> Not helpful</button>'
+                    );
+                    const _fbUp = fbSection.querySelector('.fb-up');
+                    const _fbDown = fbSection.querySelector('.fb-down');
+                    const _sendFb = async (rating) => {
                         try {
                             await fetch(`${this.BASE_URL}/feedback`, {
                                 method: 'POST',
@@ -1934,20 +1945,48 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                                 body: JSON.stringify({ rating, query: originalQuery, leader: leaderName || '' })
                             });
                         } catch(e) { /* 무시 */ }
-                        fbUp.classList.add('voted');
-                        fbDown.classList.add('voted');
+                        if (rating === 'up') { _fbUp.classList.add('selected'); } else { _fbDown.classList.add('selected'); }
+                        _fbUp.disabled = true; _fbDown.disabled = true;
+                        fbSection.querySelector('.fb-prompt').textContent = 'Thank you for your feedback!';
                     };
-                    g3.appendChild(fbUp);
-                    g3.appendChild(fbDown);
-                    toolbar.appendChild(g3);
-
-                    msgDiv.appendChild(toolbar);
+                    _fbUp.onclick = () => _sendFb('up');
+                    _fbDown.onclick = () => _sendFb('down');
+                    msgDiv.appendChild(fbSection);
 
                     // ── Disclaimer ──
                     const disclaimerDiv = document.createElement('div');
                     disclaimerDiv.className = 'ai-disclaimer';
                     disclaimerDiv.textContent = 'This is an AI legal information service and does not substitute for professional legal advice from an attorney.';
                     msgDiv.appendChild(disclaimerDiv);
+
+                    // ── Login nudge banner (non-logged-in users) ──
+                    this._incQueryCount();
+                    const _qc = this._getQueryCount();
+                    const _isLoggedIn = window.__lawmadiAuth && window.__lawmadiAuth.user;
+                    if (!_isLoggedIn && _qc >= 1) {
+                        const loginBanner = document.createElement('div');
+                        loginBanner.className = 'login-nudge-banner';
+                        if (_qc >= this.DAILY_FREE) {
+                            loginBanner.innerHTML = _sanitize(
+                                '<span class="material-symbols-outlined">lock</span>'
+                                + '<div><strong>You are approaching your free usage limit</strong>'
+                                + '<p>Log in to access expert verification, leader 1:1 chat, and more features with credits.</p></div>'
+                                + '<button class="login-nudge-btn">Log in</button>'
+                            );
+                        } else {
+                            loginBanner.innerHTML = _sanitize(
+                                '<span class="material-symbols-outlined">person</span>'
+                                + '<div><strong>Log in to unlock more features</strong>'
+                                + '<p>Expert verification, leader 1:1 chat, PDF export, save answers, and more</p></div>'
+                                + '<button class="login-nudge-btn">Log in</button>'
+                            );
+                        }
+                        loginBanner.querySelector('.login-nudge-btn').onclick = () => {
+                            if (typeof UI !== 'undefined' && UI.openAuthModal) UI.openAuthModal();
+                            else { const snLogin = document.getElementById('siteNavAuth'); if (snLogin) snLogin.click(); }
+                        };
+                        msgDiv.appendChild(loginBanner);
+                    }
 
                     // ── 전문가 검증 + 변호사 상담 CTA (답변 맨 아래) ──
                     const ctaBar = document.createElement('div');
@@ -2071,6 +2110,17 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         }
                     };
                     ctaBar.appendChild(expertCta);
+
+                    // Leader 1:1 chat CTA
+                    if (leaderName && this.currentLeader && this.currentLeader.leader_id) {
+                        const chatCta = document.createElement('button');
+                        chatCta.className = 'bottom-cta-btn leader-chat';
+                        chatCta.innerHTML = '<span class="material-symbols-outlined">chat</span> Chat with ' + this.escapeHtml(leaderName);
+                        chatCta.onclick = () => {
+                            location.href = '/leader-chat?id=' + encodeURIComponent(this.currentLeader.leader_id) + '&lang=en';
+                        };
+                        ctaBar.appendChild(chatCta);
+                    }
 
                     if (leaderName) {
                         const clevelOnly = ['서연','지유','유나'];
@@ -2477,7 +2527,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
     var isIOS = /iPad|iPhone|iPod/.test(ua);
     var isAndroid = /Android/i.test(ua);
     var isSamsung = /SamsungBrowser/i.test(ua);
-    var isInApp = /KAKAOTALK|FBAN|FBAV|Instagram|Line\/|NAVER|Snapchat|Twitter/i.test(ua);
+    var isInApp = /KAKAOTALK|FBAN|FBAV|Instagram|Line\/|NAVER|Snapchat|Twitter|SamsungBrowser|Whale|DaumApps|MicroMessenger|Telegram/i.test(ua);
 
     if (isInApp) {
         // 인앱 브라우저: 외부 브라우저로 열기 안내

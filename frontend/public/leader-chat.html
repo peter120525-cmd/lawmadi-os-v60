@@ -100,7 +100,7 @@
         }
         .leader-info .personality {
             font-size: 0.78rem;
-            color: #94a3b8;
+            color: #64748b;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -284,7 +284,7 @@
         .send-btn:active:not(:disabled) { transform: scale(0.92); }
         .char-counter {
             font-size: 0.75rem;
-            color: #94a3b8;
+            color: #64748b;
             text-align: right;
             margin-top: 4px;
         }
@@ -354,6 +354,14 @@
         body.dark-mode .input-row textarea:focus { border-color: var(--primary); background: rgba(15,23,42,0.8); }
         body.dark-mode .input-row textarea::placeholder { color: #475569; }
         body.dark-mode .error-banner { background: rgba(127,29,29,0.2); border-color: rgba(239,68,68,0.3); color: #fca5a5; }
+        body.dark-mode .char-counter { color: #94a3b8; }
+        body.dark-mode #usageBanner { background: rgba(30,41,59,0.8) !important; color: #e2e8f0 !important; border-color: rgba(255,255,255,0.08) !important; }
+
+        @media (min-width: 1440px) {
+            .input-row { max-width: 900px; }
+            .msg-row { max-width: 60%; }
+            .chat-viewport { padding: 24px 40px; }
+        }
     </style>
     <script src="/cookie-consent.js"></script>
 </head>
@@ -366,6 +374,8 @@
 
     <!-- Error Banner (hidden) -->
     <div class="error-banner" id="errorBanner"></div>
+    <!-- Usage Banner (hidden) -->
+    <div id="usageBanner" style="display:none;padding:8px 20px;font-size:0.82rem;font-weight:600;text-align:center;border-bottom:1px solid #e5e7eb;"></div>
 
     <!-- Profile Header (hidden until loaded) -->
     <div class="profile-header" id="profileHeader" style="display:none;">
@@ -401,5 +411,8 @@
 
     <script src="/leader-chat.js"></script>
 <script src="/lawmadi-monitor.js" defer></script>
+<script src="/site-nav.js" defer></script>
+<script src="/site-footer.js" defer></script>
+<script src="/auth-modal.js" defer></script>
 </body>
 </html>

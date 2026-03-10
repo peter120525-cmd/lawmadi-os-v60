@@ -157,6 +157,9 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         lastRawResponse: null,
         darkMode: false,
         MAX_RETRY: 2,
+        DAILY_FREE: 2,
+        _getQueryCount() { try { var d=new Date(),k='lq_'+d.getFullYear()+(d.getMonth()+1)+d.getDate(); return parseInt(sessionStorage.getItem(k)||'0',10); } catch(e){return 0;} },
+        _incQueryCount() { try { var d=new Date(),k='lq_'+d.getFullYear()+(d.getMonth()+1)+d.getDate(); sessionStorage.setItem(k,String(this._getQueryCount()+1)); } catch(e){} },
         currentAbortController: null,  // AbortController (항목 #12)
         currentLeader: null,  // {name, specialty} — 현재 담당 리더
         isFirstQuestion: true,  // 첫 질문 여부
@@ -1590,11 +1593,19 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                     g1.appendChild(exportBtn);
                     toolbar.appendChild(g1);
 
-                    const g3 = document.createElement('div');
-                    g3.className = 'toolbar-group';
-                    const fbUp = this._createToolbarBtn('thumb_up', '좋아요', () => _sendFb('up', fbUp));
-                    const fbDown = this._createToolbarBtn('thumb_down', '아쉬워요', () => _sendFb('down', fbDown));
-                    const _sendFb = async (rating, btn) => {
+                    msgDiv.appendChild(toolbar);
+
+                    // ── 피드백 섹션 ──
+                    const fbSection = document.createElement('div');
+                    fbSection.className = 'feedback-section';
+                    fbSection.innerHTML = _sanitize(
+                        '<span class="fb-prompt">이 답변이 도움이 되셨나요?</span>'
+                        + '<button class="fb-btn fb-up"><span class="material-symbols-outlined">thumb_up</span> 좋아요</button>'
+                        + '<button class="fb-btn fb-down"><span class="material-symbols-outlined">thumb_down</span> 아쉬워요</button>'
+                    );
+                    const _fbUp = fbSection.querySelector('.fb-up');
+                    const _fbDown = fbSection.querySelector('.fb-down');
+                    const _sendFb = async (rating) => {
                         try {
                             await fetch(`${this.BASE_URL}/feedback`, {
                                 method: 'POST',
@@ -1602,20 +1613,48 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                                 body: JSON.stringify({ rating, query: originalQuery, leader: leaderName || '' })
                             });
                         } catch(e) { /* 무시 */ }
-                        fbUp.classList.add('voted');
-                        fbDown.classList.add('voted');
+                        if (rating === 'up') { _fbUp.classList.add('selected'); } else { _fbDown.classList.add('selected'); }
+                        _fbUp.disabled = true; _fbDown.disabled = true;
+                        fbSection.querySelector('.fb-prompt').textContent = '피드백을 보내주셔서 감사합니다!';
                     };
-                    g3.appendChild(fbUp);
-                    g3.appendChild(fbDown);
-                    toolbar.appendChild(g3);
-
-                    msgDiv.appendChild(toolbar);
+                    _fbUp.onclick = () => _sendFb('up');
+                    _fbDown.onclick = () => _sendFb('down');
+                    msgDiv.appendChild(fbSection);
 
                     // ── 면책 안내 ──
                     const disclaimerDiv = document.createElement('div');
                     disclaimerDiv.className = 'ai-disclaimer';
                     disclaimerDiv.textContent = '본 서비스는 AI 기반 법률 정보 제공 시스템이며, 변호사의 법률 자문을 대체하지 않습니다.';
                     msgDiv.appendChild(disclaimerDiv);
+
+                    // ── 로그인 유도 배너 (비로그인 사용자) ──
+                    this._incQueryCount();
+                    const _qc = this._getQueryCount();
+                    const _isLoggedIn = window.__lawmadiAuth && window.__lawmadiAuth.user;
+                    if (!_isLoggedIn && _qc >= 1) {
+                        const loginBanner = document.createElement('div');
+                        loginBanner.className = 'login-nudge-banner';
+                        if (_qc >= this.DAILY_FREE) {
+                            loginBanner.innerHTML = _sanitize(
+                                '<span class="material-symbols-outlined">lock</span>'
+                                + '<div><strong>무료 이용 한도에 가까워지고 있습니다</strong>'
+                                + '<p>로그인하면 크레딧으로 전문가 검증, 리더 1:1 채팅 등 추가 기능을 이용할 수 있습니다.</p></div>'
+                                + '<button class="login-nudge-btn">로그인</button>'
+                            );
+                        } else {
+                            loginBanner.innerHTML = _sanitize(
+                                '<span class="material-symbols-outlined">person</span>'
+                                + '<div><strong>로그인하면 더 많은 기능을 이용할 수 있습니다</strong>'
+                                + '<p>전문가 검증, 리더 1:1 채팅, PDF 내보내기, 답변 저장 등</p></div>'
+                                + '<button class="login-nudge-btn">로그인</button>'
+                            );
+                        }
+                        loginBanner.querySelector('.login-nudge-btn').onclick = () => {
+                            if (typeof UI !== 'undefined' && UI.openAuthModal) UI.openAuthModal();
+                            else { const snLogin = document.getElementById('siteNavAuth'); if (snLogin) snLogin.click(); }
+                        };
+                        msgDiv.appendChild(loginBanner);
+                    }
 
                     // ── 전문가 검증 + 변호사 상담 CTA (답변 맨 아래) ──
                     const ctaBar = document.createElement('div');
@@ -1745,6 +1784,17 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         }
                     };
                     ctaBar.appendChild(expertCta);
+
+                    // 리더 1:1 채팅 CTA
+                    if (leaderName && this.currentLeader && this.currentLeader.leader_id) {
+                        const chatCta = document.createElement('button');
+                        chatCta.className = 'bottom-cta-btn leader-chat';
+                        chatCta.innerHTML = '<span class="material-symbols-outlined">chat</span> ' + this.escapeHtml(leaderName) + '에게 질문하기';
+                        chatCta.onclick = () => {
+                            location.href = '/leader-chat?id=' + encodeURIComponent(this.currentLeader.leader_id);
+                        };
+                        ctaBar.appendChild(chatCta);
+                    }
 
                     if (leaderName) {
                         const clevelOnly = ['서연','지유','유나'];

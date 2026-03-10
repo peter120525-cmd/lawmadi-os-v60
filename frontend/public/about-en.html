@@ -604,6 +604,10 @@
             .view-links { flex-direction: column; gap: 10px; }
             .view-link { min-height: 44px; padding: 10px 0; }
             .cta-button { padding: 16px 36px; font-size: 1rem; }
+            .floating-shape {
+                animation: none !important;
+                opacity: 0.03;
+            }
             .floating-shape.shape1 { width: 200px; height: 200px; }
             .floating-shape.shape2 { width: 150px; height: 150px; }
             .floating-shape.shape3 { width: 175px; height: 175px; }
@@ -680,7 +684,7 @@
         }
 
         /* ─── Light Mode ─── */
-        body:not(.dark-mode) { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%); color: #1e293b; }
+        body:not(.dark-mode) { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%); color: #1e293b; --text-secondary: #64748b; }
         body:not(.dark-mode) .header { background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid #e2e8f0; }
         body:not(.dark-mode) .header h1 { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
         body:not(.dark-mode) .section { background: rgba(255,255,255,0.8); border-color: #e2e8f0; }
@@ -698,6 +702,15 @@
         body:not(.dark-mode) .back-button { background: rgba(0,0,0,0.05); border-color: #e2e8f0; color: #1e293b; }
         body:not(.dark-mode) .view-link { color: #2563eb; }
         body:not(.dark-mode) .hero-text { color: #1e293b; }
+
+        /* Desktop wide-screen optimization */
+        @media (min-width: 1440px) {
+            .container { max-width: 1320px; }
+            .hero-text { max-width: 800px; }
+        }
+        @media (min-width: 1920px) {
+            .container { max-width: 1440px; }
+        }
     </style>
     <script src="/cookie-consent.js"></script>
 </head>
