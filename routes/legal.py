@@ -97,6 +97,8 @@ _sha256_fn: Optional[Callable] = None
 _optional_import_fn: Optional[Callable] = None
 _check_expert_access_fn: Optional[Callable] = None
 _post_deduct_fn: Optional[Callable] = None
+_get_paddle_user_fn: Optional[Callable] = None
+_check_leader_chat_limit_fn: Optional[Callable] = None
 
 
 def _detect_lang(query: str) -> str:
@@ -132,6 +134,8 @@ def set_dependencies(
     optional_import_fn,
     check_expert_access=None,
     post_deduct=None,
+    get_paddle_user=None,
+    check_leader_chat_limit=None,
 ):
     """Inject shared runtime objects and utility functions from main.py."""
     global _RUNTIME, _METRICS, _LEADER_REGISTRY, _limiter
@@ -139,7 +143,7 @@ def set_dependencies(
     global _match_ssot_sources_fn, _resolve_leader_from_ssot_fn, _ensure_genai_client_fn
     global _classify_gemini_error_fn, _remove_markdown_tables_fn, _remove_separator_lines_fn
     global _compute_quality_meta_fn, _audit_fn, _get_client_ip_fn, _sha256_fn, _optional_import_fn
-    global _check_expert_access_fn, _post_deduct_fn
+    global _check_expert_access_fn, _post_deduct_fn, _get_paddle_user_fn, _check_leader_chat_limit_fn
 
     _RUNTIME = runtime
     _METRICS = metrics
@@ -161,6 +165,21 @@ def set_dependencies(
     _optional_import_fn = optional_import_fn
     _check_expert_access_fn = check_expert_access
     _post_deduct_fn = post_deduct
+    _get_paddle_user_fn = get_paddle_user
+    _check_leader_chat_limit_fn = check_leader_chat_limit
+
+
+def _resolve_user_email(request) -> Optional[str]:
+    """로그인 사용자의 이메일 반환, 비로그인 시 None."""
+    if not _get_paddle_user_fn:
+        return None
+    try:
+        user = _get_paddle_user_fn(request)
+        if user:
+            return user.get("email")
+    except Exception:
+        pass
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -856,7 +875,8 @@ async def ask(request: Request):
                         lambda: db_client_v2.save_chat_history(
                             user_query=query, ai_response=final_text, leader=leader_name,
                             status="success", latency_ms=latency_ms, visitor_id=visitor_id,
-                            swarm_mode=False, leaders_used=None, query_category=query_category
+                            swarm_mode=False, leaders_used=None, query_category=query_category,
+                            user_email=_resolve_user_email(request), query_type="general"
                         )
                     )
             except Exception as log_error:
@@ -951,7 +971,7 @@ def _classify_error_category(e: Exception) -> str:
 async def ask_stream(request: Request):
     """SSE 스트리밍 엔드포인트 — 실시간 토큰 전송"""
 
-    # 4시간당 10회 제한
+    # 기본 레이트리밋
     rate_check = _check_rate_limit_fn(request)
     if rate_check is not True:
         return _rate_limit_response_fn(rate_check.get("retry_at_kst", ""))
@@ -978,6 +998,12 @@ async def ask_stream(request: Request):
         # 리더 협의/인수인계 상태
         req_current_leader = data.get("current_leader")  # {"name": ..., "specialty": ...} or None
         req_is_first_question = bool(data.get("is_first_question", True))
+
+        # 리더 1:1 채팅일 때만 일일 5회 제한 (일반 스트리밍은 제한 없음)
+        if req_current_leader and _check_leader_chat_limit_fn:
+            lc_check = _check_leader_chat_limit_fn(request)
+            if lc_check is not True:
+                return _rate_limit_response_fn(lc_check.get("retry_at_kst", ""))
 
         MAX_QUERY_LEN = 2000
         if len(query) > MAX_QUERY_LEN:
@@ -1570,6 +1596,8 @@ async def ask_stream(request: Request):
                                 latency_ms=latency_ms,
                                 visitor_id=visitor_id,
                                 swarm_mode=swarm_mode,
+                                user_email=_resolve_user_email(request),
+                                query_type="leader_chat" if req_current_leader else "general",
                             )
                         )
                 except Exception as e:
@@ -1724,6 +1752,25 @@ async def ask_expert(request: Request):
         # Post-deduction: expert costs 2 credits
         if _post_deduct_fn and _response_status == "SUCCESS":
             _post_deduct_fn(request, "expert", trace)
+
+        # Expert 채팅 로그 저장
+        try:
+            db_client_v2 = _optional_import_fn("connectors.db_client_v2")
+            if db_client_v2 and hasattr(db_client_v2, "save_chat_history"):
+                query_category = db_client_v2.classify_query_category(query)
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(
+                    None,
+                    lambda: db_client_v2.save_chat_history(
+                        user_query=query, ai_response=final_text, leader=leader_name,
+                        status="success" if _response_status == "SUCCESS" else "error",
+                        latency_ms=latency_ms, visitor_id=visitor_id,
+                        swarm_mode=False, leaders_used=None, query_category=query_category,
+                        user_email=_resolve_user_email(request), query_type="expert"
+                    )
+                )
+        except Exception as log_error:
+            logger.warning(f"⚠️ [Expert ChatHistory] 저장 실패 (무시): {log_error}")
 
         _expert_disclaimer_ko = "본 전문가 분석은 AI 기반 법률 정보이며, 변호사의 법률 자문이 아닙니다. 중요한 법적 결정 시 반드시 변호사와 상담하세요."
         _expert_disclaimer_en = "This expert analysis is AI-generated legal information, not professional legal advice. Consult a qualified attorney for important legal decisions."
