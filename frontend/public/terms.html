@@ -15,7 +15,7 @@
     <meta property="og:locale" content="ko_KR" />
     <meta property="og:image" content="https://lawmadi-db.web.app/og-image.png" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#3D8B5E">
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="icon" type="image/png" href="/icon-192.png" />
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -28,20 +28,20 @@
         }
 
         :root {
-            --primary: #2563eb;
-            --gold: #f59e0b;
-            --purple: #8b5cf6;
-            --green: #10b981;
-            --red: #ef4444;
-            --bg-dark: #0f172a;
-            --bg-card: #1e293b;
-            --text-primary: #f1f5f9;
-            --text-secondary: #cbd5e1;
+            --primary: #3D8B5E;
+            --gold: #B8922D;
+            --purple: #6DBB8F;
+            --green: #3D8B5E;
+            --red: #C45454;
+            --bg-dark: #101A15;
+            --bg-card: #1A2E22;
+            --text-primary: #E4EDE8;
+            --text-secondary: #8BAA9A;
         }
 
         body {
             font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            background: linear-gradient(135deg, #101A15 0%, #1A2E22 50%, #2D4038 100%);
             min-height: 100vh;
             color: var(--text-primary);
             overflow-x: hidden;
@@ -66,8 +66,8 @@
             width: 100%;
             height: 100%;
             background-image:
-                linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+                linear-gradient(rgba(74, 155, 110, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(74, 155, 110, 0.03) 1px, transparent 1px);
             background-size: 50px 50px;
             animation: gridMove 20s linear infinite;
         }
@@ -84,9 +84,9 @@
             animation: float 25s infinite ease-in-out;
         }
 
-        .shape1 { width: 400px; height: 400px; background: #3b82f6; top: 5%; left: 5%; animation-delay: 0s; }
-        .shape2 { width: 300px; height: 300px; background: #f59e0b; top: 50%; right: 5%; animation-delay: 8s; }
-        .shape3 { width: 350px; height: 350px; background: #8b5cf6; bottom: 5%; left: 40%; animation-delay: 16s; }
+        .shape1 { width: 400px; height: 400px; background: #4A9B6E; top: 5%; left: 5%; animation-delay: 0s; }
+        .shape2 { width: 300px; height: 300px; background: #B8922D; top: 50%; right: 5%; animation-delay: 8s; }
+        .shape3 { width: 350px; height: 350px; background: #6DBB8F; bottom: 5%; left: 40%; animation-delay: 16s; }
 
         @keyframes float {
             0%, 100% { transform: translate(0, 0) rotate(0deg); }
@@ -138,19 +138,19 @@
         .header-badge {
             display: inline-block;
             padding: 8px 20px;
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            background: linear-gradient(135deg, #4A9B6E 0%, #6DBB8F 100%);
             border-radius: 20px;
             font-size: 0.85rem;
             font-weight: 700;
             letter-spacing: 1px;
             margin-bottom: 20px;
-            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 4px 20px rgba(74, 155, 110, 0.3);
         }
 
         .header h1 {
             font-size: 3rem;
             font-weight: 900;
-            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+            background: linear-gradient(135deg, #fff 0%, #8BAA9A 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -168,7 +168,7 @@
 
         /* Article Card */
         .article-card {
-            background: rgba(30, 41, 59, 0.7);
+            background: rgba(26, 46, 34, 0.7);
             -webkit-backdrop-filter: blur(20px);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -184,7 +184,7 @@
         }
 
         .article-card:hover {
-            border-color: rgba(59, 130, 246, 0.3);
+            border-color: rgba(74, 155, 110, 0.3);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
         }
 
@@ -252,15 +252,15 @@
         }
 
         .highlight-box {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
+            background: rgba(196, 84, 84, 0.1);
+            border: 1px solid rgba(196, 84, 84, 0.3);
             border-radius: 12px;
             padding: 16px 20px;
             margin-top: 12px;
         }
 
         .highlight-box p {
-            color: #fca5a5;
+            color: #D4A0A0;
             font-weight: 600;
             margin-bottom: 0;
         }
@@ -272,15 +272,15 @@
         }
 
         .info-box {
-            background: rgba(37, 99, 235, 0.1);
-            border: 1px solid rgba(37, 99, 235, 0.3);
+            background: rgba(61, 139, 94, 0.1);
+            border: 1px solid rgba(61, 139, 94, 0.3);
             border-radius: 12px;
             padding: 16px 20px;
             margin-top: 12px;
         }
 
         .info-box p {
-            color: #93c5fd;
+            color: #8DD4AA;
             font-weight: 600;
             margin-bottom: 0;
         }
@@ -311,7 +311,7 @@
         .effective-date .date {
             font-size: 1.4rem;
             font-weight: 900;
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            background: linear-gradient(135deg, #4A9B6E 0%, #6DBB8F 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -349,7 +349,7 @@
         }
 
         .footer-link:hover {
-            background: rgba(37, 99, 235, 0.2);
+            background: rgba(61, 139, 94, 0.2);
             border-color: var(--primary);
             transform: translateY(-3px);
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
@@ -424,19 +424,19 @@
         }
 
         /* ─── Light Mode ─── */
-        body:not(.dark-mode) { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%); color: #1e293b; --text-secondary: #64748b; }
-        body:not(.dark-mode) .article-card a, body:not(.dark-mode) .contact-box a { color: #2563eb; }
-        body:not(.dark-mode) .header { background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid #e2e8f0; }
-        body:not(.dark-mode) .header h1 { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        body:not(.dark-mode) .article-card { background: #fff; border-color: #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.06); color: #1e293b; }
-        body:not(.dark-mode) .highlight-box { background: rgba(239,68,68,0.06); border-color: #fecaca; color: #1e293b; }
+        body:not(.dark-mode) { background: linear-gradient(135deg, #F4F8F5 0%, #D4E4DA 50%, #8BAA9A 100%); color: #1A2E22; --text-secondary: #5D7D6D; }
+        body:not(.dark-mode) .article-card a, body:not(.dark-mode) .contact-box a { color: #3D8B5E; }
+        body:not(.dark-mode) .header { background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid #D4E4DA; }
+        body:not(.dark-mode) .header h1 { background: linear-gradient(135deg, #1A2E22 0%, #2D4038 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        body:not(.dark-mode) .article-card { background: #fff; border-color: #D4E4DA; box-shadow: 0 2px 8px rgba(0,0,0,0.06); color: #1A2E22; }
+        body:not(.dark-mode) .highlight-box { background: rgba(196,84,84,0.06); border-color: #E8BFBF; color: #1A2E22; }
         body:not(.dark-mode) .highlight-box p { color: #991b1b; }
-        body:not(.dark-mode) .info-box { background: rgba(37,99,235,0.06); border-color: #bfdbfe; color: #1e293b; }
-        body:not(.dark-mode) .info-box p { color: #1e40af; }
-        body:not(.dark-mode) .article-number { color: #2563eb; }
-        body:not(.dark-mode) .effective-date { background: rgba(255,255,255,0.8); border-color: #e2e8f0; color: #64748b; }
-        body:not(.dark-mode) .back-button { background: rgba(0,0,0,0.05); border-color: #e2e8f0; color: #1e293b; }
-        body:not(.dark-mode) .footer-link { background: rgba(0,0,0,0.05); border-color: #e2e8f0; color: #1e293b; }
+        body:not(.dark-mode) .info-box { background: rgba(61,139,94,0.06); border-color: #B4DEC8; color: #1A2E22; }
+        body:not(.dark-mode) .info-box p { color: #1A5E3A; }
+        body:not(.dark-mode) .article-number { color: #3D8B5E; }
+        body:not(.dark-mode) .effective-date { background: rgba(255,255,255,0.8); border-color: #D4E4DA; color: #5D7D6D; }
+        body:not(.dark-mode) .back-button { background: rgba(0,0,0,0.05); border-color: #D4E4DA; color: #1A2E22; }
+        body:not(.dark-mode) .footer-link { background: rgba(0,0,0,0.05); border-color: #D4E4DA; color: #1A2E22; }
 
         /* ── 인앱 브라우저 호환 (backdrop-filter 미지원 WebView 폴백) ── */
         body.is-inapp-browser {
@@ -446,14 +446,14 @@
         }
         body.is-inapp-browser .header {
             -webkit-backdrop-filter: blur(20px);
-            background: rgba(15, 23, 42, 0.98);
+            background: rgba(16, 26, 21, 0.98);
         }
         body:not(.dark-mode).is-inapp-browser .header {
             background: rgba(255, 255, 255, 0.98);
         }
         body.is-inapp-browser .article-card {
             -webkit-backdrop-filter: blur(12px);
-            background: rgba(30, 41, 59, 0.95);
+            background: rgba(26, 46, 34, 0.95);
         }
         body:not(.dark-mode).is-inapp-browser .article-card {
             background: rgba(255, 255, 255, 0.98);
@@ -484,20 +484,22 @@
 
     <div class="container">
         <!-- Header -->
-        <header class="header">
+        <header class="header" style="margin-bottom:40px;">
             <div class="header-badge">TERMS OF SERVICE</div>
             <h1>이용약관</h1>
-            <p>Lawmadi OS 서비스 이용에 관한 약관</p>
         </header>
 
-        <!-- 제1조 목적 -->
+        <!-- 제1조 목적 및 동의 -->
         <div class="article-card">
             <div class="article-number">
                 <div class="num">1</div>
-                <h2>목적</h2>
+                <h2>목적 및 동의</h2>
             </div>
             <p>본 약관은 Lawmadi OS(이하 "서비스")가 제공하는 법률 정보 서비스의 이용에 관한 기본적인 사항을 규정함을 목적으로 합니다.</p>
             <p>Lawmadi OS는 60명의 AI 전문 리더와 국가법령정보센터(SSOT) 실시간 검증을 통해 법률 정보를 검색, 분석, 정리하여 제공하는 법률 정보 서비스입니다. 본 서비스는 국가법령정보센터(법제처)의 공식 데이터를 기반으로 운영됩니다.</p>
+            <div class="info-box">
+                <p><span class="material-symbols-outlined">info</span>이용자는 서비스에 접속하여 법률 질의를 제출하거나, 크레딧을 구매하거나, OTP 이메일 인증을 완료하는 시점에 본 약관에 동의한 것으로 간주됩니다.</p>
+            </div>
         </div>
 
         <!-- 제2조 용어의 정의 -->
@@ -567,10 +569,10 @@
             </ul>
         </div>
 
-        <!-- 제5-2조 계정 및 인증 -->
+        <!-- 제6조 계정 및 인증 -->
         <div class="article-card">
             <div class="article-number">
-                <div class="num">5-2</div>
+                <div class="num">6</div>
                 <h2>계정 및 인증</h2>
             </div>
             <p>크레딧 구매 및 유료 서비스 이용 시 이메일 인증(OTP)이 필요합니다.</p>
@@ -583,10 +585,24 @@
             </ul>
         </div>
 
-        <!-- 제6조 지적재산권 -->
+        <!-- 제7조 미성년자 이용 -->
         <div class="article-card">
             <div class="article-number">
-                <div class="num">6</div>
+                <div class="num">7</div>
+                <h2>미성년자 이용</h2>
+            </div>
+            <p>만 14세 미만의 아동은 법정대리인의 동의 없이 서비스를 이용할 수 없습니다.</p>
+            <ul>
+                <li>만 14세 이상 만 19세 미만의 미성년자가 크레딧을 구매하는 경우, 법정대리인의 동의가 있는 것으로 간주합니다.</li>
+                <li>법정대리인의 동의 없이 이루어진 미성년자의 크레딧 구매는 법정대리인이 취소할 수 있습니다.</li>
+                <li>미성년자 관련 문의는 <a href="mailto:choepeter@outlook.kr" style="color:#3D8B5E;">choepeter@outlook.kr</a>로 연락 바랍니다.</li>
+            </ul>
+        </div>
+
+        <!-- 제8조 지적재산권 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">8</div>
                 <h2>지적재산권</h2>
             </div>
             <p>Lawmadi OS의 모든 콘텐츠에 대한 지적재산권은 보호됩니다.</p>
@@ -597,10 +613,10 @@
             </ul>
         </div>
 
-        <!-- 제7조 면책조항 -->
+        <!-- 제9조 면책조항 -->
         <div class="article-card">
             <div class="article-number">
-                <div class="num">7</div>
+                <div class="num">9</div>
                 <h2>면책조항</h2>
             </div>
             <p>Lawmadi OS는 다음 사항에 대하여 책임을 지지 않습니다.</p>
@@ -615,10 +631,10 @@
             </div>
         </div>
 
-        <!-- 제8조 요금 및 결제 -->
+        <!-- 제10조 요금 및 결제 -->
         <div class="article-card">
             <div class="article-number">
-                <div class="num">8</div>
+                <div class="num">10</div>
                 <h2>요금 및 결제</h2>
             </div>
             <p>서비스는 무료 플랜과 유료 크레딧 구매를 통해 이용할 수 있습니다.</p>
@@ -627,18 +643,18 @@
                 <li>유료 크레딧: 크레딧을 구매하여 일일 제한 없이 서비스를 이용할 수 있습니다. 일반 질의 1크레딧, 전문가답변 2크레딧.</li>
                 <li>크레딧은 구매 후 유효기간 없이 사용 가능합니다.</li>
                 <li>결제는 Paddle(결제 대행사)을 통해 처리되며, Paddle이 판매자(Merchant of Record)로서 세금 및 결제를 관리합니다.</li>
-                <li>크레딧은 타인에게 양도하거나 현금으로 환불할 수 없습니다. 단, <a href="/refund" style="color:#2563eb;">환불 정책</a>에서 정한 경우는 예외로 합니다.</li>
+                <li>크레딧은 타인에게 양도하거나 현금으로 환불할 수 없습니다. 단, <a href="/refund" style="color:#3D8B5E;">환불 정책</a>에서 정한 경우는 예외로 합니다.</li>
                 <li>표시 가격은 부가가치세(VAT)를 포함한 금액입니다.</li>
             </ul>
             <div class="info-box">
-                <p><span class="material-symbols-outlined">info</span>크레딧 상품 및 가격은 <a href="/pricing" style="color:#2563eb;">요금제</a> 페이지에서 확인하실 수 있습니다.</p>
+                <p><span class="material-symbols-outlined">info</span>크레딧 상품 및 가격은 <a href="/pricing" style="color:#3D8B5E;">요금제</a> 페이지에서 확인하실 수 있습니다.</p>
             </div>
         </div>
 
-        <!-- 제9조 서비스 변경/중단 -->
+        <!-- 제11조 서비스 변경 및 중단 -->
         <div class="article-card">
             <div class="article-number">
-                <div class="num">9</div>
+                <div class="num">11</div>
                 <h2>서비스 변경 및 중단</h2>
             </div>
             <p>Lawmadi OS는 서비스의 안정성과 품질 향상을 위해 서비스의 전부 또는 일부를 변경하거나 중단할 수 있습니다.</p>
@@ -650,24 +666,40 @@
             </ul>
         </div>
 
-        <!-- 제10조 준거법 및 관할 -->
+        <!-- 제12조 약관의 변경 -->
         <div class="article-card">
             <div class="article-number">
-                <div class="num">10</div>
+                <div class="num">12</div>
+                <h2>약관의 변경</h2>
+            </div>
+            <p>Lawmadi OS는 관련 법령에 위배되지 않는 범위에서 본 약관을 변경할 수 있습니다.</p>
+            <ul>
+                <li>약관을 변경하는 경우, 변경 내용과 적용일을 명시하여 적용일 7일 전까지 서비스 내 공지사항 또는 이메일을 통해 이용자에게 통지합니다.</li>
+                <li>이용자에게 불리한 약관 변경의 경우, 적용일 30일 전까지 통지하며, 이메일 등 개별 통지 수단을 병행합니다.</li>
+                <li>변경된 약관에 동의하지 않는 이용자는 서비스 이용을 중단하고 탈퇴할 수 있습니다.</li>
+                <li>통지 후 적용일까지 이용자가 명시적으로 거부 의사를 표시하지 않은 경우, 변경된 약관에 동의한 것으로 간주합니다.</li>
+            </ul>
+        </div>
+
+        <!-- 제13조 준거법 및 관할 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">13</div>
                 <h2>준거법 및 관할</h2>
             </div>
             <p>본 약관의 해석 및 적용에 관한 사항은 다음과 같습니다.</p>
             <ul>
                 <li>본 약관은 대한민국 법률에 따라 해석되고 적용됩니다.</li>
-                <li>서비스 이용과 관련하여 분쟁이 발생한 경우, 제작자의 주소지를 관할하는 법원을 제1심 관할법원으로 합니다.</li>
-                <li>본 약관에서 정하지 아니한 사항에 대해서는 관계 법령 및 상관례에 따릅니다.</li>
+                <li>서비스 이용과 관련하여 분쟁이 발생한 경우, 서울중앙지방법원을 제1심 전속관할법원으로 합니다.</li>
+                <li>분쟁 발생 시 이용자는 한국소비자원(1372), 한국인터넷진흥원 개인정보침해 신고센터(118), 전자거래분쟁조정위원회 등 대안적 분쟁해결(ADR) 절차를 이용할 수 있습니다.</li>
+                <li>본 약관에서 정하지 아니한 사항에 대해서는 「전자상거래 등에서의 소비자보호에 관한 법률」, 「약관의 규제에 관한 법률」 등 관계 법령 및 상관례에 따릅니다.</li>
             </ul>
         </div>
 
-        <!-- 제11조 개인정보 보호책임자 -->
+        <!-- 제14조 개인정보 보호책임자 -->
         <div class="article-card">
             <div class="article-number">
-                <div class="num">11</div>
+                <div class="num">14</div>
                 <h2>개인정보 보호책임자</h2>
             </div>
             <p>서비스의 개인정보 처리에 관한 업무를 총괄하고, 이용자의 불만 처리 및 피해 구제를 위해 아래와 같이 개인정보 보호책임자를 지정하고 있습니다.</p>
@@ -678,10 +710,10 @@
             </ul>
         </div>
 
-        <!-- 제12조 시행일 -->
+        <!-- 제15조 시행일 -->
         <div class="article-card">
             <div class="article-number">
-                <div class="num">12</div>
+                <div class="num">15</div>
                 <h2>시행일</h2>
             </div>
             <p>본 약관은 아래 시행일부터 효력이 발생합니다.</p>
@@ -690,7 +722,7 @@
         <!-- Effective Date -->
         <div class="effective-date">
             <p>시행일</p>
-            <div class="date">2026년 3월 5일</div>
+            <div class="date">2026년 3월 10일</div>
         </div>
 
         <!-- Footer Navigation -->
