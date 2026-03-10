@@ -5,7 +5,7 @@
     var params = new URLSearchParams(window.location.search);
     var id = params.get('id');
 
-    if (!id) { showError(); return; }
+    if (!id || !/^[A-Za-z0-9]+$/.test(id)) { showError(); return; }
 
     try {
         var [leadersRes, profilesRes] = await Promise.all([

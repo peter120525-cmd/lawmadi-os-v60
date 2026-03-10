@@ -5,7 +5,7 @@
     var params = new URLSearchParams(window.location.search);
     var id = params.get('id');
 
-    if (!id) { showError(); return; }
+    if (!id || !/^[A-Za-z0-9]+$/.test(id)) { showError(); return; }
 
     try {
         var [leadersRes, profilesRes] = await Promise.all([
@@ -114,6 +114,10 @@ function renderProfile(basic, profile, code) {
     if (profile.vision) {
         document.getElementById('visionCard').innerHTML = '<p>' + esc(profile.vision) + '</p>';
     }
+
+    // Chat CTA link
+    var chatCta = document.getElementById('chatCta');
+    if (chatCta) chatCta.href = '/leader-chat?id=' + encodeURIComponent(code);
 
     // Show content
     document.getElementById('loadingState').style.display = 'none';

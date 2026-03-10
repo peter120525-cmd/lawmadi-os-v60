@@ -27,6 +27,7 @@ _LEADER_PERSONAS: Dict[str, Any] = {}
 
 _ensure_genai_client_fn: Optional[Callable] = None
 _check_rate_limit_fn: Optional[Callable] = None
+_check_leader_chat_limit_fn: Optional[Callable] = None
 _rate_limit_response_fn: Optional[Callable] = None
 _get_client_ip_fn: Optional[Callable] = None
 
@@ -44,12 +45,14 @@ def set_dependencies(
     check_rate_limit: Callable,
     rate_limit_response: Callable,
     get_client_ip: Callable,
+    check_leader_chat_limit: Optional[Callable] = None,
     leader_profiles: Optional[Dict[str, Any]] = None,
     leader_personas: Optional[Dict[str, Any]] = None,
 ):
     """Inject shared runtime objects from main.py."""
     global _RUNTIME, _LEADER_REGISTRY, _LEADER_PROFILES, _LEADER_PERSONAS
     global _ensure_genai_client_fn, _check_rate_limit_fn
+    global _check_leader_chat_limit_fn
     global _rate_limit_response_fn, _get_client_ip_fn
 
     _RUNTIME = runtime
@@ -58,6 +61,7 @@ def set_dependencies(
     _LEADER_PERSONAS = (leader_personas or {}).get("personas", {})
     _ensure_genai_client_fn = ensure_genai_client
     _check_rate_limit_fn = check_rate_limit
+    _check_leader_chat_limit_fn = check_leader_chat_limit
     _rate_limit_response_fn = rate_limit_response
     _get_client_ip_fn = get_client_ip
 
@@ -278,6 +282,12 @@ async def chat_leader(request: Request):
     rate_check = _check_rate_limit_fn(request)
     if rate_check is not True:
         return _rate_limit_response_fn(rate_check.get("retry_at_kst", ""))
+
+    # Leader chat daily limit
+    if _check_leader_chat_limit_fn:
+        lc_check = _check_leader_chat_limit_fn(request)
+        if lc_check is not True:
+            return _rate_limit_response_fn(lc_check.get("retry_at_kst", ""))
 
     # Parse body
     try:

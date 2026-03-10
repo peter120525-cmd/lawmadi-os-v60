@@ -211,3 +211,9 @@ window.addEventListener('load', function() {
 
 // Disable right-click context menu
 document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+
+// Event delegation: stop-propagation for chat buttons inside clevel cards
+document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-action="stop-propagation"]');
+    if (el) e.stopPropagation();
+});

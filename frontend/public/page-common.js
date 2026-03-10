@@ -1,7 +1,7 @@
 // In-app browser detection & viewport fix
 (function() {
     var ua = navigator.userAgent || '';
-    var isInApp = /KAKAOTALK|FBAN|FBAV|Instagram|Line\/|NAVER|Snapchat|Twitter/i.test(ua);
+    var isInApp = /KAKAOTALK|FBAN|FBAV|Instagram|Line\/|NAVER|Snapchat|Twitter|SamsungBrowser|Whale|DaumApps|MicroMessenger|Telegram/i.test(ua);
     if (isInApp) {
         document.body.classList.add('is-inapp-browser');
         function setVH() {
@@ -26,3 +26,17 @@ window.addEventListener('load', function() {
 
 // Disable right-click context menu
 document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+
+// Safe localStorage JSON parser (prevents crash on corrupt data)
+window.safeParseJSON = function(key, fallback) {
+    try {
+        var raw = localStorage.getItem(key);
+        if (!raw) return fallback;
+        var parsed = JSON.parse(raw);
+        if (fallback !== undefined && typeof parsed !== typeof fallback) return fallback;
+        return parsed;
+    } catch(e) {
+        localStorage.removeItem(key);
+        return fallback;
+    }
+};

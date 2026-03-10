@@ -468,8 +468,20 @@
             .solve-item { flex-direction: column; gap: 12px; }
         }
 
+        @media (max-width: 480px) {
+            .hero-section { min-height: 300px; }
+            .hero-content { padding: 24px 14px 32px; }
+            .hero-profile-img { width: 96px; height: 96px; }
+            .hero-name { font-size: 1.6rem; }
+            .hero-role { font-size: 0.9rem; }
+            .hero-statement { font-size: 0.9rem; }
+            .content { padding: 0 12px 48px; }
+            .section-card { padding: 18px 14px; }
+            .section-label { font-size: 0.8rem; }
+        }
+
         /* ─── Light Mode ─── */
-        body:not(.dark-mode) { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%); color: #1e293b; }
+        body:not(.dark-mode) { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%); color: #1e293b; --text-secondary: #64748b; }
         body:not(.dark-mode) .profile-section { background: rgba(255,255,255,0.8); border-color: #e2e8f0; }
         body:not(.dark-mode) .section-card { background: #fff; border-color: #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
         body:not(.dark-mode) .section-card:hover { border-color: #3b82f6; box-shadow: 0 4px 16px rgba(59,130,246,0.15); }
@@ -485,6 +497,32 @@
         body:not(.dark-mode) .cta-section { background: rgba(255,255,255,0.8); border-color: #e2e8f0; }
         body:not(.dark-mode) .cta-button { background: #2563eb; color: #fff; }
         body:not(.dark-mode) .back-button { background: rgba(0,0,0,0.05); border-color: #e2e8f0; color: #1e293b; }
+
+        @media (min-width: 1440px) {
+            .profile-content { max-width: 1040px; }
+            .hero-section { min-height: 460px; }
+        }
+
+        /* ── In-app browser compat (backdrop-filter fallback for WebViews) ── */
+        body.is-inapp-browser {
+            height: 100vh;
+            height: -webkit-fill-available;
+            position: relative;
+        }
+        body.is-inapp-browser .section-card {
+            -webkit-backdrop-filter: blur(12px);
+            background: rgba(30, 41, 59, 0.95);
+        }
+        body:not(.dark-mode).is-inapp-browser .section-card {
+            background: rgba(255, 255, 255, 0.98);
+        }
+        body.is-inapp-browser .back-button {
+            -webkit-backdrop-filter: blur(8px);
+            background: rgba(255, 255, 255, 0.15);
+        }
+        body:not(.dark-mode).is-inapp-browser .back-button {
+            background: rgba(0, 0, 0, 0.06);
+        }
     </style>
     <script src="/cookie-consent.js"></script>
 </head>
@@ -595,7 +633,11 @@
 
             <!-- CTA -->
             <div class="cta-section">
-                <a href="/leaders-en" class="cta-button">
+                <a id="chatCta" href="/leader-chat" class="cta-button" style="margin-right:12px;">
+                    <span class="material-symbols-outlined">chat</span>
+                    Chat with Leader
+                </a>
+                <a href="/leaders-en" class="cta-button" style="background:rgba(255,255,255,0.1);box-shadow:none;">
                     <span class="material-symbols-outlined">groups</span>
                     View All Leaders
                 </a>
