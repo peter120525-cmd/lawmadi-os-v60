@@ -514,8 +514,8 @@
             <p>서비스에서 판매하는 크레딧 상품은 다음과 같습니다.</p>
             <ul>
                 <li><strong>Starter</strong> - 20 크레딧 / 2,100원</li>
-                <li><strong>Standard</strong> - 100 크레딧 / 7,000원 (33% 할인)</li>
-                <li><strong>Pro</strong> - 300 크레딧 / 13,800원 (56% 할인)</li>
+                <li><strong>Standard</strong> - 100 크레딧 / 7,000원 (Starter 대비 33% 할인)</li>
+                <li><strong>Pro</strong> - 300 크레딧 / 13,800원 (Starter 대비 56% 할인)</li>
             </ul>
             <div class="info-box">
                 <p><span class="material-symbols-outlined">info</span>크레딧은 만료 기간 없이 사용 가능하며, 계정에 영구적으로 적립됩니다.</p>
@@ -531,11 +531,17 @@
             <p>크레딧 구매에 대한 환불은 다음 조건에 따라 처리됩니다.</p>
             <ul>
                 <li><strong>전액 환불:</strong> 구매 후 7일 이내이며, 구매한 크레딧을 전혀 사용하지 않은 경우</li>
-                <li><strong>부분 환불:</strong> 구매 후 7일 이내이며, 일부 크레딧을 사용한 경우 미사용 크레딧에 해당하는 금액을 환불</li>
+                <li><strong>부분 환불:</strong> 구매 후 7일 이내이며, 일부 크레딧을 사용한 경우 미사용 크레딧에 해당하는 금액을 환불합니다. 환불액은 구매 단가 기준 비례 정산으로 계산됩니다.</li>
                 <li><strong>환불 불가:</strong> 구매 후 7일이 경과한 경우</li>
             </ul>
+            <div class="info-box" style="margin-bottom:12px;">
+                <p><span class="material-symbols-outlined">info</span><strong>부분 환불 계산 예시:</strong> Standard 100크레딧(7,000원) 구매 후 30크레딧 사용 시 → 미사용 70크레딧 × 70원(구매 단가) = 4,900원 환불</p>
+            </div>
             <div class="highlight-box">
                 <p><span class="material-symbols-outlined">warning</span>무료 플랜(일일 2회)으로 제공되는 무료 이용분에 대해서는 환불이 적용되지 않습니다.</p>
+            </div>
+            <div class="highlight-box" style="margin-top:8px;">
+                <p><span class="material-symbols-outlined">warning</span>크레딧은 디지털 콘텐츠로, 사용(응답 생성) 개시 후에는 해당 크레딧에 대한 청약철회가 제한됩니다 (전자상거래법 제17조 제2항 제5호).</p>
             </div>
         </div>
 
@@ -545,7 +551,7 @@
                 <div class="num">4</div>
                 <h2>환불 절차</h2>
             </div>
-            <p>환불을 원하시는 경우 다음 절차를 따라 주시기 바랍니다.</p>
+            <p>환불 요청은 반드시 아래 이메일로 접수해 주세요. Paddle에 직접 요청하시면 처리가 지연될 수 있습니다.</p>
             <ul>
                 <li>이메일(<a href="mailto:choepeter@outlook.kr" style="color:#3D8B5E;">choepeter@outlook.kr</a>)로 환불을 요청합니다.</li>
                 <li>환불 요청 시 구매 이메일 주소와 결제 일시를 함께 기재해 주세요.</li>
@@ -560,7 +566,7 @@
                 <div class="num">5</div>
                 <h2>환불 제외 사항</h2>
             </div>
-            <p>다음의 경우에는 환불이 제한될 수 있습니다.</p>
+            <p>제3조의 환불 조건을 충족하더라도, 다음에 해당하는 경우에는 환불이 제한됩니다.</p>
             <ul>
                 <li>서비스 이용약관을 위반하여 이용이 제한된 경우</li>
                 <li>부정한 방법으로 크레딧을 취득하거나 사용한 경우</li>
@@ -601,28 +607,10 @@
         <!-- Effective Date -->
         <div class="effective-date">
             <p>시행일</p>
-            <div class="date">2026년 3월 5일</div>
+            <div class="date">2026년 3월 10일</div>
         </div>
 
-        <!-- Footer Navigation -->
-        <div class="footer-nav">
-            <a href="/" class="footer-link">
-                <span class="material-symbols-outlined">home</span>
-                메인으로
-            </a>
-            <a href="/terms" class="footer-link">
-                <span class="material-symbols-outlined">description</span>
-                이용약관
-            </a>
-            <a href="/privacy" class="footer-link">
-                <span class="material-symbols-outlined">shield</span>
-                개인정보처리방침
-            </a>
-            <a href="/pricing" class="footer-link">
-                <span class="material-symbols-outlined">payments</span>
-                요금제
-            </a>
-        </div>
+        <!-- Footer links are in biz-footer below -->
     </div>
 
     <!-- 사업자 정보 (전자상거래법 제10조) -->
