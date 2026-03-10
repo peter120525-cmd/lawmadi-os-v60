@@ -357,21 +357,22 @@
         body.dark-mode .char-counter { color: #7A9A88; }
         body.dark-mode #usageBanner { background: rgba(26,46,34,0.8) !important; color: #D4E4DA !important; border-color: rgba(255,255,255,0.08) !important; }
 
+        /* ── Desktop: contained chat window ── */
+        @media (min-width: 768px) {
+            body {
+                max-width: 720px;
+                margin: 0 auto;
+                border-left: 1px solid #D4E4DA;
+                border-right: 1px solid #D4E4DA;
+            }
+            body.dark-mode {
+                border-color: rgba(255,255,255,0.06);
+            }
+        }
         @media (min-width: 1024px) {
-            .profile-header { padding: 12px 32px; }
-            .input-row { max-width: 860px; }
-            .msg-row { max-width: 70%; }
-            .chat-viewport { padding: 24px 32px; }
-        }
-        @media (min-width: 1440px) {
-            .input-row { max-width: 960px; }
-            .msg-row { max-width: 65%; }
-            .chat-viewport { padding: 24px 48px; }
-        }
-        @media (min-width: 1920px) {
-            .input-row { max-width: 1060px; }
-            .msg-row { max-width: 60%; }
-            .chat-viewport { padding: 24px 60px; }
+            .profile-header { padding: 12px 24px; }
+            .msg-row { max-width: 85%; }
+            .chat-viewport { padding: 24px 24px; }
         }
     </style>
     <script src="/cookie-consent.js"></script>

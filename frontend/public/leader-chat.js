@@ -50,20 +50,25 @@
         var banner = document.getElementById('usageBanner');
         if (!banner) return;
         var remain = DAILY_FREE - count;
+        var pricingLink = pageLang === 'en' ? '/pricing-en' : '/pricing';
         if (remain <= 0) {
             banner.style.display = 'block';
-            banner.textContent = pageLang === 'en'
-                ? 'Free daily limit reached. Additional uses require 2 credits per 5 chats.'
-                : '오늘 무료 ' + DAILY_FREE + '회를 모두 사용했습니다. 추가 5회당 2크레딧이 필요합니다.';
+            banner.innerHTML = pageLang === 'en'
+                ? 'Free limit reached (' + DAILY_FREE + '/' + DAILY_FREE + ') · Additional 5 chats = 2 credits · <a href="' + pricingLink + '" style="color:inherit;text-decoration:underline;font-weight:700;">Buy credits</a>'
+                : '무료 ' + DAILY_FREE + '/' + DAILY_FREE + '회 소진 · 추가 5회 = 2크레딧 · <a href="' + pricingLink + '" style="color:inherit;text-decoration:underline;font-weight:700;">크레딧 구매</a>';
             banner.style.background = '#F5F0F0'; banner.style.color = '#B04444';
         } else if (remain <= 2) {
             banner.style.display = 'block';
-            banner.textContent = pageLang === 'en'
-                ? remain + ' free chat(s) remaining today'
-                : '오늘 무료 채팅 ' + remain + '회 남음';
+            banner.innerHTML = pageLang === 'en'
+                ? 'Free: ' + remain + '/' + DAILY_FREE + ' remaining · Then 2 credits per 5 chats'
+                : '무료 ' + remain + '/' + DAILY_FREE + '회 남음 · 이후 5회당 2크레딧';
             banner.style.background = '#F7F5EC'; banner.style.color = '#A07830';
         } else {
-            banner.style.display = 'none';
+            banner.style.display = 'block';
+            banner.innerHTML = pageLang === 'en'
+                ? 'Free: ' + remain + '/' + DAILY_FREE + ' remaining today'
+                : '오늘 무료 ' + remain + '/' + DAILY_FREE + '회 남음';
+            banner.style.background = '#F0F7F2'; banner.style.color = '#3D8B5E';
         }
     }
 
@@ -345,13 +350,29 @@
 
         var welcomeDiv = document.createElement('div');
         welcomeDiv.className = 'welcome-msg';
+
+        var pricingHtml = pageLang === 'en'
+            ? '<div style="margin-top:16px;padding:14px 18px;background:rgba(61,139,94,0.08);border:1px solid rgba(61,139,94,0.2);border-radius:12px;text-align:left;font-size:0.82rem;color:#5D7D6D;line-height:1.7;">'
+                + '<strong style="color:#1A2E22;font-size:0.88rem;">1:1 Chat Pricing</strong><br>'
+                + '<span style="color:#3D8B5E;font-weight:700;">Free:</span> 5 chats per day (resets at 00:00 KST)<br>'
+                + '<span style="color:#B8922D;font-weight:700;">Paid:</span> 2 credits per additional 5 chats<br>'
+                + '<span style="font-size:0.78rem;opacity:0.8;">Credits never expire · <a href="/pricing-en" style="color:#3D8B5E;">Buy credits</a></span>'
+                + '</div>'
+            : '<div style="margin-top:16px;padding:14px 18px;background:rgba(61,139,94,0.08);border:1px solid rgba(61,139,94,0.2);border-radius:12px;text-align:left;font-size:0.82rem;color:#5D7D6D;line-height:1.7;">'
+                + '<strong style="color:#1A2E22;font-size:0.88rem;">1:1 채팅 요금 안내</strong><br>'
+                + '<span style="color:#3D8B5E;font-weight:700;">무료:</span> 매일 5회 (KST 00:00 초기화)<br>'
+                + '<span style="color:#B8922D;font-weight:700;">유료:</span> 추가 5회마다 2크레딧 차감<br>'
+                + '<span style="font-size:0.78rem;opacity:0.8;">크레딧은 만료 없이 사용 가능 · <a href="/pricing" style="color:#3D8B5E;">크레딧 구매</a></span>'
+                + '</div>';
+
         welcomeDiv.innerHTML =
             '<img class="welcome-avatar" src="' + esc(leaderAvatarSrc) + '" alt="' + esc(name) + '">' +
             '<h3>' + esc(name) + '</h3>' +
             '<p>' + esc(specialty) + (pageLang === 'en' ? ' AI Leader' : ' 전문 AI 리더') + '</p>' +
             (hero ? '<p style="margin-top:12px;font-style:italic;color:#5D7D6D;">"' + esc(hero) + '"</p>' : '') +
             '<p style="margin-top:16px;font-size:0.85rem;color:#5D7D6D;">' +
-            (pageLang === 'en' ? 'Feel free to ask any legal questions.' : '궁금한 법률 문제를 자유롭게 질문해 주세요.') + '</p>';
+            (pageLang === 'en' ? 'Feel free to ask any legal questions.' : '궁금한 법률 문제를 자유롭게 질문해 주세요.') + '</p>' +
+            pricingHtml;
         chatViewport.appendChild(welcomeDiv);
     }
 
