@@ -70,6 +70,8 @@ def validate_constitutional_compliance(response_text: str) -> bool:
             return False
 
     # 5) 불법 행위 조장 차단
+    #    — 법적 출처가 있는 법률 분석에서는 교육적 논의이므로 허용
+    #    — 법적 출처 없이 불법 행위만 언급하면 차단
     illegal_incitement = [
         "증거를 인멸",
         "증거를 없애",
@@ -84,17 +86,32 @@ def validate_constitutional_compliance(response_text: str) -> bool:
         "탈세 방법",
         "세금을 탈루",
     ]
-    if any(phrase in t for phrase in illegal_incitement):
-        return False
+    incitement_count = sum(1 for phrase in illegal_incitement if phrase in t)
+    if incitement_count > 0:
+        # 충분한 길이의 법률 분석(200자+)에서 불법행위 언급은 교육적 논의
+        # 짧은 텍스트에서 불법행위 언급은 조장으로 간주
+        is_legal_analysis = (
+            len(t) > 200
+            and bool(re.search(
+                r'제\s?\d+\s?조|판례|대법원|헌법재판소|법령'
+                r'|[가-힣]{2,}법(?:[^가-힣]|$)'
+                r'|손해배상|과실|처벌|형사|민사|소송',
+                t
+            ))
+        )
+        if not is_legal_analysis:
+            return False
 
     # 6) 결과 보장 차단
+    #    — "보장합니다"는 "법이 보장합니다", "권리를 보장합니다" 등 합법적 용례가 많으므로
+    #      승소/결과 보장 맥락에서만 차단
     guarantee_patterns = [
         r"반드시\s*승소",
         r"100\s*%\s*(?:이길|승소|성공|확실)",
         r"무조건\s*(?:이길|승소|성공)",
         r"확실히\s*(?:이길|승소|이깁니다)",
         r"틀림없이\s*(?:이길|승소|이깁니다)",
-        r"보장합니다",
+        r"(?:승소|결과|성공)를?\s*보장합니다",
         r"장담합니다",
     ]
     if any(re.search(p, t) for p in guarantee_patterns):
