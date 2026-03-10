@@ -2300,15 +2300,16 @@ async def _gemini_fallback_compose(
     loop = asyncio.get_running_loop()
     for _attempt in range(3):
         try:
+            _compose_timeout = 90.0 if mode == "expert" else _GEMINI_COMPOSE_TIMEOUT
             resp = await asyncio.wait_for(
                 loop.run_in_executor(None, _sync_gemini_call, model_name),
-                timeout=_GEMINI_COMPOSE_TIMEOUT,
+                timeout=_compose_timeout,
             )
             text = _safe_extract_gemini_text(resp)
             logger.info(f"[Gemini] 답변 생성 완료 ({len(text)}자, model={model_name}, mode={mode}, vertex={USE_VERTEX_AI})")
             return text
         except asyncio.TimeoutError:
-            logger.warning(f"[Gemini] 타임아웃 ({_GEMINI_COMPOSE_TIMEOUT}초, attempt={_attempt+1}, model={model_name})")
+            logger.warning(f"[Gemini] 타임아웃 ({_compose_timeout}초, attempt={_attempt+1}, model={model_name}, mode={mode})")
             if _attempt < 2:
                 continue
             raise
