@@ -16,11 +16,10 @@ from typing import Any, Optional
 logger = logging.getLogger("LawmadiOS.ModelFallback")
 
 # ─── 모델 체인 (리전에서 사용 가능한 모델만) ───
-# asia-northeast3: gemini-2.5-flash, gemini-2.5-flash-lite만 사용 가능
-# gemini-2.0-flash, gemini-2.5-pro 등은 해당 리전 미지원 (404)
+# asia-northeast3: gemini-2.5-flash만 안정적 사용 가능
+# gemini-2.5-flash-lite는 asia-northeast3 미지원 (404) → 제거
 MODEL_CHAIN = [
     os.getenv("GEMINI_MODEL_1", "gemini-2.5-flash"),
-    os.getenv("GEMINI_MODEL_2", "gemini-2.5-flash-lite"),
 ]
 
 # ─── 상태 관리 (lock-free 읽기, 쓰기만 lock) ───
@@ -38,9 +37,8 @@ def get_model(mode: str = "") -> str:
 
     mode="leader_chat" → lite 우선 (비용 절감), 일반/전문가는 flash 유지.
     """
-    # 리더 1:1 채팅: lite 모델 우선
-    if mode == "leader_chat" and len(MODEL_CHAIN) > 1:
-        return MODEL_CHAIN[1]  # gemini-2.5-flash-lite
+    # 리더 1:1 채팅: flash 모델 사용 (lite는 asia-northeast3 미지원)
+    # 향후 lite가 리전 지원되면 MODEL_CHAIN[1]로 전환 가능
 
     global _current_index, _downgrade_time
     idx = _current_index  # atomic read

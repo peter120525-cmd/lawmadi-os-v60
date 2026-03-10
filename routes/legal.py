@@ -1481,7 +1481,21 @@ async def ask_stream(request: Request):
                     logger.warning("[Stream] 빈 응답 — 파이프라인 타임아웃 또는 오류 (len=%d)", len(final_text))
                     _retry_msg = "⚠️ 답변 생성에 시간이 초과되었습니다. 다시 시도해 주세요." if lang != "en" else "⚠️ Response generation timed out. Please try again."
                     yield _sse("error", {"message": _retry_msg})
-                    yield _sse("answer_done", {"leader": leader_name, "leader_specialty": leader_specialty, "latency_ms": int((time.time() - start_time) * 1000), "trace_id": trace, "status": "TIMEOUT"})
+                    _timeout_latency = int((time.time() - start_time) * 1000)
+                    yield _sse("answer_done", {"leader": leader_name, "leader_specialty": leader_specialty, "latency_ms": _timeout_latency, "trace_id": trace, "status": "TIMEOUT"})
+                    # TIMEOUT이어도 DB에 기록
+                    try:
+                        _db = _optional_import_fn("connectors.db_client_v2")
+                        if _db and hasattr(_db, "save_chat_history"):
+                            _loop = asyncio.get_event_loop()
+                            await _loop.run_in_executor(None, lambda: _db.save_chat_history(
+                                user_query=query, ai_response="[TIMEOUT]", leader=leader_name,
+                                status="timeout", latency_ms=_timeout_latency, visitor_id=visitor_id,
+                                swarm_mode=swarm_mode, user_email=_resolve_user_email(request),
+                                query_type="leader_chat" if req_current_leader else "general",
+                            ))
+                    except Exception:
+                        pass
                     return
 
                 # FAIL_CLOSED 체크
@@ -1497,6 +1511,18 @@ async def ask_stream(request: Request):
                         "latency_ms": latency_ms, "trace_id": trace,
                         "swarm_mode": False, "response": FAIL_CLOSED_RESPONSE, "status": "FAIL_CLOSED",
                     })
+                    try:
+                        _db = _optional_import_fn("connectors.db_client_v2")
+                        if _db and hasattr(_db, "save_chat_history"):
+                            _loop = asyncio.get_event_loop()
+                            await _loop.run_in_executor(None, lambda: _db.save_chat_history(
+                                user_query=query, ai_response="[FAIL_CLOSED]", leader=leader_name,
+                                status="FAIL_CLOSED", latency_ms=latency_ms, visitor_id=visitor_id,
+                                swarm_mode=swarm_mode, user_email=_resolve_user_email(request),
+                                query_type="leader_chat" if req_current_leader else "general",
+                            ))
+                    except Exception:
+                        pass
                     return
 
                 if not validate_constitutional_compliance(final_text):
