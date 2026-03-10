@@ -525,12 +525,14 @@ def save_chat_history(
     visitor_id: Optional[str] = None,
     swarm_mode: bool = False,
     leaders_used: Optional[List[str]] = None,
-    query_category: Optional[str] = None
+    query_category: Optional[str] = None,
+    user_email: Optional[str] = None,
+    query_type: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    채팅 기록 저장 (개선된 버전)
-    - 기존 chat_history 테이블 활용
-    - 추가 정보: visitor_id, swarm_mode, leaders_used, query_category
+    채팅 기록 저장.
+    - query_type: "general"(일반), "expert"(전문가), "leader_chat"(리더 채팅)
+    - user_email: 로그인 사용자만 저장, 비로그인 시 None
     """
     if not _db_enabled():
         return {"ok": False, "error": "DB_DISABLED"}
@@ -550,7 +552,9 @@ def save_chat_history(
                 ADD COLUMN IF NOT EXISTS swarm_mode BOOLEAN DEFAULT FALSE,
                 ADD COLUMN IF NOT EXISTS leaders_used TEXT,
                 ADD COLUMN IF NOT EXISTS query_category VARCHAR(50),
-                ADD COLUMN IF NOT EXISTS env_version VARCHAR(50)
+                ADD COLUMN IF NOT EXISTS env_version VARCHAR(50),
+                ADD COLUMN IF NOT EXISTS user_email VARCHAR(255),
+                ADD COLUMN IF NOT EXISTS query_type VARCHAR(20)
             """)
             conn.commit()
         except Exception:
@@ -563,20 +567,22 @@ def save_chat_history(
             INSERT INTO chat_history (
                 user_id, user_query, ai_response, leader_code,
                 status, latency_ms, visitor_id, swarm_mode,
-                leaders_used, query_category, created_at
+                leaders_used, query_category, user_email, query_type, created_at
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
         """, (
             visitor_id or "anonymous",
             user_query,
-            ai_response[:5000],  # 응답이 너무 길면 5000자로 제한
+            ai_response[:5000],
             leader,
             status,
             latency_ms,
             visitor_id,
             swarm_mode,
             leaders_str,
-            query_category
+            query_category,
+            user_email,
+            query_type or "general"
         ))
 
         conn.commit()
@@ -758,6 +764,193 @@ def get_leader_query_samples(leader_code: str, limit: int = 10) -> Dict[str, Any
 
     except Exception as e:
         logger.error(f"⚠️ [LeaderQueries] 조회 실패: {e}")
+        return {"ok": False, "error": str(e)}
+    finally:
+        if cur: cur.close()
+        if conn: release_connection(conn)
+
+
+# =====================================================
+# 📋 Chat Usage Logs (Admin)
+# =====================================================
+
+def get_chat_usage_logs(
+    days: int = 7,
+    leader: Optional[str] = None,
+    status: Optional[str] = None,
+    query_type: Optional[str] = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> Dict[str, Any]:
+    """
+    리더 채팅 이용 로그 조회 (Admin).
+    - 일자별/리더별/상태별 필터링
+    - 최근 질의 목록 + 요약 통계
+    """
+    if not _db_enabled():
+        return {"ok": False, "error": "DB_DISABLED"}
+
+    conn = get_connection()
+    cur = None
+    try:
+        cur = conn.cursor()
+
+        # ── 1) 개별 로그 조회 ──
+        where = ["created_at >= NOW() - INTERVAL '1 day' * %s"]
+        params: list = [days]
+
+        if leader:
+            where.append("leader_code = %s")
+            params.append(leader)
+        if status:
+            where.append("status = %s")
+            params.append(status)
+        if query_type:
+            where.append("query_type = %s")
+            params.append(query_type)
+
+        where_sql = " AND ".join(where)
+
+        cur.execute(f"""
+            SELECT id, created_at, visitor_id, user_query, ai_response,
+                   leader_code, leaders_used, status, latency_ms,
+                   query_category, swarm_mode, user_email, query_type
+            FROM chat_history
+            WHERE {where_sql}
+            ORDER BY created_at DESC
+            LIMIT %s OFFSET %s
+        """, params + [limit, offset])
+
+        logs = []
+        for row in cur.fetchall():
+            (rid, created, visitor, query, response, ldr, leaders_used,
+             st, latency, category, swarm, email, qtype) = row
+            logs.append({
+                "id": rid,
+                "timestamp": created.isoformat() if created else None,
+                "visitor_id": visitor[:12] if visitor else None,
+                "user_email": email,
+                "query_type": qtype or "general",
+                "query": query[:500] if query else "",
+                "response": response[:1000] if response else "",
+                "leader": ldr,
+                "leaders_used": leaders_used,
+                "status": st,
+                "latency_ms": latency,
+                "category": category,
+                "swarm_mode": swarm,
+                "response_length": len(response) if response else 0,
+            })
+
+        # ── 2) 요약 통계 ──
+        cur.execute(f"""
+            SELECT
+                COUNT(*) as total,
+                COUNT(DISTINCT visitor_id) as unique_visitors,
+                COUNT(DISTINCT user_email) FILTER (WHERE user_email IS NOT NULL) as logged_in_users,
+                COALESCE(AVG(latency_ms), 0) as avg_latency,
+                COUNT(*) FILTER (WHERE status = 'success') as success_count,
+                COUNT(*) FILTER (WHERE status = 'error' OR status = 'FAIL_CLOSED') as fail_count
+            FROM chat_history
+            WHERE {where_sql}
+        """, params)
+
+        summary_row = cur.fetchone()
+        total, visitors, logged_in, avg_lat, success, fail = summary_row
+
+        # ── 3) 리더별 분포 ──
+        cur.execute(f"""
+            SELECT leader_code, COUNT(*) as cnt
+            FROM chat_history
+            WHERE {where_sql}
+            GROUP BY leader_code
+            ORDER BY cnt DESC
+            LIMIT 20
+        """, params)
+
+        leader_dist = []
+        for ldr, cnt in cur.fetchall():
+            leader_dist.append({"leader": ldr, "count": cnt})
+
+        # ── 4) 시간대별 분포 ──
+        cur.execute(f"""
+            SELECT EXTRACT(HOUR FROM created_at AT TIME ZONE 'Asia/Seoul') as hour_kst,
+                   COUNT(*) as cnt
+            FROM chat_history
+            WHERE {where_sql}
+            GROUP BY hour_kst
+            ORDER BY hour_kst
+        """, params)
+
+        hourly_dist = []
+        for hour, cnt in cur.fetchall():
+            hourly_dist.append({"hour_kst": int(hour), "count": cnt})
+
+        # ── 5) 일별 분포 ──
+        cur.execute(f"""
+            SELECT DATE(created_at AT TIME ZONE 'Asia/Seoul') as day_kst,
+                   COUNT(*) as cnt
+            FROM chat_history
+            WHERE {where_sql}
+            GROUP BY day_kst
+            ORDER BY day_kst
+        """, params)
+
+        daily_dist = []
+        for day, cnt in cur.fetchall():
+            daily_dist.append({"date": day.isoformat() if day else None, "count": cnt})
+
+        # ── 6) 사용자별 요약 (IP/이메일별 채팅횟수, 주요 리더) ──
+        cur.execute(f"""
+            SELECT
+                COALESCE(user_email, LEFT(visitor_id, 12)) as user_key,
+                user_email,
+                LEFT(visitor_id, 12) as ip_hash,
+                COUNT(*) as chat_count,
+                STRING_AGG(DISTINCT leader_code, ', ' ORDER BY leader_code) as leaders,
+                MAX(created_at) as last_active
+            FROM chat_history
+            WHERE {where_sql}
+            GROUP BY user_key, user_email, ip_hash
+            ORDER BY chat_count DESC
+            LIMIT 50
+        """, params)
+
+        user_stats = []
+        for row in cur.fetchall():
+            ukey, email, ip_hash, chat_cnt, ldrs, last_act = row
+            user_stats.append({
+                "user": email or ip_hash,
+                "email": email,
+                "ip_hash": ip_hash,
+                "chat_count": chat_cnt,
+                "leaders_used": ldrs,
+                "last_active": last_act.isoformat() if last_act else None,
+            })
+
+        return {
+            "ok": True,
+            "period_days": days,
+            "summary": {
+                "total_queries": total or 0,
+                "unique_visitors": visitors or 0,
+                "logged_in_users": logged_in or 0,
+                "avg_latency_ms": round(float(avg_lat or 0), 1),
+                "success_count": success or 0,
+                "fail_count": fail or 0,
+                "success_rate": round((success or 0) / max(total or 1, 1) * 100, 1),
+            },
+            "user_stats": user_stats,
+            "leader_distribution": leader_dist,
+            "hourly_distribution": hourly_dist,
+            "daily_distribution": daily_dist,
+            "logs": logs,
+            "limit": limit,
+            "offset": offset,
+        }
+
+    except Exception as e:
+        logger.error(f"⚠️ [ChatUsageLogs] 조회 실패: {e}")
         return {"ok": False, "error": str(e)}
     finally:
         if cur: cur.close()

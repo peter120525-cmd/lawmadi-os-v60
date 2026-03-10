@@ -223,6 +223,52 @@ async def get_leader_queries_api(
 
 
 # =============================================================
+# Admin Chat Usage Logs API
+# =============================================================
+
+@router.get("/api/admin/chat-logs")
+async def get_chat_logs_api(
+    request: Request,
+    days: int = Query(default=7, ge=1, le=90),
+    leader: str = Query(default=None),
+    status: str = Query(default=None),
+    query_type: str = Query(default=None, description="general|expert|leader_chat"),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    authorization: str = Header(default=""),
+):
+    """
+    Admin API: 리더 채팅 이용 로그.
+    - days: 최근 N일 (기본 7)
+    - leader: 리더 코드 필터 (e.g. "온유")
+    - status: 상태 필터 (success/error/FAIL_CLOSED)
+    - query_type: 질의 유형 필터 (general/expert/leader_chat)
+    - limit/offset: 페이지네이션
+    """
+    _verify_internal_auth(authorization)
+
+    try:
+        db_client = _optional_import("connectors.db_client_v2")
+        if db_client and hasattr(db_client, "get_chat_usage_logs"):
+            return db_client.get_chat_usage_logs(
+                days=days,
+                leader=leader,
+                status=status,
+                query_type=query_type,
+                limit=limit,
+                offset=offset,
+            )
+        return {"ok": False, "error": "DB module not available"}
+
+    except Exception as e:
+        logger.error(f"[API] /api/admin/chat-logs failed: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "error": "채팅 로그 조회 실패"}
+        )
+
+
+# =============================================================
 # Frontend Error Tracking API (신규)
 # =============================================================
 

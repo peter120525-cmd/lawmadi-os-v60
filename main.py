@@ -143,7 +143,7 @@ from routes.analytics import router as analytics_router, set_dependencies as _se
 from routes.legal import router as legal_router, set_dependencies as _set_legal_deps, ask as _legal_ask, search as _legal_search
 from routes.files import router as files_router, set_dependencies as _set_files_deps
 from routes.user import router as user_router, set_dependencies as _set_user_deps
-from routes.admin import router as admin_router
+from routes.admin import router as admin_router, set_blacklist_fns as _set_blacklist_fns
 from routes.auth import router as auth_router
 from routes.leaders import router as leaders_router, set_dependencies as _set_leaders_deps
 from routes.paddle import (
@@ -263,6 +263,107 @@ METRICS: Dict[str, Any] = {
     "mcp_requests": 0,
 }
 _METRICS_LOCK = threading.Lock()
+
+# =============================================================
+# 🛡️ IP 자동 블랙리스트 (429 폭탄 방어)
+# 짧은 시간에 429를 반복 수신하는 IP를 자동 차단
+# =============================================================
+_BLACKLIST_WINDOW = 60          # 60초 내
+_BLACKLIST_THRESHOLD = 20       # 429가 20회 이상이면 블랙리스트
+_BLACKLIST_DURATION = 3600      # 1시간 차단
+_ip_429_hits: Dict[str, List[float]] = {}   # IP → [timestamp, ...]
+_ip_blacklist: Dict[str, float] = {}        # IP → 차단 해제 시각 (UNIX ts)
+_blacklist_lock = threading.Lock()
+
+def _record_429(ip: str):
+    """429 응답 시 호출 — 임계치 초과 시 자동 블랙리스트 등록."""
+    now = time.time()
+    with _blacklist_lock:
+        hits = _ip_429_hits.get(ip, [])
+        hits = [t for t in hits if now - t < _BLACKLIST_WINDOW]
+        hits.append(now)
+        _ip_429_hits[ip] = hits
+        if len(hits) >= _BLACKLIST_THRESHOLD:
+            _ip_blacklist[ip] = now + _BLACKLIST_DURATION
+            _ip_429_hits.pop(ip, None)
+            logger.warning(f"[BLACKLIST] IP auto-blocked: {_sha256(ip)[:12]} ({len(hits)} hits in {_BLACKLIST_WINDOW}s)")
+
+def _is_blacklisted(ip: str) -> bool:
+    """IP가 현재 블랙리스트에 있는지 확인."""
+    with _blacklist_lock:
+        expires = _ip_blacklist.get(ip)
+        if expires is None:
+            return False
+        if time.time() >= expires:
+            _ip_blacklist.pop(ip, None)
+            return False
+        return True
+
+def _cleanup_blacklist():
+    """만료된 블랙리스트/429 기록 정리."""
+    now = time.time()
+    with _blacklist_lock:
+        expired = [ip for ip, exp in _ip_blacklist.items() if now >= exp]
+        for ip in expired:
+            _ip_blacklist.pop(ip, None)
+        stale = [ip for ip, hits in _ip_429_hits.items()
+                 if not hits or now - max(hits) > _BLACKLIST_WINDOW]
+        for ip in stale:
+            _ip_429_hits.pop(ip, None)
+
+def _get_blacklist_entries() -> list:
+    """Admin API용: 현재 블랙리스트 목록 반환."""
+    now = time.time()
+    entries = []
+    with _blacklist_lock:
+        for ip, expires in _ip_blacklist.items():
+            remaining = max(0, int(expires - now))
+            entries.append({
+                "ip_hash": _sha256(ip)[:12],
+                "remaining_seconds": remaining,
+                "expires_utc": datetime.datetime.utcfromtimestamp(expires).isoformat() + "Z",
+            })
+    return entries
+
+def _remove_from_blacklist(ip_hash_prefix: str) -> bool:
+    """Admin API용: IP 해시 prefix로 블랙리스트 해제."""
+    with _blacklist_lock:
+        to_remove = [ip for ip in _ip_blacklist if _sha256(ip)[:12] == ip_hash_prefix]
+        for ip in to_remove:
+            _ip_blacklist.pop(ip, None)
+        return len(to_remove) > 0
+
+def _add_to_blacklist(ip: str, duration: int = 3600):
+    """Admin API용: 수동 블랙리스트 추가."""
+    with _blacklist_lock:
+        _ip_blacklist[ip] = time.time() + duration
+    logger.warning(f"[BLACKLIST] Manual block: {_sha256(ip)[:12]} for {duration}s")
+
+
+@app.middleware("http")
+async def blacklist_middleware(request: Request, call_next):
+    """블랙리스트 IP 조기 차단 — 모든 미들웨어보다 먼저 실행."""
+    ip = _get_client_ip_fast(request)
+    if _is_blacklisted(ip):
+        return JSONResponse(
+            status_code=403,
+            content={"error": "Access denied."}
+        )
+    response = await call_next(request)
+    if response.status_code == 429:
+        _record_429(ip)
+    return response
+
+
+def _get_client_ip_fast(request: Request) -> str:
+    """블랙리스트 미들웨어용 경량 IP 추출 (ipaddress 검증 생략)."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[-1].strip()
+    if request.client and request.client.host:
+        return request.client.host
+    return "unknown"
+
 
 @app.middleware("http")
 async def body_size_limit_middleware(request: Request, call_next):
@@ -779,6 +880,10 @@ def _rate_limit_response(retry_at_kst: str = ""):
         msg = "크레딧이 모두 소진되었습니다. 추가 크레딧을 충전해주세요."
     elif retry_at_kst == "credits_required_for_expert":
         msg = "전문가 답변은 크레딧이 필요합니다. 크레딧을 구매해주세요."
+    elif retry_at_kst == "leader_chat_limit":
+        msg = f"오늘 리더 채팅 무료 {LEADER_CHAT_DAILY_FREE}회를 모두 사용했습니다. 크레딧을 충전하면 추가 이용이 가능합니다."
+    elif retry_at_kst == "leader_chat_credits_required":
+        msg = f"리더 채팅 추가 이용에는 {LEADER_CHAT_EXTRA_COST}크레딧이 필요합니다. 크레딧을 충전해주세요."
     elif retry_at_kst == "daily_limit_reached":
         msg = "오늘 무료 이용 한도에 도달했습니다. 내일 00:00(한국시간) 이후 다시 이용 가능합니다."
     elif retry_at_kst:
@@ -807,6 +912,104 @@ def _post_deduct(request: Request, query_type: str, trace_id: str = ""):
             _use_daily_free(user_id, reference_id=trace_id)
     except Exception as e:
         logger.warning(f"[PostDeduct] Failed (non-blocking): {e}")
+
+# =============================================================
+# 🎯 리더 채팅 일일 제한 (5회 무료 → 2크레딧으로 5회 추가)
+# =============================================================
+LEADER_CHAT_DAILY_FREE = 5
+LEADER_CHAT_EXTRA_COST = 2   # 추가 5회당 크레딧
+LEADER_CHAT_EXTRA_USES = 5
+
+_leader_chat_usage: Dict[str, List[float]] = {}  # IP해시 → [timestamps]
+
+def _check_leader_chat_limit(request: Request) -> Union[bool, dict]:
+    """
+    리더 채팅 일일 제한.
+    - 모든 사용자: 일일 5회 무료
+    - 5회 초과 시: 2크레딧 차감으로 5회 추가 (자동)
+    - 크레딧 없으면 차단
+    - Admin → 무제한
+    """
+    # Admin 무제한
+    _admin_key = os.getenv("MCP_API_KEY", "").strip() or os.getenv("INTERNAL_API_KEY", "").strip()
+    if _admin_key and len(_admin_key) >= 32:
+        req_key = request.headers.get("X-Admin-Key", "").strip()
+        if req_key and hmac.compare_digest(req_key, _admin_key):
+            return True
+
+    ip = _get_client_ip(request)
+    ip_hash = _sha256(ip)
+
+    # DB 기반 카운트 (chat_history에서 오늘 leader_chat 횟수)
+    today_count = _get_leader_chat_today_count(ip_hash)
+
+    if today_count < LEADER_CHAT_DAILY_FREE:
+        return True  # 무료 5회 내
+
+    # 5회 초과 → 크레딧 확인
+    user = _get_paddle_user(request)
+    if not user:
+        return {
+            "blocked": True,
+            "retry_at_kst": "leader_chat_limit",
+            "daily_used": today_count,
+            "daily_free": LEADER_CHAT_DAILY_FREE,
+        }
+
+    # 추가 5회 단위: (today_count - 5) 중 현재 블록 내 사용 횟수
+    extra_used = today_count - LEADER_CHAT_DAILY_FREE
+    # 현재 블록 안에서 아직 5회 채우지 않았으면 통과 (이미 크레딧 차감됨)
+    if extra_used > 0 and extra_used % LEADER_CHAT_EXTRA_USES != 0:
+        return True  # 현재 추가 블록 내
+
+    # 새 블록 시작 → 크레딧 차감 필요
+    if user.get("credit_balance", 0) >= LEADER_CHAT_EXTRA_COST:
+        _deduct_credit(user["user_id"], LEADER_CHAT_EXTRA_COST,
+                       reference_id=f"leader_chat_extra_{today_count}")
+        logger.info(f"[LeaderChat] 추가 5회 크레딧 차감: user={user.get('email', '?')}, "
+                     f"used={today_count}, cost={LEADER_CHAT_EXTRA_COST}")
+        return True
+
+    return {
+        "blocked": True,
+        "retry_at_kst": "leader_chat_credits_required",
+        "daily_used": today_count,
+        "daily_free": LEADER_CHAT_DAILY_FREE,
+        "extra_cost": LEADER_CHAT_EXTRA_COST,
+    }
+
+
+def _get_leader_chat_today_count(ip_hash: str) -> int:
+    """오늘(KST) 해당 IP의 리더 채팅 횟수를 DB에서 조회."""
+    try:
+        from connectors.db_client_v2 import execute
+        result = execute(
+            """SELECT COUNT(*) FROM chat_history
+               WHERE visitor_id = %s
+                 AND query_type = 'leader_chat'
+                 AND created_at >= (NOW() AT TIME ZONE 'Asia/Seoul')::date AT TIME ZONE 'Asia/Seoul'""",
+            (ip_hash,), fetch="one"
+        )
+        if result.get("ok") and result.get("data"):
+            return result["data"][0] or 0
+    except Exception as e:
+        logger.warning(f"[LeaderChat] DB count failed: {e}")
+
+    # 인메모리 fallback
+    today_start = _kst_today_start_ts()
+    timestamps = _leader_chat_usage.get(ip_hash, [])
+    return len([t for t in timestamps if t >= today_start])
+
+
+def _record_leader_chat_usage(ip_hash: str):
+    """인메모리 fallback용 사용 기록."""
+    now = time.time()
+    today_start = _kst_today_start_ts()
+    timestamps = _leader_chat_usage.get(ip_hash, [])
+    timestamps = [t for t in timestamps if t >= today_start]
+    timestamps.append(now)
+    _leader_chat_usage[ip_hash] = timestamps
+
 
 def _trace_id() -> str:
     """[ULTRA] 요청별 고유 추적 ID"""
@@ -962,6 +1165,7 @@ async def startup():
             await asyncio.sleep(3600)
             try:
                 _cleanup_expired_uploads()
+                _cleanup_blacklist()
             except Exception:
                 pass
     asyncio.create_task(_periodic_cleanup())
@@ -1248,6 +1452,8 @@ async def startup():
         optional_import_fn=optional_import,
         check_expert_access=_check_expert_access,
         post_deduct=_post_deduct,
+        get_paddle_user=_get_paddle_user,
+        check_leader_chat_limit=_check_leader_chat_limit,
     )
     _set_files_deps(RUNTIME, rate_limiter=limiter)
     _set_user_deps(RUNTIME, rate_limiter=limiter, ask_fn=_legal_ask, search_fn=_legal_search)
@@ -1299,6 +1505,7 @@ app.include_router(legal_router)
 app.include_router(files_router)
 app.include_router(user_router)
 app.include_router(admin_router)
+_set_blacklist_fns(_get_blacklist_entries, _remove_from_blacklist, _add_to_blacklist)
 app.include_router(auth_router)
 app.include_router(paddle_router)
 app.include_router(leaders_router)
