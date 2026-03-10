@@ -967,7 +967,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                     const isMod = (payload.role === 'CSO');
                     bubble.className = 'chat-msg-bubble' + (isMod ? ' moderator' : '');
                     bubble.style.opacity = '0';
-                    bubble.innerHTML = this._buildBubbleBody(payload.speaker || '', payload.role || '', payload.content || payload.text || '');
+                    const _avatarHtml = this._buildAvatarHTML(payload.speaker || '');
+                    bubble.innerHTML = _avatarHtml + this._buildBubbleBody(payload.speaker || '', payload.role || '', payload.content || payload.text || '');
                     this._meetingContainer.appendChild(bubble);
                     requestAnimationFrame(() => { bubble.style.transition = 'opacity 0.3s'; bubble.style.opacity = '1'; });
                     this._smartScroll(false);

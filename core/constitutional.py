@@ -10,8 +10,8 @@ _log = logging.getLogger("LawmadiOS.Constitutional")
 
 def validate_constitutional_compliance(response_text: str) -> bool:
     if not response_text or len(response_text.strip()) < 10:
-        _log.warning("[Constitutional] BLOCKED: 빈 응답 (len=%d)", len(response_text) if response_text else 0)
-        return False
+        _log.warning("[Constitutional] SKIP: 빈 응답 (len=%d) — 타임아웃 가능성", len(response_text) if response_text else 0)
+        return True  # 빈 응답은 상위 호출자에서 처리 (타임아웃 메시지)
 
     t = response_text
 

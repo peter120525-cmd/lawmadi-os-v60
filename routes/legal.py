@@ -1422,11 +1422,13 @@ async def ask_stream(request: Request):
                                 logger.error("[Parallel] 전체 타임아웃 (90초)")
                                 break
                             try:
+                                # 협의 완료 후 파이프라인 대기 시 충분한 시간 확보
+                                _evt_timeout = min(_remaining, 90.0) if _delib_finished else min(_remaining, 30.0)
                                 evt_type, evt_data = await asyncio.wait_for(
-                                    _event_queue.get(), timeout=min(_remaining, 30.0)
+                                    _event_queue.get(), timeout=_evt_timeout
                                 )
                             except asyncio.TimeoutError:
-                                logger.warning("[Parallel] Queue 대기 타임아웃 — 루프 탈출")
+                                logger.warning("[Parallel] Queue 대기 타임아웃 (delib=%s, pipeline=%s)", _delib_finished, _pipeline_finished)
                                 break
                             if evt_type == "_delib_done":
                                 _delib_finished = True
@@ -1465,6 +1467,14 @@ async def ask_stream(request: Request):
                 # 타입 안전: final_text가 문자열이 아닌 경우 방어
                 if not isinstance(final_text, str):
                     final_text = str(final_text) if final_text else ""
+
+                # 빈 응답 체크 (타임아웃 등으로 파이프라인 결과 없음)
+                if not final_text or len(final_text.strip()) < 10:
+                    logger.warning("[Stream] 빈 응답 — 파이프라인 타임아웃 또는 오류 (len=%d)", len(final_text))
+                    _retry_msg = "⚠️ 답변 생성에 시간이 초과되었습니다. 다시 시도해 주세요." if lang != "en" else "⚠️ Response generation timed out. Please try again."
+                    yield _sse("error", {"message": _retry_msg})
+                    yield _sse("answer_done", {"leader": leader_name, "leader_specialty": leader_specialty, "latency_ms": int((time.time() - start_time) * 1000), "trace_id": trace, "status": "TIMEOUT"})
+                    return
 
                 # FAIL_CLOSED 체크
                 _is_fc = (FAIL_CLOSED_RESPONSE in final_text) or (final_text.strip() == FAIL_CLOSED_RESPONSE.strip())
