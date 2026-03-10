@@ -284,6 +284,14 @@
         .executive-card:nth-child(2) { animation-delay: 0.2s; }
         .executive-card:nth-child(3) { animation-delay: 0.3s; }
 
+        @media (max-width: 1024px) {
+            .executive-card {
+                flex-direction: column;
+                text-align: center;
+                padding: 40px 32px;
+            }
+            .executive-avatar { margin: 0 auto 20px; }
+        }
         @media (max-width: 768px) {
             .container { padding: 20px 16px; }
             .back-button { top: 12px; left: 12px; padding: 8px 14px; font-size: 0.85rem; min-height: 44px; }
