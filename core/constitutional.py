@@ -2,17 +2,22 @@
 Lawmadi OS v60 — 헌법 적합성 검증 모듈.
 main.py에서 분리됨 (Item 7).
 """
+import logging
 import re
+
+_log = logging.getLogger("LawmadiOS.Constitutional")
 
 
 def validate_constitutional_compliance(response_text: str) -> bool:
     if not response_text or len(response_text.strip()) < 10:
+        _log.warning("[Constitutional] BLOCKED: 빈 응답 (len=%d)", len(response_text) if response_text else 0)
         return False
 
     t = response_text
 
     # 1) 변호사 사칭 금지
     if "변호사입니다" in t or "변호사로서" in t:
+        _log.warning("[Constitutional] BLOCKED by Rule 1: 변호사 사칭")
         return False
 
     # 2) placeholder 날짜/타임라인 금지
@@ -24,6 +29,7 @@ def validate_constitutional_compliance(response_text: str) -> bool:
     ]
     for p in banned_patterns:
         if re.search(p, t):
+            _log.warning("[Constitutional] BLOCKED by Rule 2: placeholder '%s'", p)
             return False
 
     # 3) 근거 없는 상태 단정 차단
@@ -34,6 +40,7 @@ def validate_constitutional_compliance(response_text: str) -> bool:
         "즉각적인 접근이 가능",
     ]
     if any(x in t for x in banned_phrases):
+        _log.warning("[Constitutional] BLOCKED by Rule 3: 상태 단정")
         return False
 
     # 4) 법조문 참조 없는 단정적 법률 주장 차단
@@ -67,6 +74,7 @@ def validate_constitutional_compliance(response_text: str) -> bool:
             t
         ))
         if not has_legal_source:
+            _log.warning("[Constitutional] BLOCKED by Rule 4: 단정 %d개, 법적출처 없음 (text=%s...)", assertion_count, t[:100])
             return False
 
     # 5) 불법 행위 조장 차단
@@ -100,6 +108,8 @@ def validate_constitutional_compliance(response_text: str) -> bool:
             ))
         )
         if not is_legal_analysis:
+            matched = [p for p in illegal_incitement if p in t]
+            _log.warning("[Constitutional] BLOCKED by Rule 5: 불법조장 %s (len=%d, legal=%s)", matched, len(t), is_legal_analysis)
             return False
 
     # 6) 결과 보장 차단
@@ -114,7 +124,9 @@ def validate_constitutional_compliance(response_text: str) -> bool:
         r"(?:승소|결과|성공)를?\s*보장합니다",
         r"장담합니다",
     ]
-    if any(re.search(p, t) for p in guarantee_patterns):
-        return False
+    for p in guarantee_patterns:
+        if re.search(p, t):
+            _log.warning("[Constitutional] BLOCKED by Rule 6: 보장 패턴 '%s'", p)
+            return False
 
     return True
