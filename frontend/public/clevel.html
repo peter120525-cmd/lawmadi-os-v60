@@ -431,6 +431,14 @@
         .executive-card:nth-child(3) { animation-delay: 0.3s; }
 
         /* Responsive */
+        @media (max-width: 1024px) {
+            .executive-card {
+                flex-direction: column;
+                text-align: center;
+                padding: 40px 32px;
+            }
+            .executive-avatar { margin: 0 auto 20px; }
+        }
         @media (max-width: 768px) {
             .container {
                 padding: 20px 16px;
