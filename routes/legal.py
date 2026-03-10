@@ -997,6 +997,9 @@ async def ask_stream(request: Request):
 
         # 리더 협의/인수인계 상태
         req_current_leader = data.get("current_leader")  # {"name": ..., "specialty": ...} or None
+        req_leader_id = (data.get("leader_id", "") or "").strip()  # leader-chat.js sends leader_id
+        if not req_current_leader and req_leader_id:
+            req_current_leader = {"leader_id": req_leader_id}  # leader_id만으로도 1:1 채팅 식별
         req_is_first_question = bool(data.get("is_first_question", True))
 
         # 리더 1:1 채팅일 때만 일일 5회 제한 (일반 스트리밍은 제한 없음)
@@ -1181,7 +1184,8 @@ async def ask_stream(request: Request):
             tools = _get_drf_tools()
 
             now_kst = _now_iso()
-            model_name = get_model()
+            _model_mode = "leader_chat" if req_current_leader else ""
+            model_name = get_model(mode=_model_mode)
             gc = _ensure_genai_client_fn(_RUNTIME)
 
             # 4) S0(분류) + S1(RAG) 병렬 실행

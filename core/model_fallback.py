@@ -32,10 +32,16 @@ _MAX_RETRIES = int(os.getenv("GEMINI_MAX_RETRIES", "3"))
 _RETRY_BASE_SEC = float(os.getenv("GEMINI_RETRY_BASE_SEC", "2.0"))
 
 
-def get_model() -> str:
+def get_model(mode: str = "") -> str:
     """현재 활성 모델명 반환. 다운그레이드 후 일정 시간 경과 시 자동 업그레이드.
     읽기 경로는 lock-free (동시 요청 직렬화 방지).
+
+    mode="leader_chat" → lite 우선 (비용 절감), 일반/전문가는 flash 유지.
     """
+    # 리더 1:1 채팅: lite 모델 우선
+    if mode == "leader_chat" and len(MODEL_CHAIN) > 1:
+        return MODEL_CHAIN[1]  # gemini-2.5-flash-lite
+
     global _current_index, _downgrade_time
     idx = _current_index  # atomic read
     if idx > 0 and time.time() - _downgrade_time >= _UPGRADE_INTERVAL:
