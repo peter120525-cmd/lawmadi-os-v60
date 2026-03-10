@@ -2071,7 +2071,7 @@ async def _gemini_fallback_compose(
     if not gc:
         raise RuntimeError("Gemini 클라이언트 미초기화")
 
-    model_name = get_model()  # Pro→Flash→Lite 자동 전환
+    model_name = get_model(mode=mode)  # leader_chat→lite, 나머지→flash
     leader_name = analysis.get("leader_name", "마디")
     leader_specialty = analysis.get("leader_specialty", "통합")
 
@@ -2254,7 +2254,7 @@ async def _gemini_fallback_compose(
 
     # ── Selective Thinking (expert=512, general=0) ──
     # gemini-2.0-flash 등 thinking 미지원 모델은 ThinkingConfig 생략
-    _model = get_model()
+    _model = get_model(mode=mode)
     _supports_thinking = "2.5" in _model or "3" in _model
     thinking_config = None
     if _supports_thinking:
