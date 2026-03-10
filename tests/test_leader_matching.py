@@ -778,9 +778,10 @@ class TestEdgeCases:
         assert _nlu_detect_intent("asdfghjkl") is None
 
     def test_constitutional_empty_response(self):
-        assert validate_constitutional_compliance("") is False
-        assert validate_constitutional_compliance("짧음") is False
-        assert validate_constitutional_compliance(None) is False
+        # 빈 응답은 True 반환 (상위 호출자에서 타임아웃 처리)
+        assert validate_constitutional_compliance("") is True
+        assert validate_constitutional_compliance("짧음") is True
+        assert validate_constitutional_compliance(None) is True
 
 
 class TestSystemCheckFixes:

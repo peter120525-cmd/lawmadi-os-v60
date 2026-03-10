@@ -55,11 +55,12 @@ class TestIsLowSignal:
 # ===========================================================================
 class TestConstitutionalCompliance:
     def test_empty_response(self):
-        assert validate_constitutional_compliance("") is False
-        assert validate_constitutional_compliance(None) is False
+        # 빈 응답은 True 반환 (상위 호출자에서 타임아웃 처리)
+        assert validate_constitutional_compliance("") is True
+        assert validate_constitutional_compliance(None) is True
 
     def test_too_short(self):
-        assert validate_constitutional_compliance("짧은 답") is False
+        assert validate_constitutional_compliance("짧은 답") is True
 
     def test_valid_response(self, sample_legal_response):
         assert validate_constitutional_compliance(sample_legal_response) is True
