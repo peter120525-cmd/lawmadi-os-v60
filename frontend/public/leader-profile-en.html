@@ -402,6 +402,11 @@
             transform: translateY(-2px);
             box-shadow: 0 12px 32px rgba(74,155,110,0.4);
         }
+        .cta-secondary {
+            background: rgba(255,255,255,0.1);
+            box-shadow: none;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
 
         /* Loading / Error */
         .loading-state, .error-state {
@@ -497,6 +502,9 @@
         body:not(.dark-mode) .cta-section { background: rgba(255,255,255,0.8); border-color: #D4E4DA; }
         body:not(.dark-mode) .cta-button { background: #3D8B5E; color: #fff; }
         body:not(.dark-mode) .back-button { background: rgba(0,0,0,0.05); border-color: #D4E4DA; color: #1A2E22; }
+        body:not(.dark-mode) .solve-item h4 { color: #1A2E22; }
+        body:not(.dark-mode) .expertise-label { color: #1A2E22; }
+        body:not(.dark-mode) .cta-secondary { background: rgba(0,0,0,0.06); border: 1px solid #D4E4DA; color: #1A2E22; box-shadow: none; }
 
         @media (min-width: 1440px) {
             .profile-content { max-width: 1040px; }
@@ -637,7 +645,7 @@
                     <span class="material-symbols-outlined">chat</span>
                     Chat with Leader
                 </a>
-                <a href="/leaders-en" class="cta-button" style="background:rgba(255,255,255,0.1);box-shadow:none;">
+                <a href="/leaders-en" class="cta-button cta-secondary">
                     <span class="material-symbols-outlined">groups</span>
                     View All Leaders
                 </a>
