@@ -1091,6 +1091,147 @@ async def _handle_transaction_completed(event_data: dict):
         logger.error(f"[Paddle] CRITICAL: Could not determine credits for transaction {transaction_id}, email={customer_email[:3]}***. Manual review required.")
 
 
+# ─── Paddle API Client ───
+
+_PADDLE_API_BASE = "https://api.paddle.com"
+_PADDLE_SANDBOX_API_BASE = "https://sandbox-api.paddle.com"
+
+
+def _paddle_api_base() -> str:
+    return _PADDLE_SANDBOX_API_BASE if PADDLE_ENVIRONMENT == "sandbox" else _PADDLE_API_BASE
+
+
+async def paddle_api_get(path: str, params: Optional[dict] = None) -> dict:
+    """GET request to Paddle API. Returns parsed JSON or error dict."""
+    import asyncio
+    import urllib.request
+    import urllib.parse
+    import urllib.error
+
+    if not PADDLE_API_KEY:
+        return {"ok": False, "error": "PADDLE_API_KEY not configured"}
+
+    base = _paddle_api_base()
+    url = f"{base}{path}"
+    if params:
+        url += "?" + urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
+
+    def _do():
+        req = urllib.request.Request(url, method="GET")
+        req.add_header("Authorization", f"Bearer {PADDLE_API_KEY}")
+        req.add_header("Content-Type", "application/json")
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return json.loads(resp.read().decode())
+        except urllib.error.HTTPError as e:
+            body = e.read().decode() if e.fp else ""
+            try:
+                return {"ok": False, "error": json.loads(body)}
+            except Exception:
+                return {"ok": False, "error": body, "status": e.code}
+
+    return await asyncio.to_thread(_do)
+
+
+async def paddle_api_post(path: str, body: dict) -> dict:
+    """POST request to Paddle API. Returns parsed JSON or error dict."""
+    import asyncio
+    import urllib.request
+    import urllib.error
+
+    if not PADDLE_API_KEY:
+        return {"ok": False, "error": "PADDLE_API_KEY not configured"}
+
+    base = _paddle_api_base()
+    url = f"{base}{path}"
+    payload = json.dumps(body).encode()
+
+    def _do():
+        req = urllib.request.Request(url, data=payload, method="POST")
+        req.add_header("Authorization", f"Bearer {PADDLE_API_KEY}")
+        req.add_header("Content-Type", "application/json")
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                return json.loads(resp.read().decode())
+        except urllib.error.HTTPError as e:
+            raw = e.read().decode() if e.fp else ""
+            try:
+                return {"ok": False, "error": json.loads(raw)}
+            except Exception:
+                return {"ok": False, "error": raw, "status": e.code}
+
+    return await asyncio.to_thread(_do)
+
+
+async def get_paddle_transaction(transaction_id: str) -> dict:
+    """Fetch a single transaction from Paddle API."""
+    return await paddle_api_get(f"/transactions/{transaction_id}")
+
+
+async def list_paddle_transactions(
+    status: str = None, after: str = None, per_page: int = 25,
+    customer_id: str = None, order_by: str = None,
+) -> dict:
+    """List transactions from Paddle API with optional filters."""
+    params = {"per_page": str(per_page)}
+    if status:
+        params["status"] = status
+    if after:
+        params["after"] = after
+    if customer_id:
+        params["customer_id"] = customer_id
+    if order_by:
+        params["order_by"] = order_by
+    return await paddle_api_get("/transactions", params)
+
+
+async def get_paddle_customer(customer_id: str) -> dict:
+    """Fetch a single customer from Paddle API."""
+    return await paddle_api_get(f"/customers/{customer_id}")
+
+
+async def list_paddle_customers(
+    after: str = None, per_page: int = 25, email: str = None,
+) -> dict:
+    """List customers from Paddle API."""
+    params = {"per_page": str(per_page)}
+    if after:
+        params["after"] = after
+    if email:
+        params["email"] = email
+    return await paddle_api_get("/customers", params)
+
+
+async def create_paddle_adjustment(
+    transaction_id: str, reason: str, action: str = "refund",
+    items: Optional[list] = None,
+) -> dict:
+    """Create adjustment (refund/credit) via Paddle API.
+    action: "refund" (full) or "credit" (partial/account credit).
+    items: optional list of {"item_id": ..., "type": "full"/"partial", "amount": ...}
+    """
+    body: dict = {
+        "action": action,
+        "transaction_id": transaction_id,
+        "reason": reason,
+    }
+    if items:
+        body["items"] = items
+    return await paddle_api_post("/adjustments", body)
+
+
+async def list_paddle_adjustments(
+    transaction_id: str = None, after: str = None, per_page: int = 25,
+) -> dict:
+    """List adjustments (refunds) from Paddle API."""
+    params = {"per_page": str(per_page)}
+    if transaction_id:
+        params["transaction_id"] = transaction_id
+    if after:
+        params["after"] = after
+    return await paddle_api_get("/adjustments", params)
+
+
 # ─── Paddle Client Config ───
 
 @router.get("/config")
