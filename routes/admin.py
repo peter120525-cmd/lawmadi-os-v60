@@ -1,11 +1,12 @@
 """
 Lawmadi OS v60 — Admin Dashboard API routes.
-비즈니스 메트릭 조회 엔드포인트.
+비즈니스 메트릭 조회 + Paddle 관리 엔드포인트.
 """
 import os
 import time
 import hashlib
 import logging
+import re
 from typing import Any, Callable, Dict, Optional
 from fastapi import APIRouter, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
@@ -154,3 +155,356 @@ async def admin_blacklist_add(request: Request, authorization: str = Header(defa
     add_fn(ip, duration)
     ip_hash = hashlib.sha256(ip.encode()).hexdigest()[:12]
     return {"ok": True, "ip_hash": ip_hash, "duration": duration}
+
+
+# ─── Paddle 관리 API ───
+
+_TXN_ID_RE = re.compile(r'^txn_[a-zA-Z0-9]+$')
+_CTM_ID_RE = re.compile(r'^ctm_[a-zA-Z0-9]+$')
+
+
+@router.get("/paddle/transactions")
+@limiter.limit("10/minute")
+async def admin_paddle_transactions(
+    request: Request,
+    status: str = Query(default=None, regex="^(completed|billed|past_due|canceled|draft)$"),
+    customer_id: str = Query(default=None),
+    per_page: int = Query(default=25, ge=1, le=100),
+    after: str = Query(default=None),
+    authorization: str = Header(default=""),
+):
+    """Paddle 거래 목록 조회."""
+    _verify_admin_auth(authorization)
+    if customer_id and not _CTM_ID_RE.match(customer_id):
+        return JSONResponse(status_code=400, content={"ok": False, "error": "Invalid customer_id format"})
+
+    from routes.paddle import list_paddle_transactions
+    result = await list_paddle_transactions(
+        status=status, after=after, per_page=per_page,
+        customer_id=customer_id, order_by="created_at[DESC]",
+    )
+    if "data" in result:
+        return {"ok": True, "data": result["data"], "meta": result.get("meta", {})}
+    return JSONResponse(status_code=502, content={"ok": False, "error": result.get("error", "Paddle API error")})
+
+
+@router.get("/paddle/transactions/{transaction_id}")
+@limiter.limit("10/minute")
+async def admin_paddle_transaction_detail(
+    request: Request, transaction_id: str, authorization: str = Header(default=""),
+):
+    """Paddle 거래 상세 조회."""
+    _verify_admin_auth(authorization)
+    if not _TXN_ID_RE.match(transaction_id):
+        return JSONResponse(status_code=400, content={"ok": False, "error": "Invalid transaction_id format"})
+
+    from routes.paddle import get_paddle_transaction
+    result = await get_paddle_transaction(transaction_id)
+    if "data" in result:
+        return {"ok": True, "data": result["data"]}
+    return JSONResponse(status_code=502, content={"ok": False, "error": result.get("error", "Paddle API error")})
+
+
+@router.get("/paddle/customers")
+@limiter.limit("10/minute")
+async def admin_paddle_customers(
+    request: Request,
+    email: str = Query(default=None),
+    per_page: int = Query(default=25, ge=1, le=100),
+    after: str = Query(default=None),
+    authorization: str = Header(default=""),
+):
+    """Paddle 고객 목록 조회."""
+    _verify_admin_auth(authorization)
+    from routes.paddle import list_paddle_customers
+    result = await list_paddle_customers(after=after, per_page=per_page, email=email)
+    if "data" in result:
+        return {"ok": True, "data": result["data"], "meta": result.get("meta", {})}
+    return JSONResponse(status_code=502, content={"ok": False, "error": result.get("error", "Paddle API error")})
+
+
+@router.get("/paddle/customers/{customer_id}")
+@limiter.limit("10/minute")
+async def admin_paddle_customer_detail(
+    request: Request, customer_id: str, authorization: str = Header(default=""),
+):
+    """Paddle 고객 상세 조회."""
+    _verify_admin_auth(authorization)
+    if not _CTM_ID_RE.match(customer_id):
+        return JSONResponse(status_code=400, content={"ok": False, "error": "Invalid customer_id format"})
+
+    from routes.paddle import get_paddle_customer
+    result = await get_paddle_customer(customer_id)
+    if "data" in result:
+        return {"ok": True, "data": result["data"]}
+    return JSONResponse(status_code=502, content={"ok": False, "error": result.get("error", "Paddle API error")})
+
+
+@router.post("/paddle/refund")
+@limiter.limit("5/minute")
+async def admin_paddle_refund(
+    request: Request, authorization: str = Header(default=""),
+):
+    """Paddle 환불(Adjustment) 처리.
+    body: {"transaction_id": "txn_...", "reason": "사유", "action": "refund"|"credit"}
+    """
+    _verify_admin_auth(authorization)
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"ok": False, "error": "Invalid JSON"})
+
+    txn_id = str(body.get("transaction_id", "")).strip()
+    reason = str(body.get("reason", "")).strip()
+    action = str(body.get("action", "refund")).strip()
+
+    if not txn_id or not _TXN_ID_RE.match(txn_id):
+        return JSONResponse(status_code=400, content={"ok": False, "error": "Valid transaction_id required (txn_...)"})
+    if not reason or len(reason) > 500:
+        return JSONResponse(status_code=400, content={"ok": False, "error": "reason required (max 500 chars)"})
+    if action not in ("refund", "credit"):
+        return JSONResponse(status_code=400, content={"ok": False, "error": "action must be 'refund' or 'credit'"})
+
+    from routes.paddle import create_paddle_adjustment
+    result = await create_paddle_adjustment(
+        transaction_id=txn_id, reason=reason, action=action,
+    )
+
+    if "data" in result:
+        # 환불 성공 시 DB에서 크레딧 차감
+        adjustment_data = result["data"]
+        await _revoke_credits_for_refund(txn_id, adjustment_data)
+        logger.info(f"[Admin] Refund created: txn={txn_id}, action={action}")
+        return {"ok": True, "data": adjustment_data}
+    logger.warning(f"[Admin] Refund failed: txn={txn_id}, error={result.get('error')}")
+    return JSONResponse(status_code=502, content={"ok": False, "error": result.get("error", "Paddle API error")})
+
+
+@router.get("/paddle/adjustments")
+@limiter.limit("10/minute")
+async def admin_paddle_adjustments(
+    request: Request,
+    transaction_id: str = Query(default=None),
+    per_page: int = Query(default=25, ge=1, le=100),
+    after: str = Query(default=None),
+    authorization: str = Header(default=""),
+):
+    """Paddle 환불/조정 내역 조회."""
+    _verify_admin_auth(authorization)
+    if transaction_id and not _TXN_ID_RE.match(transaction_id):
+        return JSONResponse(status_code=400, content={"ok": False, "error": "Invalid transaction_id format"})
+
+    from routes.paddle import list_paddle_adjustments
+    result = await list_paddle_adjustments(
+        transaction_id=transaction_id, after=after, per_page=per_page,
+    )
+    if "data" in result:
+        return {"ok": True, "data": result["data"], "meta": result.get("meta", {})}
+    return JSONResponse(status_code=502, content={"ok": False, "error": result.get("error", "Paddle API error")})
+
+
+@router.get("/paddle/revenue")
+@limiter.limit("10/minute")
+async def admin_paddle_revenue(
+    request: Request,
+    days: int = Query(default=30, ge=1, le=365),
+    authorization: str = Header(default=""),
+):
+    """매출 통계: credit_ledger 기반 구매/차감/환불 요약."""
+    _verify_admin_auth(authorization)
+    db = _optional_import("connectors.db_client_v2")
+    if not db:
+        return JSONResponse(status_code=503, content={"ok": False, "error": "DB not available"})
+
+    try:
+        from connectors.db_client import _db_enabled, get_connection, release_connection
+        if not _db_enabled():
+            return JSONResponse(status_code=503, content={"ok": False, "error": "DB disabled"})
+
+        conn = get_connection()
+        if not conn:
+            return JSONResponse(status_code=503, content={"ok": False, "error": "DB connection failed"})
+        try:
+            cur = conn.cursor()
+            # 기간별 구매/차감/환불 집계
+            cur.execute("""
+                SELECT type,
+                       COUNT(*) as cnt,
+                       COALESCE(SUM(amount), 0) as total_amount
+                FROM credit_ledger
+                WHERE created_at >= NOW() - INTERVAL '%s days'
+                GROUP BY type
+                ORDER BY type
+            """, (days,))
+            rows = cur.fetchall()
+            summary = {}
+            for r in rows:
+                summary[r[0]] = {"count": r[1], "total_credits": r[2]}
+
+            # 일별 구매 크레딧 추이
+            cur.execute("""
+                SELECT DATE(created_at AT TIME ZONE 'Asia/Seoul') as dt,
+                       COALESCE(SUM(amount), 0) as daily_credits,
+                       COUNT(*) as daily_txns
+                FROM credit_ledger
+                WHERE type = 'purchase'
+                  AND created_at >= NOW() - INTERVAL '%s days'
+                GROUP BY dt
+                ORDER BY dt DESC
+                LIMIT 60
+            """, (days,))
+            daily = [{"date": str(r[0]), "credits": r[1], "transactions": r[2]} for r in cur.fetchall()]
+
+            # 활성 유료 사용자 수
+            cur.execute("SELECT COUNT(*) FROM users WHERE credit_balance > 0")
+            paying_users = cur.fetchone()[0]
+
+            # 총 사용자 수
+            cur.execute("SELECT COUNT(*) FROM users")
+            total_users = cur.fetchone()[0]
+
+            cur.close()
+            return {
+                "ok": True,
+                "days": days,
+                "summary": summary,
+                "daily_purchases": daily,
+                "paying_users": paying_users,
+                "total_users": total_users,
+            }
+        finally:
+            release_connection(conn)
+    except Exception as e:
+        logger.error(f"[Admin] Revenue query failed: {e}")
+        return JSONResponse(status_code=500, content={"ok": False, "error": "Revenue query failed"})
+
+
+@router.get("/paddle/users")
+@limiter.limit("10/minute")
+async def admin_paddle_users(
+    request: Request,
+    email: str = Query(default=None),
+    plan: str = Query(default=None, regex="^(free|premium)$"),
+    limit: int = Query(default=50, ge=1, le=200),
+    authorization: str = Header(default=""),
+):
+    """내부 사용자 목록 조회 (users 테이블)."""
+    _verify_admin_auth(authorization)
+    try:
+        from connectors.db_client import _db_enabled, get_connection, release_connection
+        if not _db_enabled():
+            return JSONResponse(status_code=503, content={"ok": False, "error": "DB disabled"})
+
+        conn = get_connection()
+        if not conn:
+            return JSONResponse(status_code=503, content={"ok": False, "error": "DB connection failed"})
+        try:
+            cur = conn.cursor()
+            where_clauses = []
+            params = []
+
+            if email:
+                where_clauses.append("email ILIKE %s")
+                params.append(f"%{email}%")
+            if plan:
+                where_clauses.append("current_plan = %s")
+                params.append(plan)
+
+            where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+            params.append(limit)
+
+            cur.execute(f"""
+                SELECT user_id, email, current_plan, credit_balance, daily_free_used,
+                       paddle_customer_id, created_at, last_login_at
+                FROM users {where_sql}
+                ORDER BY created_at DESC
+                LIMIT %s
+            """, tuple(params))
+            rows = cur.fetchall()
+            cur.close()
+
+            users = []
+            for r in rows:
+                users.append({
+                    "user_id": str(r[0])[:8] + "...",
+                    "email": r[1],
+                    "plan": r[2],
+                    "credits": r[3],
+                    "daily_free_used": r[4],
+                    "paddle_customer_id": r[5] or "",
+                    "created_at": r[6].isoformat() if r[6] else "",
+                    "last_login_at": r[7].isoformat() if r[7] else "",
+                })
+            return {"ok": True, "count": len(users), "users": users}
+        finally:
+            release_connection(conn)
+    except Exception as e:
+        logger.error(f"[Admin] Users query failed: {e}")
+        return JSONResponse(status_code=500, content={"ok": False, "error": "Users query failed"})
+
+
+async def _revoke_credits_for_refund(transaction_id: str, adjustment_data: dict):
+    """환불 시 해당 거래의 크레딧을 DB에서 차감."""
+    try:
+        from connectors.db_client import _db_enabled, get_connection, release_connection
+        if not _db_enabled():
+            return
+
+        ref_id = f"paddle:{transaction_id}"
+        conn = get_connection()
+        if not conn:
+            return
+        try:
+            cur = conn.cursor()
+            # 원래 충전 기록에서 user_id, amount 조회
+            cur.execute(
+                "SELECT user_id, amount FROM credit_ledger WHERE reference_id = %s AND type = 'purchase' LIMIT 1",
+                (ref_id,)
+            )
+            row = cur.fetchone()
+            if not row:
+                logger.warning(f"[Admin] Refund: no purchase ledger for {ref_id}")
+                cur.close()
+                return
+
+            user_id, original_amount = str(row[0]), int(row[1])
+
+            # 이미 환불 처리됐는지 확인
+            refund_ref = f"refund:{transaction_id}"
+            cur.execute(
+                "SELECT 1 FROM credit_ledger WHERE reference_id = %s LIMIT 1",
+                (refund_ref,)
+            )
+            if cur.fetchone():
+                logger.info(f"[Admin] Refund already processed for {transaction_id}")
+                cur.close()
+                return
+
+            # 크레딧 차감 (FOR UPDATE lock)
+            cur.execute("SELECT credit_balance FROM users WHERE user_id = %s FOR UPDATE", (user_id,))
+            balance_row = cur.fetchone()
+            if not balance_row:
+                cur.close()
+                return
+
+            current_balance = int(balance_row[0])
+            deduct = min(original_amount, current_balance)  # 잔액 이상 차감 불가
+            new_balance = current_balance - deduct
+
+            import uuid
+            cur.execute(
+                """INSERT INTO credit_ledger (id, user_id, amount, type, balance_after, reference_id)
+                   VALUES (%s, %s, %s, 'refund', %s, %s)""",
+                (str(uuid.uuid4()), user_id, -deduct, new_balance, refund_ref)
+            )
+            cur.execute(
+                "UPDATE users SET credit_balance = %s, current_plan = CASE WHEN %s <= 0 THEN 'free' ELSE current_plan END WHERE user_id = %s",
+                (new_balance, new_balance, user_id)
+            )
+            conn.commit()
+            cur.close()
+            logger.info(f"[Admin] Refund credit revoked: user={user_id[:8]}, amount={deduct}, new_balance={new_balance}")
+        finally:
+            release_connection(conn)
+    except Exception as e:
+        logger.error(f"[Admin] Credit revoke for refund failed: {e}")
