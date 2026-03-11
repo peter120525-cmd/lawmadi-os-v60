@@ -2252,14 +2252,11 @@ async def _gemini_fallback_compose(
             ),
         ]
 
-    # ── Selective Thinking (expert=512, general=0) ──
-    # gemini-2.0-flash 등 thinking 미지원 모델은 ThinkingConfig 생략
+    # ── Selective Thinking ──
+    # thinking_budget이 높으면 Gemini 내부 추론 시간이 90초+ 소요 → 타임아웃
+    # asia-northeast3 리전에서 안정적 응답을 위해 expert도 비활성화
     _model = get_model(mode=mode)
-    _supports_thinking = "2.5" in _model or "3" in _model
     thinking_config = None
-    if _supports_thinking:
-        thinking_budget = 512 if mode == "expert" else 0
-        thinking_config = genai_types.ThinkingConfig(thinking_budget=thinking_budget)
 
     # ── GenerateContentConfig 조립 ──
     _config_kwargs = dict(
