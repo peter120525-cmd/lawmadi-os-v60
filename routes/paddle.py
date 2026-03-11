@@ -25,45 +25,24 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
+from slowapi import Limiter
+
 logger = logging.getLogger("LawmadiOS.Paddle")
 router = APIRouter(prefix="/api/paddle", tags=["paddle"])
 
-# Limiter is injected from app.state.limiter via set_limiter()
-_real_limiter = None
+
+def _get_real_ip(request: Request) -> str:
+    """Extract real client IP from X-Forwarded-For (Cloud Run LB appends last)."""
+    xff = request.headers.get("X-Forwarded-For", "")
+    if xff:
+        ip = xff.split(",")[-1].strip()
+        if ip:
+            return ip
+    return request.client.host if request.client else "0.0.0.0"
 
 
-class _LazyLimiter:
-    """Proxy that defers .limit() calls until the real limiter is injected.
-
-    At import time _real_limiter is None, so @limiter.limit("3/minute")
-    must not crash.  This proxy records the rate string and returns a
-    decorator that applies the real limiter at request time.
-    """
-
-    def limit(self, rate: str):
-        """Return a decorator that enforces *rate* via the real limiter."""
-        def decorator(func):
-            import functools
-
-            @functools.wraps(func)
-            async def wrapper(*args, **kwargs):
-                if _real_limiter is not None:
-                    # Build and invoke the real limiter decorator on each call
-                    real_decorator = _real_limiter.limit(rate)
-                    wrapped = real_decorator(func)
-                    return await wrapped(*args, **kwargs)
-                return await func(*args, **kwargs)
-            return wrapper
-        return decorator
-
-
-limiter = _LazyLimiter()
-
-
-def set_limiter(app_limiter):
-    """Inject the app-level SlowAPI limiter so rate limits actually enforce."""
-    global _real_limiter
-    _real_limiter = app_limiter
+# paddle.py owns the Limiter — main.py uses this as app.state.limiter
+limiter = Limiter(key_func=_get_real_ip)
 
 # ─── Config ───
 PADDLE_WEBHOOK_SECRET = os.getenv("PADDLE_WEBHOOK_SECRET", "").strip()
