@@ -26,19 +26,36 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 logger = logging.getLogger("LawmadiOS.Paddle")
 router = APIRouter(prefix="/api/paddle", tags=["paddle"])
-limiter = Limiter(key_func=get_remote_address)
+
+
+def _get_real_ip(request: Request) -> str:
+    """Extract real client IP from X-Forwarded-For (Cloud Run LB appends last)."""
+    xff = request.headers.get("X-Forwarded-For", "")
+    if xff:
+        ip = xff.split(",")[-1].strip()
+        if ip:
+            return ip
+    return request.client.host if request.client else "0.0.0.0"
+
+
+limiter = Limiter(key_func=_get_real_ip)
 
 # ─── Config ───
 PADDLE_WEBHOOK_SECRET = os.getenv("PADDLE_WEBHOOK_SECRET", "").strip()
 PADDLE_API_KEY = os.getenv("PADDLE_API_KEY", "").strip()
 PADDLE_CLIENT_TOKEN = os.getenv("PADDLE_CLIENT_TOKEN", "").strip()
 PADDLE_ENVIRONMENT = os.getenv("PADDLE_ENVIRONMENT", "sandbox")
-DAILY_FREE_LIMIT = int(os.getenv("DAILY_FREE_LIMIT", "2"))
-SESSION_EXPIRY_DAYS = int(os.getenv("SESSION_EXPIRY_DAYS", "30"))
+try:
+    DAILY_FREE_LIMIT = int(os.getenv("DAILY_FREE_LIMIT", "2"))
+except ValueError:
+    DAILY_FREE_LIMIT = 2
+try:
+    SESSION_EXPIRY_DAYS = int(os.getenv("SESSION_EXPIRY_DAYS", "30"))
+except ValueError:
+    SESSION_EXPIRY_DAYS = 30
 
 # OTP config
 _OTP_TTL_SEC = 300  # 5 minutes
@@ -93,9 +110,15 @@ def _validate_email(email: str) -> bool:
 
 
 _OTP_HMAC_SECRET = os.getenv("OTP_HMAC_SECRET", "").strip()
+_OTP_DISABLED = False
 if not _OTP_HMAC_SECRET:
-    logger.warning("⚠️ OTP_HMAC_SECRET 미설정 — 기본 fallback 사용 (production에서는 반드시 설정하세요)")
-    _OTP_HMAC_SECRET = "lawmadi-otp-default-hmac-key-v2-change-me"
+    if PADDLE_ENVIRONMENT == "production":
+        logger.error("❌ OTP_HMAC_SECRET 미설정 — production에서 OTP 비활성화 (보안 fail-closed)")
+        _OTP_DISABLED = True
+        _OTP_HMAC_SECRET = "disabled"
+    else:
+        logger.warning("⚠️ OTP_HMAC_SECRET 미설정 — sandbox fallback 사용")
+        _OTP_HMAC_SECRET = "lawmadi-sandbox-only-hmac-key"
 
 
 def _hash_otp(code: str, email: str = "") -> str:
@@ -284,6 +307,8 @@ def get_current_user(request: Request) -> Optional[dict]:
 @limiter.limit("3/minute")
 async def send_otp(request: Request):
     """Send 6-digit OTP to email. No signup required."""
+    if _OTP_DISABLED:
+        raise HTTPException(status_code=503, detail="OTP service unavailable")
     try:
         body = await request.json()
     except Exception:
@@ -416,6 +441,8 @@ async def _send_otp_email(email: str, code: str) -> bool:
 @limiter.limit("5/minute")
 async def verify_otp_endpoint(request: Request):
     """Verify OTP -> create/get user -> issue DB session token."""
+    if _OTP_DISABLED:
+        raise HTTPException(status_code=503, detail="OTP service unavailable")
     try:
         body = await request.json()
     except Exception:
@@ -574,7 +601,7 @@ async def auth_logout(request: Request):
     if token:
         _delete_session(token)
     response = JSONResponse(content={"ok": True})
-    response.delete_cookie("__session", path="/")
+    response.delete_cookie("__session", path="/", secure=True, samesite="lax")
     return response
 
 
@@ -815,6 +842,9 @@ def use_daily_free(user_id: str, reference_id: str = "") -> bool:
 
 def add_credits(user_id: str, amount: int, reason: str = "purchase", reference_id: str = "") -> bool:
     """Add credits to user account with ledger entry."""
+    if amount <= 0:
+        logger.warning(f"[Credit] add_credits 거부: amount={amount} (must be > 0)")
+        return False
     _MAX_CREDITS = 999_999
     from connectors.db_client import _db_enabled, get_connection, release_connection
     if not _db_enabled():
