@@ -92,10 +92,17 @@ def _validate_email(email: str) -> bool:
     return bool(re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email))
 
 
+_OTP_HMAC_SECRET = os.getenv("OTP_HMAC_SECRET", "").strip()
+if not _OTP_HMAC_SECRET:
+    logger.warning("⚠️ OTP_HMAC_SECRET 미설정 — 기본 fallback 사용 (production에서는 반드시 설정하세요)")
+    _OTP_HMAC_SECRET = "lawmadi-otp-default-hmac-key-v2-change-me"
+
+
 def _hash_otp(code: str, email: str = "") -> str:
-    """Hash OTP code with HMAC-SHA256, using email as salt to prevent rainbow tables."""
-    key = (email or "lawmadi-otp-salt").encode()
-    return hmac.new(key, code.encode(), hashlib.sha256).hexdigest()
+    """Hash OTP code with HMAC-SHA256 using server-side secret key.
+    email is included in the message (not the key) to bind OTP to specific email."""
+    msg = f"{email}:{code}".encode()
+    return hmac.new(_OTP_HMAC_SECRET.encode(), msg, hashlib.sha256).hexdigest()
 
 
 def _cleanup_otp_store():
@@ -406,7 +413,7 @@ async def _send_otp_email(email: str, code: str) -> bool:
 # ─── OTP Verify ───
 
 @router.post("/otp/verify")
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")
 async def verify_otp_endpoint(request: Request):
     """Verify OTP -> create/get user -> issue DB session token."""
     try:
@@ -624,7 +631,7 @@ async def credit_history(request: Request):
                 "amount": r[0],
                 "type": r[1],
                 "balance_after": r[2],
-                "reference_id": r[3] or "",
+                "reference_id": (r[3] or "")[:8] + "..." if r[3] else "",
                 "created_at": r[4].isoformat() if r[4] else "",
             })
         return {"ok": True, "history": history, "balance": user["credit_balance"]}
@@ -1038,11 +1045,8 @@ async def _handle_transaction_completed(event_data: dict):
             total_credits += CREDIT_PACKS[pack_name]["credits"] * qty
 
     if total_credits == 0:
-        custom = event_data.get("custom_data", {})
-        if isinstance(custom, dict):
-            pack = custom.get("pack", "")
-            if pack in CREDIT_PACKS:
-                total_credits = CREDIT_PACKS[pack]["credits"]
+        logger.error(f"[Paddle] price_id→pack 매핑 실패 — 크레딧 미지급 (price_id 미등록 가능성)")
+        # custom_data fallback 비활성화: price_id 매핑만 신뢰 (보안)
 
     total_credits = min(total_credits, _MAX_CREDITS)
 
