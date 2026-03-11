@@ -273,6 +273,8 @@ async def ask(request: Request):
         query = (data.get("query", "") or "").strip()
         raw_history = data.get("history", [])
         lang = (data.get("lang", "") or "").strip().lower()
+        if lang not in ("en", "ko", ""):
+            lang = ""
         if not lang:
             lang = _detect_lang(query)
 
@@ -927,6 +929,11 @@ async def ask(request: Request):
         # Post-deduction: deduct credits after successful response
         if _post_deduct_fn and _response_status == "SUCCESS":
             _post_deduct_fn(request, "general", trace)
+        elif _release_user_lock_fn:
+            try:
+                _release_user_lock_fn(request)
+            except Exception:
+                pass
 
         return _ask_result
 
@@ -1001,9 +1008,13 @@ async def ask_stream(request: Request):
         query = (data.get("query", "") or "").strip()
         raw_history = data.get("history", [])
         lang = (data.get("lang", "") or "").strip().lower()
+        if lang not in ("en", "ko", ""):
+            lang = ""
         if not lang:
             lang = _detect_lang(query)
         stream_mode = (data.get("mode", "") or "").strip().lower() or "general"
+        if stream_mode not in ("general", "leader_chat", "expert"):
+            stream_mode = "general"
 
         # 리더 협의/인수인계 상태
         req_current_leader = data.get("current_leader")  # {"name": ..., "specialty": ...} or None
@@ -1046,7 +1057,7 @@ async def ask_stream(request: Request):
     except Exception as parse_err:
         logger.error(f"💥 요청 파싱 실패: {type(parse_err).__name__}: {parse_err}")
         async def _error_gen():
-            yield f"event: error\ndata: {json.dumps({'message': f'요청 파싱 실패: {type(parse_err).__name__}'}, ensure_ascii=False)}\n\n"
+            yield f"event: error\ndata: {json.dumps({'message': '요청 파싱 실패'}, ensure_ascii=False)}\n\n"
         return StreamingResponse(_error_gen(), media_type="text/event-stream")
 
     # --- SSE generator ---
@@ -1625,6 +1636,11 @@ async def ask_stream(request: Request):
             # 크레딧 차감 (성공 응답 후)
             if _post_deduct_fn:
                 _post_deduct_fn(request, "general", trace)
+            elif _release_user_lock_fn:
+                try:
+                    _release_user_lock_fn(request)
+                except Exception:
+                    pass
 
             # answer_done 이벤트
             yield _sse("answer_done", {
@@ -1771,6 +1787,8 @@ async def ask_expert(request: Request):
         query = str(body.get("query", "")).strip()
         original_response = str(body.get("original_response", "")).strip()
         lang = str(body.get("lang", "")).strip().lower()
+        if lang not in ("en", "ko", ""):
+            lang = ""
         if not lang:
             lang = _detect_lang(query)
 
@@ -1855,6 +1873,11 @@ async def ask_expert(request: Request):
         # Post-deduction: expert costs 2 credits
         if _post_deduct_fn and _response_status == "SUCCESS":
             _post_deduct_fn(request, "expert", trace)
+        elif _release_user_lock_fn:
+            try:
+                _release_user_lock_fn(request)
+            except Exception:
+                pass
 
         # Expert 채팅 로그 저장
         try:
