@@ -769,6 +769,15 @@ def _kst_today_start_ts() -> float:
     today_start = now_kst.replace(hour=0, minute=0, second=0, microsecond=0)
     return today_start.timestamp()
 
+_active_user_requests: Dict[str, int] = {}  # user_id → 진행 중 요청 수
+_active_user_lock = threading.Lock()
+
+# 최근 DB 검증 성공한 세션 토큰 캐시 (DB 장애 시 grace pass 대상 제한)
+_verified_session_cache: Dict[str, float] = {}  # token_hash → last_verified_ts
+_VERIFIED_CACHE_TTL = 3600  # 1시간 이내 검증된 토큰만 grace pass
+_MAX_VERIFIED_CACHE = 2000
+
+
 def _check_rate_limit(request: Request) -> Union[bool, dict]:
     """
     요청 제한 (KST 00:00 리셋).
@@ -776,7 +785,7 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
 
     우선순위:
       1) Admin 키 → 무제한
-      2) DB 세션 유저 → 크레딧/일일무료 기반 (IP 카운트 무관)
+      2) DB 세션 유저 → 크레딧/일일무료 기반 (IP 카운트 무관) + 동시 요청 1개 제한
       3) 세션 쿠키 있지만 DB 실패 → 관대하게 통과 (유료 유저 보호)
       4) 비로그인 → IP 기반 제한 (free plan window_limit)
     """
@@ -795,6 +804,16 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
     if has_session:
         try:
             user = _get_paddle_user(request)
+            # 검증 성공 시 세션 캐시에 기록 (DB 장애 시 grace pass용)
+            if user:
+                _tk_hash = _sha256(session_token)
+                _verified_session_cache[_tk_hash] = time.time()
+                # 캐시 크기 제한
+                if len(_verified_session_cache) > _MAX_VERIFIED_CACHE:
+                    _cutoff = time.time() - _VERIFIED_CACHE_TTL
+                    _expired = [k for k, v in _verified_session_cache.items() if v < _cutoff]
+                    for k in _expired:
+                        _verified_session_cache.pop(k, None)
         except Exception:
             user = None
             _db_error = True  # DB 일시 장애 표시
@@ -802,24 +821,50 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
         user = None
 
     if user:
+        user_id = user.get("user_id", "")
         mode = request.headers.get("X-Request-Mode", "general").strip()
         cost = 2 if mode == "expert" else 1
+
+        # 동시 요청 제한: 같은 유저가 이미 진행 중인 요청이 있으면 차단 (TOCTOU 방지)
+        if user_id:
+            with _active_user_lock:
+                if _active_user_requests.get(user_id, 0) >= 1:
+                    return {"blocked": True, "retry_at_kst": "concurrent_limit"}
+                _active_user_requests[user_id] = _active_user_requests.get(user_id, 0) + 1
 
         if user.get("credit_balance", 0) >= cost:
             return True  # 유료 유저: 크레딧 충분 → 무조건 통과
 
         if user.get("current_plan") == "free":
             if mode == "expert":
+                # 동시 요청 카운터 해제
+                if user_id:
+                    with _active_user_lock:
+                        _active_user_requests[user_id] = max(0, _active_user_requests.get(user_id, 0) - 1)
                 return {"blocked": True, "retry_at_kst": "credits_required_for_expert"}
             if user.get("daily_free_used", 0) < DAILY_FREE_LIMIT:
                 return True  # 무료 일일 한도 내 → 통과
+            # 동시 요청 카운터 해제
+            if user_id:
+                with _active_user_lock:
+                    _active_user_requests[user_id] = max(0, _active_user_requests.get(user_id, 0) - 1)
             return {"blocked": True, "retry_at_kst": "daily_limit_reached"}
 
+        # 동시 요청 카운터 해제
+        if user_id:
+            with _active_user_lock:
+                _active_user_requests[user_id] = max(0, _active_user_requests.get(user_id, 0) - 1)
         return {"blocked": True, "retry_at_kst": "credits_exhausted"}
 
-    # ── 3) DB 장애로 유저 조회 실패 → 유료 유저 보호 (토큰 형식 검증 필수) ──
-    if _db_error and has_session and len(session_token) == 64 and all(c in '0123456789abcdef' for c in session_token):
-        return True  # 정상 형식 토큰 + DB 장애 → grace 통과
+    # ── 3) DB 장애로 유저 조회 실패 → 최근 검증된 세션만 grace 통과 ──
+    if _db_error and has_session:
+        _tk_hash = _sha256(session_token)
+        _last_verified = _verified_session_cache.get(_tk_hash, 0)
+        if _last_verified and (time.time() - _last_verified) < _VERIFIED_CACHE_TTL:
+            logger.info(f"[RateLimit] DB 장애 grace pass (캐시 검증 {int(time.time() - _last_verified)}초 전)")
+            return True  # 최근 1시간 내 DB 검증 성공한 토큰만 통과
+        logger.warning(f"[RateLimit] DB 장애 — 미검증 세션 거부 (token_hash={_tk_hash[:8]})")
+        return {"blocked": True, "retry_at_kst": "service_temporarily_unavailable"}
 
     # ── 4) 비로그인 → IP 기반 제한 ──
     plan_cfg = PLAN_CONFIG.get("free", {})
@@ -876,7 +921,11 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
 
 def _rate_limit_response(retry_at_kst: str = ""):
     """제한 초과 시 응답 — 다음 이용 가능 시각 안내"""
-    if retry_at_kst == "credits_exhausted":
+    if retry_at_kst == "concurrent_limit":
+        msg = "이전 요청이 처리 중입니다. 잠시 후 다시 시도해주세요."
+    elif retry_at_kst == "service_temporarily_unavailable":
+        msg = "서비스가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요."
+    elif retry_at_kst == "credits_exhausted":
         msg = "크레딧이 모두 소진되었습니다. 추가 크레딧을 충전해주세요."
     elif retry_at_kst == "credits_required_for_expert":
         msg = "전문가 답변은 크레딧이 필요합니다. 크레딧을 구매해주세요."
@@ -896,6 +945,20 @@ def _rate_limit_response(retry_at_kst: str = ""):
     )
 
 
+def _release_user_lock(request: Request):
+    """동시 요청 카운터 해제 (응답 완료 후 반드시 호출)."""
+    try:
+        session_token = request.cookies.get("__session", "").strip()
+        if session_token:
+            user = _get_paddle_user(request)
+            if user and user.get("user_id"):
+                with _active_user_lock:
+                    uid = user["user_id"]
+                    _active_user_requests[uid] = max(0, _active_user_requests.get(uid, 0) - 1)
+    except Exception:
+        pass
+
+
 def _post_deduct(request: Request, query_type: str, trace_id: str = ""):
     """Post-deduction: deduct credits AFTER successful response. Free users use daily quota."""
     try:
@@ -911,7 +974,9 @@ def _post_deduct(request: Request, query_type: str, trace_id: str = ""):
         elif user.get("current_plan") == "free":
             _use_daily_free(user_id, reference_id=trace_id)
     except Exception as e:
-        logger.warning(f"[PostDeduct] Failed (non-blocking): {e}")
+        logger.error(f"🔴 [PostDeduct] 크레딧 차감 실패 — trace={trace_id}, type={query_type}: {e}")
+    finally:
+        _release_user_lock(request)
 
 # =============================================================
 # 🎯 리더 채팅 일일 제한 (5회 무료 → 2크레딧으로 5회 추가)
@@ -1452,6 +1517,7 @@ async def startup():
         optional_import_fn=optional_import,
         check_expert_access=_check_expert_access,
         post_deduct=_post_deduct,
+        release_user_lock=_release_user_lock,
         get_paddle_user=_get_paddle_user,
         check_leader_chat_limit=_check_leader_chat_limit,
     )

@@ -97,6 +97,7 @@ _sha256_fn: Optional[Callable] = None
 _optional_import_fn: Optional[Callable] = None
 _check_expert_access_fn: Optional[Callable] = None
 _post_deduct_fn: Optional[Callable] = None
+_release_user_lock_fn: Optional[Callable] = None
 _get_paddle_user_fn: Optional[Callable] = None
 _check_leader_chat_limit_fn: Optional[Callable] = None
 
@@ -134,6 +135,7 @@ def set_dependencies(
     optional_import_fn,
     check_expert_access=None,
     post_deduct=None,
+    release_user_lock=None,
     get_paddle_user=None,
     check_leader_chat_limit=None,
 ):
@@ -143,7 +145,7 @@ def set_dependencies(
     global _match_ssot_sources_fn, _resolve_leader_from_ssot_fn, _ensure_genai_client_fn
     global _classify_gemini_error_fn, _remove_markdown_tables_fn, _remove_separator_lines_fn
     global _compute_quality_meta_fn, _audit_fn, _get_client_ip_fn, _sha256_fn, _optional_import_fn
-    global _check_expert_access_fn, _post_deduct_fn, _get_paddle_user_fn, _check_leader_chat_limit_fn
+    global _check_expert_access_fn, _post_deduct_fn, _release_user_lock_fn, _get_paddle_user_fn, _check_leader_chat_limit_fn
 
     _RUNTIME = runtime
     _METRICS = metrics
@@ -165,6 +167,7 @@ def set_dependencies(
     _optional_import_fn = optional_import_fn
     _check_expert_access_fn = check_expert_access
     _post_deduct_fn = post_deduct
+    _release_user_lock_fn = release_user_lock
     _get_paddle_user_fn = get_paddle_user
     _check_leader_chat_limit_fn = check_leader_chat_limit
 
@@ -942,6 +945,12 @@ async def ask(request: Request):
             user_msg = f"⚠️ A system error occurred. Please try again shortly. (Ref: {ref})"
         else:
             user_msg = _classify_gemini_error_fn(e, ref)
+        # 에러 시에도 동시 요청 카운터 해제
+        if _release_user_lock_fn:
+            try:
+                _release_user_lock_fn(request)
+            except Exception:
+                pass
         return {"trace_id": trace, "response": user_msg, "status": "ERROR"}
 
 
@@ -1712,6 +1721,12 @@ async def ask_stream(request: Request):
                 "latency_ms": int((time.time() - start_time) * 1000),
                 "trace_id": trace, "status": "ERROR",
             })
+            # 에러 시에도 동시 요청 카운터 해제
+            if _release_user_lock_fn:
+                try:
+                    _release_user_lock_fn(request)
+                except Exception:
+                    pass
 
     return StreamingResponse(
         _sse_generator(),
@@ -1880,6 +1895,12 @@ async def ask_expert(request: Request):
         logger.error(traceback.format_exc())
         latency_ms = int((time.time() - start) * 1000)
         user_msg = _classify_gemini_error_fn(e, ref) if _classify_gemini_error_fn else f"전문가 답변 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요. (Ref: {ref})"
+        # 에러 시에도 동시 요청 카운터 해제
+        if _release_user_lock_fn:
+            try:
+                _release_user_lock_fn(request)
+            except Exception:
+                pass
         return {"trace_id": trace, "status": "ERROR", "response": user_msg, "latency_ms": latency_ms}
 
 
