@@ -193,6 +193,18 @@
         "run": { "serviceId": "lawmadi-os-v60", "region": "asia-northeast3" }
       },
       {
+        "source": "/generate-document",
+        "run": { "serviceId": "lawmadi-os-v60", "region": "asia-northeast3" }
+      },
+      {
+        "source": "/document-types",
+        "run": { "serviceId": "lawmadi-os-v60", "region": "asia-northeast3" }
+      },
+      {
+        "source": "/api/forms/**",
+        "run": { "serviceId": "lawmadi-os-v60", "region": "asia-northeast3" }
+      },
+      {
         "source": "/suggest-questions",
         "run": { "serviceId": "lawmadi-os-v60", "region": "asia-northeast3" }
       },

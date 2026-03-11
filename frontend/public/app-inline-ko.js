@@ -1578,7 +1578,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                             const pdfRes = await fetch(`${this.BASE_URL}/export-pdf`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ title: pdfTitle, content: pdfContent })
+                                credentials: 'include',
+                                body: JSON.stringify({ title: pdfTitle, content: pdfContent, doc_type: 'analysis', lang: 'ko' })
                             });
                             if (!pdfRes.ok) throw new Error('PDF 생성 실패');
                             const blob = await pdfRes.blob();
@@ -1596,6 +1597,12 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         }
                     });
                     g1.appendChild(exportBtn);
+
+                    // 문서 작성 버튼
+                    const docBtn = this._createToolbarBtn('description', '문서 작성', () => {
+                        this._showDocGenModal(originalQuery, rawResponse, leaderName);
+                    });
+                    g1.appendChild(docBtn);
                     toolbar.appendChild(g1);
 
                     msgDiv.appendChild(toolbar);
@@ -1908,6 +1915,175 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             btn.innerHTML = `<span class="material-symbols-outlined">${icon}</span>`;
             btn.onclick = onClick;
             return btn;
+        },
+
+        // ═══ 고급 문서 작성 모달 ═══
+        _showDocGenModal(originalQuery, rawResponse, leaderName) {
+            // Remove existing modal if any
+            const existing = document.getElementById('doc-gen-modal');
+            if (existing) existing.remove();
+
+            const docTypes = [
+                { key: 'complaint', label: '고소장', desc: '형사 고소장 초안' },
+                { key: 'petition', label: '소장', desc: '민사 소장 초안' },
+                { key: 'notice', label: '내용증명', desc: '내용증명 우편 초안' },
+                { key: 'answer', label: '답변서', desc: '민사 답변서 초안' },
+                { key: 'appeal', label: '탄원서', desc: '탄원서/선처 요청' },
+                { key: 'demand', label: '최고서', desc: '이행 최고/독촉장' },
+                { key: 'agreement', label: '합의서', desc: '합의서/화해계약' },
+                { key: 'opinion', label: '법률의견서', desc: '법률 검토 의견서' },
+            ];
+
+            const overlay = document.createElement('div');
+            overlay.id = 'doc-gen-modal';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+            const modal = document.createElement('div');
+            modal.style.cssText = 'background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:85vh;overflow-y:auto;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,0.25);';
+
+            // Header
+            modal.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">'
+                + '<h3 style="margin:0;font-size:1.2rem;color:#2D4A37;">법률 문서 작성</h3>'
+                + '<button id="doc-gen-close" style="background:none;border:none;cursor:pointer;font-size:1.5rem;color:#999;">&times;</button>'
+                + '</div>';
+
+            // Document type grid
+            let gridHtml = '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px;">';
+            docTypes.forEach(dt => {
+                gridHtml += `<button class="doc-type-btn" data-type="${dt.key}" style="padding:14px 12px;border:2px solid #E8F0EB;border-radius:12px;background:#FAFCFB;cursor:pointer;text-align:left;transition:all 0.2s;">`
+                    + `<div style="font-weight:600;color:#2D4A37;font-size:0.95rem;">${_sanitize(dt.label)}</div>`
+                    + `<div style="font-size:0.78rem;color:#7A9A88;margin-top:3px;">${_sanitize(dt.desc)}</div>`
+                    + `</button>`;
+            });
+            gridHtml += '</div>';
+            modal.innerHTML += gridHtml;
+
+            // Extra instructions
+            modal.innerHTML += '<div style="margin-bottom:16px;">'
+                + '<label style="font-size:0.85rem;color:#5A7A68;font-weight:500;">추가 지시사항 (선택)</label>'
+                + '<textarea id="doc-gen-extra" placeholder="예: 피해 금액 500만원, 피고소인 주소 서울시 강남구..." '
+                + 'style="width:100%;min-height:70px;margin-top:6px;padding:12px;border:1.5px solid #D4E4DA;border-radius:10px;font-size:0.9rem;resize:vertical;box-sizing:border-box;font-family:inherit;"></textarea>'
+                + '</div>';
+
+            // Context info
+            const contextPreview = originalQuery ? originalQuery.substring(0, 80) + (originalQuery.length > 80 ? '...' : '') : '';
+            if (contextPreview) {
+                modal.innerHTML += '<div style="padding:10px 14px;background:#F0F7F3;border-radius:10px;margin-bottom:16px;font-size:0.82rem;color:#5A7A68;">'
+                    + '<span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;margin-right:4px;">info</span>'
+                    + '이전 질문/답변을 기반으로 문서가 작성됩니다.'
+                    + '</div>';
+            }
+
+            // Generate button
+            modal.innerHTML += '<button id="doc-gen-submit" disabled style="width:100%;padding:14px;background:#B8922D;color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer;opacity:0.5;transition:all 0.2s;">'
+                + '<span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle;margin-right:6px;">edit_document</span>'
+                + '문서 생성 (2 Credit)'
+                + '</button>';
+
+            // Status area
+            modal.innerHTML += '<div id="doc-gen-status" style="margin-top:12px;text-align:center;font-size:0.85rem;color:#7A9A88;"></div>';
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            // Event handlers
+            document.getElementById('doc-gen-close').onclick = () => overlay.remove();
+
+            let selectedType = null;
+            modal.querySelectorAll('.doc-type-btn').forEach(btn => {
+                btn.onmouseover = () => { if (btn.dataset.type !== selectedType) btn.style.borderColor = '#B8922D'; };
+                btn.onmouseout = () => { if (btn.dataset.type !== selectedType) btn.style.borderColor = '#E8F0EB'; };
+                btn.onclick = () => {
+                    modal.querySelectorAll('.doc-type-btn').forEach(b => {
+                        b.style.borderColor = '#E8F0EB';
+                        b.style.background = '#FAFCFB';
+                    });
+                    btn.style.borderColor = '#B8922D';
+                    btn.style.background = '#FDF8EE';
+                    selectedType = btn.dataset.type;
+                    const submitBtn = document.getElementById('doc-gen-submit');
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                };
+            });
+
+            // Submit handler
+            document.getElementById('doc-gen-submit').onclick = async () => {
+                if (!selectedType) return;
+                const submitBtn = document.getElementById('doc-gen-submit');
+                const statusEl = document.getElementById('doc-gen-status');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle;margin-right:6px;animation:spin 1s linear infinite;">progress_activity</span> 문서 생성 중...';
+                statusEl.textContent = 'Gemini가 법률 문서를 작성하고 있습니다...';
+
+                try {
+                    const extra = (document.getElementById('doc-gen-extra') || {}).value || '';
+                    let context = '';
+                    if (originalQuery) context += `[상황/질문]\n${originalQuery}\n\n`;
+                    if (rawResponse) context += `[분석 결과]\n${rawResponse}\n\n`;
+                    if (leaderName) context += `[담당 리더] ${leaderName}\n`;
+
+                    const res = await fetch(`${this.BASE_URL}/generate-document`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            doc_type: selectedType,
+                            context: context,
+                            lang: 'ko',
+                            extra_instructions: extra
+                        })
+                    });
+
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => ({}));
+                        throw new Error(err.detail || '문서 생성 실패');
+                    }
+
+                    const result = await res.json();
+                    statusEl.innerHTML = '<span style="color:#6DBB8F;">문서 생성 완료! PDF를 다운로드합니다...</span>';
+
+                    // Auto-download PDF
+                    const pdfRes = await fetch(`${this.BASE_URL}/export-pdf`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            title: result.title,
+                            content: result.content,
+                            doc_type: selectedType,
+                            lang: 'ko',
+                            sections: result.sections
+                        })
+                    });
+
+                    if (!pdfRes.ok) throw new Error('PDF 변환 실패');
+                    const blob = await pdfRes.blob();
+                    const url = URL.createObjectURL(blob);
+                    const now = new Date();
+                    const pad = n => String(n).padStart(2, '0');
+                    const fname = `${result.title}-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}.pdf`;
+                    const a = document.createElement('a'); a.href = url; a.download = fname; a.click();
+                    URL.revokeObjectURL(url);
+
+                    statusEl.innerHTML = '<span style="color:#6DBB8F;">PDF 다운로드 완료</span>';
+                    submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle;margin-right:6px;">check_circle</span> 완료';
+
+                    // Also display the document content in chat
+                    if (result.content) {
+                        const docMsg = '```\n' + result.content + '\n```';
+                        this.addMessage(docMsg, 'ai');
+                    }
+
+                    setTimeout(() => overlay.remove(), 2000);
+                } catch (e) {
+                    statusEl.innerHTML = `<span style="color:#E74C3C;">${_sanitize(e.message)}</span>`;
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle;margin-right:6px;">edit_document</span> 재시도';
+                    submitBtn.style.opacity = '1';
+                }
+            };
         },
 
         addCopyButton(msgDiv) {

@@ -1909,7 +1909,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                             const pdfRes = await fetch(`${this.BASE_URL}/export-pdf`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ title: pdfTitle, content: pdfContent })
+                                credentials: 'include',
+                                body: JSON.stringify({ title: pdfTitle, content: pdfContent, doc_type: 'analysis', lang: 'en' })
                             });
                             if (!pdfRes.ok) throw new Error('PDF generation failed');
                             const blob = await pdfRes.blob();
@@ -1928,6 +1929,12 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         }
                     });
                     g1.appendChild(exportBtn);
+
+                    // Document generation button
+                    const docBtn = this._createToolbarBtn('description', 'Draft Document', () => {
+                        this._showDocGenModal(originalQuery, rawResponse, leaderName);
+                    });
+                    g1.appendChild(docBtn);
                     toolbar.appendChild(g1);
 
                     msgDiv.appendChild(toolbar);
@@ -2239,6 +2246,163 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             btn.innerHTML = `<span class="material-symbols-outlined">${icon}</span>`;
             btn.onclick = onClick;
             return btn;
+        },
+
+        // ═══ Document Generation Modal (EN) ═══
+        _showDocGenModal(originalQuery, rawResponse, leaderName) {
+            const existing = document.getElementById('doc-gen-modal');
+            if (existing) existing.remove();
+
+            const docTypes = [
+                { key: 'complaint', label: 'Criminal Complaint', desc: 'Draft criminal complaint' },
+                { key: 'petition', label: 'Civil Petition', desc: 'Draft civil petition' },
+                { key: 'notice', label: 'Certified Notice', desc: 'Certified mail notice' },
+                { key: 'answer', label: 'Answer Brief', desc: 'Civil answer/response' },
+                { key: 'appeal', label: 'Petition Letter', desc: 'Appeal/clemency letter' },
+                { key: 'demand', label: 'Demand Letter', desc: 'Formal demand letter' },
+                { key: 'agreement', label: 'Settlement', desc: 'Settlement agreement' },
+                { key: 'opinion', label: 'Legal Opinion', desc: 'Legal opinion letter' },
+            ];
+
+            const overlay = document.createElement('div');
+            overlay.id = 'doc-gen-modal';
+            overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+            overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+            const modal = document.createElement('div');
+            modal.style.cssText = 'background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:85vh;overflow-y:auto;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,0.25);';
+
+            modal.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">'
+                + '<h3 style="margin:0;font-size:1.2rem;color:#2D4A37;">Draft Legal Document</h3>'
+                + '<button id="doc-gen-close" style="background:none;border:none;cursor:pointer;font-size:1.5rem;color:#999;">&times;</button>'
+                + '</div>';
+
+            let gridHtml = '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px;">';
+            docTypes.forEach(dt => {
+                gridHtml += `<button class="doc-type-btn" data-type="${dt.key}" style="padding:14px 12px;border:2px solid #E8F0EB;border-radius:12px;background:#FAFCFB;cursor:pointer;text-align:left;transition:all 0.2s;">`
+                    + `<div style="font-weight:600;color:#2D4A37;font-size:0.95rem;">${_sanitize(dt.label)}</div>`
+                    + `<div style="font-size:0.78rem;color:#7A9A88;margin-top:3px;">${_sanitize(dt.desc)}</div>`
+                    + `</button>`;
+            });
+            gridHtml += '</div>';
+            modal.innerHTML += gridHtml;
+
+            modal.innerHTML += '<div style="margin-bottom:16px;">'
+                + '<label style="font-size:0.85rem;color:#5A7A68;font-weight:500;">Additional Instructions (optional)</label>'
+                + '<textarea id="doc-gen-extra" placeholder="e.g., Damage amount: 5,000,000 KRW, Defendant address: Gangnam-gu, Seoul..." '
+                + 'style="width:100%;min-height:70px;margin-top:6px;padding:12px;border:1.5px solid #D4E4DA;border-radius:10px;font-size:0.9rem;resize:vertical;box-sizing:border-box;font-family:inherit;"></textarea>'
+                + '</div>';
+
+            if (originalQuery) {
+                modal.innerHTML += '<div style="padding:10px 14px;background:#F0F7F3;border-radius:10px;margin-bottom:16px;font-size:0.82rem;color:#5A7A68;">'
+                    + '<span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;margin-right:4px;">info</span>'
+                    + 'The document will be based on your previous question and analysis.'
+                    + '</div>';
+            }
+
+            modal.innerHTML += '<button id="doc-gen-submit" disabled style="width:100%;padding:14px;background:#B8922D;color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer;opacity:0.5;transition:all 0.2s;">'
+                + '<span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle;margin-right:6px;">edit_document</span>'
+                + 'Generate Document (2 Credits)'
+                + '</button>';
+
+            modal.innerHTML += '<div id="doc-gen-status" style="margin-top:12px;text-align:center;font-size:0.85rem;color:#7A9A88;"></div>';
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            document.getElementById('doc-gen-close').onclick = () => overlay.remove();
+
+            let selectedType = null;
+            modal.querySelectorAll('.doc-type-btn').forEach(btn => {
+                btn.onmouseover = () => { if (btn.dataset.type !== selectedType) btn.style.borderColor = '#B8922D'; };
+                btn.onmouseout = () => { if (btn.dataset.type !== selectedType) btn.style.borderColor = '#E8F0EB'; };
+                btn.onclick = () => {
+                    modal.querySelectorAll('.doc-type-btn').forEach(b => {
+                        b.style.borderColor = '#E8F0EB';
+                        b.style.background = '#FAFCFB';
+                    });
+                    btn.style.borderColor = '#B8922D';
+                    btn.style.background = '#FDF8EE';
+                    selectedType = btn.dataset.type;
+                    const submitBtn = document.getElementById('doc-gen-submit');
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                };
+            });
+
+            document.getElementById('doc-gen-submit').onclick = async () => {
+                if (!selectedType) return;
+                const submitBtn = document.getElementById('doc-gen-submit');
+                const statusEl = document.getElementById('doc-gen-status');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle;margin-right:6px;animation:spin 1s linear infinite;">progress_activity</span> Generating...';
+                statusEl.textContent = 'Gemini is drafting your legal document...';
+
+                try {
+                    const extra = (document.getElementById('doc-gen-extra') || {}).value || '';
+                    let context = '';
+                    if (originalQuery) context += `[Situation/Question]\n${originalQuery}\n\n`;
+                    if (rawResponse) context += `[Analysis Result]\n${rawResponse}\n\n`;
+                    if (leaderName) context += `[Assigned Leader] ${leaderName}\n`;
+
+                    const res = await fetch(`${this.BASE_URL}/generate-document`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            doc_type: selectedType,
+                            context: context,
+                            lang: 'en',
+                            extra_instructions: extra
+                        })
+                    });
+
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => ({}));
+                        throw new Error(err.detail || 'Document generation failed');
+                    }
+
+                    const result = await res.json();
+                    statusEl.innerHTML = '<span style="color:#6DBB8F;">Document ready! Downloading PDF...</span>';
+
+                    const pdfRes = await fetch(`${this.BASE_URL}/export-pdf`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            title: result.title,
+                            content: result.content,
+                            doc_type: selectedType,
+                            lang: 'en',
+                            sections: result.sections
+                        })
+                    });
+
+                    if (!pdfRes.ok) throw new Error('PDF conversion failed');
+                    const blob = await pdfRes.blob();
+                    const url = URL.createObjectURL(blob);
+                    const now = new Date();
+                    const pad = n => String(n).padStart(2, '0');
+                    const fname = `${result.title.replace(/\s+/g, '-')}-${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}.pdf`;
+                    const a = document.createElement('a'); a.href = url; a.download = fname; a.click();
+                    URL.revokeObjectURL(url);
+
+                    statusEl.innerHTML = '<span style="color:#6DBB8F;">PDF downloaded successfully</span>';
+                    submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle;margin-right:6px;">check_circle</span> Done';
+
+                    if (result.content) {
+                        const docMsg = '```\n' + result.content + '\n```';
+                        this.addMessage(docMsg, 'ai');
+                    }
+
+                    setTimeout(() => overlay.remove(), 2000);
+                } catch (e) {
+                    statusEl.innerHTML = `<span style="color:#E74C3C;">${_sanitize(e.message)}</span>`;
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px;vertical-align:middle;margin-right:6px;">edit_document</span> Retry';
+                    submitBtn.style.opacity = '1';
+                }
+            };
         },
 
         addCopyButton(msgDiv) {
