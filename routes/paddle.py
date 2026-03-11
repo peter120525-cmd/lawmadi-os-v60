@@ -56,17 +56,17 @@ CREDIT_PACKS = {
     "pro":      {"credits": 300, "price_krw": 13800, "price_usd": 9.99},
 }
 
-# Paddle Sandbox price IDs (KRW + USD)
+# Paddle Production price IDs (KRW + USD)
 _PRICE_IDS = {
     "ko": {
-        "starter":  os.getenv("PADDLE_PRICE_STARTER_KR",  "pri_01kk1d1pxdmrwwfxj5dstc31pr"),
-        "standard": os.getenv("PADDLE_PRICE_STANDARD_KR", "pri_01kk1d4mnzp64jz6r079y8n4qa"),
-        "pro":      os.getenv("PADDLE_PRICE_PRO_KR",      "pri_01kk1d6kaqcbe4261pxef9jasw"),
+        "starter":  os.getenv("PADDLE_PRICE_STARTER_KR",  "pri_01kkdd7fe430168kvyp8gm483x"),
+        "standard": os.getenv("PADDLE_PRICE_STANDARD_KR", "pri_01kkdd7jgr306g90svgx5mnpp0"),
+        "pro":      os.getenv("PADDLE_PRICE_PRO_KR",      "pri_01kkdd7mvtf1qtzxtdjkfs88fb"),
     },
     "en": {
-        "starter":  os.getenv("PADDLE_PRICE_STARTER_EN",  "pri_01kk1e4d8dywx9dpxmm1pgapxv"),
-        "standard": os.getenv("PADDLE_PRICE_STANDARD_EN", "pri_01kk1e621qz21ynfw1hfskg7a2"),
-        "pro":      os.getenv("PADDLE_PRICE_PRO_EN",      "pri_01kk1e7mw72vtdftps4wq6qz3z"),
+        "starter":  os.getenv("PADDLE_PRICE_STARTER_EN",  "pri_01kkdd7qb8akd2h5yrwdrr2a5r"),
+        "standard": os.getenv("PADDLE_PRICE_STANDARD_EN", "pri_01kkdd7sr5e5xhj067sxt09xem"),
+        "pro":      os.getenv("PADDLE_PRICE_PRO_EN",      "pri_01kkdd7vwx7bs5m5t81yzz4qb4"),
     },
 }
 

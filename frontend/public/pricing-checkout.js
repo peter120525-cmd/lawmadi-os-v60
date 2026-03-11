@@ -45,7 +45,7 @@
                     });
                 }
                 if (typeof Paddle !== 'undefined' && cfg.client_token) {
-                    Paddle.Environment.set(cfg.environment || 'sandbox');
+                    Paddle.Environment.set(cfg.environment || 'production');
                     Paddle.Initialize({ token: cfg.client_token });
                     state.paddleReady = true;
                 }
