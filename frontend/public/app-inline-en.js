@@ -933,6 +933,10 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             };
 
             const _handleEvent = (eventType, payload) => {
+                if (eventType === 'progress') {
+                    this._updateProgress(payload);
+                    return;
+                }
                 if (eventType === 'speaking') {
                     if (!this._meetingContainer) {
                         this._hideSimpleWaiting();
@@ -2330,19 +2334,96 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             return msg || 'An unknown error occurred.';
         },
 
-        // Waiting messenger (show Seoyeon CSO typing immediately on query send)
+        // Progress indicator (Yuna avatar + pipeline stages / Leader typing)
         _showSimpleWaiting() {
             this._hideSimpleWaiting();
+            const isLeaderChat = !!this.currentLeader;
             const container = document.createElement('div');
             container.id = 'simple-waiting';
-            container.className = 'chat-flow-container';
-            this._appendChatTypingBubble(container, 'Seoyeon', 'CSO');
+            container.className = 'progress-indicator-container';
+
+            if (isLeaderChat) {
+                const leaderName = (this.currentLeader && this.currentLeader.name) || '';
+                const leaderSpec = (this.currentLeader && this.currentLeader.specialty) || '';
+                const avatarSrc = leaderProfileImages[leaderName] || 'images/leaders/L60-madi.jpg';
+                container.innerHTML = _sanitize(
+                    '<div class="progress-avatar-row">' +
+                        '<img class="progress-avatar" src="' + this.escapeHtml(avatarSrc) + '" alt="' + this.escapeHtml(leaderName) + '">' +
+                        '<div class="progress-info">' +
+                            '<div class="progress-leader-name">' + this.escapeHtml(leaderName) + ' <span class="progress-leader-spec">' + this.escapeHtml(leaderSpec) + '</span></div>' +
+                            '<div class="progress-typing-row"><div class="chat-typing-dots"><span></span><span></span><span></span></div><span class="progress-typing-label">typing...</span></div>' +
+                            '<div class="progress-elapsed" id="progress-elapsed">0s</div>' +
+                        '</div>' +
+                    '</div>'
+                );
+            } else {
+                container.innerHTML = _sanitize(
+                    '<div class="progress-avatar-row">' +
+                        '<img class="progress-avatar" src="images/clevel/cco-yuna.jpg" alt="Yuna">' +
+                        '<div class="progress-info">' +
+                            '<div class="progress-leader-name">Yuna <span class="progress-leader-spec">Progress Guide</span></div>' +
+                            '<div class="progress-steps" id="progress-steps">' +
+                                '<div class="progress-step active" data-step="0"><span class="progress-step-icon">🔍</span> Analyzing your question...</div>' +
+                            '</div>' +
+                            '<div class="progress-elapsed" id="progress-elapsed">0s</div>' +
+                        '</div>' +
+                    '</div>'
+                );
+            }
             this.convArea.appendChild(container);
             this._smartScroll(true);
+
+            this._progressStartTime = Date.now();
+            this._progressTimer = setInterval(() => {
+                const sec = Math.floor((Date.now() - this._progressStartTime) / 1000);
+                const el = document.getElementById('progress-elapsed');
+                if (el) el.textContent = sec + 's';
+            }, 1000);
         },
         _hideSimpleWaiting() {
+            if (this._progressTimer) {
+                clearInterval(this._progressTimer);
+                this._progressTimer = null;
+            }
             const el = document.getElementById('simple-waiting');
             if (el) el.remove();
+        },
+
+        _updateProgress(payload) {
+            const stepsEl = document.getElementById('progress-steps');
+            if (!stepsEl) return;
+
+            const step = payload.step;
+            const message = payload.message || '';
+
+            stepsEl.querySelectorAll('.progress-step.active').forEach(el => {
+                el.classList.remove('active');
+                el.classList.add('done');
+                const icon = el.querySelector('.progress-step-icon');
+                if (icon) icon.textContent = '✓';
+            });
+
+            if (step === 0.5 && payload.leader) {
+                const avatarEl = document.querySelector('#simple-waiting .progress-avatar');
+                const nameEl = document.querySelector('#simple-waiting .progress-leader-name');
+                if (avatarEl) {
+                    const newSrc = leaderProfileImages[payload.leader] || 'images/leaders/L60-madi.jpg';
+                    avatarEl.src = newSrc;
+                    avatarEl.alt = payload.leader;
+                }
+                if (nameEl) {
+                    nameEl.innerHTML = _sanitize(this.escapeHtml(payload.leader) + ' <span class="progress-leader-spec">' + this.escapeHtml(payload.leader_specialty || '') + '</span>');
+                }
+            }
+
+            const icons = { 0: '🔍', 0.5: '👤', 1: '⚖️', 2: '📚', 3: '✍️', 4: '🔎', 5: '📋' };
+            const icon = icons[step] || '⏳';
+
+            const newStep = document.createElement('div');
+            newStep.className = 'progress-step active';
+            newStep.dataset.step = step;
+            newStep.innerHTML = _sanitize('<span class="progress-step-icon">' + icon + '</span> ' + this.escapeHtml(message));
+            stepsEl.appendChild(newStep);
         },
 
         // Mini waiting indicator after meeting ends
