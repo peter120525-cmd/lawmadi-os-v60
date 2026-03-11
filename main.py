@@ -759,6 +759,7 @@ def _check_expert_access(request: Request) -> bool:
     return plan_cfg.get("expert_access", False)
 
 _rate_usage: Dict[str, List[float]] = {}  # 인메모리 fallback용
+_SAFE_DEVICE_ID_RE = re.compile(r'^[a-fA-F0-9\-]{4,64}$')  # 핑거프린트/디바이스토큰 검증
 _KST = datetime.timezone(datetime.timedelta(hours=9))
 
 def _seconds_until_kst_midnight() -> int:
@@ -872,7 +873,7 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
         logger.warning(f"[RateLimit] DB 장애 — 미검증 세션 거부 (token_hash={_tk_hash[:8]})")
         return {"blocked": True, "retry_at_kst": "service_temporarily_unavailable"}
 
-    # ── 4) 비로그인 → IP 기반 제한 ──
+    # ── 4) 비로그인 → IP + 핑거프린트 + 디바이스토큰 3중 제한 ──
     plan_cfg = PLAN_CONFIG.get("free", {})
     window_limit = plan_cfg.get("window_limit", 2)
 
@@ -880,13 +881,23 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
     ip_hash = _sha256(ip)
     window_seconds = _seconds_until_kst_midnight()
 
-    # DB 우선
+    # 3중 식별자 수집
+    rate_keys = [f"ip:{ip_hash}"]
+    _fp = request.headers.get("X-Device-FP", "").strip()
+    if _fp and _SAFE_DEVICE_ID_RE.match(_fp):
+        rate_keys.append(f"fp:{_sha256(_fp)}")
+    _dt = request.headers.get("X-Device-Token", "").strip()
+    if _dt and _SAFE_DEVICE_ID_RE.match(_dt):
+        rate_keys.append(f"dt:{_sha256(_dt)}")
+
+    # DB 우선: 어느 식별자라도 한도 초과면 차단
     try:
         from connectors.db_client_v2 import rate_limit_check, rate_limit_hit
-        db_key = f"ip:{ip_hash}"
-        if not rate_limit_check(db_key, window_limit):
-            return {"blocked": True, "retry_at_kst": "00:00"}
-        rate_limit_hit(db_key, window_seconds=window_seconds)
+        for rk in rate_keys:
+            if not rate_limit_check(rk, window_limit):
+                return {"blocked": True, "retry_at_kst": "00:00", "login_required": True}
+        for rk in rate_keys:
+            rate_limit_hit(rk, window_seconds=window_seconds)
         return True
     except Exception:
         pass
@@ -897,21 +908,26 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
     _MAX_TIMESTAMPS_PER_IP = 200
 
     # 매 요청마다 stale 엔트리 점진 정리 (최대 50개씩)
-    _MAX_RATE_ENTRIES = 5000
+    _MAX_RATE_ENTRIES = 10000
     if len(_rate_usage) > 100:
         _stale = [k for k, v in list(_rate_usage.items())[:50] if not v or max(v) < today_start]
         for k in _stale:
             _rate_usage.pop(k, None)
 
-    timestamps = _rate_usage.get(ip_hash, [])
-    timestamps = [t for t in timestamps if t >= today_start][-_MAX_TIMESTAMPS_PER_IP:]
+    # 어느 식별자라도 한도 초과면 차단
+    for rk in rate_keys:
+        timestamps = _rate_usage.get(rk, [])
+        timestamps = [t for t in timestamps if t >= today_start][-_MAX_TIMESTAMPS_PER_IP:]
+        if len(timestamps) >= window_limit:
+            _rate_usage[rk] = timestamps
+            return {"blocked": True, "retry_at_kst": "00:00", "login_required": True}
 
-    if len(timestamps) >= window_limit:
-        _rate_usage[ip_hash] = timestamps
-        return {"blocked": True, "retry_at_kst": "00:00"}
-
-    timestamps.append(now)
-    _rate_usage[ip_hash] = timestamps
+    # 모든 식별자에 기록
+    for rk in rate_keys:
+        timestamps = _rate_usage.get(rk, [])
+        timestamps = [t for t in timestamps if t >= today_start][-_MAX_TIMESTAMPS_PER_IP:]
+        timestamps.append(now)
+        _rate_usage[rk] = timestamps
 
     # 하드 리밋: 최대 엔트리 수 초과 시 강제 정리
     if len(_rate_usage) > _MAX_RATE_ENTRIES:
@@ -925,7 +941,7 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
 
     return True
 
-def _rate_limit_response(retry_at_kst: str = ""):
+def _rate_limit_response(retry_at_kst: str = "", login_required: bool = False):
     """제한 초과 시 응답 — 다음 이용 가능 시각 안내"""
     if retry_at_kst == "concurrent_limit":
         msg = "이전 요청이 처리 중입니다. 잠시 후 다시 시도해주세요."
@@ -945,9 +961,11 @@ def _rate_limit_response(retry_at_kst: str = ""):
         msg = "오늘 무료 이용 한도에 도달했습니다. 내일 00:00(한국시간) 이후 다시 이용 가능합니다."
     else:
         msg = "이용 한도에 도달했습니다. 잠시 후 다시 이용해주세요."
+    if login_required:
+        msg = "무료 이용 한도에 도달했습니다. 로그인하면 크레딧으로 계속 이용할 수 있습니다."
     return JSONResponse(
         status_code=429,
-        content={"error": msg, "blocked": True, "retry_at_kst": retry_at_kst}
+        content={"error": msg, "blocked": True, "retry_at_kst": retry_at_kst, "login_required": login_required}
     )
 
 

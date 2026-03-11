@@ -115,6 +115,33 @@ async def admin_feedback_summary(request: Request, days: int = Query(default=30,
         return JSONResponse(status_code=500, content={"ok": False, "error": "내부 서버 오류가 발생했습니다."})
 
 
+@router.get("/chat-usage")
+@limiter.limit("10/minute")
+async def admin_chat_usage(
+    request: Request,
+    days: int = Query(default=7, ge=1, le=90),
+    leader: Optional[str] = Query(default=None),
+    status: Optional[str] = Query(default=None),
+    query_type: Optional[str] = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    authorization: str = Header(default=""),
+):
+    """채팅 이용 로그 조회: 리더별/상태별/일자별 필터 + 사용자 통계 + 시간대별 분포"""
+    _verify_admin_auth(authorization)
+    try:
+        db = _optional_import("connectors.db_client_v2")
+        if not db or not hasattr(db, "get_chat_usage_logs"):
+            return JSONResponse(status_code=503, content={"ok": False, "error": "Chat usage logs not available"})
+        return db.get_chat_usage_logs(
+            days=days, leader=leader, status=status,
+            query_type=query_type, limit=limit, offset=offset,
+        )
+    except Exception as e:
+        logger.error(f"[Admin] chat-usage error: {e}")
+        return JSONResponse(status_code=500, content={"ok": False, "error": "내부 서버 오류가 발생했습니다."})
+
+
 @router.get("/blacklist")
 @limiter.limit("10/minute")
 async def admin_blacklist(request: Request, authorization: str = Header(default="")):

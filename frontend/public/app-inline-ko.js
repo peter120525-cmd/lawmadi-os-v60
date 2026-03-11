@@ -125,6 +125,48 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         '서연': '전략 기획', '지유': '기술 검증', '유나': '콘텐츠 설계',
     };
 
+    // ── 디바이스 핑거프린트 (rate limit 3중 식별) ──
+    const _deviceFP = (function() {
+        var k = '__lm_dfp';
+        try {
+            var v = localStorage.getItem(k);
+            if (v && /^[a-f0-9]{32}$/.test(v)) return v;
+        } catch(e) {}
+        // canvas + screen + UA 기반 간이 핑거프린트
+        var raw = [
+            navigator.userAgent || '',
+            screen.width + 'x' + screen.height + 'x' + screen.colorDepth,
+            Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+            navigator.language || '',
+            navigator.hardwareConcurrency || 0,
+        ].join('|');
+        // simple hash → 32-char hex
+        var h = 0;
+        for (var i = 0; i < raw.length; i++) { h = ((h << 5) - h + raw.charCodeAt(i)) | 0; }
+        var fp = Math.abs(h).toString(16).padStart(8, '0');
+        fp = (fp + fp + fp + fp).slice(0, 32);
+        try { localStorage.setItem(k, fp); } catch(e) {}
+        return fp;
+    })();
+    const _deviceToken = (function() {
+        var k = '__lm_dtk';
+        try {
+            var v = localStorage.getItem(k);
+            if (v && /^[a-f0-9\-]{36}$/.test(v)) return v;
+        } catch(e) {}
+        // UUID v4
+        var tk = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
+        try { localStorage.setItem(k, tk); } catch(e) {}
+        return tk;
+    })();
+    function _apiHeaders(extra) {
+        var h = { 'Content-Type': 'application/json', 'X-Device-FP': _deviceFP, 'X-Device-Token': _deviceToken };
+        if (extra) for (var k in extra) h[k] = extra[k];
+        return h;
+    }
+
     const _el = (id) => document.getElementById(id);
     const UI = {
         sidebar: _el('sidebar'),
@@ -784,7 +826,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         async _dispatchClassic(query, _startTime, timeoutId) {
             const response = await fetch(this.API_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: _apiHeaders(),
                 credentials: 'include',
                 body: JSON.stringify({
                     query: query,
@@ -845,7 +887,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         async _dispatchStreaming(query, _startTime, timeoutId) {
             const response = await fetch(this.STREAM_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: _apiHeaders(),
                 credentials: 'include',
                 body: JSON.stringify({
                     query: query,
