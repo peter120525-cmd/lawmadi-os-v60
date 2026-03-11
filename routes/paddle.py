@@ -280,8 +280,8 @@ def _delete_session(token: str):
     try:
         from connectors.db_client_v2 import execute
         execute("DELETE FROM sessions WHERE session_token = %s", (token,), fetch="none")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[Session] Delete failed: {e}")
 
 
 def _get_session_token(request: Request) -> str:
@@ -479,8 +479,8 @@ async def verify_otp_endpoint(request: Request):
     try:
         from connectors.db_client_v2 import execute
         execute("UPDATE users SET last_login_at = NOW() WHERE user_id = %s", (user["user_id"],), fetch="none")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[Session] last_login_at update failed: {e}")
 
     logger.info(f"[OTP] Verified, session created for user_id={user['user_id'][:8]}")
 
@@ -919,8 +919,8 @@ def _maybe_reset_daily_free(user: dict):
                     "UPDATE users SET daily_free_used = 0, daily_free_reset_at = NOW() WHERE user_id = %s",
                     (user["user_id"],), fetch="none"
                 )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[Credit] Daily free reset failed: {e}")
 
 
 # ─── Paddle Webhook ───
@@ -1057,8 +1057,8 @@ async def _handle_transaction_completed(event_data: dict):
             from connectors.db_client_v2 import execute
             execute("UPDATE users SET paddle_customer_id = %s WHERE user_id = %s",
                     (paddle_cid, user["user_id"]), fetch="none")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"[Paddle] customer_id update failed: {e}")
 
     # Determine credits from line items
     items = event_data.get("items", [])
@@ -1159,8 +1159,8 @@ def init_paddle_tables():
         # Migrate: add attempts column if missing (safe for existing tables)
         try:
             cur.execute("ALTER TABLE otp_codes ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0")
-        except Exception:
-            pass  # Column already exists or DB doesn't support IF NOT EXISTS
+        except Exception as e:
+            logger.debug(f"[DB] ALTER TABLE otp_codes (attempts column): {e}")
 
         # Sessions table (DB-backed, 30-day TTL)
         cur.execute("""
