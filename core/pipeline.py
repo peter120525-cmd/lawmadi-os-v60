@@ -2292,9 +2292,10 @@ async def _gemini_fallback_compose(
         return chat.send_message(user_msg)
 
     loop = asyncio.get_running_loop()
-    for _attempt in range(3):
+    _max_attempts = 2 if mode == "expert" else 3
+    for _attempt in range(_max_attempts):
         try:
-            _compose_timeout = 60.0 if mode == "expert" else _GEMINI_COMPOSE_TIMEOUT
+            _compose_timeout = 120.0 if mode == "expert" else _GEMINI_COMPOSE_TIMEOUT
             resp = await asyncio.wait_for(
                 loop.run_in_executor(None, _sync_gemini_call, model_name),
                 timeout=_compose_timeout,
@@ -2303,14 +2304,14 @@ async def _gemini_fallback_compose(
             logger.info(f"[Gemini] 답변 생성 완료 ({len(text)}자, model={model_name}, mode={mode}, vertex={USE_VERTEX_AI})")
             return text
         except asyncio.TimeoutError:
-            logger.warning(f"[Gemini] 타임아웃 ({_compose_timeout}초, attempt={_attempt+1}, model={model_name}, mode={mode})")
-            if _attempt < 2:
+            logger.warning(f"[Gemini] 타임아웃 ({_compose_timeout}초, attempt={_attempt+1}/{_max_attempts}, model={model_name}, mode={mode})")
+            if _attempt < _max_attempts - 1:
                 continue
             raise
         except Exception as e:
-            if is_quota_error(e) and _attempt < 2:
+            if is_quota_error(e) and _attempt < _max_attempts - 1:
                 wait = _RETRY_BASE_SEC * (2 ** _attempt)
-                logger.warning(f"[Gemini] 429 재시도 #{_attempt+1}/3 ({wait:.1f}초 대기, model={model_name})")
+                logger.warning(f"[Gemini] 429 재시도 #{_attempt+1}/{_max_attempts} ({wait:.1f}초 대기, model={model_name})")
                 await asyncio.sleep(wait)
                 continue
             raise
@@ -2482,7 +2483,7 @@ async def _run_legal_pipeline(
     min_len = MIN_LEGAL_RESPONSE_EXPERT if mode == "expert" else MIN_LEGAL_RESPONSE_GENERAL
     soft_min = int(min_len * 0.7)  # 70% 이상이면 수용
     retry_count = 0
-    max_retries = 1  # 2→1회 (병목 방지: 각 재시도 ~3-5초)
+    max_retries = 0 if mode == "expert" else 1  # expert: 재시도 없음 (120초 타임아웃 1회로 충분)
     while is_legal and len(final_text.strip()) < soft_min and retry_count < max_retries:
         retry_count += 1
         logger.warning(
