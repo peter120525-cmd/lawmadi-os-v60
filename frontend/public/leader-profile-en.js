@@ -117,7 +117,7 @@ function renderProfile(basic, profile, code) {
 
     // Chat CTA link
     var chatCta = document.getElementById('chatCta');
-    if (chatCta) chatCta.href = '/leader-chat?id=' + encodeURIComponent(code);
+    if (chatCta) chatCta.href = '/leader-chat?id=' + encodeURIComponent(code) + '&lang=en';
 
     // Show content
     document.getElementById('loadingState').style.display = 'none';
