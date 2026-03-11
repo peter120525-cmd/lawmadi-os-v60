@@ -410,17 +410,16 @@ async def security_headers_middleware(request: Request, call_next):
     # CSP: XSS 방어 — 외부 파일만 허용, 인라인 JS 완전 제거 완료
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://sandbox-cdn.paddle.com https://cdn.paddle.com; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "script-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://*.paddle.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.paddle.com; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' https: data:; "
-        f"connect-src 'self' {LAWMADI_OS_API_URL} https://www.google-analytics.com https://region1.google-analytics.com https://sandbox-api.paddle.com https://api.paddle.com; "
-        "frame-src https://sandbox-checkout.paddle.com https://checkout.paddle.com; "
+        f"connect-src 'self' {LAWMADI_OS_API_URL} https://www.google-analytics.com https://region1.google-analytics.com https://*.paddle.com; "
+        "frame-src 'self' https://*.paddle.com; "
         "frame-ancestors 'none'; "
         "object-src 'none'; "
         "base-uri 'self'; "
-        "form-action 'self'; "
-        "block-all-mixed-content; "
+        "form-action 'self' https://*.paddle.com; "
         "upgrade-insecure-requests"
     )
     # 캐시 정책: API → no-cache, 정적 파일 → 1시간 캐시
