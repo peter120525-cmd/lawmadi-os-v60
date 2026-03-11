@@ -330,7 +330,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             var favCloseBtn = document.getElementById('favoritesCloseBtn');
             if (favCloseBtn) favCloseBtn.addEventListener('click', () => this.toggleFavorites());
             var premiumCta = document.getElementById('premiumCta');
-            if (premiumCta) premiumCta.addEventListener('click', () => alert('Premium service is coming soon!'));
+            if (premiumCta && premiumCta.tagName === 'BUTTON') premiumCta.addEventListener('click', () => { location.href = '/pricing-en'; });
             var lawyerCta = document.getElementById('lawyerCtaLanding');
             if (lawyerCta) lawyerCta.addEventListener('click', () => UI.openLawyerModal('', ''));
             var modalClose = document.getElementById('modalCloseBtn');

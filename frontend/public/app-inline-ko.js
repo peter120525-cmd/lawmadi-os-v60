@@ -312,7 +312,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             var favCloseBtn = document.getElementById('favoritesCloseBtn');
             if (favCloseBtn) favCloseBtn.addEventListener('click', () => this.toggleFavorites());
             var premiumCta = document.getElementById('premiumCta');
-            if (premiumCta) premiumCta.addEventListener('click', () => alert('프리미엄 서비스 준비 중입니다. 곧 오픈 예정입니다!'));
+            if (premiumCta && premiumCta.tagName === 'BUTTON') premiumCta.addEventListener('click', () => { location.href = '/pricing'; });
             var lawyerCta = document.getElementById('lawyerCtaLanding');
             if (lawyerCta) lawyerCta.addEventListener('click', () => UI.openLawyerModal('', ''));
             var modalClose = document.getElementById('modalCloseBtn');
