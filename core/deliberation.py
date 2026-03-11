@@ -143,14 +143,12 @@ async def _single_leader_call(
 
     def _sync_call():
         import time as _time
-        _supports_thinking = "2.5" in model_name or "3" in model_name
         _cfg_kwargs = dict(
             max_output_tokens=max_tokens,
             temperature=temp,
             safety_settings=safety_settings,
+            thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
         )
-        if _supports_thinking:
-            _cfg_kwargs["thinking_config"] = genai_types.ThinkingConfig(thinking_budget=0)
         for _attempt in range(3):
             try:
                 return gc.models.generate_content(

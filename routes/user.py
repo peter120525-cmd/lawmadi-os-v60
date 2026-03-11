@@ -192,7 +192,11 @@ async def suggest_questions(request: Request):
             gc.models.generate_content,
             model=_model,
             contents=prompt,
-            config=genai_types.GenerateContentConfig(max_output_tokens=200, temperature=0.7),
+            config=genai_types.GenerateContentConfig(
+                max_output_tokens=200,
+                temperature=0.7,
+                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+            ),
         )
         text = (resp.text or "").strip()
 

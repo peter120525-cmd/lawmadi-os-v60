@@ -369,10 +369,14 @@ async def chat_leader(request: Request):
             sys_instruction = _build_system_instruction(leader_id, entry, lang, is_first_turn=is_first_turn)
 
             # Create chat + stream
-            model_name = get_model(mode="leader_chat")
+            from google.genai import types as genai_types
+            model_name = get_model()
             chat = gc.chats.create(
                 model=model_name,
-                config={"system_instruction": sys_instruction},
+                config=genai_types.GenerateContentConfig(
+                    system_instruction=sys_instruction,
+                    thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+                ),
                 history=gemini_history,
             )
             sync_stream = chat.send_message_stream(query)

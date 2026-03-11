@@ -2071,7 +2071,7 @@ async def _gemini_fallback_compose(
     if not gc:
         raise RuntimeError("Gemini 클라이언트 미초기화")
 
-    model_name = get_model(mode=mode)  # leader_chat→lite, 나머지→flash
+    model_name = get_model()  # gemini-2.5-flash
     leader_name = analysis.get("leader_name", "마디")
     leader_specialty = analysis.get("leader_specialty", "통합")
 
@@ -2252,11 +2252,9 @@ async def _gemini_fallback_compose(
             ),
         ]
 
-    # ── Selective Thinking ──
-    # thinking_budget이 높으면 Gemini 내부 추론 시간이 90초+ 소요 → 타임아웃
-    # asia-northeast3 리전에서 안정적 응답을 위해 expert도 비활성화
-    _model = get_model(mode=mode)
-    thinking_config = None
+    # ── Thinking 명시적 비활성화 ──
+    # gemini-2.5-flash는 기본 thinking 활성화 → 대용량 컨텍스트 시 90초+ 소요
+    # thinking_budget=0으로 명시적 비활성화
 
     # ── GenerateContentConfig 조립 ──
     _config_kwargs = dict(
@@ -2265,9 +2263,8 @@ async def _gemini_fallback_compose(
         max_output_tokens=max_tokens,
         automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
         safety_settings=safety_settings,
+        thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
     )
-    if thinking_config is not None:
-        _config_kwargs["thinking_config"] = thinking_config
     gen_config = genai_types.GenerateContentConfig(**_config_kwargs)
 
     # 429/할당량 초과 시 자동 모델 전환 (Pro→Flash→Lite)
@@ -2297,7 +2294,7 @@ async def _gemini_fallback_compose(
     loop = asyncio.get_running_loop()
     for _attempt in range(3):
         try:
-            _compose_timeout = 90.0 if mode == "expert" else _GEMINI_COMPOSE_TIMEOUT
+            _compose_timeout = 60.0 if mode == "expert" else _GEMINI_COMPOSE_TIMEOUT
             resp = await asyncio.wait_for(
                 loop.run_in_executor(None, _sync_gemini_call, model_name),
                 timeout=_compose_timeout,

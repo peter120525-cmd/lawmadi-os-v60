@@ -21,9 +21,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 logger = logging.getLogger("LawmadiOS.SwarmOrchestrator")
 
 # Gemini 모델 상수 — core.constants 단일 소스
-from core.constants import GEMINI_MODEL
 from core.model_fallback import get_model, on_quota_error, is_quota_error
-_DEFAULT_MODEL = GEMINI_MODEL  # 정적 기본값 (하위호환)
 
 # =============================================================
 # 📦 법률명 → 리더 매핑 (law_cache.json 기반)
@@ -579,7 +577,11 @@ class SwarmOrchestrator:
                     resp = gc.models.generate_content(
                         model=model,
                         contents=prompt,
-                        config=genai_types.GenerateContentConfig(max_output_tokens=50, temperature=0.0),
+                        config=genai_types.GenerateContentConfig(
+                            max_output_tokens=50,
+                            temperature=0.0,
+                            thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+                        ),
                     )
                     break
                 except Exception as e:
@@ -696,7 +698,7 @@ class SwarmOrchestrator:
         query: str,
         tools: List = None,
         system_instruction_base: str = "",
-        model_name: str = _DEFAULT_MODEL
+        model_name: str = ""
     ) -> Dict:
         """
         단일 Leader로 분석 실행
@@ -704,6 +706,8 @@ class SwarmOrchestrator:
         Returns:
             Dict: {"leader": str, "specialty": str, "analysis": str, "success": bool}
         """
+        if not model_name:
+            model_name = get_model()
         leader_name = leader.get("name", "Unknown")
         leader_role = leader.get("role", "Unknown")
         leader_specialty = leader.get("specialty", "Unknown")
@@ -792,6 +796,7 @@ class SwarmOrchestrator:
                     system_instruction=system_instruction,
                     max_output_tokens=_max_tokens,
                     automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
+                    thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
                 ),
             )
             response = chat.send_message(query)
@@ -879,7 +884,7 @@ class SwarmOrchestrator:
         selected_leaders: List[Dict],
         tools: List = None,
         system_instruction_base: str = "",
-        model_name: str = _DEFAULT_MODEL
+        model_name: str = ""
     ) -> List[Dict]:
         """
         여러 Leader로 병렬 분석 실행
@@ -887,6 +892,8 @@ class SwarmOrchestrator:
         Returns:
             List[Dict] - 각 Leader의 분석 결과
         """
+        if not model_name:
+            model_name = get_model()
         results = []
 
         # 병렬 실행
@@ -926,7 +933,7 @@ class SwarmOrchestrator:
         self,
         query: str,
         swarm_results: List[Dict],
-        model_name: str = _DEFAULT_MODEL
+        model_name: str = ""
     ) -> str:
         """
         여러 Leader의 분석 결과를 통합하여 최종 판단 흐름 생성
@@ -938,6 +945,8 @@ class SwarmOrchestrator:
         Returns:
             str: 통합된 최종 응답
         """
+        if not model_name:
+            model_name = get_model()
         # 성공한 분석만 필터링
         successful_analyses = [r for r in swarm_results if r.get("success", False)]
 
@@ -1022,6 +1031,7 @@ class SwarmOrchestrator:
                     temperature=0.3,
                     top_p=0.95,
                     max_output_tokens=4500,
+                    thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
                 ),
             )
             final_response = response.text
@@ -1038,13 +1048,15 @@ class SwarmOrchestrator:
         self,
         query: str,
         swarm_results: list,
-        model_name: str = _DEFAULT_MODEL
+        model_name: str = ""
     ):
         """
         여러 Leader의 분석 결과를 통합 — 스트리밍 버전 (async generator)
         yield: str (텍스트 청크)
         """
         import asyncio
+        if not model_name:
+            model_name = get_model()
 
         successful_analyses = [r for r in swarm_results if r.get("success", False)]
 
@@ -1133,6 +1145,7 @@ class SwarmOrchestrator:
                         temperature=0.3,
                         top_p=0.95,
                         max_output_tokens=4500,
+                        thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
                     ),
                 )
 
@@ -1243,7 +1256,7 @@ class SwarmOrchestrator:
         query: str,
         tools: List = None,
         system_instruction_base: str = "",
-        model_name: str = _DEFAULT_MODEL,
+        model_name: str = "",
         force_single: bool = False,
         ssot_sources: list = None
     ) -> Dict:
@@ -1266,6 +1279,8 @@ class SwarmOrchestrator:
                 "swarm_mode": bool
             }
         """
+        if not model_name:
+            model_name = get_model()
         # 1. 도메인 탐지 (SSOT 부스트 포함)
         detected_domains = self.detect_domains(query, ssot_sources=ssot_sources)
 

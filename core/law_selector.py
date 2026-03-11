@@ -73,6 +73,7 @@ class LawSelector:
                     response_mime_type="application/json",
                     temperature=0.05,
                     top_p=0.95,
+                    thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
                 ),
             )
 

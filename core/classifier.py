@@ -1461,14 +1461,16 @@ async def _gemini_analyze_query(query: str) -> Optional[Dict[str, Any]]:
         for _attempt in range(3):
             model_name = get_model()
             try:
+                from google.genai import types as genai_types
                 resp = genai_client.models.generate_content(
                     model=model_name,
                     contents=f"질문: {query}",
-                    config={
-                        "system_instruction": TIER_ANALYSIS_PROMPT.format(leader_summary=leader_summary),
-                        "max_output_tokens": 800,
-                        "temperature": 0.1,
-                    },
+                    config=genai_types.GenerateContentConfig(
+                        system_instruction=TIER_ANALYSIS_PROMPT.format(leader_summary=leader_summary),
+                        max_output_tokens=800,
+                        temperature=0.1,
+                        thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+                    ),
                 )
                 return _safe_extract_gemini_text(resp)
             except Exception as e:
