@@ -215,7 +215,8 @@ def _ensure_genai_client(runtime: dict) -> object:
 # Rate Limiter 설정 — paddle.py의 Limiter를 앱 전체에서 공유
 # (paddle.py가 @limiter.limit 데코레이터를 사용하므로 동일 인스턴스 필요)
 app = FastAPI(title="Lawmadi OS", version=OS_VERSION)
-app.state.limiter = paddle_limiter
+limiter = paddle_limiter  # alias for downstream references
+app.state.limiter = limiter
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
