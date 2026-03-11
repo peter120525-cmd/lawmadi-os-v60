@@ -832,7 +832,7 @@ def get_chat_usage_logs(
                 "user_email": email,
                 "query_type": qtype or "general",
                 "query": query[:500] if query else "",
-                "response": response[:1000] if response else "",
+                "response": response[:3000] if response else "",
                 "leader": ldr,
                 "leaders_used": leaders_used,
                 "status": st,

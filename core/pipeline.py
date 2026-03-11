@@ -2156,7 +2156,11 @@ async def _gemini_fallback_compose(
             enhance = (
                 "\n\n[Structure] Key Issues → Relevant Statutes → Case Law Review → Practical Procedures → Issue-by-Issue Analysis → Conclusion & Recommendations → Legal Basis"
                 "\nHighlight key issues, statute names, and case numbers in **bold**. 4,000-5,000 characters."
-                f"\n\n[Required] End with a '## Legal Basis' section listing all cited statutes as '• Statute Name Art. N Para. N: Summary'. At least 5 entries."
+                "\n\n[CRITICAL — Statute Citation Rule]"
+                "\nEvery legal claim MUST cite the specific article number. Use format: 'Law Name (한글명) Article N'."
+                "\nExample: 'Labor Standards Act (근로기준법) Article 23', 'Civil Act (민법) Article 750'."
+                "\nDo NOT just mention the law name — ALWAYS include 'Article N'."
+                f"\n\n[Required] End with a '## Legal Basis' section listing all cited statutes as '• Statute Name (한글명) Article N: Summary'. At least 5 entries."
                 f"\n\n[Required] Only cite case law confirmed via SSOT cache or DRF tools. {_case_law_note_en}"
                 f"\n{_no_case_en}"
             )
@@ -2174,9 +2178,13 @@ async def _gemini_fallback_compose(
             enhance = (
                 "\n\n[Structure] In Conclusion → Why? (with relevant case law) → Actions You Can Take Now → If Still Unresolved → Free Legal Aid → Top 3 Actions Right Now → Legal Basis"
                 "\nKeep sentences concise. 2,500-3,500 characters."
+                "\n\n[CRITICAL — Statute Citation Rule]"
+                "\nEvery legal claim MUST cite the specific article number. Use format: 'Law Name (한글명) Article N'."
+                "\nExample: 'Housing Lease Protection Act (주택임대차보호법) Article 3-2', 'Civil Act (민법) Article 750'."
+                "\nDo NOT just mention the law name — ALWAYS include 'Article N'."
                 f"\n\n[Important] In the 'Why?' section, only cite case law confirmed via SSOT cache or DRF tools. {_case_law_note_en}"
                 f" {_no_case_en}"
-                "\n\n[Required] End with a '## Legal Basis' section listing up to 5 directly applicable statutes as '• Statute Name Art. N: Summary'. Do not exceed 5. Do not include unrelated statutes."
+                "\n\n[Required] End with a '## Legal Basis' section listing up to 5 directly applicable statutes as '• Statute Name (한글명) Article N: Summary'. Do not exceed 5. Do not include unrelated statutes."
             )
         else:
             enhance = (
