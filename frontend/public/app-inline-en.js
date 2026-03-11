@@ -244,8 +244,8 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
             this.initVisitorTracking();
 
-            // v60: File upload (coming soon)
-            this.uploadBtn.onclick = () => this.showUploadComingSoon();
+            // v60: File upload (active)
+            this.uploadBtn.onclick = () => this.fileInput.click();
             this.fileInput.onchange = (e) => this.handleFileSelect(e);
             this.removeFileBtn.onclick = () => this.clearUploadedFile();
 
@@ -1555,6 +1555,12 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             const esc = (s) => this.escapeHtml(String(s || ''));
             let html = `<h3>📄 Document Analysis Results: ${esc(filename)}</h3>`;
 
+            if (analysis.ocr_confidence) {
+                const conf = parseFloat(analysis.ocr_confidence);
+                const color = conf >= 0.8 ? '#2E7D32' : conf >= 0.5 ? '#F57F17' : '#C62828';
+                html += `<p><span style="display:inline-block;padding:2px 8px;border-radius:4px;background:${color};color:#fff;font-size:0.85rem;">OCR Confidence: ${Math.round(conf * 100)}%</span></p>`;
+            }
+
             if (analysis.summary) {
                 html += `<h3>Summary</h3><p>${esc(analysis.summary)}</p>`;
             }
@@ -1572,6 +1578,22 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
             if (analysis.legal_category) {
                 html += `<p><strong>Legal Area:</strong> ${esc(analysis.legal_category)}</p>`;
+            }
+
+            if (analysis.dates_found && analysis.dates_found.length > 0) {
+                html += `<p><strong>📅 Dates:</strong> ${analysis.dates_found.map(d => esc(d)).join(', ')}</p>`;
+            }
+            if (analysis.amounts_found && analysis.amounts_found.length > 0) {
+                html += `<p><strong>💰 Amounts:</strong> ${analysis.amounts_found.map(a => esc(a)).join(', ')}</p>`;
+            }
+            if (analysis.persons_found && analysis.persons_found.length > 0) {
+                html += `<p><strong>👤 Parties:</strong> ${analysis.persons_found.map(p => esc(p)).join(', ')}</p>`;
+            }
+
+            if (analysis.relevant_laws && analysis.relevant_laws.length > 0) {
+                html += `<h3>📖 Relevant Laws</h3><ul>`;
+                analysis.relevant_laws.forEach(law => { html += `<li>${esc(law)}</li>`; });
+                html += `</ul>`;
             }
 
             if (analysis.legal_issues && analysis.legal_issues.length > 0) {
@@ -1598,6 +1620,12 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 html += `<h3>Recommendations</h3><ul>`;
                 analysis.recommendations.forEach(rec => { html += `<li>${esc(rec)}</li>`; });
                 html += `</ul>`;
+            }
+
+            if (analysis.ocr_text) {
+                const ocrId = 'ocr-text-' + Date.now();
+                html += `<details style="margin-top:16px;"><summary style="cursor:pointer;font-weight:600;color:var(--text-muted);">📝 View OCR Extracted Text</summary>`;
+                html += `<pre id="${esc(ocrId)}" style="margin-top:8px;padding:12px;background:var(--bg-secondary);border-radius:8px;white-space:pre-wrap;word-break:break-all;font-size:0.85rem;max-height:300px;overflow-y:auto;">${esc(analysis.ocr_text)}</pre></details>`;
             }
 
             html += `<p style="margin-top: 24px; padding-top: 16px; border-top: 2px solid var(--border); color: var(--text-muted); font-size: 0.9rem;">
