@@ -25,23 +25,17 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
-from slowapi import Limiter
-
 logger = logging.getLogger("LawmadiOS.Paddle")
 router = APIRouter(prefix="/api/paddle", tags=["paddle"])
 
-
-def _get_real_ip(request: Request) -> str:
-    """Extract real client IP from X-Forwarded-For (Cloud Run LB appends last)."""
-    xff = request.headers.get("X-Forwarded-For", "")
-    if xff:
-        ip = xff.split(",")[-1].strip()
-        if ip:
-            return ip
-    return request.client.host if request.client else "0.0.0.0"
+# Limiter is injected from app.state.limiter via set_limiter()
+limiter = None
 
 
-limiter = Limiter(key_func=_get_real_ip)
+def set_limiter(app_limiter):
+    """Inject the app-level SlowAPI limiter so rate limits actually enforce."""
+    global limiter
+    limiter = app_limiter
 
 # ─── Config ───
 PADDLE_WEBHOOK_SECRET = os.getenv("PADDLE_WEBHOOK_SECRET", "").strip()
