@@ -200,8 +200,23 @@
         document.getElementById('otpSendBtn').click();
     });
 
+    // ─── In-app browser detection ───
+    function isInAppBrowser() {
+        var ua = navigator.userAgent || '';
+        return /KAKAOTALK|NAVER|Line\/|FBAN|FBAV|Instagram|Snapchat|Twitter|MicroMessenger/i.test(ua);
+    }
+
     // ─── Paddle Checkout ───
     function openPaddleCheckout(pack) {
+        if (isInAppBrowser()) {
+            if (pageLang === 'en') {
+                alert('Payment is not supported in this browser. Please open in Chrome or Safari.\n\nURL: ' + location.href);
+            } else {
+                alert('인앱 브라우저에서는 결제가 지원되지 않습니다. Chrome 또는 Safari에서 열어주세요.\n\n주소: ' + location.href);
+            }
+            return;
+        }
+
         if (!state.paddleReady || !state.paddleConfig) {
             alert(pageLang === 'en' ? 'Payment system loading. Please try again.' : '결제 시스템을 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
             return;
