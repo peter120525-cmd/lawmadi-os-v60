@@ -148,6 +148,7 @@ from routes.auth import router as auth_router
 from routes.leaders import router as leaders_router, set_dependencies as _set_leaders_deps
 from routes.paddle import (
     router as paddle_router,
+    set_limiter as _set_paddle_limiter,
     verify_session_token as _verify_paddle_session,
     get_current_user as _get_paddle_user,
     deduct_credit as _deduct_credit,
@@ -218,6 +219,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(title="Lawmadi OS", version=OS_VERSION)
 app.state.limiter = limiter
+_set_paddle_limiter(limiter)
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
