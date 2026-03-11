@@ -50,8 +50,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import aiofiles
 import shutil
@@ -148,7 +146,7 @@ from routes.auth import router as auth_router
 from routes.leaders import router as leaders_router, set_dependencies as _set_leaders_deps
 from routes.paddle import (
     router as paddle_router,
-    set_limiter as _set_paddle_limiter,
+    limiter as paddle_limiter,
     verify_session_token as _verify_paddle_session,
     get_current_user as _get_paddle_user,
     deduct_credit as _deduct_credit,
@@ -214,12 +212,10 @@ def _ensure_genai_client(runtime: dict) -> object:
     return gc
 
 
-# Rate Limiter 설정 (항목 #2)
-limiter = Limiter(key_func=get_remote_address)
-
+# Rate Limiter 설정 — paddle.py의 Limiter를 앱 전체에서 공유
+# (paddle.py가 @limiter.limit 데코레이터를 사용하므로 동일 인스턴스 필요)
 app = FastAPI(title="Lawmadi OS", version=OS_VERSION)
-app.state.limiter = limiter
-_set_paddle_limiter(limiter)
+app.state.limiter = paddle_limiter
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
