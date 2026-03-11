@@ -1192,6 +1192,9 @@ async def ask_stream(request: Request):
             model_name = get_model()
             gc = _ensure_genai_client_fn(_RUNTIME)
 
+            # progress 이벤트: 질문 분석 시작
+            yield _sse("progress", {"step": 0, "message": "질문 분석 중..." if lang != "en" else "Analyzing your question...", "leader": ""})
+
             # 4) S0(분류) + S1(RAG) 병렬 실행
             from core.classifier import _gemini_analyze_query, _fallback_tier_classification
             analysis_result, rag_context_pre = await asyncio.gather(
@@ -1224,6 +1227,16 @@ async def ask_stream(request: Request):
                         analysis["leader_specialty"] = _nlu_l.get("specialty", "통합")
                         analysis["leader_id"] = _nlu_lid
                         logger.info(f"🔄 [NLU Override/Stream] → {analysis['leader_name']}({_nlu_lid})")
+
+            # progress 이벤트: 리더 배정 완료
+            _assigned = analysis.get("leader_name", "마디")
+            _assigned_spec = analysis.get("leader_specialty", "통합")
+            yield _sse("progress", {
+                "step": 0.5,
+                "message": f"{_assigned}({_assigned_spec}) 리더 배정 완료" if lang != "en" else f"Leader assigned: {_assigned} ({_assigned_spec})",
+                "leader": _assigned,
+                "leader_specialty": _assigned_spec,
+            })
 
             # ─── 비법률 질문: 유나(CCO) Gemini 응답 ───
             if not is_legal:
@@ -1391,6 +1404,9 @@ async def ask_stream(request: Request):
 
                     _pipeline_result = {}
 
+                    async def _parallel_progress_cb(step, message):
+                        await _event_queue.put(("progress", {"step": step, "message": message}))
+
                     async def _pipeline_producer():
                         """파이프라인을 실행하고 결과를 dict에 저장하는 producer."""
                         try:
@@ -1400,6 +1416,7 @@ async def ask_stream(request: Request):
                                     now_kst, ssot_available,
                                     lang=lang, mode=stream_mode,
                                     rag_context=rag_context_pre,
+                                    progress_callback=_parallel_progress_cb,
                                 ),
                                 timeout=60.0,
                             )
@@ -1464,14 +1481,40 @@ async def ask_stream(request: Request):
                     if drf_verification and not hasattr(drf_verification, "all_passed"):
                         drf_verification = None  # 비정상 타입 방어
 
-                # 협의가 불필요한 경우: 기존 직렬 실행
+                # 협의가 불필요한 경우: 기존 직렬 실행 (progress 콜백 포함)
                 else:
-                    final_text, drf_verification = await _run_legal_pipeline(
-                        query, analysis, tools, gemini_history,
-                        now_kst, ssot_available,
-                        lang=lang, mode=stream_mode,
-                        rag_context=rag_context_pre,
-                    )
+                    _progress_q = asyncio.Queue()
+
+                    async def _progress_cb(step, message):
+                        await _progress_q.put({"step": step, "message": message})
+
+                    async def _pipeline_runner():
+                        return await _run_legal_pipeline(
+                            query, analysis, tools, gemini_history,
+                            now_kst, ssot_available,
+                            lang=lang, mode=stream_mode,
+                            rag_context=rag_context_pre,
+                            progress_callback=_progress_cb,
+                        )
+
+                    _pipe_task = asyncio.create_task(_pipeline_runner())
+
+                    # progress 이벤트를 소비하면서 파이프라인 완료 대기
+                    while not _pipe_task.done():
+                        try:
+                            prog = await asyncio.wait_for(_progress_q.get(), timeout=1.0)
+                            yield _sse("progress", prog)
+                        except asyncio.TimeoutError:
+                            pass
+                    # 남은 progress 이벤트 소비
+                    while not _progress_q.empty():
+                        try:
+                            prog = _progress_q.get_nowait()
+                            yield _sse("progress", prog)
+                        except Exception:
+                            break
+
+                    final_text, drf_verification = await _pipe_task
 
                 # 타입 안전: final_text가 문자열이 아닌 경우 방어
                 if not isinstance(final_text, str):

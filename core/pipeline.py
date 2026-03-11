@@ -2331,6 +2331,7 @@ async def _run_legal_pipeline(
     lang: str = "",
     mode: str = "general",
     rag_context: Optional[RAGContext] = None,
+    progress_callback=None,
 ) -> str:
     """4-Stage Hybrid Legal Pipeline (LM 5초 초안 → Gemini 완성):
     Stage 1: RAG 조문 검색
@@ -2345,7 +2346,15 @@ async def _run_legal_pipeline(
     final_text = ""
     drf_verification = VerificationResult()
 
+    async def _emit_progress(step: int, msg_ko: str, msg_en: str = ""):
+        if progress_callback:
+            try:
+                await progress_callback(step, msg_ko if lang != "en" else (msg_en or msg_ko))
+            except Exception:
+                pass
+
     # -- Stage 1: RAG 조문 검색 (1회만 수행, 외부 전달 시 스킵) --
+    await _emit_progress(1, "법령·판례 검색 중...", "Searching laws & precedents...")
     if rag_context is None:
         logger.info("[Stage 1/4] RAG 조문 검색 시작")
         try:
@@ -2355,6 +2364,8 @@ async def _run_legal_pipeline(
             rag_context = RAGContext()
     else:
         logger.info("[Stage 1/4] RAG 컨텍스트 외부 전달 (S0+S1 병렬화)")
+
+    await _emit_progress(2, "리더 법률 데이터 보강 중...", "Enhancing legal references...")
 
     # -- Stage 1.5: 리더별 핵심 법률 RAG 컨텍스트 보강 --
     leader_id = analysis.get("leader_id", "")
@@ -2449,6 +2460,7 @@ async def _run_legal_pipeline(
         logger.info("[Stage 2/4] LawmadiLM 스킵 (ENABLE_LAWMADILM=false)")
 
     # -- Stage 3: Gemini Flash 완성 답변 (LM 초안 기반 또는 단독) --
+    await _emit_progress(3, "AI 답변 생성 중...", "Generating AI response...")
     logger.info(f"[Stage 3/4] Gemini Flash 답변 (LM초안={'있음' if lm_draft else '없음'})")
     try:
         final_text = await _gemini_fallback_compose(
@@ -2557,6 +2569,7 @@ async def _run_legal_pipeline(
                 logger.info(f"[Stage 3.9] 법률 근거 자동 부착 ({len(selected)}개 조문, lang={lang})")
 
     # -- Stage 4: DRF 전수 검증 + Check Grounding 병렬 실행 (20초 타임아웃) --
+    await _emit_progress(4, "법령 교차 검증 중...", "Cross-verifying legal references...")
     logger.info("[Stage 4/4] DRF 전수 검증 + Check Grounding")
     drf_verification = None
     _s4_start = asyncio.get_event_loop().time()
@@ -2622,6 +2635,8 @@ async def _run_legal_pipeline(
         if inji_correction:
             logger.info("[Stage 4-b] 인지액 계산 오류 감지 → 교정 메시지 부착")
             final_text = final_text.rstrip() + inji_correction
+
+    await _emit_progress(5, "최종 정리 중...", "Finalizing response...")
 
     # FAIL_CLOSED 적용 (0.1% 초과 미검증 또는 DRF 오류 시 차단)
     fail_closed_result = _apply_fail_closed(final_text, drf_verification)

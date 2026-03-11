@@ -912,6 +912,10 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             };
 
             const _handleEvent = (eventType, payload) => {
+                if (eventType === 'progress') {
+                    this._updateProgress(payload);
+                    return;
+                }
                 if (eventType === 'speaking') {
                     // 회의 컨테이너 없으면 생성
                     if (!this._meetingContainer) {
@@ -2421,16 +2425,101 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
         // 대기 메신저 (질문 전송 즉시 서연 CSO 타이핑 버블)
         _showSimpleWaiting() {
             this._hideSimpleWaiting();
+            const isLeaderChat = !!this.currentLeader;
             const container = document.createElement('div');
             container.id = 'simple-waiting';
-            container.className = 'chat-flow-container';
-            this._appendChatTypingBubble(container, '서연', 'CSO');
+            container.className = 'progress-indicator-container';
+
+            // 리더 1:1 채팅: 담당 리더 아바타 + 타이핑 표시
+            if (isLeaderChat) {
+                const leaderName = (this.currentLeader && this.currentLeader.name) || '';
+                const leaderSpec = (this.currentLeader && this.currentLeader.specialty) || '';
+                const avatarSrc = leaderProfileImages[leaderName] || 'images/leaders/L60-madi.jpg';
+                container.innerHTML = _sanitize(
+                    '<div class="progress-avatar-row">' +
+                        '<img class="progress-avatar" src="' + this.escapeHtml(avatarSrc) + '" alt="' + this.escapeHtml(leaderName) + '">' +
+                        '<div class="progress-info">' +
+                            '<div class="progress-leader-name">' + this.escapeHtml(leaderName) + ' <span class="progress-leader-spec">' + this.escapeHtml(leaderSpec) + '</span></div>' +
+                            '<div class="progress-typing-row"><div class="chat-typing-dots"><span></span><span></span><span></span></div><span class="progress-typing-label">입력 중...</span></div>' +
+                            '<div class="progress-elapsed" id="progress-elapsed">0초</div>' +
+                        '</div>' +
+                    '</div>'
+                );
+            } else {
+                // 일반 질문: 유나(CCO) 아바타 + 파이프라인 단계 표시
+                container.innerHTML = _sanitize(
+                    '<div class="progress-avatar-row">' +
+                        '<img class="progress-avatar" src="images/clevel/cco-yuna.jpg" alt="유나">' +
+                        '<div class="progress-info">' +
+                            '<div class="progress-leader-name">유나 <span class="progress-leader-spec">진행 안내</span></div>' +
+                            '<div class="progress-steps" id="progress-steps">' +
+                                '<div class="progress-step active" data-step="0"><span class="progress-step-icon">🔍</span> 질문 분석 중...</div>' +
+                            '</div>' +
+                            '<div class="progress-elapsed" id="progress-elapsed">0초</div>' +
+                        '</div>' +
+                    '</div>'
+                );
+            }
             this.convArea.appendChild(container);
             this._smartScroll(true);
+
+            // 경과 시간 카운터
+            this._progressStartTime = Date.now();
+            this._progressTimer = setInterval(() => {
+                const sec = Math.floor((Date.now() - this._progressStartTime) / 1000);
+                const el = document.getElementById('progress-elapsed');
+                if (el) el.textContent = sec + '초';
+            }, 1000);
         },
         _hideSimpleWaiting() {
+            if (this._progressTimer) {
+                clearInterval(this._progressTimer);
+                this._progressTimer = null;
+            }
             const el = document.getElementById('simple-waiting');
             if (el) el.remove();
+        },
+
+        // progress SSE 이벤트 처리: 실시간 파이프라인 단계 업데이트
+        _updateProgress(payload) {
+            const stepsEl = document.getElementById('progress-steps');
+            if (!stepsEl) return;  // 리더 1:1 채팅 모드에서는 스킵
+
+            const step = payload.step;
+            const message = payload.message || '';
+
+            // 기존 active 단계를 done으로 전환
+            stepsEl.querySelectorAll('.progress-step.active').forEach(el => {
+                el.classList.remove('active');
+                el.classList.add('done');
+                const icon = el.querySelector('.progress-step-icon');
+                if (icon) icon.textContent = '✓';
+            });
+
+            // step 0.5: 리더 배정 시 유나 아바타→리더 아바타 교체
+            if (step === 0.5 && payload.leader) {
+                const avatarEl = document.querySelector('#simple-waiting .progress-avatar');
+                const nameEl = document.querySelector('#simple-waiting .progress-leader-name');
+                if (avatarEl) {
+                    const newSrc = leaderProfileImages[payload.leader] || 'images/leaders/L60-madi.jpg';
+                    avatarEl.src = newSrc;
+                    avatarEl.alt = payload.leader;
+                }
+                if (nameEl) {
+                    nameEl.innerHTML = _sanitize(this.escapeHtml(payload.leader) + ' <span class="progress-leader-spec">' + this.escapeHtml(payload.leader_specialty || '') + '</span>');
+                }
+            }
+
+            // 아이콘 매핑
+            const icons = { 0: '🔍', 0.5: '👤', 1: '⚖️', 2: '📚', 3: '✍️', 4: '🔎', 5: '📋' };
+            const icon = icons[step] || '⏳';
+
+            // 새 단계 추가
+            const newStep = document.createElement('div');
+            newStep.className = 'progress-step active';
+            newStep.dataset.step = step;
+            newStep.innerHTML = _sanitize('<span class="progress-step-icon">' + icon + '</span> ' + this.escapeHtml(message));
+            stepsEl.appendChild(newStep);
         },
 
         // 협의 종료 후 답변 대기 미니 인디케이터
