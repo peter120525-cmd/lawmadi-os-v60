@@ -11,8 +11,8 @@ import os
 # [감사 #3.6] 버전 단일 소스
 OS_VERSION = "v60.0.0"
 
-# Gemini 모델 — 자동 전환 체인은 core/model_fallback.py 에서 관리
-# GEMINI_MODEL은 하위호환용 (정적 기본값). 동적 전환은 get_model() 사용 권장.
+# Gemini 모델 — 단일 소스: GEMINI_MODEL 환경변수 (기본 gemini-2.5-flash)
+# 동적 조회는 core.model_fallback.get_model() 사용 권장
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
 

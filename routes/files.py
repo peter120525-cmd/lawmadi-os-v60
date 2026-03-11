@@ -287,7 +287,7 @@ async def analyze_document(request: Request, file_id: str, analysis_type: str = 
                         analysis_result.get("summary", "")[:500],
                         analysis_result.get("legal_category", "일반"),
                         analysis_result.get("risk_level", "medium"),
-                        GEMINI_MODEL,
+                        get_model(),
                         f"{safe_id}%"
                     ),
                     fetch="none"
@@ -392,6 +392,9 @@ async def _analyze_image_document(file_path: Path, analysis_type: str) -> Dict[s
         gc.models.generate_content,
         model=_model,
         contents=[prompt, image_part],
+        config=genai_types.GenerateContentConfig(
+            thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+        ),
     )
 
     # Parse response
@@ -471,6 +474,9 @@ async def _analyze_pdf_document(file_path: Path, analysis_type: str) -> Dict[str
             gc.models.generate_content,
             model=_model,
             contents=prompt,
+            config=genai_types.GenerateContentConfig(
+                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+            ),
         )
         result_text = response.text.strip()
 

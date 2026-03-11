@@ -26,7 +26,7 @@ class ResponseVerifier:
     def __init__(self):
         from core.constants import USE_VERTEX_AI, VERTEX_PROJECT, VERTEX_LOCATION
 
-        self.model_name = GEMINI_MODEL
+        self.model_name = get_model()
         self.client = None
         self.enabled = False
 

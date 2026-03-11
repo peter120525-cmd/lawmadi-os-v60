@@ -1,7 +1,8 @@
 """
-Gemini 모델 자동 전환 체인: 2.5-Flash → 2.5-Flash-lite + 429 재시도.
+Gemini 모델 관리 + 429 지수 백오프 재시도.
 
-429/ResourceExhausted 에러 감지 시 지수 백오프로 재시도.
+asia-northeast3 리전: gemini-2.5-flash 단일 모델 사용.
+환경변수 GEMINI_MODEL로 오버라이드 가능.
 
 사용법:
     from core.model_fallback import get_model, on_quota_error, generate_with_fallback
@@ -15,11 +16,11 @@ from typing import Any, Optional
 
 logger = logging.getLogger("LawmadiOS.ModelFallback")
 
-# ─── 모델 체인 (리전에서 사용 가능한 모델만) ───
+# ─── 모델 설정 (단일 소스: GEMINI_MODEL 환경변수) ───
 # asia-northeast3: gemini-2.5-flash만 안정적 사용 가능
-# gemini-2.5-flash-lite는 asia-northeast3 미지원 (404) → 제거
+_DEFAULT_MODEL = "gemini-2.5-flash"
 MODEL_CHAIN = [
-    os.getenv("GEMINI_MODEL_1", "gemini-2.5-flash"),
+    os.getenv("GEMINI_MODEL", _DEFAULT_MODEL),
 ]
 
 # ─── 상태 관리 (lock-free 읽기, 쓰기만 lock) ───
@@ -32,14 +33,10 @@ _RETRY_BASE_SEC = float(os.getenv("GEMINI_RETRY_BASE_SEC", "2.0"))
 
 
 def get_model(mode: str = "") -> str:
-    """현재 활성 모델명 반환. 다운그레이드 후 일정 시간 경과 시 자동 업그레이드.
+    """현재 활성 모델명 반환 (gemini-2.5-flash).
     읽기 경로는 lock-free (동시 요청 직렬화 방지).
-
-    mode="leader_chat" → lite 우선 (비용 절감), 일반/전문가는 flash 유지.
+    mode 파라미터는 하위호환용 (현재 모든 모드에서 동일 모델 반환).
     """
-    # 리더 1:1 채팅: flash 모델 사용 (lite는 asia-northeast3 미지원)
-    # 향후 lite가 리전 지원되면 MODEL_CHAIN[1]로 전환 가능
-
     global _current_index, _downgrade_time
     idx = _current_index  # atomic read
     if idx > 0 and time.time() - _downgrade_time >= _UPGRADE_INTERVAL:

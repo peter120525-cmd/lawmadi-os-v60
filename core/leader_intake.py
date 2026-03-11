@@ -282,9 +282,10 @@ async def run_leader_triage(
     config = genai_types.GenerateContentConfig(
         system_instruction=system_prompt,
         max_output_tokens=800,
+        thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
     )
 
-    model = get_model(mode="leader_chat")  # lite 모델
+    model = get_model()
 
     try:
         loop = asyncio.get_running_loop()

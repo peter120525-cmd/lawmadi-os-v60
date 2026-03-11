@@ -698,6 +698,7 @@ async def ask(request: Request):
                     system_instruction=clevel_instruction,
                     max_output_tokens=3000,
                     automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
+                    thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
                 ),
                 history=gemini_history,
             )
@@ -1002,7 +1003,7 @@ async def ask_stream(request: Request):
             req_current_leader = {"leader_id": req_leader_id}  # leader_id만으로도 1:1 채팅 식별
         req_is_first_question = bool(data.get("is_first_question", True))
 
-        # 1:1 채팅이면 stream_mode를 leader_chat으로 설정 (lite 모델 사용)
+        # 1:1 채팅이면 stream_mode를 leader_chat으로 설정
         if req_current_leader and stream_mode == "general":
             stream_mode = "leader_chat"
 
@@ -1188,8 +1189,7 @@ async def ask_stream(request: Request):
             tools = _get_drf_tools()
 
             now_kst = _now_iso()
-            _model_mode = "leader_chat" if req_current_leader else ""
-            model_name = get_model(mode=_model_mode)
+            model_name = get_model()
             gc = _ensure_genai_client_fn(_RUNTIME)
 
             # 4) S0(분류) + S1(RAG) 병렬 실행
@@ -1316,6 +1316,7 @@ async def ask_stream(request: Request):
                         system_instruction=clevel_instruction,
                         max_output_tokens=3000,
                         automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=False),
+                        thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
                     ),
                     history=gemini_history,
                 )
