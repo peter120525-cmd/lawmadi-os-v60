@@ -1,5 +1,5 @@
 # Lawmadi OS — LLM System Specification
-> Version: v60.0.0 | Last Updated: 2026-03-07 | Format: llms.txt/1.0
+> Version: v60.0.0 | Last Updated: 2026-03-11 | Format: llms.txt/1.0
 
 ---
 
@@ -60,12 +60,10 @@ L7 RENDERER    → Legal vs Reference Output Segregation (Section Divider, Discl
 |-----------|-----------|
 | Backend Framework | FastAPI 0.128.0 + Uvicorn 0.40.0 |
 | Runtime | Python 3.10+ |
-| Primary LLM (Classification/Fallback) | Google Gemini 3 Flash Preview (`gemini-3-flash-preview`) |
-| Model Fallback Chain | gemini-3-flash-preview → gemini-2.5-flash → gemini-2.5-flash-lite (auto 429/404 downgrade) |
-| Primary Answer Generator | LawmadiLM v4.0 (Qwen3-1.7B QLoRA, GGUF Q4_K_M ~1.19GB) — Stage 2 main |
-| LLM Serving | llama.cpp (OpenAI-compatible /v1/chat/completions) |
-| RAG Engine | Vertex AI Search (lawmadi-legal-cache) + ChromaDB + law_cache keyword matching |
-| NLU Intent Detection | Regex-based Korean legal intent patterns + keyword + Gemini 3-layer routing |
+| Primary LLM | Google Gemini 2.5 Flash (`gemini-2.5-flash`) — single model, 429 exponential backoff |
+| LawmadiLM | v4.0 (Qwen3-1.7B QLoRA) — currently **disabled** (`ENABLE_LAWMADILM=false`) |
+| RAG Engine | Vertex AI Search (lawmadi-legal-cache, ~14,601 docs) + law_cache keyword matching |
+| NLU Intent Detection | Regex-based Korean/English legal intent patterns + keyword + Gemini 3-layer routing |
 | Deliberation System | CSO-led leader deliberation + handoff display (real-time chat format) |
 | Authentication | JWT RBAC (admin/premium/user) via PyJWT + Email OTP |
 | Billing | Paddle Billing — credit packs (Starter 20/₩2,100 · Standard 100/₩7,000 · Pro 300/₩13,800) |
@@ -73,14 +71,14 @@ L7 RENDERER    → Legal vs Reference Output Segregation (Section Divider, Discl
 | Async HTTP | httpx (LawmadiLM API async calls) |
 | MCP Server | fastapi-mcp 0.2+ (Model Context Protocol) |
 | Cloud Platform | GCP Cloud Run (asia-northeast3) |
-| Cloud Resources | 2 vCPU / 2 GiB RAM / min 1 / max 10 instances / concurrency 80 / timeout 300s |
+| Cloud Resources | 1 vCPU / 2 GiB RAM / min 1 / max 5 instances / concurrency 15 / timeout 300s |
 | Frontend | Firebase Hosting (Static HTML/CSS/JS — Korean + English) |
 | Splash Screen | Premium: Aurora gradient + 20 particles + glow icon + letter animation + progress bar |
 | Header Badges | Analysis \| Verify icons + text (brand names removed) |
 | Mobile Header | Login + Lang toggle left, Favorites + Dark mode right (balanced layout) |
 | PWA Icons | Custom PNG icons: 192x192 + 512x512 (resized from 1024x1024 source) |
 | Database | Cloud SQL (PostgreSQL) via cloud-sql-python-connector |
-| Secret Management | GCP Secret Manager (14 secrets) |
+| Secret Management | GCP Secret Manager (18 secrets) |
 | CI/CD | GitHub Actions (5-job pipeline: Test → Staging → Backend → Frontend → Notify) |
 
 ### Runtime Constants
@@ -88,12 +86,11 @@ L7 RENDERER    → Legal vs Reference Output Segregation (Section Divider, Discl
 ```
 OS_VERSION          = "v60.0.0"
 SOFT_MODE           = true (default)
-DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview"
-MODEL_CHAIN         = ["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-2.5-flash-lite"]
-MODEL_UPGRADE_INTERVAL = 3600 (auto-upgrade after 1 hour)
-LAWMADILM_API_URL   = "https://lawmadilm-api-938146962157.asia-southeast1.run.app"
-USE_VERTEX_AI       = false (default)
-USE_VERTEX_SEARCH   = false (default)
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+MODEL_CHAIN         = ["gemini-2.5-flash"] (single model, 429 exponential backoff 2→4→8s)
+ENABLE_LAWMADILM    = false (disabled)
+USE_VERTEX_AI       = true
+USE_VERTEX_SEARCH   = true
 ```
 
 ---
@@ -186,7 +183,7 @@ USE_VERTEX_SEARCH   = false (default)
 
 ## LAWMADILM — LEGAL DOMAIN LLM
 
-LawmadiLM is a fine-tuned Korean legal language model that generates Stage 2 legal drafts.
+LawmadiLM is a fine-tuned Korean legal language model (currently **disabled** — `ENABLE_LAWMADILM=false`).
 
 ### Model Specifications
 ```
@@ -196,7 +193,7 @@ Training Data:    85,909 Q&A pairs (126 Korean laws)
 Inference Format: GGUF Q4_K_M (~1.19GB)
 Serving Engine:   llama.cpp (llama-server)
 API:              OpenAI-compatible /v1/chat/completions
-Role:             PRIMARY ANSWER GENERATOR (Stage 2) — 5-step framework enhanced answers
+Role:             DISABLED (Stage 2 bypassed) — Gemini handles answer generation
 Max Tokens:       3,000 (general) / 5,000 (expert), Context: 4096
 Min Response:     1,500 chars (general) / 4,000 chars (expert) — regenerate if under
 Circuit Breaker:  5 consecutive failures → 60s open → half_open probe → Gemini fallback
@@ -234,37 +231,40 @@ Deploy Region:    asia-southeast1
 
 ---
 
-## 3-STAGE HYBRID LEGAL PIPELINE
+## 4-STAGE LEGAL PIPELINE
 
 Every `/ask` and `/ask-stream` request flows through this pipeline:
 
 ```
 Stage 0+1: CLASSIFICATION + RAG (PARALLEL EXECUTION)
-  ├─ [Stage 0] Question Classification (Gemini 3 Flash)
-  │     NLU intent detection (regex patterns for Korean legal contexts)
+  ├─ [Stage 0] Question Classification (Gemini 2.5 Flash)
+  │     NLU intent detection (regex patterns for Korean/English legal contexts)
   │     + Keyword matching → leader candidate selection
   │     + Gemini Flash analysis → tier (1-3), leader (L01-L60), specialty
   │     3-tier routing: greeting → system intro / non-legal → local / legal → pipeline
   │     SafetyGuard.check() → CRISIS / BLOCKED / PASS
   │
   ├─ [Stage 1] RAG Article Search (runs in parallel with Stage 0)
-  │     ChromaDB semantic search (multilingual-e5-large embeddings)
+  │     Vertex AI Search (~14,601 docs, Extractive Answers/Segments)
   │     + law_cache keyword matching (14,088 keywords → 20,798 articles)
-  │     + LEADER_LAW_BOOST: per-leader core law article injection
-  │     + Vertex AI Search (optional, USE_VERTEX_SEARCH=true)
-  └─ Combined context assembled for Stage 2
+  │     + LEADER_LAW_BOOST: per-leader core law article injection (KO + EN)
+  └─ Combined context assembled for Stage 2/3
 
-Stage 2: LAWMADILM ENHANCED ANSWER (PRIMARY GENERATOR)
-  ├─ LawmadiLM API call with full context:
+Stage 2: LAWMADILM ENHANCED ANSWER (CURRENTLY DISABLED)
+  ├─ LawmadiLM API call with full context (disabled via ENABLE_LAWMADILM=false)
+  ├─ Circuit Breaker: 5 consecutive failures → 60s open → half_open probe
+  └─ Current flow: Stage 0+1 → Stage 3 (Gemini) → Stage 4 (DRF)
+
+Stage 3: GEMINI ANSWER GENERATION (PRIMARY GENERATOR)
+  ├─ Gemini 2.5 Flash with full context:
   │     System instruction + leader persona + RAG context + 5-step framework
   │     5-step: Acknowledge → Diagnose → Action Roadmap → Safety Net → Closing
   ├─ Max output: 3,000 tokens (standard) / 5,000 tokens (expert)
   ├─ Min response: 1,500 chars (general) / 4,000 chars (expert) — retry if under
-  ├─ Circuit Breaker: 5 consecutive failures → 60s open → half_open probe
-  ├─ Fallback: Gemini Flash compose (generate_with_fallback_async)
-  └─ Model fallback chain: 3-Flash → 2.5-Flash → 2.5-Flash-Lite (429 exponential backoff)
+  ├─ 429 exponential backoff (2→4→8s)
+  └─ Supports Korean and English responses (lang parameter)
 
-Stage 3: DRF REAL-TIME FULL VERIFICATION
+Stage 4: DRF REAL-TIME FULL VERIFICATION
   ├─ Extract law references + precedent numbers + constitutional court decision numbers
   ├─ DRF real-time cross-verification (article-level matching)
   ├─ Constitutional compliance validation (6 principles)
@@ -414,9 +414,13 @@ Usage: Query keywords matched against reverse index → top matching articles se
 | POST | `/api/visit` | 방문자 카운터 업데이트 |
 | GET | `/api/visitor-stats` | 방문자 통계 조회 (`today_visitors`, `total_visitors`) |
 | POST | `/auth/token` | JWT 액세스 토큰 발급 (API Key → JWT, 5/min rate limit) |
-| POST | `/api/paddle/send-otp` | Email OTP 발송 (SMTP, 5분 TTL) |
-| POST | `/api/paddle/verify-otp` | Email OTP 검증 → DB 세션 토큰 발급 (30일) |
+| POST | `/api/paddle/otp/send` | Email OTP 발송 (SMTP, 5분 TTL) |
+| POST | `/api/paddle/otp/verify` | Email OTP 검증 → DB 세션 토큰 발급 (30일) |
+| GET | `/api/paddle/me` | 로그인 사용자 정보 조회 |
+| POST | `/api/paddle/logout` | 세션 로그아웃 |
 | GET | `/api/paddle/credits` | 크레딧 잔액 조회 |
+| GET | `/api/paddle/credits/history` | 크레딧 내역 조회 (최근 50건) |
+| GET | `/api/paddle/credits/check` | 크레딧 잔액 확인 (Expert용) |
 | POST | `/api/paddle/webhook` | Paddle 결제 웹훅 (크레딧 충전, idempotent) |
 | GET | `/api/paddle/config` | Paddle 클라이언트 설정 조회 |
 | GET | `/pricing` | 요금제 페이지 (한국어) |
@@ -432,6 +436,18 @@ Usage: Query keywords matched against reverse index → top matching articles se
 | GET | `/api/admin/leader-stats` | 리더별 질문 통계 |
 | GET | `/api/admin/category-stats` | 법률 분야별 통계 |
 | GET | `/api/admin/leader-queries/{leader_code}` | 특정 리더 질문 이력 |
+| GET | `/api/admin/chat-logs` | 채팅 이용 로그 (days, query_type, leader 필터) |
+| GET | `/api/admin/blacklist` | IP 블랙리스트 조회 |
+| POST | `/api/admin/blacklist` | IP 수동 블랙리스트 추가 |
+| DELETE | `/api/admin/blacklist` | IP 블랙리스트 해제 |
+| GET | `/api/admin/paddle/transactions` | Paddle 거래 목록 |
+| GET | `/api/admin/paddle/transactions/{id}` | Paddle 거래 상세 |
+| GET | `/api/admin/paddle/customers` | Paddle 고객 목록 |
+| GET | `/api/admin/paddle/customers/{id}` | Paddle 고객 상세 |
+| POST | `/api/admin/paddle/refund` | Paddle 환불 + 크레딧 자동 회수 |
+| GET | `/api/admin/paddle/adjustments` | Paddle 환불/조정 내역 |
+| GET | `/api/admin/paddle/revenue` | 매출 통계 (DB 집계) |
+| GET | `/api/admin/paddle/users` | 결제 사용자 목록 |
 | GET | `/dashboard` | 관리자 대시보드 |
 | GET | `/conversion` | 전환율 분석 |
 | GET | `/retention` | 리텐션 분석 |
@@ -565,7 +581,7 @@ Response on violation: 요청을 처리할 수 없음을 통지하고 로그 기
 
 ## DEPLOYMENT CONFIGURATION
 
-### GCP Secret Manager (14 Secrets)
+### GCP Secret Manager (18 Secrets)
 ```
 GEMINI_API_KEY         — Google Gemini API key
 GEMINI_KEY             — Google Gemini API key (alias)
@@ -581,6 +597,10 @@ JWT_SECRET             — JWT 토큰 서명 키 (RBAC 인증)
 PADDLE_WEBHOOK_SECRET  — Paddle 결제 웹훅 서명 검증
 PADDLE_API_KEY         — Paddle Billing API 키
 PADDLE_CLIENT_TOKEN    — Paddle 클라이언트 토큰
+SMTP_USER              — OTP 이메일 발송 SMTP 계정
+SMTP_PASS              — OTP 이메일 발송 SMTP 비밀번호
+OTP_SECRET             — OTP 해시 서명 키
+PREMIUM_API_KEY        — 프리미엄 API 인증 키
 ```
 
 ### Required Environment Variables
@@ -594,17 +614,17 @@ JWT_SECRET             (JWT signing key — falls back to INTERNAL_API_KEY with 
 ### GCP Cloud Run Configuration
 ```
 Region: asia-northeast3 (Seoul)
-CPU: 2 vCPU
+CPU: 1 vCPU
 Memory: 2 GiB
-Max Instances: 10
+Max Instances: 5
 Min Instances: 1
-Concurrency: 80
+Concurrency: 15
 Request Timeout: 300s
 ```
 
 ### Cloud Run Services (4 Total)
 ```
-lawmadi-os-v60    — Main API (FastAPI)          | 2 vCPU, 2 GiB  | 1–10 instances | asia-northeast3
+lawmadi-os-v60    — Main API (FastAPI)          | 1 vCPU, 2 GiB  | 1–5 instances  | asia-northeast3
 lawmadilm-api     — LawmadiLM API gateway       | 1 vCPU, 512 MiB | 0–1 instances  | asia-southeast1
 lawmadilm-llm     — LLM inference (llama.cpp)   | 4 vCPU, 16 GiB | 1–2 instances  | asia-southeast1
 lawmadilm-rag     — RAG search (ChromaDB)        | 2 vCPU, 8 GiB  | 0–3 instances  | asia-southeast1
@@ -673,4 +693,4 @@ engines.response_verifier  → ResponseVerifier (Gemini SSOT 검증)
 ---
 
 *This llms.txt file conforms to the llms.txt/1.0 specification for machine-readable AI system documentation.*
-*Generated: 2026-03-07 | Lawmadi OS v60.0.0*
+*Generated: 2026-03-11 | Lawmadi OS v60.0.0*
