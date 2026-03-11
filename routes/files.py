@@ -1,4 +1,4 @@
-"""File upload, document analysis, PDF export routes."""
+"""File upload, document analysis, PDF export, document generation, forms search routes."""
 import os
 import re
 import json
@@ -511,8 +511,223 @@ async def _analyze_pdf_document(file_path: Path, analysis_type: str) -> Dict[str
 
 
 # =============================================================
-# PDF Export
+# PDF Export (Enhanced with templates)
 # =============================================================
+
+# Document types and their Korean/English labels
+_DOC_TYPES = {
+    "complaint": {"ko": "고소장", "en": "Criminal Complaint"},
+    "petition": {"ko": "소장", "en": "Civil Petition"},
+    "answer": {"ko": "답변서", "en": "Answer Brief"},
+    "notice": {"ko": "내용증명", "en": "Certified Notice"},
+    "withdrawal": {"ko": "고소취하서", "en": "Complaint Withdrawal"},
+    "appeal": {"ko": "탄원서", "en": "Appeal/Petition Letter"},
+    "demand": {"ko": "최고서", "en": "Demand Letter"},
+    "agreement": {"ko": "합의서", "en": "Settlement Agreement"},
+    "opinion": {"ko": "법률의견서", "en": "Legal Opinion"},
+    "analysis": {"ko": "법률 분석", "en": "Legal Analysis"},
+}
+
+
+class _LawmadiPDF:
+    """Enhanced PDF generator with legal document templates."""
+
+    def __init__(self, lang: str = "ko"):
+        from fpdf import FPDF
+
+        self.lang = lang
+        self.pdf = FPDF()
+        self.pdf.set_auto_page_break(auto=True, margin=25)
+
+        font_path = os.path.join(_PROJECT_ROOT, "fonts", "NanumGothic.ttf")
+        if not os.path.exists(font_path):
+            raise HTTPException(
+                status_code=500,
+                detail="PDF 폰트 파일이 없습니다." if lang == "ko"
+                else "PDF font file not found.",
+            )
+        self.pdf.add_font("NotoSansKR", "", font_path)
+
+    def _header_footer(self, title: str, doc_type: str):
+        """Register header/footer callbacks."""
+        pdf = self.pdf
+        lang = self.lang
+
+        def header():
+            pdf.set_font("NotoSansKR", "", 8)
+            pdf.set_text_color(130, 130, 130)
+            label = _DOC_TYPES.get(doc_type, {}).get(lang, doc_type)
+            pdf.cell(0, 6, f"Lawmadi OS  |  {label}", align="L")
+            pdf.ln(3)
+            # Thin line under header
+            pdf.set_draw_color(200, 200, 200)
+            pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
+            pdf.ln(6)
+            pdf.set_text_color(0, 0, 0)
+
+        def footer():
+            pdf.set_y(-20)
+            pdf.set_font("NotoSansKR", "", 8)
+            pdf.set_text_color(150, 150, 150)
+            date_str = datetime.datetime.now().strftime("%Y-%m-%d")
+            page_text = f"{date_str}  |  {pdf.page_no()}"
+            pdf.cell(0, 6, page_text, align="C")
+            pdf.set_text_color(0, 0, 0)
+
+        pdf.header = header
+        pdf.footer = footer
+
+    def generate(
+        self,
+        title: str,
+        content: str,
+        doc_type: str = "analysis",
+        sections: list | None = None,
+    ) -> str:
+        """
+        Generate a formatted PDF and return the file path.
+
+        Args:
+            title: Document title
+            content: Main content text
+            doc_type: Document type key (from _DOC_TYPES)
+            sections: Optional structured sections
+                      [{"heading": "...", "body": "..."}, ...]
+        """
+        pdf = self.pdf
+        self._header_footer(title, doc_type)
+
+        pdf.add_page()
+
+        # === Title ===
+        pdf.set_font("NotoSansKR", "", 20)
+        pdf.cell(0, 14, title, new_x="LMARGIN", new_y="NEXT", align="C")
+        pdf.ln(3)
+
+        # Title underline
+        pdf.set_draw_color(60, 60, 60)
+        cx = pdf.w / 2
+        pdf.line(cx - 40, pdf.get_y(), cx + 40, pdf.get_y())
+        pdf.ln(8)
+
+        # === Date line ===
+        pdf.set_font("NotoSansKR", "", 10)
+        pdf.set_text_color(100, 100, 100)
+        date_label = "작성일" if self.lang == "ko" else "Date"
+        pdf.cell(
+            0, 7,
+            f"{date_label}: {datetime.datetime.now().strftime('%Y년 %m월 %d일' if self.lang == 'ko' else '%B %d, %Y')}",
+            new_x="LMARGIN", new_y="NEXT", align="R",
+        )
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(4)
+
+        # === Structured sections (if provided) ===
+        if sections:
+            for sec in sections:
+                heading = sec.get("heading", "")
+                body = sec.get("body", "")
+                if heading:
+                    pdf.set_font("NotoSansKR", "", 13)
+                    pdf.set_text_color(30, 30, 30)
+                    pdf.cell(0, 10, heading, new_x="LMARGIN", new_y="NEXT")
+                    # Section underline
+                    pdf.set_draw_color(180, 180, 180)
+                    pdf.line(
+                        pdf.l_margin, pdf.get_y(),
+                        pdf.l_margin + 50, pdf.get_y(),
+                    )
+                    pdf.ln(4)
+                    pdf.set_text_color(0, 0, 0)
+                if body:
+                    pdf.set_font("NotoSansKR", "", 11)
+                    self._render_body(body)
+                    pdf.ln(4)
+        else:
+            # === Plain content ===
+            pdf.set_font("NotoSansKR", "", 11)
+            self._render_body(content)
+
+        # === Signature area (for formal documents) ===
+        formal_types = {"complaint", "petition", "answer", "notice",
+                        "withdrawal", "appeal", "demand", "agreement"}
+        if doc_type in formal_types:
+            self._add_signature_area()
+
+        # === Disclaimer ===
+        pdf.ln(10)
+        pdf.set_draw_color(200, 200, 200)
+        pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
+        pdf.ln(4)
+        pdf.set_font("NotoSansKR", "", 8)
+        pdf.set_text_color(130, 130, 130)
+        if self.lang == "ko":
+            disclaimer = (
+                "※ 본 문서는 Lawmadi OS가 생성한 참고용 초안이며, 법적 효력을 보장하지 않습니다. "
+                "반드시 변호사 등 법률 전문가의 검토를 받으시기 바랍니다."
+            )
+        else:
+            disclaimer = (
+                "※ This document is a reference draft generated by Lawmadi OS and does not guarantee legal effect. "
+                "Please consult a licensed attorney before use."
+            )
+        pdf.multi_cell(0, 5, disclaimer)
+        pdf.set_text_color(0, 0, 0)
+
+        # === Save ===
+        safe_title = re.sub(r'[^\w가-힣\s-]', '', title).strip() or "document"
+        filename = f"{safe_title}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        filepath = os.path.join("temp", filename)
+        os.makedirs("temp", exist_ok=True)
+        pdf.output(filepath)
+        return filepath
+
+    def _render_body(self, text: str):
+        """Render body text with smart paragraph handling."""
+        pdf = self.pdf
+        usable_w = pdf.w - pdf.l_margin - pdf.r_margin
+        for line in text.split("\n"):
+            stripped = line.strip()
+            if stripped == "":
+                pdf.ln(5)
+            elif stripped.startswith("##"):
+                # Markdown-style sub-heading
+                pdf.set_font("NotoSansKR", "", 12)
+                pdf.cell(0, 8, stripped.lstrip("#").strip(), new_x="LMARGIN", new_y="NEXT")
+                pdf.ln(2)
+                pdf.set_font("NotoSansKR", "", 11)
+            elif stripped.startswith("- ") or stripped.startswith("• "):
+                # Bullet point
+                pdf.cell(6, 7, "•")
+                bullet_text = stripped[2:]
+                if pdf.get_string_width(bullet_text) <= usable_w - 6:
+                    pdf.cell(0, 7, bullet_text, new_x="LMARGIN", new_y="NEXT")
+                else:
+                    pdf.multi_cell(usable_w - 6, 7, bullet_text)
+            else:
+                if pdf.get_string_width(line) <= usable_w:
+                    pdf.cell(0, 7, line, new_x="LMARGIN", new_y="NEXT")
+                else:
+                    pdf.multi_cell(0, 7, line.strip())
+
+    def _add_signature_area(self):
+        """Add a signature/seal area for formal legal documents."""
+        pdf = self.pdf
+        pdf.ln(20)
+        pdf.set_font("NotoSansKR", "", 11)
+        if self.lang == "ko":
+            pdf.cell(0, 8, f"{datetime.datetime.now().strftime('%Y년  %m월  %d일')}", new_x="LMARGIN", new_y="NEXT", align="R")
+            pdf.ln(12)
+            pdf.cell(0, 8, "위  작성자", new_x="LMARGIN", new_y="NEXT", align="R")
+            pdf.ln(4)
+            pdf.cell(0, 8, "성명:                          (서명 또는 날인)", new_x="LMARGIN", new_y="NEXT", align="R")
+        else:
+            pdf.cell(0, 8, f"Date: {datetime.datetime.now().strftime('%B %d, %Y')}", new_x="LMARGIN", new_y="NEXT", align="R")
+            pdf.ln(12)
+            pdf.cell(0, 8, "Name: ________________________", new_x="LMARGIN", new_y="NEXT", align="R")
+            pdf.ln(4)
+            pdf.cell(0, 8, "Signature: ________________________", new_x="LMARGIN", new_y="NEXT", align="R")
+
 
 @router.post("/export-pdf")
 @limiter.limit("20/hour")
@@ -523,7 +738,14 @@ async def export_pdf(request: Request):
     Request body:
         {
             "title": "고소장",
-            "content": "고 소 장\\n\\n고소인\\n  성명: 홍길동\\n..."
+            "content": "고 소 장\\n\\n고소인\\n  성명: 홍길동\\n...",
+            "doc_type": "complaint",     // optional (default: "analysis")
+            "lang": "ko",               // optional (default: "ko")
+            "sections": [               // optional structured sections
+                {"heading": "당사자", "body": "고소인: ...\\n피고소인: ..."},
+                {"heading": "고소 취지", "body": "..."},
+                {"heading": "고소 사실", "body": "..."}
+            ]
         }
 
     Returns:
@@ -533,63 +755,28 @@ async def export_pdf(request: Request):
         data = await request.json()
         title = (data.get("title", "") or "법률문서").strip()
         content = (data.get("content", "") or "").strip()
+        doc_type = (data.get("doc_type", "") or "analysis").strip()
+        lang = (data.get("lang", "") or "ko").strip()
+        sections = data.get("sections") or None
 
-        if not content:
-            raise HTTPException(status_code=400, detail="content 필드가 비어 있습니다.")
+        if not content and not sections:
+            raise HTTPException(status_code=400, detail="content 또는 sections 필드가 필요합니다.")
 
         # Content size limit: 100KB
-        if len(content) > 100 * 1024:
+        total_size = len(content)
+        if sections:
+            total_size += sum(len(s.get("body", "")) for s in sections)
+        if total_size > 100 * 1024:
             raise HTTPException(status_code=400, detail="콘텐츠 크기가 너무 큽니다. 최대 100KB까지 허용됩니다.")
 
-        from fpdf import FPDF
-
-        FONT_PATH = os.path.join(_PROJECT_ROOT, "fonts", "NanumGothic.ttf")
-        if not os.path.exists(FONT_PATH):
-            raise HTTPException(status_code=500, detail="PDF 폰트 파일이 없습니다. 관리자에게 문의하세요.")
-
-        pdf = FPDF()
-        pdf.set_auto_page_break(auto=True, margin=20)
-        pdf.add_page()
-        pdf.add_font("NotoSansKR", "", FONT_PATH)
-
-        # Title
-        pdf.set_font("NotoSansKR", "", 18)
-        pdf.cell(0, 15, title, new_x="LMARGIN", new_y="NEXT", align="C")
-        pdf.ln(5)
-
-        # Body
-        pdf.set_font("NotoSansKR", "", 11)
-        for line in content.split("\n"):
-            if line.strip() == "":
-                pdf.ln(7)
-            else:
-                line_width = pdf.get_string_width(line)
-                usable_width = pdf.w - pdf.l_margin - pdf.r_margin
-                if line_width <= usable_width:
-                    pdf.cell(0, 7, line, new_x="LMARGIN", new_y="NEXT")
-                else:
-                    pdf.multi_cell(0, 7, line.strip())
-
-        # Disclaimer
-        pdf.ln(10)
-        pdf.set_font("NotoSansKR", "", 9)
-        disclaimer = (
-            "※ 본 문서는 Lawmadi OS가 생성한 참고용 초안이며, 법적 효력을 보장하지 않습니다. "
-            "반드시 변호사 등 법률 전문가의 검토를 받으시기 바랍니다."
+        gen = _LawmadiPDF(lang=lang)
+        filepath = gen.generate(
+            title=title, content=content,
+            doc_type=doc_type, sections=sections,
         )
-        pdf.multi_cell(0, 6, disclaimer)
 
-        # Save and return file
-        safe_title = re.sub(r'[^\w가-힣\s-]', '', title).strip() or "document"
-        filename = f"{safe_title}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-        filepath = os.path.join("temp", filename)
-
-        # Ensure temp directory exists
-        os.makedirs("temp", exist_ok=True)
-
-        pdf.output(filepath)
-
-        logger.info(f"[PDF] Generated: {filename}")
+        filename = os.path.basename(filepath)
+        logger.info(f"[PDF] Generated: {filename} (type={doc_type})")
 
         return FileResponse(
             path=filepath,
@@ -604,3 +791,384 @@ async def export_pdf(request: Request):
         logger.error(f"[PDF] Generation failed: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail="PDF 생성 중 오류가 발생했습니다.")
+
+
+# =============================================================
+# Advanced Document Generation (Gemini-powered)
+# =============================================================
+
+# Document generation prompts per type
+_DOC_PROMPTS = {
+    "complaint": {
+        "ko": (
+            "다음 정보를 바탕으로 한국 형사소송법에 따른 **고소장** 초안을 작성해 주세요.\n"
+            "형식: 고소인/피고소인 인적사항, 고소 취지, 고소 사실(육하원칙), 관련 법조문, 증거방법, 결론.\n"
+            "각 섹션은 ##으로 구분해 주세요."
+        ),
+        "en": (
+            "Based on the following information, draft a **Criminal Complaint** under Korean criminal procedure.\n"
+            "Format: Complainant/Respondent details, Purpose, Facts (5W1H), Relevant statutes, Evidence, Conclusion.\n"
+            "Separate each section with ##."
+        ),
+    },
+    "petition": {
+        "ko": (
+            "다음 정보를 바탕으로 한국 민사소송법에 따른 **소장** 초안을 작성해 주세요.\n"
+            "형식: 원고/피고 인적사항, 청구 취지, 청구 원인(사실관계+법적 근거), 증거방법, 결론.\n"
+            "각 섹션은 ##으로 구분해 주세요."
+        ),
+        "en": (
+            "Based on the following information, draft a **Civil Petition** under Korean civil procedure.\n"
+            "Format: Plaintiff/Defendant details, Claims, Cause of Action (facts + legal basis), Evidence, Conclusion.\n"
+            "Separate each section with ##."
+        ),
+    },
+    "notice": {
+        "ko": (
+            "다음 정보를 바탕으로 **내용증명** 초안을 작성해 주세요.\n"
+            "형식: 발신인/수신인 정보, 제목, 본문(요구사항+법적근거+이행기한+불이행시 조치), 결론.\n"
+            "각 섹션은 ##으로 구분해 주세요."
+        ),
+        "en": (
+            "Based on the following information, draft a **Certified Notice (내용증명)** under Korean law.\n"
+            "Format: Sender/Recipient, Subject, Body (demand + legal basis + deadline + consequences), Conclusion.\n"
+            "Separate each section with ##."
+        ),
+    },
+    "answer": {
+        "ko": (
+            "다음 정보를 바탕으로 민사 **답변서** 초안을 작성해 주세요.\n"
+            "형식: 사건번호, 원고/피고, 청구 취지에 대한 답변, 청구 원인에 대한 답변, 항변사항, 증거방법.\n"
+            "각 섹션은 ##으로 구분해 주세요."
+        ),
+        "en": (
+            "Based on the following information, draft an **Answer Brief** under Korean civil procedure.\n"
+            "Format: Case number, parties, response to claims, defenses, evidence.\n"
+            "Separate each section with ##."
+        ),
+    },
+    "appeal": {
+        "ko": (
+            "다음 정보를 바탕으로 **탄원서** 초안을 작성해 주세요.\n"
+            "형식: 수신(법원/검찰), 사건번호, 탄원인 정보, 탄원 취지, 탄원 사유(구체적 정상참작 사유), 결론.\n"
+            "각 섹션은 ##으로 구분해 주세요."
+        ),
+        "en": (
+            "Based on the following information, draft a **Petition/Appeal Letter** under Korean law.\n"
+            "Format: Recipient (court/prosecution), Case number, Petitioner, Purpose, Reasons, Conclusion.\n"
+            "Separate each section with ##."
+        ),
+    },
+    "demand": {
+        "ko": (
+            "다음 정보를 바탕으로 **최고서** 초안을 작성해 주세요.\n"
+            "형식: 발신인/수신인, 제목, 요구사항, 법적 근거, 이행기한, 불이행시 법적조치 안내.\n"
+            "각 섹션은 ##으로 구분해 주세요."
+        ),
+        "en": (
+            "Based on the following information, draft a **Demand Letter** under Korean law.\n"
+            "Format: Sender/Recipient, Subject, Demands, Legal basis, Deadline, Consequences.\n"
+            "Separate each section with ##."
+        ),
+    },
+    "agreement": {
+        "ko": (
+            "다음 정보를 바탕으로 **합의서** 초안을 작성해 주세요.\n"
+            "형식: 당사자(갑/을), 합의 배경, 합의 조건(항목별), 손해배상/위약금, 비밀유지, 효력발생.\n"
+            "각 섹션은 ##으로 구분해 주세요."
+        ),
+        "en": (
+            "Based on the following information, draft a **Settlement Agreement** under Korean law.\n"
+            "Format: Parties, Background, Terms (itemized), Damages/Penalties, Confidentiality, Effective date.\n"
+            "Separate each section with ##."
+        ),
+    },
+    "opinion": {
+        "ko": (
+            "다음 정보를 바탕으로 **법률의견서** 초안을 작성해 주세요.\n"
+            "형식: 의뢰인/의뢰사항, 사실관계 요약, 관련 법령 검토, 판례 분석, 법적 의견, 결론 및 권고.\n"
+            "각 섹션은 ##으로 구분해 주세요."
+        ),
+        "en": (
+            "Based on the following information, draft a **Legal Opinion** under Korean law.\n"
+            "Format: Client/Matter, Facts, Legal analysis, Case law, Opinion, Conclusion & Recommendations.\n"
+            "Separate each section with ##."
+        ),
+    },
+}
+
+
+@router.post("/generate-document")
+@limiter.limit("10/hour")
+async def generate_document(request: Request):
+    """
+    Generate a structured legal document using Gemini.
+
+    Request body:
+        {
+            "doc_type": "complaint",     // required — see _DOC_TYPES keys
+            "context": "사기 피해...",     // required — user's situation/facts
+            "lang": "ko",               // optional (default: "ko")
+            "extra_instructions": ""     // optional — additional user instructions
+        }
+
+    Returns:
+        {
+            "doc_type": "complaint",
+            "title": "고소장",
+            "content": "...",
+            "sections": [...],
+            "download_ready": true
+        }
+    """
+    try:
+        data = await request.json()
+        doc_type = (data.get("doc_type", "") or "").strip()
+        context = (data.get("context", "") or "").strip()
+        lang = (data.get("lang", "") or "ko").strip()
+        extra = (data.get("extra_instructions", "") or "").strip()
+
+        if not doc_type or doc_type not in _DOC_TYPES:
+            valid = ", ".join(_DOC_TYPES.keys())
+            raise HTTPException(
+                status_code=400,
+                detail=f"유효한 doc_type을 지정하세요: {valid}",
+            )
+        if not context:
+            raise HTTPException(status_code=400, detail="context (상황/사실관계)가 필요합니다.")
+        if len(context) > 10000:
+            raise HTTPException(status_code=400, detail="context가 너무 깁니다. 최대 10,000자.")
+
+        # Build prompt
+        doc_prompt = _DOC_PROMPTS.get(doc_type, {}).get(lang, "")
+        if not doc_prompt:
+            # Fallback generic prompt
+            type_label = _DOC_TYPES[doc_type].get(lang, doc_type)
+            doc_prompt = (
+                f"다음 정보를 바탕으로 **{type_label}** 초안을 작성해 주세요. "
+                f"각 섹션은 ##으로 구분해 주세요."
+                if lang == "ko"
+                else f"Based on the following, draft a **{type_label}**. "
+                     f"Separate each section with ##."
+            )
+
+        system_instruction = (
+            "당신은 한국법 전문 법률 문서 작성 AI입니다. "
+            "실제 법률문서 양식에 맞춰 정확하고 구체적인 초안을 작성합니다. "
+            "추측이나 허위 법조문을 절대 사용하지 마세요. "
+            "문서 내용만 출력하고, 부가 설명은 하지 마세요."
+            if lang == "ko"
+            else "You are a Korean law legal document drafting AI. "
+                 "Draft accurate, specific documents following proper Korean legal format. "
+                 "Never fabricate statutes or case numbers. "
+                 "Output only the document content, no additional commentary."
+        )
+
+        full_prompt = f"{doc_prompt}\n\n---\n\n{context}"
+        if extra:
+            additional = "추가 지시" if lang == "ko" else "Additional instructions"
+            full_prompt += f"\n\n[{additional}]\n{extra}"
+
+        # 별표서식 자동 참조 — 관련 서식이 있으면 프롬프트에 포함
+        drf = _RUNTIME.get("drf")
+        if drf:
+            try:
+                type_label = _DOC_TYPES[doc_type].get("ko", doc_type)
+                forms_result = await drf.search_forms_async(
+                    query=type_label, search=1, display=5,
+                )
+                if forms_result:
+                    raw_list = forms_result.get("LicBylInfoList", {}).get("licbyl", [])
+                    if isinstance(raw_list, dict):
+                        raw_list = [raw_list]
+                    if raw_list:
+                        forms_ref = "\n\n[참고 별표서식 (법령정보센터)]\n"
+                        for f in raw_list[:5]:
+                            fname = f.get("별표명", "")
+                            flaw = f.get("관련법령명", "")
+                            flink = f.get("별표서식파일링크", "")
+                            if fname:
+                                forms_ref += f"- {fname} ({flaw})"
+                                if flink:
+                                    forms_ref += f" [링크: {flink}]"
+                                forms_ref += "\n"
+                        full_prompt += forms_ref
+                        logger.info(f"[DOC] 별표서식 {len(raw_list)}건 참조 추가")
+            except Exception as e:
+                logger.warning(f"[DOC] 별표서식 조회 실패 (무시): {e}")
+
+        # Call Gemini
+        model = get_model()
+        response = await model.generate_content_async(
+            contents=full_prompt,
+            config=genai_types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=0.3,
+                max_output_tokens=4096,
+            ),
+        )
+
+        generated = response.text.strip() if response.text else ""
+        if not generated:
+            raise HTTPException(status_code=500, detail="문서 생성에 실패했습니다.")
+
+        # Parse sections from ## headings
+        sections = []
+        current_heading = ""
+        current_body_lines = []
+        for line in generated.split("\n"):
+            if line.strip().startswith("##"):
+                if current_heading or current_body_lines:
+                    sections.append({
+                        "heading": current_heading,
+                        "body": "\n".join(current_body_lines).strip(),
+                    })
+                current_heading = line.strip().lstrip("#").strip()
+                current_body_lines = []
+            else:
+                current_body_lines.append(line)
+        if current_heading or current_body_lines:
+            sections.append({
+                "heading": current_heading,
+                "body": "\n".join(current_body_lines).strip(),
+            })
+
+        title = _DOC_TYPES[doc_type].get(lang, doc_type)
+
+        logger.info(f"[DOC] Generated: {doc_type} ({lang}), {len(sections)} sections")
+
+        return {
+            "doc_type": doc_type,
+            "title": title,
+            "content": generated,
+            "sections": sections,
+            "lang": lang,
+            "download_ready": True,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[DOC] Generation failed: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail="문서 생성 중 오류가 발생했습니다.")
+
+
+@router.get("/document-types")
+async def list_document_types(request: Request):
+    """Return available document types for the document generator."""
+    return {
+        "types": [
+            {"key": k, "label_ko": v["ko"], "label_en": v["en"]}
+            for k, v in _DOC_TYPES.items()
+        ]
+    }
+
+
+# =============================================================
+# 별표서식 검색 (DRF target=licbyl)
+# =============================================================
+
+@router.get("/api/forms/search")
+@limiter.limit("30/minute")
+async def search_legal_forms(
+    request: Request,
+    query: str = "*",
+    search: int = 1,
+    display: int = 20,
+    knd: str = "",
+    page: int = 1,
+    source: str = "law",
+):
+    """
+    별표서식 목록 검색 (DRF licbyl / admbyl API)
+
+    Query params:
+        query: 검색어 (default="*")
+        search: 검색범위 (1:별표서식명, 2:해당법령검색, 3:별표본문검색)
+        display: 결과 개수 (default=20, max=100)
+        knd: 별표종류 (1:별표, 2:서식, 3:별지, 4:별도, 5:부록, "":전체)
+        page: 결과 페이지 (default=1)
+        source: "law" (법령 별표서식, licbyl) 또는 "admin" (행정규칙 별표서식, admbyl)
+
+    Returns:
+        정규화된 items 배열 + 메타데이터
+    """
+    try:
+        drf = _RUNTIME.get("drf")
+        if not drf:
+            raise HTTPException(status_code=503, detail="DRF 서비스를 사용할 수 없습니다.")
+
+        # Sanitize inputs
+        query = query.strip()[:200]
+        display = min(max(1, display), 100)
+        page = max(1, page)
+        if knd and knd not in ("1", "2", "3", "4", "5"):
+            knd = ""
+        source = source.strip().lower()
+        if source not in ("law", "admin"):
+            source = "law"
+
+        if source == "admin":
+            result = await drf.search_admin_forms_async(
+                query=query, search=search, display=display, knd=knd, page=page,
+            )
+        else:
+            result = await drf.search_forms_async(
+                query=query, search=search, display=display, knd=knd, page=page,
+            )
+
+        if not result:
+            return {"items": [], "totalCnt": 0, "page": page, "query": query, "source": source}
+
+        # Normalize response — DRF returns nested structure
+        # licbyl → LicBylInfoList, admbyl → same or similar structure
+        list_key = "LicBylInfoList" if source == "law" else "AdmBylInfoList"
+        item_key = "licbyl" if source == "law" else "admbyl"
+
+        container = result.get(list_key, {})
+        if not container:
+            # Fallback: try other key patterns
+            for k in result:
+                if "List" in k or "Info" in k:
+                    container = result[k]
+                    break
+
+        raw_list = container.get(item_key, []) if isinstance(container, dict) else []
+        if isinstance(raw_list, dict):
+            raw_list = [raw_list]
+
+        items = []
+        for entry in raw_list:
+            items.append({
+                "id": entry.get("별표일련번호", ""),
+                "name": entry.get("별표명", ""),
+                "law_name": entry.get("관련법령명", entry.get("관련행정규칙명", "")),
+                "law_id": entry.get("관련법령ID", entry.get("관련행정규칙ID", "")),
+                "number": entry.get("별표번호", ""),
+                "kind": entry.get("별표종류", ""),
+                "ministry": entry.get("소관부처명", ""),
+                "promulgation_date": entry.get("공포일자", ""),
+                "revision_type": entry.get("제개정구분명", ""),
+                "law_type": entry.get("법령종류", entry.get("행정규칙종류", "")),
+                "file_link": entry.get("별표서식파일링크", ""),
+                "pdf_link": entry.get("별표서식PDF파일링크", ""),
+                "detail_link": entry.get("별표법령상세링크", entry.get("별표행정규칙상세링크", "")),
+            })
+
+        total = container.get("totalCnt", len(items)) if isinstance(container, dict) else len(items)
+
+        return {
+            "items": items,
+            "totalCnt": int(total) if total else len(items),
+            "page": page,
+            "query": query,
+            "source": source,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[Forms] Search failed: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail="별표서식 검색 중 오류가 발생했습니다.")

@@ -45,6 +45,8 @@ _CACHE_TTL = {
     "lstrm": 7200,   # 2시간
     "decc": 7200,    # 2시간
     "trty": 21600,   # 6시간
+    "licbyl": 21600, # 6시간 (법령 별표서식)
+    "admbyl": 21600, # 6시간 (행정규칙 별표서식)
     "default": 3600, # 1시간
 }
 
@@ -579,6 +581,279 @@ class DRFConnector:
             logger.warning(f"[lawService] trty failed for ID={doc_id}: {str(e)}")
 
         logger.error(f"[lawService] Failed for target=trty, ID={doc_id}")
+        return None
+
+    # -------------------------------------------------
+    # 별표서식 검색 (licbyl)
+    # -------------------------------------------------
+    def search_forms(
+        self,
+        query: str = "*",
+        search: int = 1,
+        display: int = 20,
+        knd: str = "",
+        page: int = 1,
+    ) -> Optional[Any]:
+        """
+        별표서식 목록 조회 (target=licbyl)
+
+        Args:
+            query: 검색어 (default="*" 전체)
+            search: 검색범위 (1:별표서식명, 2:해당법령검색, 3:별표본문검색)
+            display: 결과 개수 (default=20, max=100)
+            knd: 별표종류 (1:별표, 2:서식, 3:별지, 4:별도, 5:부록, "":전체)
+            page: 결과 페이지 (default=1)
+
+        Returns:
+            JSON dict 또는 None
+        """
+        _init_cache()
+
+        cache_key = f"drf:v2:licbyl:{search}:{knd}:{page}:{hashlib.md5(query.encode('utf-8')).hexdigest()}"
+        try:
+            cached_data = _cache_get(cache_key)
+            if cached_data and cached_data.get("data"):
+                logger.info(f"🎯 [Cache HIT] licbyl, query={query[:30]}")
+                return cached_data["data"]
+        except Exception:
+            pass
+
+        logger.info(f"🔍 [Cache MISS] licbyl, query={query[:30]}")
+
+        params = {
+            "OC": self.drf_key,
+            "target": "licbyl",
+            "type": "JSON",
+            "query": query,
+            "search": search,
+            "display": display,
+            "page": page,
+        }
+        if knd:
+            params["knd"] = knd
+
+        last_err = None
+        for attempt in range(2):
+            try:
+                r = self._session.get(self.drf_url, params=params, timeout=self.timeout_sec)
+                if r.status_code != 200:
+                    raise RuntimeError(f"licbyl HTTP {r.status_code}")
+                result = r.json()
+                ttl = _CACHE_TTL.get("licbyl", _CACHE_TTL["default"])
+                try:
+                    _cache_set(
+                        cache_key,
+                        {"data": result, "query": query[:200], "target": "licbyl"},
+                        ttl_seconds=ttl,
+                    )
+                except Exception:
+                    pass
+                return result
+            except Exception as e:
+                last_err = e
+                if attempt < 1:
+                    wait = 0.5 + _random.uniform(0, 0.3)
+                    logger.warning(f"⚠️ licbyl 재시도: {e}, {wait:.1f}s 대기")
+                    _time.sleep(wait)
+
+        logger.error(f"[licbyl] 실패: {last_err}")
+        return None
+
+    async def search_forms_async(
+        self,
+        query: str = "*",
+        search: int = 1,
+        display: int = 20,
+        knd: str = "",
+        page: int = 1,
+    ) -> Optional[Any]:
+        """비동기 별표서식 검색"""
+        import asyncio as _aio
+        if not _HTTPX_AVAILABLE:
+            return await _aio.to_thread(self.search_forms, query, search, display, knd, page)
+
+        await _aio.to_thread(_init_cache)
+
+        cache_key = f"drf:v2:licbyl:{search}:{knd}:{page}:{hashlib.md5(query.encode('utf-8')).hexdigest()}"
+        try:
+            cached_data = await _aio.to_thread(_cache_get, cache_key)
+            if cached_data and cached_data.get("data"):
+                logger.info(f"🎯 [Cache HIT async] licbyl, query={query[:30]}")
+                return cached_data["data"]
+        except Exception:
+            pass
+
+        params = {
+            "OC": self.drf_key,
+            "target": "licbyl",
+            "type": "JSON",
+            "query": query,
+            "search": search,
+            "display": display,
+            "page": page,
+        }
+        if knd:
+            params["knd"] = knd
+
+        last_err = None
+        client = await self._get_async_client()
+        for attempt in range(2):
+            try:
+                r = await client.get(self.drf_url, params=params)
+                if r.status_code != 200:
+                    raise RuntimeError(f"licbyl HTTP {r.status_code}")
+                result = r.json()
+                ttl = _CACHE_TTL.get("licbyl", _CACHE_TTL["default"])
+                try:
+                    await _aio.to_thread(
+                        _cache_set, cache_key,
+                        {"data": result, "query": query[:200], "target": "licbyl"},
+                        ttl,
+                    )
+                except Exception:
+                    pass
+                return result
+            except Exception as e:
+                last_err = e
+                if attempt < 1:
+                    await _aio.sleep(0.5 + _random.uniform(0, 0.3))
+
+        logger.error(f"[licbyl async] 실패: {last_err}")
+        return None
+
+    # -------------------------------------------------
+    # 행정규칙 별표서식 검색 (admbyl)
+    # -------------------------------------------------
+    def search_admin_forms(
+        self,
+        query: str = "*",
+        search: int = 1,
+        display: int = 20,
+        knd: str = "",
+        page: int = 1,
+    ) -> Optional[Any]:
+        """
+        행정규칙 별표서식 목록 조회 (target=admbyl)
+
+        Args:
+            query: 검색어 (default="*" 전체)
+            search: 검색범위 (1:별표서식명, 2:해당법령검색, 3:별표본문검색)
+            display: 결과 개수 (default=20, max=100)
+            knd: 별표종류 (1:별표, 2:서식, 3:별지, 4:별도, 5:부록, "":전체)
+            page: 결과 페이지 (default=1)
+
+        Returns:
+            JSON dict 또는 None
+        """
+        _init_cache()
+
+        cache_key = f"drf:v2:admbyl:{search}:{knd}:{page}:{hashlib.md5(query.encode('utf-8')).hexdigest()}"
+        try:
+            cached_data = _cache_get(cache_key)
+            if cached_data and cached_data.get("data"):
+                logger.info(f"🎯 [Cache HIT] admbyl, query={query[:30]}")
+                return cached_data["data"]
+        except Exception:
+            pass
+
+        params = {
+            "OC": self.drf_key,
+            "target": "admbyl",
+            "type": "JSON",
+            "query": query,
+            "search": search,
+            "display": display,
+            "page": page,
+        }
+        if knd:
+            params["knd"] = knd
+
+        last_err = None
+        for attempt in range(2):
+            try:
+                r = self._session.get(self.drf_url, params=params, timeout=self.timeout_sec)
+                if r.status_code != 200:
+                    raise RuntimeError(f"admbyl HTTP {r.status_code}")
+                result = r.json()
+                ttl = _CACHE_TTL.get("admbyl", _CACHE_TTL["default"])
+                try:
+                    _cache_set(
+                        cache_key,
+                        {"data": result, "query": query[:200], "target": "admbyl"},
+                        ttl_seconds=ttl,
+                    )
+                except Exception:
+                    pass
+                return result
+            except Exception as e:
+                last_err = e
+                if attempt < 1:
+                    wait = 0.5 + _random.uniform(0, 0.3)
+                    logger.warning(f"⚠️ admbyl 재시도: {e}, {wait:.1f}s 대기")
+                    _time.sleep(wait)
+
+        logger.error(f"[admbyl] 실패: {last_err}")
+        return None
+
+    async def search_admin_forms_async(
+        self,
+        query: str = "*",
+        search: int = 1,
+        display: int = 20,
+        knd: str = "",
+        page: int = 1,
+    ) -> Optional[Any]:
+        """비동기 행정규칙 별표서식 검색"""
+        import asyncio as _aio
+        if not _HTTPX_AVAILABLE:
+            return await _aio.to_thread(self.search_admin_forms, query, search, display, knd, page)
+
+        await _aio.to_thread(_init_cache)
+
+        cache_key = f"drf:v2:admbyl:{search}:{knd}:{page}:{hashlib.md5(query.encode('utf-8')).hexdigest()}"
+        try:
+            cached_data = await _aio.to_thread(_cache_get, cache_key)
+            if cached_data and cached_data.get("data"):
+                return cached_data["data"]
+        except Exception:
+            pass
+
+        params = {
+            "OC": self.drf_key,
+            "target": "admbyl",
+            "type": "JSON",
+            "query": query,
+            "search": search,
+            "display": display,
+            "page": page,
+        }
+        if knd:
+            params["knd"] = knd
+
+        last_err = None
+        client = await self._get_async_client()
+        for attempt in range(2):
+            try:
+                r = await client.get(self.drf_url, params=params)
+                if r.status_code != 200:
+                    raise RuntimeError(f"admbyl HTTP {r.status_code}")
+                result = r.json()
+                ttl = _CACHE_TTL.get("admbyl", _CACHE_TTL["default"])
+                try:
+                    await _aio.to_thread(
+                        _cache_set, cache_key,
+                        {"data": result, "query": query[:200], "target": "admbyl"},
+                        ttl,
+                    )
+                except Exception:
+                    pass
+                return result
+            except Exception as e:
+                last_err = e
+                if attempt < 1:
+                    await _aio.sleep(0.5 + _random.uniform(0, 0.3))
+
+        logger.error(f"[admbyl async] 실패: {last_err}")
         return None
 
     # -------------------------------------------------
