@@ -29,13 +29,41 @@ logger = logging.getLogger("LawmadiOS.Paddle")
 router = APIRouter(prefix="/api/paddle", tags=["paddle"])
 
 # Limiter is injected from app.state.limiter via set_limiter()
-limiter = None
+_real_limiter = None
+
+
+class _LazyLimiter:
+    """Proxy that defers .limit() calls until the real limiter is injected.
+
+    At import time _real_limiter is None, so @limiter.limit("3/minute")
+    must not crash.  This proxy records the rate string and returns a
+    decorator that applies the real limiter at request time.
+    """
+
+    def limit(self, rate: str):
+        """Return a decorator that enforces *rate* via the real limiter."""
+        def decorator(func):
+            import functools
+
+            @functools.wraps(func)
+            async def wrapper(*args, **kwargs):
+                if _real_limiter is not None:
+                    # Build and invoke the real limiter decorator on each call
+                    real_decorator = _real_limiter.limit(rate)
+                    wrapped = real_decorator(func)
+                    return await wrapped(*args, **kwargs)
+                return await func(*args, **kwargs)
+            return wrapper
+        return decorator
+
+
+limiter = _LazyLimiter()
 
 
 def set_limiter(app_limiter):
     """Inject the app-level SlowAPI limiter so rate limits actually enforce."""
-    global limiter
-    limiter = app_limiter
+    global _real_limiter
+    _real_limiter = app_limiter
 
 # ─── Config ───
 PADDLE_WEBHOOK_SECRET = os.getenv("PADDLE_WEBHOOK_SECRET", "").strip()
