@@ -48,6 +48,9 @@
                     Paddle.Environment.set(cfg.environment || 'production');
                     Paddle.Initialize({ token: cfg.client_token });
                     state.paddleReady = true;
+                    console.log('[Paddle] Initialized:', cfg.environment);
+                } else {
+                    console.warn('[Paddle] SDK not loaded or no client_token. Paddle:', typeof Paddle, 'token:', !!cfg.client_token);
                 }
             })
             .catch(function(e) { console.warn('[Paddle] Config fetch failed:', e); });
@@ -210,17 +213,22 @@
             return;
         }
 
-        Paddle.Checkout.open({
-            items: [{ priceId: priceId, quantity: 1 }],
-            customer: { email: state.email },
-            customData: { pack: pack },
-            settings: {
-                displayMode: 'overlay',
-                theme: 'dark',
-                locale: pageLang === 'en' ? 'en' : 'ko',
-                successUrl: location.origin + (pageLang === 'en' ? '/pricing-en' : '/pricing') + '?success=1'
-            }
-        });
+        try {
+            Paddle.Checkout.open({
+                items: [{ priceId: priceId, quantity: 1 }],
+                customer: { email: state.email },
+                customData: { pack: pack },
+                settings: {
+                    displayMode: 'overlay',
+                    theme: 'dark',
+                    locale: pageLang === 'en' ? 'en' : 'ko',
+                    successUrl: location.origin + (pageLang === 'en' ? '/pricing-en' : '/pricing') + '?success=1'
+                }
+            });
+        } catch (err) {
+            console.error('[Paddle] Checkout open failed:', err);
+            alert(pageLang === 'en' ? 'Payment system error. Please refresh and try again.' : '결제 시스템 오류가 발생했습니다. 새로고침 후 다시 시도해주세요.');
+        }
     }
 
     // ─── Buy Button Handlers ───
