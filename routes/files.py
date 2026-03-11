@@ -318,7 +318,7 @@ async def analyze_document(request: Request, file_id: str, analysis_type: str = 
 # =============================================================
 
 async def _analyze_image_document(file_path: Path, analysis_type: str) -> Dict[str, Any]:
-    """Analyze image document via Gemini Vision."""
+    """Analyze image document via Gemini Vision with precision OCR."""
     logger.info(f"[Analyze] Image analysis started: {file_path.name}")
 
     gc = _RUNTIME.get("genai_client")
@@ -327,73 +327,104 @@ async def _analyze_image_document(file_path: Path, analysis_type: str) -> Dict[s
     with open(file_path, "rb") as f:
         image_data = f.read()
 
+    # OCR 정밀 추출 프롬프트 (공통)
+    ocr_instruction = (
+        "## 1단계: OCR 텍스트 정밀 추출\n"
+        "이 이미지에서 모든 텍스트를 정확하게 추출해주세요.\n"
+        "- 한국어, 영어, 숫자, 특수문자를 빠짐없이 인식하세요.\n"
+        "- 표, 양식, 도장/인감, 서명란, 날짜, 금액도 정확히 추출하세요.\n"
+        "- 손글씨가 있으면 최대한 판독하되, 불확실한 부분은 [판독불가]로 표시하세요.\n"
+        "- 인쇄 품질이 낮거나 흐린 부분도 최대한 읽어주세요.\n"
+        "- 문서 레이아웃(제목, 본문, 각주, 표)을 구분하여 추출하세요.\n\n"
+        "## 2단계: 법률적 분석\n"
+        "추출한 텍스트를 기반으로 아래 형식의 법률 분석을 수행하세요.\n\n"
+    )
+
     # Build prompt
     if analysis_type == "contract":
-        prompt = """
-이 이미지에 있는 계약서를 분석해주세요.
-
-다음 형식으로 JSON 응답을 제공해주세요:
+        prompt = ocr_instruction + """다음 형식으로 JSON 응답을 제공해주세요:
 {
+    "ocr_text": "추출된 전체 텍스트 (원문 그대로, 최대 3000자)",
+    "ocr_confidence": "high/medium/low (전체 텍스트 판독 신뢰도)",
     "summary": "계약서 요약 (3-5문장)",
     "contract_type": "계약서 종류 (예: 임대차계약, 근로계약, 매매계약 등)",
-    "parties": ["당사자1", "당사자2"],
+    "parties": ["당사자1 (이름/회사명)", "당사자2"],
+    "contract_date": "계약 체결일 (인식된 경우)",
+    "contract_amount": "계약금액 (인식된 경우)",
+    "contract_period": "계약기간 (인식된 경우)",
     "key_terms": [
-        {"term": "조항명", "content": "내용", "issue": "문제점 또는 확인 필요 사항"}
+        {"term": "조항명/번호", "content": "내용 요약", "issue": "문제점 또는 확인 필요 사항"}
     ],
-    "legal_issues": [
-        "법률적 문제점 1",
-        "법률적 문제점 2"
-    ],
+    "missing_clauses": ["누락된 중요 조항 (예: 해지조항, 위약금 조항 등)"],
+    "legal_issues": ["법률적 문제점 1", "법률적 문제점 2"],
     "risk_level": "low/medium/high/critical",
-    "recommendations": [
-        "권고사항 1",
-        "권고사항 2"
-    ],
-    "legal_category": "민사/형사/행정/노동 등"
-}
-"""
+    "recommendations": ["권고사항 1", "권고사항 2"],
+    "legal_category": "민사/형사/행정/노동 등",
+    "relevant_laws": ["관련 법령명 (예: 주택임대차보호법, 근로기준법 등)"]
+}"""
     elif analysis_type == "risk_assessment":
-        prompt = """
-이 문서의 법률적 위험도를 평가해주세요.
-
-다음 형식으로 JSON 응답을 제공해주세요:
+        prompt = ocr_instruction + """다음 형식으로 JSON 응답을 제공해주세요:
 {
+    "ocr_text": "추출된 전체 텍스트 (원문 그대로, 최대 3000자)",
+    "ocr_confidence": "high/medium/low",
     "summary": "문서 요약",
+    "document_type": "문서 종류",
     "risk_level": "low/medium/high/critical",
     "risk_factors": [
-        {"factor": "위험 요소", "severity": "심각도", "description": "설명"}
+        {"factor": "위험 요소", "severity": "상/중/하", "description": "구체적 설명", "mitigation": "대응 방안"}
     ],
     "legal_issues": ["법률적 쟁점"],
     "recommendations": ["권고사항"],
-    "legal_category": "법률 분야"
-}
-"""
+    "legal_category": "법률 분야",
+    "relevant_laws": ["관련 법령명"]
+}"""
     else:  # general
-        prompt = """
-이 문서를 법률적 관점에서 분석해주세요.
-
-다음 형식으로 JSON 응답을 제공해주세요:
+        prompt = ocr_instruction + """다음 형식으로 JSON 응답을 제공해주세요:
 {
+    "ocr_text": "추출된 전체 텍스트 (원문 그대로, 최대 3000자)",
+    "ocr_confidence": "high/medium/low (전체 텍스트 판독 신뢰도)",
     "summary": "문서 요약 (3-5문장)",
-    "document_type": "문서 종류",
+    "document_type": "문서 종류 (예: 계약서, 판결문, 통지서, 영수증, 소장, 등기부등본 등)",
+    "dates_found": ["문서에서 발견된 날짜들"],
+    "amounts_found": ["문서에서 발견된 금액들"],
+    "persons_found": ["문서에서 발견된 인명/기관명"],
     "legal_issues": ["법률적 쟁점 1", "법률적 쟁점 2"],
     "risk_level": "low/medium/high/critical",
     "recommendations": ["권고사항 1", "권고사항 2"],
     "legal_category": "민사/형사/행정/노동 등",
-    "key_points": ["핵심 내용 1", "핵심 내용 2"]
-}
-"""
+    "key_points": ["핵심 내용 1", "핵심 내용 2"],
+    "relevant_laws": ["관련 법령명 (예: 민법, 형법 등)"]
+}"""
 
-    # Gemini Vision call (이벤트 루프 블로킹 방지)
-    image_part = genai_types.Part.from_bytes(data=image_data, mime_type=f"image/{file_path.suffix[1:]}")
+    # Determine MIME type
+    ext = file_path.suffix[1:].lower()
+    mime_map = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}
+    mime_type = mime_map.get(ext, f"image/{ext}")
+
+    # Gemini Vision call
+    image_part = genai_types.Part.from_bytes(data=image_data, mime_type=mime_type)
     import asyncio
     _model = get_model()
+
+    # System instruction for OCR precision
+    system_inst = (
+        "당신은 한국 법률 문서 전문 OCR 분석 AI입니다. "
+        "이미지에서 텍스트를 정밀하게 추출하고, 추출된 텍스트를 기반으로 법률적 분석을 수행합니다. "
+        "OCR 추출 시 한국어 법률 용어(조, 항, 호, 목), 금액(원, 만원, 억원), "
+        "날짜(년, 월, 일), 당사자 정보에 특히 주의하세요. "
+        "추측하지 말고, 이미지에서 실제로 보이는 내용만 추출하세요. "
+        "판독이 어려운 부분은 [판독불가] 또는 [불명확: 추정값]으로 표시하세요. "
+        "반드시 유효한 JSON만 출력하세요."
+    )
+
     response = await asyncio.to_thread(
         gc.models.generate_content,
         model=_model,
         contents=[prompt, image_part],
         config=genai_types.GenerateContentConfig(
-            thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
+            system_instruction=system_inst,
+            temperature=0.1,  # Lower temperature for more precise OCR
+            max_output_tokens=4096,
         ),
     )
 
@@ -409,17 +440,26 @@ async def _analyze_image_document(file_path: Path, analysis_type: str) -> Dict[s
     try:
         analysis_result = json.loads(result_text)
     except json.JSONDecodeError:
-        # JSON parse failure — return raw text
-        analysis_result = {
-            "summary": result_text[:500],
-            "legal_issues": ["분석 결과를 구조화하지 못했습니다."],
-            "risk_level": "medium",
-            "recommendations": ["전문가 확인이 필요합니다."],
-            "legal_category": "일반",
-            "raw_response": result_text
-        }
+        # JSON parse failure — try to salvage
+        logger.warning(f"[Analyze] JSON parse failed, attempting repair")
+        # Try removing trailing comma
+        cleaned = re.sub(r',\s*([}\]])', r'\1', result_text)
+        try:
+            analysis_result = json.loads(cleaned)
+        except json.JSONDecodeError:
+            analysis_result = {
+                "ocr_text": result_text[:2000],
+                "ocr_confidence": "low",
+                "summary": result_text[:500],
+                "document_type": "판독 결과",
+                "legal_issues": ["OCR 분석 결과를 구조화하지 못했습니다."],
+                "risk_level": "medium",
+                "recommendations": ["전문가 확인이 필요합니다."],
+                "legal_category": "일반",
+                "raw_response": result_text
+            }
 
-    logger.info("[Analyze] Image analysis complete")
+    logger.info(f"[Analyze] Image analysis complete (confidence: {analysis_result.get('ocr_confidence', 'N/A')})")
     return analysis_result
 
 
@@ -430,66 +470,138 @@ async def _analyze_image_document(file_path: Path, analysis_type: str) -> Dict[s
 async def _analyze_pdf_document(file_path: Path, analysis_type: str) -> Dict[str, Any]:
     """
     Analyze PDF document.
-    Uses PyPDF2 for text extraction, then Gemini for analysis.
+    Strategy: PyPDF2 text extraction → if too short (scan PDF), use Gemini Vision on pages.
     """
     logger.info(f"[Analyze] PDF analysis: {file_path.name}")
 
-    # Check if PyPDF2 is installed
+    import asyncio
+    gc = _RUNTIME.get("genai_client")
+
+    text = ""
+    page_count = 0
+
+    # Try PyPDF2 text extraction first
     try:
         import PyPDF2
-
-        # Extract PDF text
         with open(file_path, "rb") as f:
             pdf_reader = PyPDF2.PdfReader(f)
-            text = ""
-            for page in pdf_reader.pages:
-                text += page.extract_text() + "\n"
+            page_count = len(pdf_reader.pages)
+            for page in pdf_reader.pages[:20]:  # Max 20 pages
+                page_text = page.extract_text() or ""
+                text += page_text + "\n"
+        logger.info(f"[Analyze] PDF text extracted: {len(text)} chars, {page_count} pages")
+    except ImportError:
+        logger.warning("[Analyze] PyPDF2 not installed")
+    except Exception as e:
+        logger.warning(f"[Analyze] PyPDF2 extraction failed: {e}")
 
-        logger.info(f"[Analyze] PDF text extracted: {len(text)} chars")
+    # If text is too short (likely a scanned/image PDF), try Gemini Vision
+    stripped_text = text.strip()
+    is_scan_pdf = len(stripped_text) < 100
 
-        # Gemini text analysis
-        gc = _RUNTIME.get("genai_client")
+    if is_scan_pdf:
+        logger.info("[Analyze] PDF appears to be scanned/image — attempting Gemini Vision OCR")
+        try:
+            with open(file_path, "rb") as f:
+                pdf_data = f.read()
+            pdf_part = genai_types.Part.from_bytes(data=pdf_data, mime_type="application/pdf")
 
-        prompt = f"""
-다음 PDF 문서를 법률적 관점에서 분석해주세요.
+            ocr_prompt = (
+                "이 PDF 문서에서 모든 텍스트를 정밀하게 추출해주세요.\n"
+                "- 한국어, 영어, 숫자, 특수문자를 빠짐없이 인식하세요.\n"
+                "- 표, 양식, 도장/인감, 서명란, 날짜, 금액도 정확히 추출하세요.\n"
+                "- 손글씨가 있으면 최대한 판독하되, 불확실한 부분은 [판독불가]로 표시하세요.\n"
+                "- 문서 레이아웃(제목, 본문, 각주, 표)을 구분하여 추출하세요.\n\n"
+                "추출한 텍스트를 원문 그대로 출력해주세요. JSON이 아닌 일반 텍스트로 출력하세요."
+            )
+            _model = get_model()
+            ocr_response = await asyncio.to_thread(
+                gc.models.generate_content,
+                model=_model,
+                contents=[ocr_prompt, pdf_part],
+                config=genai_types.GenerateContentConfig(
+                    system_instruction="당신은 정밀 OCR 전문 AI입니다. 문서에서 보이는 텍스트를 정확하게 추출합니다.",
+                    temperature=0.1,
+                    max_output_tokens=4096,
+                ),
+            )
+            ocr_text = ocr_response.text.strip() if ocr_response.text else ""
+            if len(ocr_text) > len(stripped_text):
+                text = ocr_text
+                logger.info(f"[Analyze] Gemini Vision OCR: {len(text)} chars extracted")
+        except Exception as e:
+            logger.warning(f"[Analyze] Gemini Vision PDF OCR failed: {e}")
 
-문서 내용:
+    if not text.strip():
+        return {
+            "summary": "PDF에서 텍스트를 추출할 수 없습니다.",
+            "ocr_text": "",
+            "ocr_confidence": "low",
+            "legal_issues": ["텍스트 추출 불가 — 이미지 형식으로 재업로드를 시도해주세요."],
+            "risk_level": "medium",
+            "recommendations": ["PDF를 이미지(JPG/PNG)로 변환하여 다시 업로드하시거나, 텍스트 기반 PDF를 사용해주세요."],
+            "legal_category": "일반",
+        }
+
+    # Build analysis prompt
+    system_inst = (
+        "당신은 한국 법률 문서 분석 AI입니다. "
+        "문서 텍스트를 기반으로 법률적 분석을 수행합니다. "
+        "추측하지 말고, 문서에 실제로 있는 내용만 분석하세요. "
+        "반드시 유효한 JSON만 출력하세요."
+    )
+
+    analysis_prompt = f"""다음 PDF 문서를 법률적 관점에서 분석해주세요.
+
+문서 내용 ({page_count}페이지):
 {text[:10000]}
 
 다음 형식으로 JSON 응답을 제공해주세요:
 {{
-    "summary": "문서 요약",
-    "document_type": "문서 종류",
-    "legal_issues": ["법률적 쟁점"],
+    "ocr_text": "{text[:200].replace(chr(10), ' ')}... (이미 추출됨, 이 필드에는 핵심 내용 200자만 요약)",
+    "ocr_confidence": "{'low' if is_scan_pdf else 'high'}",
+    "summary": "문서 요약 (3-5문장)",
+    "document_type": "문서 종류 (예: 계약서, 판결문, 통지서, 등기부등본 등)",
+    "dates_found": ["문서에서 발견된 주요 날짜들"],
+    "amounts_found": ["문서에서 발견된 주요 금액들"],
+    "persons_found": ["문서에서 발견된 인명/기관명"],
+    "legal_issues": ["법률적 쟁점 1", "법률적 쟁점 2"],
     "risk_level": "low/medium/high/critical",
-    "recommendations": ["권고사항"],
-    "legal_category": "법률 분야",
-    "key_points": ["핵심 내용"]
-}}
-"""
+    "recommendations": ["권고사항 1", "권고사항 2"],
+    "legal_category": "민사/형사/행정/노동 등",
+    "key_points": ["핵심 내용 1", "핵심 내용 2"],
+    "relevant_laws": ["관련 법령명"]
+}}"""
 
-        import asyncio
-        _model = get_model()
-        response = await asyncio.to_thread(
-            gc.models.generate_content,
-            model=_model,
-            contents=prompt,
-            config=genai_types.GenerateContentConfig(
-                thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
-            ),
-        )
-        result_text = response.text.strip()
+    _model = get_model()
+    response = await asyncio.to_thread(
+        gc.models.generate_content,
+        model=_model,
+        contents=analysis_prompt,
+        config=genai_types.GenerateContentConfig(
+            system_instruction=system_inst,
+            temperature=0.2,
+            max_output_tokens=4096,
+        ),
+    )
+    result_text = response.text.strip()
 
-        # Extract JSON
-        if "```json" in result_text:
-            result_text = result_text.split("```json")[1].split("```")[0].strip()
-        elif "```" in result_text:
-            result_text = result_text.split("```")[1].split("```")[0].strip()
+    # Extract JSON
+    if "```json" in result_text:
+        result_text = result_text.split("```json")[1].split("```")[0].strip()
+    elif "```" in result_text:
+        result_text = result_text.split("```")[1].split("```")[0].strip()
 
+    try:
+        analysis_result = json.loads(result_text)
+    except json.JSONDecodeError:
+        cleaned = re.sub(r',\s*([}\]])', r'\1', result_text)
         try:
-            analysis_result = json.loads(result_text)
+            analysis_result = json.loads(cleaned)
         except json.JSONDecodeError:
             analysis_result = {
+                "ocr_text": text[:2000],
+                "ocr_confidence": "low" if is_scan_pdf else "medium",
                 "summary": result_text[:500],
                 "legal_issues": ["분석 결과를 구조화하지 못했습니다."],
                 "risk_level": "medium",
@@ -497,17 +609,7 @@ async def _analyze_pdf_document(file_path: Path, analysis_type: str) -> Dict[str
                 "legal_category": "일반"
             }
 
-        return analysis_result
-
-    except ImportError:
-        logger.warning("[Analyze] PyPDF2 not installed")
-        return {
-            "summary": "PDF 분석 기능은 PyPDF2 패키지가 필요합니다.",
-            "legal_issues": ["PDF 텍스트 추출 불가"],
-            "risk_level": "medium",
-            "recommendations": ["이미지 형식으로 변환하여 업로드하시거나, 관리자에게 문의하세요."],
-            "legal_category": "일반"
-        }
+    return analysis_result
 
 
 # =============================================================
