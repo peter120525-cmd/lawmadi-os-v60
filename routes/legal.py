@@ -295,6 +295,8 @@ async def ask(request: Request):
         # 대화 히스토리 → Gemini Content 형식 변환 (최근 6턴)
         gemini_history = []
         for msg in raw_history:
+            if not isinstance(msg, dict):
+                continue
             role = msg.get("role", "")
             content = msg.get("content", "")
             if role == "user" and content:
@@ -1043,6 +1045,8 @@ async def ask_stream(request: Request):
 
         gemini_history = []
         for msg in raw_history:
+            if not isinstance(msg, dict):
+                continue
             role = msg.get("role", "")
             content = msg.get("content", "")
             if role == "user" and content:
@@ -1070,7 +1074,8 @@ async def ask_stream(request: Request):
         swarm_mode = False
 
         def _sse(event: str, payload: dict) -> str:
-            return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
+            safe_event = event.replace("\n", "").replace("\r", "")
+            return f"event: {safe_event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
         async def _async_stream_chunks(sync_stream):
             """동기 스트림 이터레이터를 비동기로 소비 (이벤트 루프 블로킹 방지)"""
@@ -1633,14 +1638,9 @@ async def ask_stream(request: Request):
                 "swarm_mode": swarm_mode,
             })
 
-            # 크레딧 차감 (성공 응답 후)
+            # 크레딧 차감 (성공 응답 후) — lock 해제는 finally에서 처리
             if _post_deduct_fn:
                 _post_deduct_fn(request, "general", trace)
-            elif _release_user_lock_fn:
-                try:
-                    _release_user_lock_fn(request)
-                except Exception:
-                    pass
 
             # answer_done 이벤트
             yield _sse("answer_done", {
@@ -1737,7 +1737,8 @@ async def ask_stream(request: Request):
                 "latency_ms": int((time.time() - start_time) * 1000),
                 "trace_id": trace, "status": "ERROR",
             })
-            # 에러 시에도 동시 요청 카운터 해제
+        finally:
+            # 모든 경로(성공, 조기리턴, 에러)에서 동시 요청 카운터 해제
             if _release_user_lock_fn:
                 try:
                     _release_user_lock_fn(request)

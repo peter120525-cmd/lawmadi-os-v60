@@ -356,10 +356,16 @@ async def blacklist_middleware(request: Request, call_next):
 
 
 def _get_client_ip_fast(request: Request) -> str:
-    """블랙리스트 미들웨어용 경량 IP 추출 (ipaddress 검증 생략)."""
+    """블랙리스트 미들웨어용 IP 추출 (_get_client_ip와 동일 로직)."""
+    import ipaddress as _ipa
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
-        return forwarded.split(",")[-1].strip()
+        for ip in reversed([s.strip() for s in forwarded.split(",")]):
+            try:
+                _ipa.ip_address(ip)
+                return ip
+            except (ValueError, TypeError):
+                continue
     if request.client and request.client.host:
         return request.client.host
     return "unknown"
@@ -826,6 +832,8 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
         cost = 2 if mode == "expert" else 1
 
         # 동시 요청 제한: 같은 유저가 이미 진행 중인 요청이 있으면 차단 (TOCTOU 방지)
+        # user_id를 request.state에 저장 (lock 해제 시 DB 재조회 불필요)
+        request.state._locked_user_id = user_id
         if user_id:
             with _active_user_lock:
                 if _active_user_requests.get(user_id, 0) >= 1:
@@ -948,13 +956,11 @@ def _rate_limit_response(retry_at_kst: str = ""):
 def _release_user_lock(request: Request):
     """동시 요청 카운터 해제 (응답 완료 후 반드시 호출)."""
     try:
-        session_token = request.cookies.get("__session", "").strip()
-        if session_token:
-            user = _get_paddle_user(request)
-            if user and user.get("user_id"):
-                with _active_user_lock:
-                    uid = user["user_id"]
-                    _active_user_requests[uid] = max(0, _active_user_requests.get(uid, 0) - 1)
+        # request.state에서 lock 획득 시 저장한 user_id 사용 (DB 재조회 불필요)
+        uid = getattr(request.state, "_locked_user_id", None)
+        if uid:
+            with _active_user_lock:
+                _active_user_requests[uid] = max(0, _active_user_requests.get(uid, 0) - 1)
     except Exception:
         pass
 

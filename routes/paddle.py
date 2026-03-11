@@ -394,7 +394,7 @@ async def _send_otp_email(email: str, code: str) -> bool:
         from email.mime.multipart import MIMEMultipart
 
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"[Lawmadi] Verification Code: {code}"
+        msg["Subject"] = "[Lawmadi] Your Verification Code"
         msg["From"] = f"Lawmadi OS <{smtp_from}>"
         msg["To"] = email
 
@@ -723,6 +723,9 @@ def _get_query_cost(query_type: str) -> int:
 
 def deduct_credit(user_id: str, amount: int = 1, reference_id: str = "") -> bool:
     """Post-deduction: deduct credits atomically with ledger entry. FOR UPDATE lock."""
+    if amount <= 0:
+        logger.warning(f"[Credit] deduct_credit 거부: amount={amount} (must be > 0)")
+        return False
     from connectors.db_client import _db_enabled, get_connection, release_connection
     if not _db_enabled():
         return False
