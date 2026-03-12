@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lawmadi OS — Launch Helper</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a1628; color: #e2e8f0; padding: 16px; line-height: 1.6; }
+h1 { color: #60a5fa; font-size: 24px; margin-bottom: 8px; }
+h2 { color: #93c5fd; font-size: 18px; margin: 24px 0 8px; border-bottom: 1px solid #1e3a5f; padding-bottom: 4px; }
+h3 { color: #a78bfa; font-size: 15px; margin: 16px 0 6px; }
+.card { background: #111827; border: 1px solid #1e3a5f; border-radius: 12px; padding: 16px; margin: 12px 0; }
+.copy-box { position: relative; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px; margin: 8px 0; font-size: 13px; white-space: pre-wrap; word-break: break-word; max-height: 300px; overflow-y: auto; }
+.copy-btn { position: absolute; top: 6px; right: 6px; background: #3b82f6; color: white; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; cursor: pointer; z-index: 1; }
+.copy-btn:active { background: #2563eb; }
+.copy-btn.copied { background: #10b981; }
+.link-btn { display: inline-block; background: #3b82f6; color: white; text-decoration: none; border-radius: 8px; padding: 10px 20px; margin: 6px 4px 6px 0; font-size: 14px; font-weight: 600; }
+.link-btn:active { background: #2563eb; }
+.link-btn.reddit { background: #ff4500; }
+.link-btn.ph { background: #da552f; }
+.link-btn.hn { background: #ff6600; }
+.link-btn.devto { background: #0a0a0a; border: 1px solid #333; }
+.tag { display: inline-block; background: #1e3a5f; color: #93c5fd; border-radius: 4px; padding: 2px 8px; font-size: 11px; margin: 2px; }
+.step { color: #fbbf24; font-weight: bold; }
+.done-list { list-style: none; padding: 0; }
+.done-list li { padding: 4px 0; }
+.done-list li::before { content: "✅ "; }
+.todo-list { list-style: none; padding: 0; }
+.todo-list li { padding: 4px 0; }
+.todo-list li::before { content: "⬜ "; }
+small { color: #64748b; }
+</style>
+<script>
+function copyText(id) {
+  const el = document.getElementById(id);
+  const text = el.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = el.parentElement.querySelector('.copy-btn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+</script>
+</head>
+<body>
+
+<h1>Lawmadi OS Launch Helper</h1>
+<p><small>각 섹션의 Copy 버튼으로 내용을 복사 → 해당 사이트에 붙여넣기</small></p>
+
+<!-- DONE -->
+<h2>Done (GitHub)</h2>
+<ul class="done-list">
+  <li><a href="https://github.com/peter120525-cmd/lawmadi-os-v60/releases/tag/v60.0.0" style="color:#60a5fa">Release v60.0.0</a></li>
+  <li><a href="https://github.com/peter120525-cmd/lawmadi-os-v60/discussions/5" style="color:#60a5fa">Discussion: Show & Tell</a></li>
+  <li><a href="https://github.com/peter120525-cmd/lawmadi-os-v60/discussions/6" style="color:#60a5fa">Discussion: Announcement</a></li>
+  <li><a href="https://gist.github.com/peter120525-cmd/0e9254451e2cfde7039310e8cca5e528" style="color:#60a5fa">Gist: English</a></li>
+  <li><a href="https://gist.github.com/peter120525-cmd/03240982188ca0ee58aa802f82bd54b2" style="color:#60a5fa">Gist: Korean</a></li>
+  <li><a href="https://gist.github.com/peter120525-cmd/e63ee1e716f9287e5f279d6e1bdd8d3d" style="color:#60a5fa">Gist: Tech Deep-dive</a></li>
+</ul>
+
+<!-- PRODUCT HUNT -->
+<h2>1. Product Hunt</h2>
+<a href="https://www.producthunt.com/posts/new" class="link-btn ph" target="_blank">Open Product Hunt Submit</a>
+
+<div class="card">
+<h3>Name</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('ph-name')">Copy</button><span id="ph-name">Lawmadi OS</span></div>
+
+<h3>Tagline</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('ph-tagline')">Copy</button><span id="ph-tagline">60 AI legal experts that verify every answer against live Korean statutes</span></div>
+
+<h3>URL</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('ph-url')">Copy</button><span id="ph-url">https://lawmadi.com</span></div>
+
+<h3>Topics</h3>
+<span class="tag">Legal Tech</span> <span class="tag">Artificial Intelligence</span> <span class="tag">SaaS</span>
+
+<h3>Description</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('ph-desc')">Copy</button><span id="ph-desc">Lawmadi OS is a legal decision operating system that turns legal anxiety into clear action plans.
+
+How it works:
+• Ask any Korean legal question in Korean or English
+• Our NLU engine routes your query to the right expert among 60 specialized AI legal agents (labor, divorce, real estate, traffic accidents, criminal law, and 55 more)
+• Every response goes through a 4-stage pipeline: Intent Classification → RAG Search → Gemini Analysis → Real-time Statute Verification
+• All statute citations are verified against live government APIs (law.go.kr) — no hallucinated laws
+
+What makes Lawmadi OS different:
+• 60 Domain Experts — Each agent specializes in a specific area of Korean law
+• Real-time Verification — Every citation cross-checked against 10 official government data sources
+• Empathy-First Responses — Emotional acknowledgment → Situation diagnosis → Action roadmap → Safety net → Supportive closing
+• Bilingual — Full Korean and English support
+• Fail-Closed — If verification fails, the system refuses to answer rather than risk providing unverified legal guidance
+
+Pricing:
+• Free: 2 queries/day
+• Starter: 20 queries — $1.50
+• Standard: 100 queries — $4.99
+• Pro: 300 queries — $9.99</span></div>
+
+<h3>First Comment (post immediately after launch)</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('ph-comment')">Copy</button><span id="ph-comment">Hi Product Hunt! I'm Jainam, the maker of Lawmadi OS.
+
+When people in Korea face legal issues, most don't know where to start. Lawyer consultations are expensive, internet searches are unreliable, and AI chatbots hallucinate laws that don't exist.
+
+I built Lawmadi OS to solve this:
+• 60 specialized AI agents analyze your legal question and route it to the right domain expert
+• Every statute citation is verified in real-time against Korea's official legislative database (law.go.kr)
+• If verification fails, the system refuses to answer — we'd rather say "I don't know" than give you wrong legal information
+
+It's still early days, but in the last 7 days, 114 users asked 481 legal questions with a 99.6% success rate.
+
+I'd love your feedback and questions!</span></div>
+</div>
+
+<!-- REDDIT -->
+<h2>2. Reddit</h2>
+
+<!-- r/SideProject -->
+<div class="card">
+<h3>r/SideProject <span class="tag">Main Launch</span></h3>
+<a href="https://www.reddit.com/r/SideProject/submit" class="link-btn reddit" target="_blank">Post to r/SideProject</a>
+
+<h3>Title</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('r1-title')">Copy</button><span id="r1-title">I built an AI legal OS with 60 specialized agents that verify every answer against live government databases — Lawmadi OS</span></div>
+
+<h3>Body</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('r1-body')">Copy</button><span id="r1-body">Hey r/SideProject!
+
+I've been working on Lawmadi OS — an AI-powered legal operating system for Korean law.
+
+**The problem:** In Korea, when you have a legal issue, your options are expensive lawyers, unreliable internet searches, or AI chatbots that confidently cite laws that don't exist.
+
+**What I built:**
+- 60 domain-specialized AI agents (labor law, divorce, real estate, traffic accidents, criminal law, etc.)
+- 3-layer NLU routing: regex patterns → keyword matching → Gemini classification
+- 4-stage pipeline: Intent Classification → RAG (14,601 docs) → Gemini 2.5 Flash analysis → DRF real-time verification
+- Every statute citation is verified against Korea's official legislative API (law.go.kr) in real-time
+- **Fail-Closed**: if verification fails, the system refuses to answer instead of hallucinating
+
+**Tech stack:**
+- Backend: Python/FastAPI on GCP Cloud Run
+- LLM: Google Gemini 2.5 Flash
+- RAG: Vertex AI Search (14,601 legal documents)
+- Verification: 법제처 DRF API (10 government data sources)
+- Frontend: Static HTML/JS on Firebase Hosting
+- Billing: Paddle (credit-based, no subscription)
+- CI/CD: GitHub Actions (5-stage: test → staging → backend → frontend → notify)
+
+**Some numbers (last 7 days):**
+- 114 unique visitors
+- 481 legal queries processed
+- 99.6% success rate
+- Average response time: ~40s (Gemini analysis + verification)
+
+**Pricing:** Free tier (2 queries/day), paid packs start at $1.50 for 20 queries.
+
+Live at: https://lawmadi.com
+
+Would love feedback on:
+1. The multi-agent routing approach — is 60 agents overkill or does specialization matter?
+2. The fail-closed verification — would you trust a legal AI more knowing it refuses to answer when unsure?
+3. Any ideas for reducing the ~40s response time?
+
+Happy to answer any technical questions!</span></div>
+</div>
+
+<!-- r/artificial -->
+<div class="card">
+<h3>r/artificial <span class="tag">AI Focus</span></h3>
+<a href="https://www.reddit.com/r/artificial/submit" class="link-btn reddit" target="_blank">Post to r/artificial</a>
+
+<h3>Title</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('r2-title')">Copy</button><span id="r2-title">Built a multi-agent legal AI system with 60 domain-specialized agents and real-time government database verification</span></div>
+
+<h3>Body</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('r2-body')">Copy</button><span id="r2-body">I wanted to share an approach I've been working on for legal AI that addresses the hallucination problem.
+
+**Architecture overview:**
+
+The system uses 60 domain-specialized AI agents coordinated by a 3-layer routing system:
+
+1. **NLU Layer** — Regex-based Korean/English legal intent patterns
+2. **Keyword Layer** — Domain-specific keyword matching
+3. **Gemini Classification** — LLM-based fallback routing
+
+Once routed, each query goes through a 4-stage pipeline:
+- **Stage 0**: Intent classification & leader selection
+- **Stage 1**: RAG retrieval (Vertex AI Search, 14,601 legal documents)
+- **Stage 3**: Gemini 2.5 Flash analysis with domain-specific prompts
+- **Stage 4**: Real-time DRF verification against law.go.kr (Korea's official legislative database)
+
+**The key insight:** Stage 4 cross-checks every statute citation in the response against live government APIs. If a cited law doesn't exist or the article number is wrong, the system flags it. This is a **fail-closed** design — unverified responses are rejected.
+
+**Results so far:**
+- 99.6% success rate across 481 queries
+- 84.7/100 average verification score
+- 82.5% Korean statute citation accuracy
+- 25.6% English statute citation accuracy (known issue, actively improving)
+
+Curious what this community thinks about multi-agent specialization vs. single generalist agent approaches for domain-specific AI.
+
+Live demo: https://lawmadi.com</span></div>
+</div>
+
+<!-- r/korea -->
+<div class="card">
+<h3>r/korea <span class="tag">Korea Community</span></h3>
+<a href="https://www.reddit.com/r/korea/submit" class="link-btn reddit" target="_blank">Post to r/korea</a>
+
+<h3>Title</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('r3-title')">Copy</button><span id="r3-title">Made a free AI legal assistant for Korean law — verifies every answer against 법제처 API in real-time</span></div>
+
+<h3>Body</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('r3-body')">Copy</button><span id="r3-body">Hey r/korea,
+
+I built Lawmadi OS, a free AI legal assistant specifically for Korean law. Thought it might be useful for people here who've had to navigate the Korean legal system.
+
+**What it does:**
+- You ask a legal question in Korean or English
+- One of 60 specialized AI agents analyzes your situation (labor, housing/전세, divorce, traffic, criminal, immigration, etc.)
+- Every law cited in the response is verified against 법제처 (law.go.kr) in real-time
+- You get a structured response with specific steps you can take
+
+**Why I built it:**
+Navigating Korean law as anyone — Korean or foreigner — is confusing. Legal consultations start at ₩100,000+, and searching Naver/Google gives you outdated or wrong information. AI chatbots like ChatGPT will confidently cite Korean laws that don't exist.
+
+**Key features:**
+- Bilingual: Korean (/) and English (/en)
+- Free: 2 questions per day, no account needed
+- Paid: 20 queries for ₩2,100 if you need more
+- All 60 legal domains covered
+- 법제처 DRF API로 법 조문 실시간 검증
+
+**Disclaimer:** This is NOT a substitute for professional legal advice. It's a first-step tool to help you understand your situation.
+
+https://lawmadi.com
+
+Would love to hear if this is useful, especially from foreigners dealing with Korean legal issues or Koreans who've struggled to find affordable legal guidance.</span></div>
+</div>
+
+<!-- r/LegalTech -->
+<div class="card">
+<h3>r/LegalTech <span class="tag">Niche</span></h3>
+<a href="https://www.reddit.com/r/LegalTech/submit" class="link-btn reddit" target="_blank">Post to r/LegalTech</a>
+
+<h3>Title</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('r4-title')">Copy</button><span id="r4-title">Lawmadi OS: Open-access AI legal analysis for Korean law with real-time statute verification</span></div>
+
+<h3>Body</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('r4-body')">Copy</button><span id="r4-body">I built Lawmadi OS to make Korean legal guidance more accessible. Here's what it does differently:
+
+**Real-time verification against official sources:**
+Every response goes through a verification stage that checks cited statutes against Korea's legislative database (법제처, law.go.kr) via their public DRF API. We pull from 10 different government data sources to cross-reference.
+
+**60 domain-specialized agents:**
+Instead of one generalist legal AI, we have 60 specialists. When you ask about unfair dismissal, your question goes to the labor law agent. Divorce custody questions go to the family law agent.
+
+**Structured response framework:**
+Every response follows a 5-stage framework:
+1. Emotional acknowledgment
+2. Situation diagnosis
+3. Action roadmap with specific steps
+4. Safety net information (legal aid, hotlines, etc.)
+5. Supportive closing
+
+**Not a replacement for lawyers** — this is a first-step tool.
+
+**Pricing:** Free tier available (2 queries/day). Paid packs from $1.50.
+
+https://lawmadi.com
+
+Would appreciate feedback from anyone in the legal tech space.</span></div>
+</div>
+
+<!-- r/MachineLearning -->
+<div class="card">
+<h3>r/MachineLearning <span class="tag">[P] Project</span></h3>
+<a href="https://www.reddit.com/r/MachineLearning/submit" class="link-btn reddit" target="_blank">Post to r/MachineLearning</a>
+
+<h3>Title</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('r5-title')">Copy</button><span id="r5-title">[P] Multi-agent legal AI with 60 domain-specialized agents, 3-layer NLU routing, and real-time government API verification</span></div>
+
+<h3>Body</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('r5-body')">Copy</button><span id="r5-body">**TL;DR:** Built a legal AI system that routes queries through 60 specialized agents and verifies every statute citation against live government databases. Fail-closed design — unverified answers are rejected.
+
+**Routing approach:**
+3-layer routing with priority ordering. Layer 1 (regex NLU) catches ~70% of queries. Layer 2 (keyword) catches ~20%. Layer 3 (Gemini classification) handles the rest. We chose this over pure LLM routing for latency and cost reasons.
+
+**Verification pipeline:**
+Every statute citation in the generated response is extracted and verified against Korea's legislative API in real-time. We check: Does the cited law exist? Does the article number exist? Is the content accurate?
+
+If verification fails, the system applies a fail-closed policy and rejects the response.
+
+**Current metrics:**
+- 99.6% success rate (481 queries/7d)
+- Verification score: 84.7/100 avg
+- Latency: ~40s avg (bottleneck: Gemini generation ~30s)
+- NLU accuracy: 264/264 test cases passing
+
+**Challenges:**
+1. Agent specialization granularity — 60 agents vs maintainability
+2. Latency — Stage 3 (Gemini) takes ~30s
+3. Cross-lingual statute matching — KO 82.5% vs EN 25.6%
+
+Live: https://lawmadi.com | Stack: FastAPI + Gemini 2.5 Flash + Vertex AI Search + Cloud Run</span></div>
+</div>
+
+<!-- r/Entrepreneur -->
+<div class="card">
+<h3>r/Entrepreneur <span class="tag">Business</span></h3>
+<a href="https://www.reddit.com/r/Entrepreneur/submit" class="link-btn reddit" target="_blank">Post to r/Entrepreneur</a>
+
+<h3>Title</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('r6-title')">Copy</button><span id="r6-title">I built an AI legal assistant for the Korean market — 481 queries in the first week, here's what I learned</span></div>
+
+<h3>Body</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('r6-body')">Copy</button><span id="r6-body">I launched Lawmadi OS, an AI-powered legal assistant for Korean law, and wanted to share some learnings.
+
+**The market opportunity:**
+- Korea has ~50M people, most can't afford legal consultations (starts at ~$75 per session)
+- Legal information online is fragmented and outdated
+- AI chatbots hallucinate laws — a serious problem in the legal domain
+
+**What I built:**
+An AI system with 60 domain-specialized agents that analyze legal questions and verify every cited law against government databases in real-time. If verification fails, it refuses to answer.
+
+**First week numbers:**
+- 114 unique visitors
+- 481 legal queries
+- 99.6% success rate
+- Most popular: labor law (90), housing/lease (83), divorce (50), traffic (48)
+
+**Business model:**
+- Free: 2 queries/day (acquisition)
+- Starter: 20 queries / $1.50
+- Standard: 100 queries / $4.99
+- Pro: 300 queries / $9.99
+- Credit-based, no subscription
+
+**What I learned:**
+1. Labor law is #1 — unfair dismissal and unpaid wages are the biggest pain points
+2. Trust matters more than speed — users prefer waiting 40s for a verified answer
+3. Free tier is essential — most users need 1-2 questions answered
+4. Bilingual matters — foreigners in Korea have even fewer legal resources
+
+https://lawmadi.com
+
+Happy to answer questions about the tech, business model, or Korean market.</span></div>
+</div>
+
+<!-- HACKER NEWS -->
+<h2>3. Hacker News</h2>
+<div class="card">
+<a href="https://news.ycombinator.com/submit" class="link-btn hn" target="_blank">Submit to Hacker News</a>
+
+<h3>Title</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('hn-title')">Copy</button><span id="hn-title">Show HN: Lawmadi OS – AI legal system with 60 agents and real-time statute verification</span></div>
+
+<h3>URL</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('hn-url')">Copy</button><span id="hn-url">https://lawmadi.com</span></div>
+
+<h3>Text (optional, if submitting as text post)</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('hn-text')">Copy</button><span id="hn-text">I built Lawmadi OS, an AI legal operating system for Korean law.
+
+The core idea: 60 domain-specialized AI agents analyze your legal question, and every statute citation is verified against Korea's official legislative database (law.go.kr) in real-time. If verification fails, the system refuses to answer — fail-closed by design.
+
+Architecture: 3-layer NLU routing (regex → keyword → Gemini) → RAG (14.6K docs) → Gemini 2.5 Flash → DRF API verification (10 gov data sources).
+
+Results after 1 week: 481 queries, 99.6% success rate, 84.7/100 verification score.
+
+Free tier: 2 queries/day. Bilingual (Korean + English).
+
+Tech: FastAPI, Gemini 2.5 Flash, Vertex AI Search, Cloud SQL, Cloud Run, Firebase, Paddle billing.
+
+Would love feedback on the multi-agent approach and verification pipeline.</span></div>
+</div>
+
+<!-- TWITTER/X -->
+<h2>4. Twitter/X</h2>
+<div class="card">
+<a href="https://twitter.com/intent/tweet" class="link-btn" style="background:#000" target="_blank">Open Twitter</a>
+
+<h3>Tweet</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('tw-1')">Copy</button><span id="tw-1">I built Lawmadi OS — an AI legal operating system with 60 expert agents for Korean law.
+
+Every answer is verified against live government databases. If verification fails, it refuses to answer. No hallucinated laws.
+
+Free to try → https://lawmadi.com
+
+#LegalTech #AI #BuildInPublic</span></div>
+
+<h3>Thread (2/n)</h3>
+<div class="copy-box"><button class="copy-btn" onclick="copyText('tw-2')">Copy</button><span id="tw-2">How it works:
+
+1. Ask any legal question (Korean or English)
+2. NLU routes to the right expert (60 domains)
+3. RAG searches 14,601 legal documents
+4. Gemini 2.5 Flash analyzes your situation
+5. Every statute citation verified against law.go.kr
+6. You get a verified action plan
+
+99.6% success rate after 481 queries.</span></div>
+</div>
+
+<!-- LINKEDIN -->
+<h2>5. LinkedIn</h2>
+<div class="card">
+<a href="https://www.linkedin.com/feed/" class="link-btn" style="background:#0a66c2" target="_blank">Open LinkedIn</a>
+
+<div class="copy-box"><button class="copy-btn" onclick="copyText('li-post')">Copy</button><span id="li-post">Excited to share Lawmadi OS — an AI legal operating system I built for Korean law.
+
+The problem: When people in Korea face legal issues, they have 3 bad options — expensive lawyers, unreliable internet searches, or AI chatbots that hallucinate laws.
+
+What makes Lawmadi OS different:
+
+→ 60 domain-specialized AI legal agents
+→ Real-time statute verification against official government APIs
+→ Fail-Closed: refuses to answer if verification fails
+→ Bilingual (Korean + English)
+→ Free tier: 2 queries/day
+
+481 legal questions answered in the first week with 99.6% success rate.
+
+Try it: https://lawmadi.com
+
+Tech stack: FastAPI + Gemini 2.5 Flash + Vertex AI Search + GCP Cloud Run
+
+#LegalTech #AI #Startup #Korea #BuildInPublic</span></div>
+</div>
+
+<br>
+<p style="text-align:center; color:#475569; font-size:12px;">Lawmadi OS Launch Helper — Generated 2026-03-12</p>
+</body>
+</html>
