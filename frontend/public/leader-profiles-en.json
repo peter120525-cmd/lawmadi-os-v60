@@ -1,8 +1,8 @@
 {
   "CSO": {
     "images": {
-      "profile": "images/clevel/cso-seoyeon.jpg",
-      "banner": "images/clevel/cso-seoyeon-banner.png"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/clevel/cso-seoyeon.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/clevel/cso-seoyeon-banner.png"
     },
     "hero": "Strategy is not direction — it is structure. We design frameworks that do not waver.",
     "identity": {
@@ -47,8 +47,8 @@
   },
   "CTO": {
     "images": {
-      "profile": "images/clevel/cto-jiyu.jpg",
-      "banner": "images/clevel/cto-jiyu-banner.png"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/clevel/cto-jiyu.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/clevel/cto-jiyu-banner.png"
     },
     "hero": "Technology must be precise. Even more so for AI that handles law.",
     "identity": {
@@ -93,8 +93,8 @@
   },
   "CCO": {
     "images": {
-      "profile": "images/clevel/cco-yuna.jpg",
-      "banner": "images/clevel/cco-yuna-banner.png"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/clevel/cco-yuna.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/clevel/cco-yuna-banner.png"
     },
     "hero": "Making complex law understandable for everyone. Experience is trust.",
     "identity": {
@@ -139,8 +139,8 @@
   },
   "L01": {
     "images": {
-      "profile": "images/leaders/L01-hwiyul.jpg",
-      "banner": "images/leaders/L01-hwiyul-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L01-hwiyul.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L01-hwiyul-banner.jpg"
     },
     "hero": "We structure every issue in civil law. We focus on the essence of disputes.",
     "identity": {
@@ -185,8 +185,8 @@
   },
   "L02": {
     "images": {
-      "profile": "images/leaders/L02-bonui.jpg",
-      "banner": "images/leaders/L02-bonui-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L02-bonui.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L02-bonui-banner.jpg"
     },
     "hero": "Real estate is not about numbers — it is about rights. Precise analysis protects property.",
     "identity": {
@@ -231,8 +231,8 @@
   },
   "L03": {
     "images": {
-      "profile": "images/leaders/L03-damseul.jpg",
-      "banner": "images/leaders/L03-damseul-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L03-damseul.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L03-damseul-banner.jpg"
     },
     "hero": "We resolve construction site disputes through law. Building legal foundations as solid as structures.",
     "identity": {
@@ -277,8 +277,8 @@
   },
   "L04": {
     "images": {
-      "profile": "images/leaders/L04-aki.jpg",
-      "banner": "images/leaders/L04-aki-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L04-aki.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L04-aki-banner.jpg"
     },
     "hero": "Cities keep evolving. We precisely protect redevelopment rights.",
     "identity": {
@@ -323,8 +323,8 @@
   },
   "L05": {
     "images": {
-      "profile": "images/leaders/L05-yeonwoo.jpg",
-      "banner": "images/leaders/L05-yeonwoo-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L05-yeonwoo.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L05-yeonwoo-banner.jpg"
     },
     "hero": "We stand at the intersection of medicine and law. Proving patient rights with science.",
     "identity": {
@@ -369,8 +369,8 @@
   },
   "L06": {
     "images": {
-      "profile": "images/leaders/L06-byeori.jpg",
-      "banner": "images/leaders/L06-byeori-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L06-byeori.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L06-byeori-banner.jpg"
     },
     "hero": "We calculate damages precisely. Designing compensation with logic, not emotion.",
     "identity": {
@@ -415,8 +415,8 @@
   },
   "L07": {
     "images": {
-      "profile": "images/leaders/L07-hanui.jpg",
-      "banner": "images/leaders/L07-hanui-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L07-hanui.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L07-hanui-banner.jpg"
     },
     "hero": "We precisely analyze the legal issues of traffic accidents. Delivering the truth from the scene to the courtroom.",
     "identity": {
@@ -461,8 +461,8 @@
   },
   "L08": {
     "images": {
-      "profile": "images/leaders/L08-onyu.jpg",
-      "banner": "images/leaders/L08-onyu-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L08-onyu.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L08-onyu-banner.jpg"
     },
     "hero": "Lease law is the cornerstone of housing stability. We protect the rights of both tenants and landlords.",
     "identity": {
@@ -507,8 +507,8 @@
   },
   "L09": {
     "images": {
-      "profile": "images/leaders/L09-hanul.jpg",
-      "banner": "images/leaders/L09-hanul-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L09-hanul.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L09-hanul-banner.jpg"
     },
     "hero": "We decode the complex procedures of government contracts. Designing fair bidding environments.",
     "identity": {
@@ -553,8 +553,8 @@
   },
   "L10": {
     "images": {
-      "profile": "images/leaders/L10-gyeolhwi.jpg",
-      "banner": "images/leaders/L10-gyeolhwi-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L10-gyeolhwi.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L10-gyeolhwi-banner.jpg"
     },
     "hero": "A judgment is just the beginning. Completing actual enforcement is the real resolution.",
     "identity": {
@@ -599,8 +599,8 @@
   },
   "L11": {
     "images": {
-      "profile": "images/leaders/L11-oreum.jpg",
-      "banner": "images/leaders/L11-oreum-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L11-oreum.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L11-oreum-banner.jpg"
     },
     "hero": "We track the flow of receivables. Systematic management determines recovery rates.",
     "identity": {
@@ -645,8 +645,8 @@
   },
   "L12": {
     "images": {
-      "profile": "images/leaders/L12-aseul.jpg",
-      "banner": "images/leaders/L12-aseul-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L12-aseul.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L12-aseul-banner.jpg"
     },
     "hero": "We decode the truth in registry records. Precisely analyzing opportunities and risks in auctions.",
     "identity": {
@@ -691,8 +691,8 @@
   },
   "L13": {
     "images": {
-      "profile": "images/leaders/L13-nuri.jpg",
-      "banner": "images/leaders/L13-nuri-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L13-nuri.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L13-nuri-banner.jpg"
     },
     "hero": "We design commercial transactions through law. Building safety mechanisms for business.",
     "identity": {
@@ -732,8 +732,8 @@
   },
   "L14": {
     "images": {
-      "profile": "images/leaders/L14-dasom.jpg",
-      "banner": "images/leaders/L14-dasom-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L14-dasom.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L14-dasom-banner.jpg"
     },
     "hero": "We design the combination and separation of companies. Completing the legal structure of M&A.",
     "identity": {
@@ -778,8 +778,8 @@
   },
   "L15": {
     "images": {
-      "profile": "images/leaders/L15-byeolha.jpg",
-      "banner": "images/leaders/L15-byeolha-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L15-byeolha.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L15-byeolha-banner.jpg"
     },
     "hero": "We support startup growth through law. Building structures that stand firm through rapid scaling.",
     "identity": {
@@ -824,8 +824,8 @@
   },
   "L16": {
     "images": {
-      "profile": "images/leaders/L16-seula.jpg",
-      "banner": "images/leaders/L16-seula-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L16-seula.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L16-seula-banner.jpg"
     },
     "hero": "We decode insurance policy language. Protecting the right to fair compensation.",
     "identity": {
@@ -870,8 +870,8 @@
   },
   "L17": {
     "images": {
-      "profile": "images/leaders/L17-mir.jpg",
-      "banner": "images/leaders/L17-mir-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L17-mir.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L17-mir-banner.jpg"
     },
     "hero": "We connect cross-border transactions through law. Building legal bridges for global business.",
     "identity": {
@@ -916,8 +916,8 @@
   },
   "L18": {
     "images": {
-      "profile": "images/leaders/L18-daon.jpg",
-      "banner": "images/leaders/L18-daon-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L18-daon.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L18-daon-banner.jpg"
     },
     "hero": "Energy is the foundation of the future. We analyze the intersection of resources and regulations.",
     "identity": {
@@ -957,8 +957,8 @@
   },
   "L19": {
     "images": {
-      "profile": "images/leaders/L19-selong.jpg",
-      "banner": "images/leaders/L19-selong-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L19-selong.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L19-selong-banner.jpg"
     },
     "hero": "We handle the laws of sea and sky. Designing legal safe passages for logistics.",
     "identity": {
@@ -998,8 +998,8 @@
   },
   "L20": {
     "images": {
-      "profile": "images/leaders/L20-chansol.jpg",
-      "banner": "images/leaders/L20-chansol-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L20-chansol.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L20-chansol-banner.jpg"
     },
     "hero": "Taxation is structure. Lawful tax planning and accurate filing protect wealth.",
     "identity": {
@@ -1044,8 +1044,8 @@
   },
   "L21": {
     "images": {
-      "profile": "images/leaders/L21-sebin.jpg",
-      "banner": "images/leaders/L21-sebin-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L21-sebin.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L21-sebin-banner.jpg"
     },
     "hero": "The legal shield of the digital age. Precisely analyzing IT and security regulations.",
     "identity": {
@@ -1090,8 +1090,8 @@
   },
   "L22": {
     "images": {
-      "profile": "images/leaders/L22-gaon.jpg",
-      "banner": "images/leaders/L22-gaon-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L22-gaon.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L22-gaon-banner.jpg"
     },
     "hero": "Defending rights with the precision of criminal law. Upholding the presumption of innocence.",
     "identity": {
@@ -1136,8 +1136,8 @@
   },
   "L23": {
     "images": {
-      "profile": "images/leaders/L23-seoun.jpg",
-      "banner": "images/leaders/L23-seoun-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L23-seoun.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L23-seoun-banner.jpg"
     },
     "hero": "We protect the rights of the entertainment industry. Safeguarding creators' value through law.",
     "identity": {
@@ -1177,8 +1177,8 @@
   },
   "L24": {
     "images": {
-      "profile": "images/leaders/L24-doul.jpg",
-      "banner": "images/leaders/L24-doul-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L24-doul.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L24-doul-banner.jpg"
     },
     "hero": "We challenge unjust taxation. Protecting taxpayer rights through tax procedures.",
     "identity": {
@@ -1223,8 +1223,8 @@
   },
   "L25": {
     "images": {
-      "profile": "images/leaders/L25-damwoo.jpg",
-      "banner": "images/leaders/L25-damwoo-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L25-damwoo.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L25-damwoo-banner.jpg"
     },
     "hero": "We precisely analyze the special nature of military criminal law. Protecting the legal rights of service members.",
     "identity": {
@@ -1264,8 +1264,8 @@
   },
   "L26": {
     "images": {
-      "profile": "images/leaders/L26-jinu.jpg",
-      "banner": "images/leaders/L26-jinu-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L26-jinu.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L26-jinu-banner.jpg"
     },
     "hero": "We turn ideas into legal assets. Protecting the value of intellectual property.",
     "identity": {
@@ -1310,8 +1310,8 @@
   },
   "L27": {
     "images": {
-      "profile": "images/leaders/L27-ruda.jpg",
-      "banner": "images/leaders/L27-ruda-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L27-ruda.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L27-ruda-banner.jpg"
     },
     "hero": "We find the balance between environment and law. Designing a sustainable future through legal frameworks.",
     "identity": {
@@ -1351,8 +1351,8 @@
   },
   "L28": {
     "images": {
-      "profile": "images/leaders/L28-haeseul.jpg",
-      "banner": "images/leaders/L28-haeseul-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L28-haeseul.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L28-haeseul-banner.jpg"
     },
     "hero": "We handle the law of goods crossing borders. Designing optimal paths for trade and customs.",
     "identity": {
@@ -1392,8 +1392,8 @@
   },
   "L29": {
     "images": {
-      "profile": "images/leaders/L29-raon.jpg",
-      "banner": "images/leaders/L29-raon-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L29-raon.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L29-raon-banner.jpg"
     },
     "hero": "We design the legal structure of games and content. Protecting virtual world rights in reality.",
     "identity": {
@@ -1433,8 +1433,8 @@
   },
   "L30": {
     "images": {
-      "profile": "images/leaders/L30-damwoo.jpg",
-      "banner": "images/leaders/L30-damwoo-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L30-damwoo.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L30-damwoo-banner.jpg"
     },
     "hero": "We connect worker rights with employer obligations. Designing balanced labor relations.",
     "identity": {
@@ -1479,8 +1479,8 @@
   },
   "L31": {
     "images": {
-      "profile": "images/leaders/L31-roun.jpg",
-      "banner": "images/leaders/L31-roun-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L31-roun.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L31-roun-banner.jpg"
     },
     "hero": "We correct administrative errors. Maintaining the legal balance between the state and citizens.",
     "identity": {
@@ -1525,8 +1525,8 @@
   },
   "L32": {
     "images": {
-      "profile": "images/leaders/L32-bareum.jpg",
-      "banner": "images/leaders/L32-bareum-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L32-bareum.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L32-bareum-banner.jpg"
     },
     "hero": "We protect fair market order. Analyzing monopolies and unfair practices.",
     "identity": {
@@ -1566,8 +1566,8 @@
   },
   "L33": {
     "images": {
-      "profile": "images/leaders/L33-byeoli.jpg",
-      "banner": "images/leaders/L33-byeoli-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L33-byeoli.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L33-byeoli-banner.jpg"
     },
     "hero": "Pioneering the new legal frontier of space and aviation.",
     "identity": {
@@ -1607,8 +1607,8 @@
   },
   "L34": {
     "images": {
-      "profile": "images/leaders/L34-jinu.jpg",
-      "banner": "images/leaders/L34-jinu-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L34-jinu.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L34-jinu-banner.jpg"
     },
     "hero": "Personal data is the personality right of the digital age. We protect data subjects' rights.",
     "identity": {
@@ -1653,8 +1653,8 @@
   },
   "L35": {
     "images": {
-      "profile": "images/leaders/L35-maru.jpg",
-      "banner": "images/leaders/L35-maru-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L35-maru.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L35-maru-banner.jpg"
     },
     "hero": "The constitution is the foundation of all law. We guard the last bastion of fundamental rights.",
     "identity": {
@@ -1694,8 +1694,8 @@
   },
   "L36": {
     "images": {
-      "profile": "images/leaders/L36-dana.jpg",
-      "banner": "images/leaders/L36-dana-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L36-dana.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L36-dana-banner.jpg"
     },
     "hero": "We protect the value of cultural heritage and religion through law.",
     "identity": {
@@ -1735,8 +1735,8 @@
   },
   "L37": {
     "images": {
-      "profile": "images/leaders/L37-yesol.jpg",
-      "banner": "images/leaders/L37-yesol-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L37-yesol.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L37-yesol-banner.jpg"
     },
     "hero": "We protect the future of juveniles. Providing legal support for growth, not punishment.",
     "identity": {
@@ -1776,8 +1776,8 @@
   },
   "L38": {
     "images": {
-      "profile": "images/leaders/L38-seulbi.jpg",
-      "banner": "images/leaders/L38-seulbi-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L38-seulbi.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L38-seulbi-banner.jpg"
     },
     "hero": "We protect consumer rights. Creating fair balance between businesses and consumers.",
     "identity": {
@@ -1817,8 +1817,8 @@
   },
   "L39": {
     "images": {
-      "profile": "images/leaders/L39-gaon.jpg",
-      "banner": "images/leaders/L39-gaon-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L39-gaon.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L39-gaon-banner.jpg"
     },
     "hero": "We design the legal infrastructure of telecommunications. Finding regulatory balance in the connected age.",
     "identity": {
@@ -1858,8 +1858,8 @@
   },
   "L40": {
     "images": {
-      "profile": "images/leaders/L40-hangyeol.jpg",
-      "banner": "images/leaders/L40-hangyeol-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L40-hangyeol.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L40-hangyeol-banner.jpg"
     },
     "hero": "Human rights are the starting point of all law. Realizing a society free of discrimination through law.",
     "identity": {
@@ -1899,8 +1899,8 @@
   },
   "L41": {
     "images": {
-      "profile": "images/leaders/L41-sandeul.jpg",
-      "banner": "images/leaders/L41-sandeul-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L41-sandeul.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L41-sandeul-banner.jpg"
     },
     "hero": "We resolve family conflicts through law. Minimizing the wounds of relationships.",
     "identity": {
@@ -1945,8 +1945,8 @@
   },
   "L42": {
     "images": {
-      "profile": "images/leaders/L42-haram.jpg",
-      "banner": "images/leaders/L42-haram-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L42-haram.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L42-haram-banner.jpg"
     },
     "hero": "We protect the value of creative works. Precisely analyzing the boundaries of copyright.",
     "identity": {
@@ -1986,8 +1986,8 @@
   },
   "L43": {
     "images": {
-      "profile": "images/leaders/L43-haena.jpg",
-      "banner": "images/leaders/L43-haena-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L43-haena.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L43-haena-banner.jpg"
     },
     "hero": "We protect industrial workplace safety through law. Defending the rights of accident victims.",
     "identity": {
@@ -2032,8 +2032,8 @@
   },
   "L44": {
     "images": {
-      "profile": "images/leaders/L44-boram.jpg",
-      "banner": "images/leaders/L44-boram-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L44-boram.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L44-boram-banner.jpg"
     },
     "hero": "We fill the blind spots of welfare through law. Protecting the rights of the socially vulnerable.",
     "identity": {
@@ -2073,8 +2073,8 @@
   },
   "L45": {
     "images": {
-      "profile": "images/leaders/L45-ireum.jpg",
-      "banner": "images/leaders/L45-ireum-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L45-ireum.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L45-ireum-banner.jpg"
     },
     "hero": "We organize legal information in education. Helping understand student rights and safety.",
     "identity": {
@@ -2114,8 +2114,8 @@
   },
   "L46": {
     "images": {
-      "profile": "images/leaders/L46-daol.jpg",
-      "banner": "images/leaders/L46-daol-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L46-daol.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L46-daol-banner.jpg"
     },
     "hero": "We design future safety nets through law. Protecting insurance and pension rights.",
     "identity": {
@@ -2155,8 +2155,8 @@
   },
   "L47": {
     "images": {
-      "profile": "images/leaders/L47-saeron.jpg",
-      "banner": "images/leaders/L47-saeron-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L47-saeron.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L47-saeron-banner.jpg"
     },
     "hero": "We lay the legal foundation for new industries. Designing the balance between regulation and innovation.",
     "identity": {
@@ -2196,8 +2196,8 @@
   },
   "L48": {
     "images": {
-      "profile": "images/leaders/L48-narae.jpg",
-      "banner": "images/leaders/L48-narae-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L48-narae.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L48-narae-banner.jpg"
     },
     "hero": "We protect artists' rights through law. Realizing creative freedom and protection simultaneously.",
     "identity": {
@@ -2237,8 +2237,8 @@
   },
   "L49": {
     "images": {
-      "profile": "images/leaders/L49-garam.jpg",
-      "banner": "images/leaders/L49-garam-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L49-garam.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L49-garam-banner.jpg"
     },
     "hero": "We protect food and public health safety through law. The legal guardian of national health.",
     "identity": {
@@ -2278,8 +2278,8 @@
   },
   "L50": {
     "images": {
-      "profile": "images/leaders/L50-bitna.jpg",
-      "banner": "images/leaders/L50-bitna-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L50-bitna.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L50-bitna-banner.jpg"
     },
     "hero": "We build legal bridges for a multicultural society. Protecting immigrant rights.",
     "identity": {
@@ -2319,8 +2319,8 @@
   },
   "L51": {
     "images": {
-      "profile": "images/leaders/L51-soul.jpg",
-      "banner": "images/leaders/L51-soul-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L51-soul.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L51-soul-banner.jpg"
     },
     "hero": "We protect the values of religion and tradition through law. Safeguarding freedom of faith.",
     "identity": {
@@ -2360,8 +2360,8 @@
   },
   "L52": {
     "images": {
-      "profile": "images/leaders/L52-miso.jpg",
-      "banner": "images/leaders/L52-miso-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L52-miso.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L52-miso-banner.jpg"
     },
     "hero": "We analyze the legal boundaries of advertising and media. Finding the balance between expression and responsibility.",
     "identity": {
@@ -2401,8 +2401,8 @@
   },
   "L53": {
     "images": {
-      "profile": "images/leaders/L53-neulsol.jpg",
-      "banner": "images/leaders/L53-neulsol-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L53-neulsol.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L53-neulsol-banner.jpg"
     },
     "hero": "We strengthen the legal foundation of agriculture and livestock. Protecting primary industry rights.",
     "identity": {
@@ -2442,8 +2442,8 @@
   },
   "L54": {
     "images": {
-      "profile": "images/leaders/L54-iseo.jpg",
-      "banner": "images/leaders/L54-iseo-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L54-iseo.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L54-iseo-banner.jpg"
     },
     "hero": "We handle the laws of the sea. Protecting marine resources and fisheries rights.",
     "identity": {
@@ -2483,8 +2483,8 @@
   },
   "L55": {
     "images": {
-      "profile": "images/leaders/L55-yunbit.jpg",
-      "banner": "images/leaders/L55-yunbit-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L55-yunbit.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L55-yunbit-banner.jpg"
     },
     "hero": "We design legal frameworks for science and technology. Supporting research innovation through law.",
     "identity": {
@@ -2524,8 +2524,8 @@
   },
   "L56": {
     "images": {
-      "profile": "images/leaders/L56-dain.jpg",
-      "banner": "images/leaders/L56-dain-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L56-dain.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L56-dain-banner.jpg"
     },
     "hero": "We fully realize the legal rights of persons with disabilities. Accessibility is an obligation, not an option.",
     "identity": {
@@ -2565,8 +2565,8 @@
   },
   "L57": {
     "images": {
-      "profile": "images/leaders/L57-seum.jpg",
-      "banner": "images/leaders/L57-seum-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L57-seum.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L57-seum-banner.jpg"
     },
     "hero": "We design cross-generational asset transfers. Completing the legal structure of inheritance and trusts.",
     "identity": {
@@ -2611,8 +2611,8 @@
   },
   "L58": {
     "images": {
-      "profile": "images/leaders/L58-yeon.jpg",
-      "banner": "images/leaders/L58-yeon-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L58-yeon.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L58-yeon-banner.jpg"
     },
     "hero": "We protect the fair rules of sports through law. Defending athlete rights.",
     "identity": {
@@ -2652,8 +2652,8 @@
   },
   "L59": {
     "images": {
-      "profile": "images/leaders/L59-hanbit.jpg",
-      "banner": "images/leaders/L59-hanbit-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L59-hanbit.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L59-hanbit-banner.jpg"
     },
     "hero": "We establish ethical standards for the AI era through law. Verifying algorithm fairness.",
     "identity": {
@@ -2698,8 +2698,8 @@
   },
   "L60": {
     "images": {
-      "profile": "images/leaders/L60-madi.jpg",
-      "banner": "images/leaders/L60-madi-banner.jpg"
+      "profile": "https://storage.googleapis.com/lawmadi-media/images/leaders/L60-madi.jpg",
+      "banner": "https://storage.googleapis.com/lawmadi-media/images/leaders/L60-madi-banner.jpg"
     },
     "hero": "We weave the capabilities of 60 leaders into one. Overseeing the completeness of the system.",
     "identity": {

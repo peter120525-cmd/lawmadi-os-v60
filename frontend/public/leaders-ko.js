@@ -146,7 +146,7 @@ function renderLeaders(searchTerm) {
         var bannerHtml = '';
         if (img) {
             var videoTag = img.video
-                ? '<video class="leader-video" src="' + esc(img.video) + '" muted loop playsinline preload="none"></video>'
+                ? '<video class="leader-video" src="' + esc(img.video) + '" muted loop playsinline preload="metadata"></video>'
                 : '';
             bannerHtml = '<div class="leader-banner">' +
                 '<img src="' + esc(img.banner) + '" alt="' + safeName + '" loading="lazy">' +
@@ -216,26 +216,30 @@ window.addEventListener('load', function() {
     }, 100);
 });
 
-// Hover video playback on leader cards
-document.getElementById('leadersGrid').addEventListener('mouseenter', function(e) {
+// Hover video playback on leader cards (mouseover/mouseout for reliable delegation)
+document.getElementById('leadersGrid').addEventListener('mouseover', function(e) {
     var card = e.target.closest('.leader-card');
-    if (!card) return;
+    if (!card || card._videoHover) return;
+    card._videoHover = true;
     var video = card.querySelector('.leader-video');
     if (video) {
         video.currentTime = 0;
         video.play().catch(function() {});
     }
-}, true);
+});
 
-document.getElementById('leadersGrid').addEventListener('mouseleave', function(e) {
+document.getElementById('leadersGrid').addEventListener('mouseout', function(e) {
     var card = e.target.closest('.leader-card');
     if (!card) return;
+    var related = e.relatedTarget;
+    if (related && card.contains(related)) return;
+    card._videoHover = false;
     var video = card.querySelector('.leader-video');
     if (video) {
         video.pause();
         video.currentTime = 0;
     }
-}, true);
+});
 
 // Disable right-click context menu
 document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
