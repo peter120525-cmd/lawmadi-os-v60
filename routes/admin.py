@@ -169,7 +169,7 @@ async def admin_blacklist_remove(request: Request, ip_hash: str, authorization: 
 @router.post("/blacklist")
 @limiter.limit("10/minute")
 async def admin_blacklist_add(request: Request, authorization: str = Header(default="")):
-    """수동 블랙리스트 추가. body: {"ip": "1.2.3.4", "duration": 3600}"""
+    """수동 블랙리스트 추가. body: {"ip": "1.2.3.4", "duration": 3600, "reason": "..."}"""
     _verify_admin_auth(authorization)
     add_fn = _blacklist_fns.get("add_to_blacklist")
     if not add_fn:
@@ -177,9 +177,10 @@ async def admin_blacklist_add(request: Request, authorization: str = Header(defa
     body = await request.json()
     ip = body.get("ip", "").strip()
     duration = int(body.get("duration", 3600))
+    reason = body.get("reason", "manual")
     if not ip:
         return JSONResponse(status_code=400, content={"ok": False, "error": "ip required"})
-    add_fn(ip, duration)
+    add_fn(ip, duration, reason)
     ip_hash = hashlib.sha256(ip.encode()).hexdigest()[:12]
     return {"ok": True, "ip_hash": ip_hash, "duration": duration}
 

@@ -137,6 +137,17 @@ def init_tables():
             );
         """)
 
+        # IP 블랙리스트 영구 저장 테이블
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS ip_blacklist (
+                ip_hash         VARCHAR(64)  PRIMARY KEY,
+                ip_addr         VARCHAR(45)  NOT NULL,
+                expires_at      TIMESTAMP WITH TIME ZONE NOT NULL,
+                reason          TEXT         NOT NULL DEFAULT '',
+                created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+            );
+        """)
+
         conn.commit()
         logger.info("✅ [DB] 핵심 데이터 테이블 초기화 성공")
     except Exception as e:
