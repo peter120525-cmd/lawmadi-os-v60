@@ -1,0 +1,50 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Lawmadi OS — Korean Legal AI",
+  "name_for_model": "lawmadi_legal_ai",
+  "description_for_human": "AI-powered Korean legal consultation with 60 specialized agents. Get verified legal analysis on labor law, housing, divorce, criminal law, and 56 more domains.",
+  "description_for_model": "Lawmadi OS is a Korean legal AI operating system with 60 domain-specialized agents. Use this plugin to ask legal questions about Korean law. The system verifies every statute citation against Korea's official legislative database in real-time. Supports Korean and English queries. Pass 'lang: en' for English responses. Rate limited to 2 free queries per day per IP.",
+  "auth": {
+    "type": "service_http",
+    "authorization_type": "bearer",
+    "verification_tokens": {}
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://lawmadi.com/.well-known/openapi-public.json"
+  },
+  "logo_url": "https://lawmadi-db.web.app/icon-512.png",
+  "contact_email": "choepeter@outlook.kr",
+  "legal_info_url": "https://lawmadi.com/terms",
+  "rate_limits": {
+    "free_queries_per_day": 2,
+    "authenticated_queries": "credit-based (starter: 20, standard: 100, pro: 300)"
+  },
+  "capabilities": {
+    "domains": [
+      "Civil Law", "Real Estate", "Construction", "Urban Redevelopment",
+      "Medical Law", "Damages", "Traffic Accidents", "Lease & Housing",
+      "Government Contracts", "Civil Enforcement", "Debt Collection",
+      "Registry & Auction", "Commercial Law", "Corporate & M&A",
+      "Startup & Venture", "Insurance", "International Trade",
+      "Energy & Resources", "Maritime & Aviation", "Tax & Finance",
+      "IT & Cybersecurity", "Criminal Law", "Entertainment",
+      "Tax Appeals", "Military Law", "Intellectual Property",
+      "Environmental Law", "Trade & Customs", "Gaming & Content",
+      "Labor & Employment", "Administrative Law", "Fair Trade",
+      "Space & Aerospace", "Privacy & Data Protection",
+      "Constitutional Law", "Cultural Heritage", "Juvenile Law",
+      "Consumer Protection", "Telecommunications", "Human Rights",
+      "Family & Divorce", "Copyright", "Industrial Accidents",
+      "Social Welfare", "Education & Youth", "Pension & Insurance",
+      "Venture & New Industries", "Arts & Culture", "Food & Health Safety",
+      "Multicultural & Immigration", "Religion & Tradition",
+      "Media & Press", "Agriculture & Livestock", "Marine & Fisheries",
+      "Science & Technology", "Disability Rights", "Inheritance & Trust",
+      "Sports & Leisure", "Data & AI Ethics", "General Legal"
+    ],
+    "languages": ["ko", "en"],
+    "verification": "Real-time statute verification against Korea's official legislative database",
+    "agents": 60
+  }
+}

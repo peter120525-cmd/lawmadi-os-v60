@@ -1,0 +1,129 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Lawmadi OS — Korean Legal AI API",
+    "description": "Public API for Korean legal consultation. 60 domain-specialized AI agents with real-time statute verification.",
+    "version": "60.0.0",
+    "contact": {
+      "email": "choepeter@outlook.kr"
+    },
+    "termsOfService": "https://lawmadi.com/terms"
+  },
+  "servers": [
+    {
+      "url": "https://lawmadi.com",
+      "description": "Production"
+    }
+  ],
+  "paths": {
+    "/ask": {
+      "post": {
+        "operationId": "askLegalQuestion",
+        "summary": "Submit a legal question",
+        "description": "Routes query to the most relevant specialist agent among 60 legal domains. Returns verified legal analysis with statute citations. Rate limited: 2 free queries/day per IP.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["query"],
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "description": "Legal question in Korean or English",
+                    "example": "부당해고를 당했는데 어떻게 해야 하나요?"
+                  },
+                  "lang": {
+                    "type": "string",
+                    "enum": ["ko", "en"],
+                    "default": "ko",
+                    "description": "Response language"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Legal analysis response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "response": {
+                      "type": "string",
+                      "description": "Legal analysis with verified statute citations"
+                    },
+                    "leader": {
+                      "type": "string",
+                      "description": "Specialist agent name that handled the query"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["success", "error"]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "model": {
+                          "type": "string",
+                          "description": "LLM model used"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (2 free queries/day)"
+          }
+        }
+      }
+    },
+    "/ask-stream": {
+      "post": {
+        "operationId": "askLegalQuestionStream",
+        "summary": "Submit a legal question (streaming)",
+        "description": "Same as /ask but returns Server-Sent Events (SSE) for streaming responses.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["query"],
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "description": "Legal question in Korean or English"
+                  },
+                  "lang": {
+                    "type": "string",
+                    "enum": ["ko", "en"],
+                    "default": "ko"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SSE stream of legal analysis chunks",
+            "content": {
+              "text/event-stream": {}
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    }
+  }
+}
