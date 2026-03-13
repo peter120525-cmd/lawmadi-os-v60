@@ -427,7 +427,7 @@
 
             // Avatar
             var profileImages = (leaderProfile && leaderProfile.images) || {};
-            leaderAvatarSrc = profileImages.profile || ('images/leaders/' + leaderId + '.jpg');
+            leaderAvatarSrc = profileImages.profile || ('https://storage.googleapis.com/lawmadi-media/images/leaders/' + leaderId + '.jpg');
 
             // Render header
             document.getElementById('headerAvatar').src = leaderAvatarSrc;
