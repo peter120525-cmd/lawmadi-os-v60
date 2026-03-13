@@ -165,6 +165,8 @@ jobs:
 
           API = "${{ env.API_URL }}"
           TIMEOUT = 120  # Cold Start 고려 (60→120초)
+          INTERNAL_KEY = "${{ secrets.INTERNAL_API_KEY }}"
+          HEADERS = {"X-Admin-Key": INTERNAL_KEY} if INTERNAL_KEY else {}
 
           # 1단계: 워밍업 (Cold Start 대응, 점수 미반영)
           print("🔥 워밍업 (Cold Start 대응)")
@@ -172,7 +174,7 @@ jobs:
           for attempt in range(2):
               try:
                   s = time.time()
-                  r = requests.post(f"{API}/ask", json={"query": "안녕하세요"}, timeout=TIMEOUT)
+                  r = requests.post(f"{API}/ask", json={"query": "안녕하세요"}, headers=HEADERS, timeout=TIMEOUT)
                   ms = (time.time() - s) * 1000
                   print(f"  워밍업 #{attempt+1}: HTTP {r.status_code} ({ms/1000:.1f}s)")
                   if r.status_code in (200, 429):
@@ -198,7 +200,7 @@ jobs:
           for i, sc in enumerate(scenarios):
               s = time.time()
               try:
-                  r = requests.post(f"{API}/ask", json={"query": sc["query"]}, timeout=TIMEOUT)
+                  r = requests.post(f"{API}/ask", json={"query": sc["query"]}, headers=HEADERS, timeout=TIMEOUT)
                   ms = (time.time() - s) * 1000
                   if r.status_code == 200:
                       data = r.json()
