@@ -38,69 +38,69 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
     // 리더/C-Level 프로필 이미지 매핑 (이름 → 경로)
     const leaderProfileImages = {
-        '휘율': 'images/leaders/L01-hwiyul.jpg',
-        '보늬': 'images/leaders/L02-bonui.jpg',
-        '담슬': 'images/leaders/L03-damseul.jpg',
-        '아키': 'images/leaders/L04-aki.jpg',
-        '연우': 'images/leaders/L05-yeonwoo.jpg',
-        '벼리': 'images/leaders/L06-byeori.jpg',
-        '하늬': 'images/leaders/L07-hanui.jpg',
-        '온유': 'images/leaders/L08-onyu.jpg',
-        '한울': 'images/leaders/L09-hanul.jpg',
-        '결휘': 'images/leaders/L10-gyeolhwi.jpg',
-        '오름': 'images/leaders/L11-oreum.jpg',
-        '아슬': 'images/leaders/L12-aseul.jpg',
-        '누리': 'images/leaders/L13-nuri.jpg',
-        '다솜': 'images/leaders/L14-dasom.jpg',
-        '별하': 'images/leaders/L15-byeolha.jpg',
-        '슬아': 'images/leaders/L16-seula.jpg',
-        '미르': 'images/leaders/L17-mir.jpg',
-        '다온': 'images/leaders/L18-daon.jpg',
-        '슬옹': 'images/leaders/L19-selong.jpg',
-        '찬솔': 'images/leaders/L20-chansol.jpg',
-        '휘윤': 'images/leaders/L21-sebin.jpg',
-        '무결': 'images/leaders/L22-gaon.jpg',
-        '가비': 'images/leaders/L23-seoun.jpg',
-        '도울': 'images/leaders/L24-doul.jpg',
-        '강무': 'images/leaders/L25-damwoo.jpg',
-        '루다': 'images/leaders/L26-jinu.jpg',
-        '수림': 'images/leaders/L27-ruda.jpg',
-        '해슬': 'images/leaders/L28-haeseul.jpg',
-        '라온': 'images/leaders/L29-raon.jpg',
-        '담우': 'images/leaders/L30-damwoo.jpg',
-        '로운': 'images/leaders/L31-roun.jpg',
-        '바름': 'images/leaders/L32-bareum.jpg',
-        '별이': 'images/leaders/L33-byeoli.jpg',
-        '지누': 'images/leaders/L34-jinu.jpg',
-        '마루': 'images/leaders/L35-maru.jpg',
-        '단아': 'images/leaders/L36-dana.jpg',
-        '예솔': 'images/leaders/L37-yesol.jpg',
-        '슬비': 'images/leaders/L38-seulbi.jpg',
-        '가온': 'images/leaders/L39-gaon.jpg',
-        '한결': 'images/leaders/L40-hangyeol.jpg',
-        '산들': 'images/leaders/L41-sandeul.jpg',
-        '하람': 'images/leaders/L42-haram.jpg',
-        '해나': 'images/leaders/L43-haena.jpg',
-        '보람': 'images/leaders/L44-boram.jpg',
-        '이룸': 'images/leaders/L45-ireum.jpg',
-        '다올': 'images/leaders/L46-daol.jpg',
-        '새론': 'images/leaders/L47-saeron.jpg',
-        '나래': 'images/leaders/L48-narae.jpg',
-        '가람': 'images/leaders/L49-garam.jpg',
-        '빛나': 'images/leaders/L50-bitna.jpg',
-        '소울': 'images/leaders/L51-soul.jpg',
-        '미소': 'images/leaders/L52-miso.jpg',
-        '늘솔': 'images/leaders/L53-neulsol.jpg',
-        '이서': 'images/leaders/L54-iseo.jpg',
-        '윤빛': 'images/leaders/L55-yunbit.jpg',
-        '다인': 'images/leaders/L56-dain.jpg',
-        '세움': 'images/leaders/L57-seum.jpg',
-        '예온': 'images/leaders/L58-yeon.jpg',
-        '한빛': 'images/leaders/L59-hanbit.jpg',
-        '마디': 'images/leaders/L60-madi.jpg',
-        '서연': 'images/clevel/cso-seoyeon.jpg',
-        '지유': 'images/clevel/cto-jiyu.jpg',
-        '유나': 'images/clevel/cco-yuna.jpg',
+        '휘율': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L01-hwiyul.jpg',
+        '보늬': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L02-bonui.jpg',
+        '담슬': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L03-damseul.jpg',
+        '아키': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L04-aki.jpg',
+        '연우': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L05-yeonwoo.jpg',
+        '벼리': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L06-byeori.jpg',
+        '하늬': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L07-hanui.jpg',
+        '온유': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L08-onyu.jpg',
+        '한울': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L09-hanul.jpg',
+        '결휘': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L10-gyeolhwi.jpg',
+        '오름': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L11-oreum.jpg',
+        '아슬': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L12-aseul.jpg',
+        '누리': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L13-nuri.jpg',
+        '다솜': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L14-dasom.jpg',
+        '별하': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L15-byeolha.jpg',
+        '슬아': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L16-seula.jpg',
+        '미르': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L17-mir.jpg',
+        '다온': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L18-daon.jpg',
+        '슬옹': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L19-selong.jpg',
+        '찬솔': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L20-chansol.jpg',
+        '휘윤': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L21-sebin.jpg',
+        '무결': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L22-gaon.jpg',
+        '가비': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L23-seoun.jpg',
+        '도울': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L24-doul.jpg',
+        '강무': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L25-damwoo.jpg',
+        '루다': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L26-jinu.jpg',
+        '수림': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L27-ruda.jpg',
+        '해슬': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L28-haeseul.jpg',
+        '라온': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L29-raon.jpg',
+        '담우': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L30-damwoo.jpg',
+        '로운': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L31-roun.jpg',
+        '바름': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L32-bareum.jpg',
+        '별이': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L33-byeoli.jpg',
+        '지누': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L34-jinu.jpg',
+        '마루': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L35-maru.jpg',
+        '단아': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L36-dana.jpg',
+        '예솔': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L37-yesol.jpg',
+        '슬비': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L38-seulbi.jpg',
+        '가온': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L39-gaon.jpg',
+        '한결': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L40-hangyeol.jpg',
+        '산들': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L41-sandeul.jpg',
+        '하람': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L42-haram.jpg',
+        '해나': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L43-haena.jpg',
+        '보람': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L44-boram.jpg',
+        '이룸': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L45-ireum.jpg',
+        '다올': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L46-daol.jpg',
+        '새론': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L47-saeron.jpg',
+        '나래': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L48-narae.jpg',
+        '가람': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L49-garam.jpg',
+        '빛나': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L50-bitna.jpg',
+        '소울': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L51-soul.jpg',
+        '미소': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L52-miso.jpg',
+        '늘솔': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L53-neulsol.jpg',
+        '이서': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L54-iseo.jpg',
+        '윤빛': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L55-yunbit.jpg',
+        '다인': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L56-dain.jpg',
+        '세움': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L57-seum.jpg',
+        '예온': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L58-yeon.jpg',
+        '한빛': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L59-hanbit.jpg',
+        '마디': 'https://storage.googleapis.com/lawmadi-media/images/leaders/L60-madi.jpg',
+        '서연': 'https://storage.googleapis.com/lawmadi-media/images/clevel/cso-seoyeon.jpg',
+        '지유': 'https://storage.googleapis.com/lawmadi-media/images/clevel/cto-jiyu.jpg',
+        '유나': 'https://storage.googleapis.com/lawmadi-media/images/clevel/cco-yuna.jpg',
     };
 
     // Leader Korean → Romanized name mapping (for foreigner-friendly display)
@@ -1122,7 +1122,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
 
         // ═══ Leader Deliberation Rendering — Premium UI ═══
         _getLeaderAvatar(name) {
-            return leaderProfileImages[name] || 'images/leaders/L60-madi.jpg';
+            return leaderProfileImages[name] || 'https://storage.googleapis.com/lawmadi-media/images/leaders/L60-madi.jpg';
         },
 
         _getTimeStamp(turnOffset) {
@@ -2576,7 +2576,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             if (isLeaderChat) {
                 const leaderName = (this.currentLeader && this.currentLeader.name) || '';
                 const leaderSpec = (this.currentLeader && this.currentLeader.specialty) || '';
-                const avatarSrc = leaderProfileImages[leaderName] || 'images/leaders/L60-madi.jpg';
+                const avatarSrc = leaderProfileImages[leaderName] || 'https://storage.googleapis.com/lawmadi-media/images/leaders/L60-madi.jpg';
                 container.innerHTML = _sanitize(
                     '<div class="progress-avatar-row">' +
                         '<img class="progress-avatar" src="' + this.escapeHtml(avatarSrc) + '" alt="' + this.escapeHtml(leaderName) + '">' +
@@ -2590,7 +2590,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             } else {
                 container.innerHTML = _sanitize(
                     '<div class="progress-avatar-row">' +
-                        '<img class="progress-avatar" src="images/clevel/cco-yuna.jpg" alt="Yuna">' +
+                        '<img class="progress-avatar" src="https://storage.googleapis.com/lawmadi-media/images/clevel/cco-yuna.jpg" alt="Yuna">' +
                         '<div class="progress-info">' +
                             '<div class="progress-leader-name">Yuna <span class="progress-leader-spec">Progress Guide</span></div>' +
                             '<div class="progress-steps" id="progress-steps">' +
@@ -2638,7 +2638,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 const avatarEl = document.querySelector('#simple-waiting .progress-avatar');
                 const nameEl = document.querySelector('#simple-waiting .progress-leader-name');
                 if (avatarEl) {
-                    const newSrc = leaderProfileImages[payload.leader] || 'images/leaders/L60-madi.jpg';
+                    const newSrc = leaderProfileImages[payload.leader] || 'https://storage.googleapis.com/lawmadi-media/images/leaders/L60-madi.jpg';
                     avatarEl.src = newSrc;
                     avatarEl.alt = payload.leader;
                 }
