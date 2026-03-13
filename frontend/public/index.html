@@ -32,24 +32,65 @@
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
-        "@type": "WebApplication",
+        "@type": ["WebApplication", "LegalService"],
         "name": "Lawmadi OS",
         "alternateName": "법마디",
         "description": "무료 AI 법률 상담 플랫폼. 임대차 분쟁, 부당해고, 이혼, 상속 등 60개 분야 전문 AI가 쟁점을 분석하고 국가법령정보센터 법령을 기반으로 답변합니다.",
-        "url": "https://lawmadi-db.web.app",
+        "url": "https://lawmadi.com",
         "applicationCategory": "LegalService",
         "operatingSystem": "Web",
-        "inLanguage": "ko",
-        "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "KRW"
+        "inLanguage": ["ko", "en"],
+        "availableLanguage": ["ko", "en"],
+        "featureList": [
+            "60개 법률 분야 전문 AI 리더",
+            "국가법령정보센터 실시간 법령 검증",
+            "무료 일일 2회 상담",
+            "한국어/영어 지원",
+            "실시간 스트리밍 응답"
+        ],
+        "areaServed": {
+            "@type": "Country",
+            "name": "KR"
         },
+        "offers": [
+            {
+                "@type": "Offer",
+                "name": "무료 플랜",
+                "price": "0",
+                "priceCurrency": "KRW",
+                "description": "일일 2회 무료 법률 상담"
+            },
+            {
+                "@type": "Offer",
+                "name": "스타터팩",
+                "price": "2100",
+                "priceCurrency": "KRW",
+                "description": "20 크레딧"
+            },
+            {
+                "@type": "Offer",
+                "name": "스탠다드팩",
+                "price": "7000",
+                "priceCurrency": "KRW",
+                "description": "100 크레딧"
+            },
+            {
+                "@type": "Offer",
+                "name": "프로팩",
+                "price": "13800",
+                "priceCurrency": "KRW",
+                "description": "300 크레딧"
+            }
+        ],
         "provider": {
             "@type": "Organization",
             "name": "Lawmadi",
-            "url": "https://lawmadi-db.web.app"
-        }
+            "url": "https://lawmadi.com"
+        },
+        "sameAs": [
+            "https://dev.to/lawmadi",
+            "https://hashnode.com/@lawmadi"
+        ]
     }
     </script>
     <script type="application/ld+json">

@@ -32,24 +32,65 @@
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
-        "@type": "WebApplication",
+        "@type": ["WebApplication", "LegalService"],
         "name": "Lawmadi OS",
         "alternateName": "법마디",
         "description": "Free AI legal consultation platform. 60 specialized AI leaders analyze legal issues across lease disputes, wrongful termination, divorce, inheritance and more, based on Korean statutory law.",
-        "url": "https://lawmadi-db.web.app",
+        "url": "https://lawmadi.com",
         "applicationCategory": "LegalService",
         "operatingSystem": "Web",
-        "inLanguage": "en",
-        "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "USD"
+        "inLanguage": ["ko", "en"],
+        "availableLanguage": ["ko", "en"],
+        "featureList": [
+            "60 domain-specialized AI legal leaders",
+            "Real-time statute verification via Korea Law API",
+            "2 free consultations per day",
+            "Korean and English support",
+            "Streaming real-time responses"
+        ],
+        "areaServed": {
+            "@type": "Country",
+            "name": "KR"
         },
+        "offers": [
+            {
+                "@type": "Offer",
+                "name": "Free Plan",
+                "price": "0",
+                "priceCurrency": "USD",
+                "description": "2 free legal consultations per day"
+            },
+            {
+                "@type": "Offer",
+                "name": "Starter Pack",
+                "price": "1.50",
+                "priceCurrency": "USD",
+                "description": "20 credits"
+            },
+            {
+                "@type": "Offer",
+                "name": "Standard Pack",
+                "price": "4.99",
+                "priceCurrency": "USD",
+                "description": "100 credits"
+            },
+            {
+                "@type": "Offer",
+                "name": "Pro Pack",
+                "price": "9.99",
+                "priceCurrency": "USD",
+                "description": "300 credits"
+            }
+        ],
         "provider": {
             "@type": "Organization",
             "name": "Lawmadi",
-            "url": "https://lawmadi-db.web.app"
-        }
+            "url": "https://lawmadi.com"
+        },
+        "sameAs": [
+            "https://dev.to/lawmadi",
+            "https://hashnode.com/@lawmadi"
+        ]
     }
     </script>
     <script type="application/ld+json">
