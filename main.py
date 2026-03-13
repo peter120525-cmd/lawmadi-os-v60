@@ -325,29 +325,107 @@ def _get_blacklist_entries() -> list:
     return entries
 
 def _remove_from_blacklist(ip_hash_prefix: str) -> bool:
-    """Admin API용: IP 해시 prefix로 블랙리스트 해제."""
+    """Admin API용: IP 해시 prefix로 블랙리스트 해제 + DB 삭제."""
     with _blacklist_lock:
         to_remove = [ip for ip in _ip_blacklist if _sha256(ip)[:12] == ip_hash_prefix]
         for ip in to_remove:
             _ip_blacklist.pop(ip, None)
-        return len(to_remove) > 0
+    # DB에서도 삭제
+    if to_remove:
+        try:
+            from connectors.db_client import get_connection, release_connection
+            conn = get_connection()
+            try:
+                cur = conn.cursor()
+                for ip in to_remove:
+                    cur.execute("DELETE FROM ip_blacklist WHERE ip_hash = %s", (_sha256(ip)[:64],))
+                conn.commit()
+                cur.close()
+            finally:
+                release_connection(conn)
+        except Exception as e:
+            logger.warning(f"[BLACKLIST] DB delete failed: {e}")
+    return len(to_remove) > 0
 
-def _add_to_blacklist(ip: str, duration: int = 3600):
-    """Admin API용: 수동 블랙리스트 추가."""
+def _add_to_blacklist(ip: str, duration: int = 3600, reason: str = "manual"):
+    """Admin API용: 수동 블랙리스트 추가 + DB 영구 저장."""
+    expires = time.time() + duration
     with _blacklist_lock:
-        _ip_blacklist[ip] = time.time() + duration
+        _ip_blacklist[ip] = expires
     logger.warning(f"[BLACKLIST] Manual block: {_sha256(ip)[:12]} for {duration}s")
+    # DB 영구 저장
+    try:
+        from connectors.db_client import get_connection, release_connection
+        conn = get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO ip_blacklist (ip_hash, ip_addr, expires_at, reason)
+                VALUES (%s, %s, TO_TIMESTAMP(%s), %s)
+                ON CONFLICT (ip_hash) DO UPDATE
+                SET expires_at = EXCLUDED.expires_at, reason = EXCLUDED.reason
+            """, (_sha256(ip)[:64], ip, expires, reason))
+            conn.commit()
+            cur.close()
+        finally:
+            release_connection(conn)
+    except Exception as e:
+        logger.warning(f"[BLACKLIST] DB save failed: {e}")
+
+
+def _load_blacklist_from_db():
+    """DB에서 만료되지 않은 블랙리스트를 인메모리로 로드."""
+    try:
+        from connectors.db_client import get_connection, release_connection
+        conn = get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT ip_addr, EXTRACT(EPOCH FROM expires_at) AS expires_ts
+                FROM ip_blacklist WHERE expires_at > NOW()
+            """)
+            rows = cur.fetchall()
+            cur.close()
+        finally:
+            release_connection(conn)
+        with _blacklist_lock:
+            for ip_addr, expires_ts in rows:
+                _ip_blacklist[ip_addr] = float(expires_ts)
+        if rows:
+            logger.info(f"✅ [BLACKLIST] DB에서 {len(rows)}건 로드")
+    except Exception as e:
+        logger.warning(f"[BLACKLIST] DB load failed: {e}")
+
+
+# 봇 UA 차단 패턴 — /ask 등 API 엔드포인트에만 적용
+import re as _re_mod
+_BOT_UA_PATTERNS = _re_mod.compile(
+    r"python-requests|python-urllib|httpx|aiohttp|Go-http-client|"
+    r"java/|curl/|wget/|scrapy|node-fetch|undici|axios/",
+    _re_mod.IGNORECASE,
+)
+_BOT_PROTECTED_PATHS = frozenset({"/ask", "/ask-stream", "/ask-expert"})
 
 
 @app.middleware("http")
 async def blacklist_middleware(request: Request, call_next):
-    """블랙리스트 IP 조기 차단 — 모든 미들웨어보다 먼저 실행."""
+    """블랙리스트 IP + 봇 UA 조기 차단."""
     ip = _get_client_ip_fast(request)
     if _is_blacklisted(ip):
         return JSONResponse(
             status_code=403,
             content={"error": "Access denied."}
         )
+    # 봇 UA 차단: /ask 계열 엔드포인트만 적용 (Admin 키 보유 시 우회)
+    if request.url.path in _BOT_PROTECTED_PATHS:
+        ua = request.headers.get("user-agent", "")
+        auth = request.headers.get("authorization", "") or request.headers.get("x-admin-key", "")
+        if not auth and _BOT_UA_PATTERNS.search(ua):
+            logger.warning(f"[BOT-BLOCK] UA blocked: {ua[:80]} | IP: {_sha256(ip)[:12]}")
+            return JSONResponse(
+                status_code=403,
+                content={"error": "Automated requests are not allowed."}
+            )
     response = await call_next(request)
     if response.status_code == 429:
         _record_429(ip)
@@ -1239,6 +1317,9 @@ async def startup():
     _executor = concurrent.futures.ThreadPoolExecutor(max_workers=40)
     asyncio.get_running_loop().set_default_executor(_executor)
     logger.info("✅ ThreadPoolExecutor: max_workers=40")
+
+    # DB에서 영구 블랙리스트 로드
+    _load_blacklist_from_db()
 
     # 만료된 업로드/임시 파일 정리
     try:
