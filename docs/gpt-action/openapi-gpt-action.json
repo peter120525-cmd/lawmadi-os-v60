@@ -1,0 +1,82 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Lawmadi OS Korean Legal AI",
+    "description": "Korean legal consultation API with 60 specialized AI agents and real-time statute verification.",
+    "version": "60.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://lawmadi.com"
+    }
+  ],
+  "paths": {
+    "/ask": {
+      "post": {
+        "operationId": "askLegalQuestion",
+        "summary": "Ask a Korean law question to a specialized AI legal agent",
+        "description": "Submits a legal question. The system automatically routes it to the most relevant specialist among 60 legal domain agents. Returns verified legal analysis with statute citations checked against Korea's official legislative database.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["query"],
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "description": "The legal question. Can be in Korean or English. Korean queries get better results."
+                  },
+                  "lang": {
+                    "type": "string",
+                    "enum": ["ko", "en"],
+                    "default": "ko",
+                    "description": "Response language. Use 'en' for English responses."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful legal analysis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "response": {
+                      "type": "string",
+                      "description": "The legal analysis with verified statute citations"
+                    },
+                    "leader": {
+                      "type": "string",
+                      "description": "Name of the specialist agent that handled the query"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "success or error"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "model": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. Free tier: 2 queries per day."
+          }
+        }
+      }
+    }
+  }
+}
