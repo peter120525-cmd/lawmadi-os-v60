@@ -39,7 +39,7 @@ from prompts.system_instructions import build_lawmadilm_prompt, build_system_ins
 logger = logging.getLogger("LawmadiOS.Pipeline")
 
 # 최소 법률 응답 길이 (이 미만이면 재생성 시도)
-MIN_LEGAL_RESPONSE_GENERAL = 1500   # 일반 답변 최소 1500자
+MIN_LEGAL_RESPONSE_GENERAL = 2500   # 일반 답변 최소 2500자
 MIN_LEGAL_RESPONSE_EXPERT = 4000    # 전문가 답변 최소 4000자
 
 # ---------------------------------------------------------------------------
