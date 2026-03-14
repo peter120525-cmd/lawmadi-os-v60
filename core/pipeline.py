@@ -57,6 +57,85 @@ def _get_genai_client():
         raise RuntimeError("Gemini 클라이언트 미초기화")
     return gc
 
+# ── 판례 캐시 (data/precedent_cache.json) ──
+_PREC_CACHE: List[Dict] = []
+_PREC_BY_LEADER: Dict[str, List[Dict]] = {}
+_PREC_LOADED = False
+
+
+def _load_precedent_cache():
+    """data/precedent_cache.json 로드 → 리더별 인덱스 구축 (서버 시작 시 1회)."""
+    global _PREC_CACHE, _PREC_BY_LEADER, _PREC_LOADED
+    if _PREC_LOADED:
+        return
+    _PREC_LOADED = True
+    cache_path = os.path.join(os.path.dirname(__file__), "..", "data", "precedent_cache.json")
+    try:
+        if os.path.exists(cache_path):
+            import json as _json
+            with open(cache_path, "r", encoding="utf-8") as f:
+                data = _json.load(f)
+            _PREC_CACHE.extend(data.get("precedents", []))
+            # 리더별 인덱스 구축
+            for p in _PREC_CACHE:
+                for lid in p.get("leaders", []):
+                    if lid not in _PREC_BY_LEADER:
+                        _PREC_BY_LEADER[lid] = []
+                    _PREC_BY_LEADER[lid].append(p)
+            logger.info(f"✅ 판례 캐시 로드: {len(_PREC_CACHE)}건, {len(_PREC_BY_LEADER)}개 리더")
+    except Exception as e:
+        logger.warning(f"⚠️ 판례 캐시 로드 실패: {e}")
+
+
+def _get_leader_precedents(leader_id: str, query: str = "", max_results: int = 5) -> str:
+    """리더 전문분야 관련 판례를 프롬프트 주입용 텍스트로 반환."""
+    _load_precedent_cache()
+    candidates = _PREC_BY_LEADER.get(leader_id, [])
+    if not candidates:
+        return ""
+
+    # 쿼리 키워드 매칭으로 관련도 순 정렬
+    if query:
+        query_words = set(query.replace(" ", ""))
+
+        def _score(p):
+            name = p.get("case_name", "")
+            ruling = p.get("ruling", "")
+            ref = p.get("ref_articles", "")
+            text = name + ruling + ref
+            return sum(1 for w in query_words if w in text)
+
+        candidates = sorted(candidates, key=_score, reverse=True)
+
+    # 판결요지가 있는 것 우선
+    with_summary = [p for p in candidates if p.get("summary", "").strip()]
+    without = [p for p in candidates if not p.get("summary", "").strip()]
+    ranked = with_summary + without
+
+    selected = ranked[:max_results]
+    if not selected:
+        return ""
+
+    lines = ["[참고 판례 — 대법원 판시사항/판결요지 (SSOT 검증 완료)]"]
+    for p in selected:
+        case_no = p.get("case_no", "")
+        case_name = p.get("case_name", "")
+        date = p.get("date", "")
+        ruling = p.get("ruling", "").strip()
+        summary = p.get("summary", "").strip()
+        ref_art = p.get("ref_articles", "").strip()
+
+        lines.append(f"\n■ {case_no} ({date}) — {case_name}")
+        if ruling:
+            lines.append(f"  판시사항: {ruling[:500]}")
+        if summary:
+            lines.append(f"  판결요지: {summary[:800]}")
+        if ref_art:
+            lines.append(f"  참조조문: {ref_art[:300]}")
+
+    return "\n".join(lines)
+
+
 # ── 3단비교 + 시행령/시행규칙 서식 사전캐시 ──
 _THD_CMP_CACHE: Dict[str, Any] = {}
 _THD_CMP_LOADED = False
@@ -2156,11 +2235,27 @@ def _build_compose_params(
                 f"{_compressed_context}"
             )
 
+    # ── 판례 캐시 주입 (리더별 관련 판례) ──
+    prec_section = ""
+    leader_id = analysis.get("leader_id", "")
+    prec_text = _get_leader_precedents(leader_id, query=query, max_results=5)
+    if prec_text:
+        prec_section = f"\n\n{prec_text}"
+        if ctx_section:
+            ctx_section += prec_section
+        else:
+            ctx_section = prec_section
+
     # 모드별 보강 지시
+    _has_prec = bool(prec_text)
     _case_law_note_ko = "판례번호를 추측하거나 임의 생성하면 응답이 차단됩니다."
     _case_law_note_en = "Fabricating or guessing case numbers will cause the response to be blocked."
-    _no_case_ko = "판례가 없으면 '관련 판례는 법원 종합법률정보(glaw.scourt.go.kr)에서 확인하세요'로 대체하세요."
-    _no_case_en = "If no case law is available, write: 'Relevant case law can be found at the Korea Courts website (glaw.scourt.go.kr).'"
+    if _has_prec:
+        _no_case_ko = "위 [참고 판례]에서 사안과 관련된 판례를 반드시 1건 이상 인용하세요. 판례번호와 판시사항을 정확히 인용하세요."
+        _no_case_en = "You MUST cite at least 1 case from the [Reference Cases] above. Cite the case number and ruling accurately."
+    else:
+        _no_case_ko = "판례가 없으면 '관련 판례는 법원 종합법률정보(glaw.scourt.go.kr)에서 확인하세요'로 대체하세요."
+        _no_case_en = "If no case law is available, write: 'Relevant case law can be found at the Korea Courts website (glaw.scourt.go.kr).'"
 
     if mode == "expert":
         if _en:
