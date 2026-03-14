@@ -48,6 +48,26 @@ MIN_LEGAL_RESPONSE_EXPERT = 4000    # 전문가 답변 최소 4000자
 _RUNTIME: Dict[str, Any] = {}
 _LAW_CACHE: Dict[str, Any] = {}
 _LEADER_PROFILES: Dict[str, Any] = {}
+
+# ── 3단비교 + 시행령/시행규칙 서식 사전캐시 ──
+_THD_CMP_CACHE: Dict[str, Any] = {}
+_THD_CMP_LOADED = False
+
+def _load_thd_cmp_cache():
+    """data/thd_cmp_cache.json 로드 (서버 시작 시 1회)"""
+    global _THD_CMP_CACHE, _THD_CMP_LOADED
+    if _THD_CMP_LOADED:
+        return
+    _THD_CMP_LOADED = True
+    cache_path = os.path.join(os.path.dirname(__file__), "..", "data", "thd_cmp_cache.json")
+    try:
+        if os.path.exists(cache_path):
+            import json as _json
+            with open(cache_path, "r", encoding="utf-8") as f:
+                _THD_CMP_CACHE.update(_json.load(f))
+            logger.info(f"✅ 3단비교 캐시 로드: {len(_THD_CMP_CACHE)}개 법률")
+    except Exception as e:
+        logger.warning(f"⚠️ 3단비교 캐시 로드 실패: {e}")
 _build_cache_context_fn = None
 _match_ssot_sources_fn = None
 _build_ssot_context_fn = None
@@ -2397,6 +2417,66 @@ async def _run_legal_pipeline(
         else:
             rag_context.context_text = boost_text
         logger.info(f"[Stage 1.5] 리더 {leader_id} 핵심 법률 RAG 주입")
+
+    # -- Stage 1.6: 3단비교 위임조문 + 시행령/시행규칙 서식 주입 --
+    _load_thd_cmp_cache()
+    if _THD_CMP_CACHE and _leader_law_boost:
+        _thd_lines = []
+        _form_lines = []
+        _injected_laws = set()
+        # LAW_BOOST에서 법률명 추출
+        for m in _BOOST_LAW_NAME_RE.finditer(_leader_law_boost):
+            _law_name = m.group(1).strip()
+            if _law_name in _injected_laws:
+                continue
+            _injected_laws.add(_law_name)
+            _thd_entry = _THD_CMP_CACHE.get(_law_name)
+            if not _thd_entry:
+                continue
+            # 위임조문 (상위 3개만)
+            _dels = _thd_entry.get("delegations", [])
+            if _dels:
+                for _d in _dels[:3]:
+                    _num = _d.get("num", "").lstrip("0") or "0"
+                    _title = _d.get("title", "")
+                    _content = _d.get("content", "")[:200]
+                    _thd_lines.append(f"• {_law_name} 제{_num}조{' ' + _title if _title else ''}: {_content}")
+            # 서식 (시행규칙 우선, 상위 5개)
+            _rule = _thd_entry.get("rule", {})
+            _decree = _thd_entry.get("decree", {})
+            _rule_forms = _rule.get("forms", []) if _rule else []
+            _decree_forms = _decree.get("forms", []) if _decree else []
+            _all_forms = _rule_forms + _decree_forms
+            if _all_forms:
+                _src = _rule.get("name", "") if _rule_forms else _decree.get("name", "")
+                for _f in _all_forms[:5]:
+                    _title = _f.get("title", "")
+                    _pdf = _f.get("pdf_link", "")
+                    if _title:
+                        _form_lines.append(f"• [{_src}] {_title}" + (f" (https://www.law.go.kr{_pdf})" if _pdf else ""))
+
+        _thd_block = ""
+        if _thd_lines:
+            if lang == "en":
+                _thd_block += "\n[Delegated Provisions — Key articles delegating details to Enforcement Decree/Rules]\n"
+            else:
+                _thd_block += "\n[위임조문 — 시행령/시행규칙에 세부사항을 위임한 주요 조문]\n"
+            _thd_block += "\n".join(_thd_lines[:15])
+        if _form_lines:
+            if lang == "en":
+                _thd_block += "\n\n[Official Forms — Available from enforcement rules]\n"
+            else:
+                _thd_block += "\n\n[관련 서식 — 시행규칙 공식 서식 (법제처 제공)]\n"
+            _thd_block += "\n".join(_form_lines[:15])
+
+        if _thd_block:
+            if rag_context.context_text:
+                rag_context.context_text += "\n" + _thd_block
+            elif rag_context.cache_context:
+                rag_context.cache_context += "\n" + _thd_block
+            else:
+                rag_context.context_text = _thd_block
+            logger.info(f"[Stage 1.6] 3단비교 {len(_thd_lines)}건 + 서식 {len(_form_lines)}건 주입")
 
     # -- Stage 1.7: DRF Article Pre-fetch (실제 조문 텍스트 프롬프트 주입) --
     _drf_prefetch_cache: Dict[str, Any] = {}
