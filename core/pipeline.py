@@ -2923,8 +2923,10 @@ run_legal_pipeline = _run_legal_pipeline
 # =============================================================
 
 async def _async_stream_chunks_pipeline(sync_stream):
-    """동기 Gemini 스트림을 비동기로 소비 (pipeline 전용)."""
-    q: asyncio.Queue = asyncio.Queue(maxsize=200)  # 바운드 큐 (DoS 방지)
+    """동기 Gemini 스트림을 비동기로 소비 (pipeline 전용).
+    threading.Queue (스레드 안전) + asyncio 폴링 조합."""
+    import queue as _queue_mod
+    q = _queue_mod.Queue(maxsize=200)  # 스레드 안전 바운드 큐
 
     def _consume():
         try:
@@ -2938,8 +2940,8 @@ async def _async_stream_chunks_pipeline(sync_stream):
                             text_part += part.text
                 if text_part:
                     try:
-                        q.put(text_part, timeout=30.0)  # 블로킹 put, 30초 타임아웃
-                    except Exception:
+                        q.put(text_part, timeout=30.0)
+                    except _queue_mod.Full:
                         logger.warning("[StreamPipeline] 큐 full 타임아웃 — 스트림 중단")
                         return
         except Exception as e:
@@ -2947,12 +2949,16 @@ async def _async_stream_chunks_pipeline(sync_stream):
         finally:
             q.put_nowait(None)
 
-    _task = asyncio.get_running_loop().run_in_executor(None, _consume)
+    loop = asyncio.get_running_loop()
+    _task = loop.run_in_executor(None, _consume)
     try:
         while True:
             try:
-                item = await asyncio.wait_for(q.get(), timeout=60.0)
-            except asyncio.TimeoutError:
+                item = await asyncio.wait_for(
+                    loop.run_in_executor(None, q.get, True, 60.0),
+                    timeout=65.0,
+                )
+            except (asyncio.TimeoutError, _queue_mod.Empty):
                 logger.error("[StreamPipeline] 60초 청크 타임아웃 — 스트림 종료")
                 break
             if item is None:
