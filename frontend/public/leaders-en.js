@@ -137,7 +137,7 @@ function renderLeaders(searchTerm) {
         var bannerHtml = '';
         if (img) {
             var videoTag = img.video
-                ? '<video class="leader-video" src="' + esc(img.video) + '" muted loop playsinline preload="metadata"></video>'
+                ? '<video class="leader-video" data-src="' + esc(img.video) + '" muted loop playsinline preload="none"></video>'
                 : '';
             bannerHtml = '<div class="leader-banner">' +
                 '<img src="' + esc(img.banner) + '" alt="' + safeName + '" loading="lazy">' +
@@ -174,6 +174,42 @@ document.querySelectorAll('.filter-tab').forEach(function(tab) {
 });
 
 loadLeaders();
+
+// Lazy video loading: hover → load + play, leave → pause
+(function() {
+    var grid = document.getElementById('leadersGrid');
+    if (!grid) return;
+    grid.addEventListener('mouseenter', function(e) {
+        var card = e.target.closest('.leader-card');
+        if (!card) return;
+        var video = card.querySelector('video[data-src]');
+        if (video && !video.src) { video.src = video.dataset.src; video.removeAttribute('data-src'); video.load(); }
+        if (video) video.play().catch(function(){});
+    }, true);
+    grid.addEventListener('mouseleave', function(e) {
+        var card = e.target.closest('.leader-card');
+        if (!card) return;
+        var video = card.querySelector('video');
+        if (video && !video.paused) { video.pause(); video.currentTime = 0; }
+    }, true);
+    if ('IntersectionObserver' in window) {
+        var observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    var video = entry.target.querySelector('video[data-src]');
+                    if (video) { video.src = video.dataset.src; video.removeAttribute('data-src'); }
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { rootMargin: '200px' });
+        var mo = new MutationObserver(function() {
+            grid.querySelectorAll('.leader-card').forEach(function(card) {
+                if (card.querySelector('video[data-src]')) observer.observe(card);
+            });
+        });
+        mo.observe(grid, { childList: true });
+    }
+})();
 
 // C-Level card click -> profile page
 var clevelCodeMap = { '\uC11C\uC5F0': 'CSO', '\uC9C0\uC720': 'CTO', '\uC720\uB098': 'CCO' };
