@@ -2253,6 +2253,9 @@ def _build_compose_params(
             ctx_section += prec_section
         else:
             ctx_section = prec_section
+        logger.info(f"[PrecCache] 판례 {len(prec_text)}자 주입 (leader={leader_id}, name={leader_name})")
+    else:
+        logger.info(f"[PrecCache] 판례 없음 (leader_id={leader_id!r}, name={leader_name!r})")
 
     # 모드별 보강 지시
     _has_prec = bool(prec_text)
