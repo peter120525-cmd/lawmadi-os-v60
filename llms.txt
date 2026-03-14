@@ -80,14 +80,14 @@ MODEL_CHAIN          = ["gemini-2.5-flash"] (single, 429 backoff 2→4→8s)
 ENABLE_LAWMADILM     = false
 USE_VERTEX_AI        = true
 USE_VERTEX_SEARCH    = true
-MIN_LEGAL_RESPONSE_GENERAL = 2500 chars (soft min 1750 = 70%)
+MIN_LEGAL_RESPONSE_GENERAL = 2500 chars
 MIN_LEGAL_RESPONSE_EXPERT  = 4000 chars
 PIPELINE_MAX_TIMEOUT = 180s
 ```
 
 ---
 
-## 4-STAGE LEGAL PIPELINE
+## 3-STAGE HYBRID LEGAL PIPELINE
 
 Every `/ask` and `/ask-stream` request:
 
@@ -240,16 +240,42 @@ Total Keywords: 14,088 | Total Articles: 20,798 | Entries: 548
 
 **Base URL**: https://lawmadi.com
 
-### Core
+### Core Legal
 
 | Method | Path | Description |
 |--------|------|-------------|
 | POST | `/ask` | JSON 법률 답변 (비스트리밍, 외부 API용) |
 | POST | `/ask-stream` | SSE 실시간 Gemini 스트리밍 법률 답변 |
 | POST | `/ask-expert` | 전문가용 답변 (4,000-5,000자) |
-| GET | `/health` | `{"status": "online", "os_version": "v60.0.0"}` |
 | GET | `/search` | 법령 검색 |
 | GET | `/trending` | 인기 질문 트렌드 |
+| POST | `/suggest-questions` | AI 추천 질문 생성 |
+
+### Leaders & Chat
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/leaders` | 60 리더 목록 (JSON) |
+| POST | `/api/chat-leader` | 리더 1:1 채팅 (SSE 스트리밍) |
+
+### Documents
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/upload` | 법률 문서 업로드 (PDF, JPG, PNG, WEBP) |
+| POST | `/analyze-document/{file_id}` | 업로드 문서 분석 |
+| POST | `/export-pdf` | 법률문서 PDF 내보내기 |
+| GET | `/generate-document` | 문서 양식 생성 |
+| GET | `/document-types` | 문서 유형 목록 |
+| GET | `/api/forms/search` | 서식 검색 |
+
+### System
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | `{"status": "online", "os_version": "v60.0.0"}` |
+| GET | `/metrics` | 시스템 메트릭 (요청 수, 평균 레이턴시) |
+| GET | `/diagnostics` | 시스템 진단 정보 |
 
 ### Auth & Billing
 
@@ -258,8 +284,33 @@ Total Keywords: 14,088 | Total Articles: 20,798 | Entries: 548
 | POST | `/auth/token` | JWT 발급 (5/min) |
 | POST | `/api/paddle/otp/send` | Email OTP 발송 |
 | POST | `/api/paddle/otp/verify` | OTP 검증 → 세션 |
+| GET | `/api/paddle/me` | 로그인 사용자 정보 |
+| POST | `/api/paddle/logout` | 세션 로그아웃 |
 | GET | `/api/paddle/credits` | 크레딧 잔액 |
+| GET | `/api/paddle/credits/history` | 크레딧 내역 (최근 50건) |
+| GET | `/api/paddle/credits/check` | 크레딧 확인 (Expert용) |
 | POST | `/api/paddle/webhook` | Paddle 결제 웹훅 |
+| GET | `/api/paddle/config` | Paddle 클라이언트 설정 |
+
+### User
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/feedback` | 사용자 피드백 제출 |
+| POST | `/api/lawyer-inquiry` | 변호사 상담 문의 |
+| POST | `/api/visit` | 방문자 카운터 |
+| GET | `/api/visitor-stats` | 방문자 통계 |
+| POST | `/api/errors` | 프론트엔드 에러 리포트 |
+| POST | `/api/perf` | 프론트엔드 성능 리포트 |
+| GET | `/plans` | 요금제 정보 |
+
+### External API (v1)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/me` | 인증 사용자 정보 |
+| POST | `/api/v1/ask` | 외부 API 법률 질의 |
+| GET | `/api/v1/search` | 외부 API 법령 검색 |
 
 ### Pages
 
@@ -270,7 +321,10 @@ Total Keywords: 14,088 | Total Articles: 20,798 | Entries: 548
 | `/leaders`, `/leaders-en` | 60 리더 목록 |
 | `/about`, `/about-en` | 소개 |
 | `/pricing`, `/pricing-en` | 요금제 |
+| `/clevel`, `/clevel-en` | C-Level 임원 |
 | `/terms`, `/privacy` | 약관, 개인정보 |
+| `/refund`, `/refund-en` | 환불 정책 |
+| `/llms.txt`, `/README.md`, `/license` | 시스템 문서 |
 
 ### Admin (requires `X-Admin-Key` or `Authorization: Bearer`)
 
@@ -278,11 +332,20 @@ Total Keywords: 14,088 | Total Articles: 20,798 | Entries: 548
 |------|-------------|
 | `/api/admin/dashboard` | DAU, 쿼리수, latency, 에러율 |
 | `/api/admin/chat-usage` | 채팅 이용 로그 |
+| `/api/admin/chat-logs` | 채팅 로그 (필터) |
 | `/api/admin/conversion` | 전환 메트릭 |
 | `/api/admin/retention` | 리텐션 메트릭 |
 | `/api/admin/cost-estimate` | API 비용 추정 |
+| `/api/admin/feedback-summary` | 피드백 요약 |
 | `/api/admin/blacklist` | 블랙리스트 CRUD |
-| `/api/admin/paddle/*` | 거래/고객/환불/매출 |
+| `/api/admin/leader-stats` | 리더별 질문 통계 |
+| `/api/admin/category-stats` | 법률 분야별 통계 |
+| `/api/admin/leader-queries/{code}` | 특정 리더 질문 이력 |
+| `/api/admin/system-metrics` | 시스템 메트릭 상세 |
+| `/api/admin/frontend-errors` | 프론트엔드 에러 로그 |
+| `/api/admin/frontend-perf` | 프론트엔드 성능 로그 |
+| `/api/admin/paddle/*` | 거래/고객/환불/조정/매출/사용자 |
+| `/api/verification/stats` | 헌법 검증 통계 |
 
 ---
 
@@ -311,7 +374,7 @@ Deduction: Post-response (after successful answer)
 ### CORS
 
 ```
-Allowed: lawmadi.com, www.lawmadi.com, lawmadi-os.web.app, lawmadi-db.web.app
+Allowed: lawmadi.com, www.lawmadi.com, lawmadi-os.web.app, lawmadi-db.web.app, Vercel PWA
 Wildcard (*): PROHIBITED
 ```
 
@@ -345,9 +408,9 @@ Timeout: 300s | Artifact Registry: asia-northeast3-docker.pkg.dev/lawmadi-db/law
 
 ```
 Instance: lawmadi-db-v1 | Engine: PostgreSQL 17 | Tier: db-f1-micro | Disk: 10GB HDD
-Tables (12): drf_cache, rate_limit_tracker, audit_logs, chat_history, visitor_stats,
-  daily_visitors, lawyer_inquiries, feedback, response_verification, frontend_errors,
-  frontend_perf, users + credit_ledger + user_sessions
+Tables (15): drf_cache, rate_limit_tracker, ip_blacklist, audit_logs, chat_history,
+  visitor_stats, daily_visitors, lawyer_inquiries, feedback, response_verification,
+  frontend_errors, frontend_perf, users, credit_ledger, user_sessions
 ```
 
 ### CI/CD (GitHub Actions — 5 Jobs)
