@@ -38,6 +38,28 @@ def _init_cache():
 _DEFAULT_DRF_URL = "https://www.law.go.kr/DRF/lawSearch.do"
 _LAW_SERVICE_URL = "https://www.law.go.kr/DRF/lawService.do"
 
+# ── GCS 사전 캐시 (대용량 법률 타임아웃 방지) ──
+_GCS_LAW_CACHE: Dict[str, Any] = {}
+_GCS_CACHE_LOADED = False
+
+def _load_gcs_law_cache():
+    """data/law_service_cache.json 로드 (서버 시작 시 1회)"""
+    global _GCS_LAW_CACHE, _GCS_CACHE_LOADED
+    if _GCS_CACHE_LOADED:
+        return
+    _GCS_CACHE_LOADED = True
+    cache_path = os.path.join(os.path.dirname(__file__), "..", "data", "law_service_cache.json")
+    try:
+        if os.path.exists(cache_path):
+            import json
+            with open(cache_path, "r", encoding="utf-8") as f:
+                _GCS_LAW_CACHE = json.load(f)
+            logger.info(f"✅ GCS 법률 사전캐시 로드: {len(_GCS_LAW_CACHE)}개 법률")
+        else:
+            logger.info("ℹ️ GCS 법률 사전캐시 파일 없음 → 스킵")
+    except Exception as e:
+        logger.warning(f"⚠️ GCS 법률 사전캐시 로드 실패: {e}")
+
 # Target별 캐시 TTL (초) — 법률 데이터는 자주 변경되지 않으므로 긴 TTL 적용
 _CACHE_TTL = {
     "law": 21600,    # 6시간
@@ -342,17 +364,18 @@ class DRFConnector:
             lawService.do JSON 응답 (조문단위 포함) 또는 None
         """
         _init_cache()
+        _load_gcs_law_cache()
 
         cache_key = f"drf:v2:lawsvc:{hashlib.md5(law_name.encode('utf-8')).hexdigest()}"
+
+        # 1순위: DB 캐시 (6시간 TTL)
         try:
             cached = _cache_get(cache_key)
             if cached and cached.get("data"):
-                # 시간 기반 만료: _cached_at 타임스탬프 확인 (6시간 TTL)
                 cached_at = cached.get("_cached_at", 0)
                 if cached_at and (_time.time() - cached_at) > 21600:  # 6h
                     logger.warning(f"⚠️ [Cache EXPIRED] lawService {law_name}: 캐시 6시간 초과 → 재조회")
                 else:
-                    # 캐시 검증: 조문 수가 극히 적으면 잘린 데이터일 수 있음 → 재조회
                     cached_data = cached["data"]
                     arts = cached_data.get("법령", {}).get("조문", {}).get("조문단위", [])
                     if isinstance(arts, list) and len(arts) < 3:
@@ -362,6 +385,21 @@ class DRFConnector:
                         return cached_data
         except Exception:
             pass
+
+        # 2순위: GCS 사전캐시 (law.go.kr 타임아웃 방지)
+        md5_key = hashlib.md5(law_name.encode("utf-8")).hexdigest()
+        gcs_entry = _GCS_LAW_CACHE.get(md5_key)
+        if gcs_entry and gcs_entry.get("data"):
+            gcs_data = gcs_entry["data"]
+            arts = gcs_data.get("법령", {}).get("조문", {}).get("조문단위", [])
+            if isinstance(arts, list) and len(arts) >= 3:
+                logger.info(f"🎯 [GCS Cache HIT] lawService, query={law_name[:30]} ({len(arts)}건)")
+                # DB 캐시에도 저장 (다음 조회 가속)
+                try:
+                    _cache_set(cache_key, {"data": gcs_data, "law_name": law_name, "mst": gcs_entry.get("mst"), "_cached_at": _time.time()}, ttl_seconds=21600)
+                except Exception:
+                    pass
+                return gcs_data
 
         # Step 1: lawSearch.do로 법령일련번호(MST) 조회
         search_result = self.law_search(law_name)
@@ -1143,8 +1181,10 @@ class DRFConnector:
             return await _aio.to_thread(self.get_law_articles, law_name)
 
         await _aio.to_thread(_init_cache)
+        _load_gcs_law_cache()
 
         cache_key = f"drf:v2:lawsvc:{hashlib.md5(law_name.encode('utf-8')).hexdigest()}"
+        # 1순위: DB 캐시
         try:
             cached = await _aio.to_thread(_cache_get, cache_key)
             if cached and cached.get("data"):
@@ -1160,6 +1200,24 @@ class DRFConnector:
                         return cached_data
         except Exception:
             pass
+
+        # 2순위: GCS 사전캐시 (law.go.kr 타임아웃 방지)
+        md5_key = hashlib.md5(law_name.encode("utf-8")).hexdigest()
+        gcs_entry = _GCS_LAW_CACHE.get(md5_key)
+        if gcs_entry and gcs_entry.get("data"):
+            gcs_data = gcs_entry["data"]
+            arts = gcs_data.get("법령", {}).get("조문", {}).get("조문단위", [])
+            if isinstance(arts, list) and len(arts) >= 3:
+                logger.info(f"🎯 [GCS Cache HIT async] lawService, query={law_name[:30]} ({len(arts)}건)")
+                try:
+                    await _aio.to_thread(
+                        _cache_set, cache_key,
+                        {"data": gcs_data, "law_name": law_name, "mst": gcs_entry.get("mst"), "_cached_at": _time.time()},
+                        21600
+                    )
+                except Exception:
+                    pass
+                return gcs_data
 
         # Step 1: lawSearch.do로 MST 조회 (async)
         search_result = await self.law_search_async(law_name)
