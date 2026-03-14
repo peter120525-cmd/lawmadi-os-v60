@@ -527,12 +527,14 @@ def save_chat_history(
     leaders_used: Optional[List[str]] = None,
     query_category: Optional[str] = None,
     user_email: Optional[str] = None,
-    query_type: Optional[str] = None
+    query_type: Optional[str] = None,
+    is_admin: bool = False
 ) -> Dict[str, Any]:
     """
     채팅 기록 저장.
     - query_type: "general"(일반), "expert"(전문가), "leader_chat"(리더 채팅)
     - user_email: 로그인 사용자만 저장, 비로그인 시 None
+    - is_admin: 관리자 테스트 여부 (True면 통계에서 제외 가능)
     """
     if not _db_enabled():
         return {"ok": False, "error": "DB_DISABLED"}
@@ -554,7 +556,8 @@ def save_chat_history(
                 ADD COLUMN IF NOT EXISTS query_category VARCHAR(50),
                 ADD COLUMN IF NOT EXISTS env_version VARCHAR(50),
                 ADD COLUMN IF NOT EXISTS user_email VARCHAR(255),
-                ADD COLUMN IF NOT EXISTS query_type VARCHAR(20)
+                ADD COLUMN IF NOT EXISTS query_type VARCHAR(20),
+                ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE
             """)
             conn.commit()
         except Exception:
@@ -567,9 +570,9 @@ def save_chat_history(
             INSERT INTO chat_history (
                 user_id, user_query, ai_response, leader_code,
                 status, latency_ms, visitor_id, swarm_mode,
-                leaders_used, query_category, user_email, query_type, created_at
+                leaders_used, query_category, user_email, query_type, is_admin, created_at
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
         """, (
             visitor_id or "anonymous",
             user_query,
@@ -582,7 +585,8 @@ def save_chat_history(
             leaders_str,
             query_category,
             user_email,
-            query_type or "general"
+            query_type or "general",
+            is_admin
         ))
 
         conn.commit()
@@ -781,10 +785,12 @@ def get_chat_usage_logs(
     query_type: Optional[str] = None,
     limit: int = 100,
     offset: int = 0,
+    exclude_admin: bool = False,
 ) -> Dict[str, Any]:
     """
     리더 채팅 이용 로그 조회 (Admin).
     - 일자별/리더별/상태별 필터링
+    - exclude_admin=True: 관리자 테스트 제외
     - 최근 질의 목록 + 요약 통계
     """
     if not _db_enabled():
@@ -808,13 +814,16 @@ def get_chat_usage_logs(
         if query_type:
             where.append("query_type = %s")
             params.append(query_type)
+        if exclude_admin:
+            where.append("(is_admin IS NULL OR is_admin = FALSE)")
 
         where_sql = " AND ".join(where)
 
         cur.execute(f"""
             SELECT id, created_at, visitor_id, user_query, ai_response,
                    leader_code, leaders_used, status, latency_ms,
-                   query_category, swarm_mode, user_email, query_type
+                   query_category, swarm_mode, user_email, query_type,
+                   COALESCE(is_admin, FALSE) as is_admin
             FROM chat_history
             WHERE {where_sql}
             ORDER BY created_at DESC
@@ -824,13 +833,14 @@ def get_chat_usage_logs(
         logs = []
         for row in cur.fetchall():
             (rid, created, visitor, query, response, ldr, leaders_used,
-             st, latency, category, swarm, email, qtype) = row
+             st, latency, category, swarm, email, qtype, admin_flag) = row
             logs.append({
                 "id": rid,
                 "timestamp": created.isoformat() if created else None,
                 "visitor_id": visitor[:12] if visitor else None,
                 "user_email": email,
                 "query_type": qtype or "general",
+                "is_admin": bool(admin_flag),
                 "query": query[:500] if query else "",
                 "response": response[:3000] if response else "",
                 "leader": ldr,

@@ -885,7 +885,8 @@ async def ask(request: Request):
                             user_query=query, ai_response=final_text, leader=leader_name,
                             status="success", latency_ms=latency_ms, visitor_id=visitor_id,
                             swarm_mode=False, leaders_used=None, query_category=query_category,
-                            user_email=_resolve_user_email(request), query_type="general"
+                            user_email=_resolve_user_email(request), query_type="general",
+                            is_admin=getattr(request.state, "is_admin", False)
                         )
                     )
             except Exception as log_error:
@@ -1559,6 +1560,7 @@ async def ask_stream(request: Request):
                                 status="timeout", latency_ms=_timeout_latency, visitor_id=visitor_id,
                                 swarm_mode=swarm_mode, user_email=_resolve_user_email(request),
                                 query_type="leader_chat" if req_current_leader else "general",
+                                is_admin=getattr(request.state, "is_admin", False),
                             ))
                     except Exception:
                         pass
@@ -1586,6 +1588,7 @@ async def ask_stream(request: Request):
                                 status="FAIL_CLOSED", latency_ms=latency_ms, visitor_id=visitor_id,
                                 swarm_mode=swarm_mode, user_email=_resolve_user_email(request),
                                 query_type="leader_chat" if req_current_leader else "general",
+                                is_admin=getattr(request.state, "is_admin", False),
                             ))
                     except Exception:
                         pass
@@ -1697,6 +1700,7 @@ async def ask_stream(request: Request):
                                 swarm_mode=swarm_mode,
                                 user_email=_resolve_user_email(request),
                                 query_type="leader_chat" if req_current_leader else "general",
+                                is_admin=getattr(request.state, "is_admin", False),
                             )
                         )
                 except Exception as e:
@@ -1879,7 +1883,8 @@ async def ask_expert(request: Request):
                         status="success" if _response_status == "SUCCESS" else "error",
                         latency_ms=latency_ms, visitor_id=visitor_id,
                         swarm_mode=False, leaders_used=None, query_category=query_category,
-                        user_email=_resolve_user_email(request), query_type="expert"
+                        user_email=_resolve_user_email(request), query_type="expert",
+                        is_admin=getattr(request.state, "is_admin", False)
                     )
                 )
         except Exception as log_error:
