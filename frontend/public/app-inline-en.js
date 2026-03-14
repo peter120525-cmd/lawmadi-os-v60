@@ -2600,6 +2600,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         '<img class="progress-avatar" src="https://storage.googleapis.com/lawmadi-media/images/clevel/cco-yuna.jpg" alt="Yuna">' +
                         '<div class="progress-info">' +
                             '<div class="progress-leader-name">Yuna <span class="progress-leader-spec">Progress Guide</span></div>' +
+                            '<div class="progress-greeting">One moment, the best leader is preparing your answer</div>' +
                             '<div class="progress-steps" id="progress-steps">' +
                                 '<div class="progress-step active" data-step="0"><span class="progress-step-icon">🔍</span> Analyzing your question...</div>' +
                             '</div>' +

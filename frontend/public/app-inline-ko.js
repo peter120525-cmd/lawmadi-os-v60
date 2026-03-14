@@ -2706,6 +2706,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         '<img class="progress-avatar" src="https://storage.googleapis.com/lawmadi-media/images/clevel/cco-yuna.jpg" alt="유나">' +
                         '<div class="progress-info">' +
                             '<div class="progress-leader-name">유나 <span class="progress-leader-spec">진행 안내</span></div>' +
+                            '<div class="progress-greeting">잠시만요, 최적의 리더가 답변을 준비 중이에요</div>' +
                             '<div class="progress-steps" id="progress-steps">' +
                                 '<div class="progress-step active" data-step="0"><span class="progress-step-icon">🔍</span> 질문 분석 중...</div>' +
                             '</div>' +
