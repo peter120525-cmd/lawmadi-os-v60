@@ -877,7 +877,9 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
     if _admin_key and len(_admin_key) >= 32:
         req_key = request.headers.get("X-Admin-Key", "").strip()
         if req_key and hmac.compare_digest(req_key, _admin_key):
+            request.state.is_admin = True
             return True
+    request.state.is_admin = False
 
     # ── 2) DB 세션 유저 → 크레딧/무료 기반 판단 ──
     session_token = request.cookies.get("__session", "").strip()
@@ -968,12 +970,15 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
     if _dt and _SAFE_DEVICE_ID_RE.match(_dt):
         rate_keys.append(f"dt:{_sha256(_dt)}")
 
-    # DB 우선: 어느 식별자라도 한도 초과면 차단
+    # DB 우선: 어느 식별자라도 한도 초과면 즉시 블랙리스트 + 차단
     try:
         from connectors.db_client_v2 import rate_limit_check, rate_limit_hit
         for rk in rate_keys:
             if not rate_limit_check(rk, window_limit):
-                return {"blocked": True, "retry_at_kst": "00:00", "login_required": True}
+                # 한도 초과 → 즉시 블랙리스트 등록 (1시간 차단)
+                _add_to_blacklist(ip, duration=_BLACKLIST_DURATION, reason=f"daily_limit_exceeded:{rk}")
+                logger.warning(f"[BLACKLIST] 일일 한도 초과 즉시 차단: {ip_hash[:12]} (key={rk})")
+                return {"blocked": True, "retry_at_kst": "00:00", "login_required": True, "blacklisted": True}
         for rk in rate_keys:
             rate_limit_hit(rk, window_seconds=window_seconds)
         return True
@@ -992,13 +997,15 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
         for k in _stale:
             _rate_usage.pop(k, None)
 
-    # 어느 식별자라도 한도 초과면 차단
+    # 어느 식별자라도 한도 초과면 즉시 블랙리스트 + 차단
     for rk in rate_keys:
         timestamps = _rate_usage.get(rk, [])
         timestamps = [t for t in timestamps if t >= today_start][-_MAX_TIMESTAMPS_PER_IP:]
         if len(timestamps) >= window_limit:
             _rate_usage[rk] = timestamps
-            return {"blocked": True, "retry_at_kst": "00:00", "login_required": True}
+            _add_to_blacklist(ip, duration=_BLACKLIST_DURATION, reason=f"daily_limit_exceeded:{rk}")
+            logger.warning(f"[BLACKLIST] 일일 한도 초과 즉시 차단 (fallback): {_sha256(ip)[:12]} (key={rk})")
+            return {"blocked": True, "retry_at_kst": "00:00", "login_required": True, "blacklisted": True}
 
     # 모든 식별자에 기록
     for rk in rate_keys:
