@@ -228,11 +228,48 @@ Follow-up → Leader handoff
 | SSOT_09 | 조약 | trty | Active |
 | SSOT_10 | 법령용어 | lstrm | Active |
 
-### Law Cache (7 files, ~603MB)
+### Law Cache (law_cache_1~7.json, ~603MB)
+
+서버 시작 시 메모리에 로드되는 법령 키워드 매칭 캐시.
 
 ```
-Total Keywords: 14,088 | Total Articles: 20,798 | Entries: 548
+Total Keywords: 14,088 | Total Articles: 20,798 | Entries: 548 | Files: 7
 ```
+
+| Type | Label | Entries | Keywords | Articles |
+|------|-------|---------|----------|----------|
+| law | 현행법령 | 103 | 3,413 | 7,882 |
+| prec | 판례 | 88 | 3,151 | 4,697 |
+| ordin | 자치법규 | 72 | 2,677 | 1,806 |
+| admrul | 행정규칙 | 60 | 2,090 | 1,670 |
+| lstrm | 법령용어 | 52 | 1,514 | 194 |
+| decc | 행정심판례 | 37 | 1,304 | 1,195 |
+| decis | 헌재결정례 | 34 | 1,181 | 976 |
+| trty | 조약 | 32 | 1,166 | 851 |
+
+### Pre-built Caches (data/)
+
+파이프라인 Stage 1.5~1.7에서 사용하는 사전 캐시 파일.
+
+| File | Size | Content | Used In |
+|------|------|---------|---------|
+| `law_service_cache.json` | 30MB | 144개 법령 조문 전문 (DRF pre-fetch) | Stage 1.7 DRF article pre-fetch |
+| `elaw_cache.json` | 6.9MB | 181개 영문 법령 (4,767 articles) | 영문 LAW_BOOST 자동 생성, EN→KR 역매핑 |
+| `thd_cmp_cache.json` | 15MB | 144개 법률 3단비교 (위임조문 12,087 + 서식 3,755) | Stage 1.6 delegation + forms 주입 |
+| `decree_forms_cache.json` | 1.3MB | 12개 시행령 서식 | Stage 1.6 서식 보강 |
+| `leader-personas-v2.json` | 48KB | 리더 인격·철학 프로필 | Gemini 시스템 프롬프트 페르소나 주입 |
+| `_leader_law_mst.json` | 15KB | 리더별 핵심 법률 마스터 | LEADER_LAW_BOOST 매핑 |
+
+### Runtime Caches
+
+| Cache | Type | TTL | Description |
+|-------|------|-----|-------------|
+| DRF API 캐시 | DB (drf_cache) | 3600s | DRF 조문 조회 결과 DB 캐싱 |
+| Vertex AI Search | In-memory | Per-request | RAG 검색 결과 (~14,601 docs) |
+| DRF Prefetch | In-memory | Per-request | Stage 1.7에서 프리패치한 조문 (파이프라인 내 공유) |
+| LEADER_LAW_BOOST | In-memory | Startup | 59개 리더별 핵심 법률 조문 (KO+EN) |
+| THD_CMP_CACHE | In-memory | Startup | 3단비교 위임조문+서식 (1회 로드) |
+| ELAW_CACHE | In-memory | Startup | 영문 법령 181개 (1회 로드) |
 
 ---
 
