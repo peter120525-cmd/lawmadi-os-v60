@@ -87,37 +87,72 @@ def _load_precedent_cache():
         logger.warning(f"⚠️ 판례 캐시 로드 실패: {e}")
 
 
-def _get_leader_precedents(leader_id: str, query: str = "", max_results: int = 5) -> str:
-    """리더 전문분야 관련 판례를 프롬프트 주입용 텍스트로 반환."""
+def _extract_keywords(text: str) -> List[str]:
+    """텍스트에서 2글자 이상 한글 명사/핵심어 추출."""
+    # 2~6글자 한글 단어 추출 (조사/어미 제거)
+    words = re.findall(r'[가-힣]{2,6}', text)
+    # 불용어 제거
+    _stopwords = {"있는", "하는", "되는", "에서", "으로", "하여", "대한", "관한", "통한",
+                  "위한", "경우", "사항", "해야", "어떻", "방법", "기준", "절차", "문의",
+                  "알려", "주세", "입니", "습니", "습니다", "합니다", "됩니다"}
+    return [w for w in words if w not in _stopwords]
+
+
+def _extract_ref_laws(ref_articles: str) -> set:
+    """참조조문에서 '법령명 제N조' 패턴 추출 → set."""
+    return set(re.findall(r'([가-힣]+(?:법|시행령|규칙))\s*제(\d+)조', ref_articles))
+
+
+def _get_leader_precedents(leader_id: str, query: str = "", rag_laws: List[str] = None, max_results: int = 3) -> str:
+    """리더 전문분야 관련 판례를 프롬프트 주입용 텍스트로 반환.
+    1) 쿼리 키워드 관련도 2) 참조조문-RAG 법률 매칭 3) 판결요지 필수."""
     _load_precedent_cache()
     candidates = _PREC_BY_LEADER.get(leader_id, [])
     if not candidates:
         return ""
 
-    # 쿼리 키워드 매칭으로 관련도 순 정렬
-    if query:
-        query_words = set(query.replace(" ", ""))
-
-        def _score(p):
-            name = p.get("case_name", "")
-            ruling = p.get("ruling", "")
-            ref = p.get("ref_articles", "")
-            text = name + ruling + ref
-            return sum(1 for w in query_words if w in text)
-
-        candidates = sorted(candidates, key=_score, reverse=True)
-
-    # 판결요지가 있는 것 우선
-    with_summary = [p for p in candidates if p.get("summary", "").strip()]
-    without = [p for p in candidates if not p.get("summary", "").strip()]
-    ranked = with_summary + without
-
-    selected = ranked[:max_results]
-    if not selected:
+    # 쿼리에서 핵심 키워드 추출
+    keywords = _extract_keywords(query) if query else []
+    if not keywords:
         return ""
 
-    lines = ["[참고 판례 — 대법원 판시사항/판결요지 (SSOT 검증 완료)]"]
-    for p in selected:
+    # RAG에서 인용된 법률명 목록 (있으면 참조조문 매칭에 활용)
+    rag_law_names = set(rag_laws) if rag_laws else set()
+    # LAW_BOOST에서도 법률명 추출
+    boost_text = _get_leader_law_boost(leader_id)
+    if boost_text:
+        for m in re.finditer(r'([가-힣]+(?:법|시행령|규칙))', boost_text):
+            rag_law_names.add(m.group(1))
+
+    scored = []
+    for p in candidates:
+        if not p.get("summary", "").strip():
+            continue
+
+        text = p.get("case_name", "") + p.get("ruling", "") + p.get("ref_articles", "")
+
+        # 1) 키워드 관련도 점수
+        kw_score = sum(1 for kw in keywords if kw in text)
+
+        # 2) 참조조문 ↔ 리더 핵심법률 매칭 점수 (보너스)
+        ref_score = 0
+        if rag_law_names:
+            ref_laws = _extract_ref_laws(p.get("ref_articles", ""))
+            ref_score = sum(2 for law, _ in ref_laws if law in rag_law_names)
+
+        total = kw_score + ref_score
+        if kw_score >= 1 and total >= 2:  # 키워드 1+, 총합 2+ 필요
+            scored.append((total, kw_score, ref_score, p))
+
+    if not scored:
+        return ""
+
+    scored.sort(key=lambda x: (-x[0], -x[1]))
+    selected = [(s[0], s[2], s[3]) for s in scored[:max_results]]
+
+    lines = ["[참고 판례 — 대법원 판결요지 (DRF 검증 완료)]"]
+    lines.append("⚠️ 아래 판례 중 사안과 관련된 것을 '왜 그런가요?' 섹션에서 판례번호와 판시사항을 인용하세요.")
+    for total_score, ref_sc, p in selected:
         case_no = p.get("case_no", "")
         case_name = p.get("case_name", "")
         date = p.get("date", "")
@@ -125,7 +160,8 @@ def _get_leader_precedents(leader_id: str, query: str = "", max_results: int = 5
         summary = p.get("summary", "").strip()
         ref_art = p.get("ref_articles", "").strip()
 
-        lines.append(f"\n■ {case_no} ({date}) — {case_name}")
+        match_tag = " [조문매칭]" if ref_sc > 0 else ""
+        lines.append(f"\n■ {case_no} ({date}) — {case_name}{match_tag}")
         if ruling:
             lines.append(f"  판시사항: {ruling[:500]}")
         if summary:
@@ -2246,7 +2282,14 @@ def _build_compose_params(
             if _linfo.get("name") == leader_name:
                 leader_id = _lid
                 break
-    prec_text = _get_leader_precedents(leader_id, query=query, max_results=5)
+    # RAG에서 매칭된 법률명 추출 (판례 참조조문 매칭용)
+    _rag_law_names = []
+    if rag_context and rag_context.matched_laws:
+        for ml in rag_context.matched_laws:
+            _law = ml.get("law", "")
+            if _law:
+                _rag_law_names.append(_law)
+    prec_text = _get_leader_precedents(leader_id, query=query, rag_laws=_rag_law_names, max_results=3)
     if prec_text:
         prec_section = f"\n\n{prec_text}"
         if ctx_section:
