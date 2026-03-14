@@ -2238,6 +2238,14 @@ def _build_compose_params(
     # ── 판례 캐시 주입 (리더별 관련 판례) ──
     prec_section = ""
     leader_id = analysis.get("leader_id", "")
+    # leader_id 미설정 시 리더 이름으로 역매핑 (판례 캐시 조회용)
+    if not leader_id and leader_name:
+        from core.classifier import _LEADER_REGISTRY
+        _reg = _LEADER_REGISTRY.get("swarm_engine_config", {}).get("leader_registry", {})
+        for _lid, _linfo in _reg.items():
+            if _linfo.get("name") == leader_name:
+                leader_id = _lid
+                break
     prec_text = _get_leader_precedents(leader_id, query=query, max_results=5)
     if prec_text:
         prec_section = f"\n\n{prec_text}"
