@@ -1040,6 +1040,13 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                     streamContent.innerHTML = this._renderStreamingText(accumulatedText);
                     this._smartScroll(false);
 
+                } else if (eventType === 'answer_replace') {
+                    accumulatedText = payload.text || accumulatedText;
+                    if (streamDivAttached) {
+                        streamContent.innerHTML = this._renderStreamingText(accumulatedText);
+                        this._smartScroll(false);
+                    }
+
                 } else if (eventType === 'answer_done') {
                     leaderName = payload.leader || leaderName;
                     leaderSpecialty = payload.leader_specialty || payload.specialty || leaderSpecialty;

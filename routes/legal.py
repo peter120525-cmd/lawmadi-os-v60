@@ -41,6 +41,7 @@ from core.pipeline import (
     run_pipeline_stage1,
     run_pipeline_stage2,
     run_pipeline_stage3,
+    run_legal_pipeline_stream,
     _apply_fail_closed,
     _drf_verify_law_refs,
     _gemini_fallback_compose,
@@ -1506,40 +1507,91 @@ async def ask_stream(request: Request):
                     if drf_verification and not hasattr(drf_verification, "all_passed"):
                         drf_verification = None  # 비정상 타입 방어
 
-                # 협의가 불필요한 경우: 기존 직렬 실행 (progress 콜백 포함)
+                # 협의가 불필요한 경우: 실시간 Gemini 스트리밍 또는 기존 직렬 실행
                 else:
-                    _progress_q = asyncio.Queue()
+                    _use_real_stream = os.getenv("ENABLE_REAL_STREAMING", "true").lower() == "true"
 
-                    async def _progress_cb(step, message):
-                        await _progress_q.put({"step": step, "message": message})
+                    if _use_real_stream:
+                        # ── 실시간 Gemini 스트리밍 ──
+                        _progress_q = asyncio.Queue()
+                        _answer_started = False
 
-                    async def _pipeline_runner():
-                        return await _run_legal_pipeline(
-                            query, analysis, tools, gemini_history,
-                            now_kst, ssot_available,
-                            lang=lang, mode=stream_mode,
-                            rag_context=rag_context_pre,
-                            progress_callback=_progress_cb,
-                        )
+                        async def _progress_cb(step, message):
+                            await _progress_q.put({"step": step, "message": message})
 
-                    _pipe_task = asyncio.create_task(_pipeline_runner())
-
-                    # progress 이벤트를 소비하면서 파이프라인 완료 대기
-                    while not _pipe_task.done():
                         try:
-                            prog = await asyncio.wait_for(_progress_q.get(), timeout=1.0)
-                            yield _sse("progress", prog)
-                        except asyncio.TimeoutError:
-                            pass
-                    # 남은 progress 이벤트 소비
-                    while not _progress_q.empty():
-                        try:
-                            prog = _progress_q.get_nowait()
-                            yield _sse("progress", prog)
-                        except Exception:
-                            break
+                            async for event in run_legal_pipeline_stream(
+                                query, analysis, tools, gemini_history,
+                                now_kst, ssot_available,
+                                lang=lang, mode=stream_mode,
+                                rag_context=rag_context_pre,
+                                progress_callback=_progress_cb,
+                            ):
+                                if event[0] == "progress":
+                                    yield _sse("progress", {"step": event[1], "message": event[2]})
+                                elif event[0] == "chunk":
+                                    if not _answer_started:
+                                        yield _sse("answer_start", {"speaker": leader_name, "role": leader_specialty})
+                                        _answer_started = True
+                                    yield _sse("answer_chunk", {"text": event[1]})
+                                elif event[0] == "replace":
+                                    yield _sse("answer_replace", {"text": event[1]})
+                                    final_text = event[1]
+                                elif event[0] == "done":
+                                    final_text = event[1]
+                                    drf_verification = event[2]
+                        except Exception as e:
+                            logger.error(f"[Stream] 실시간 스트리밍 실패: {e}", exc_info=True)
+                            _err_msg = "⚠️ 답변 생성에 실패했습니다. 다시 시도해 주세요." if lang != "en" else "⚠️ Response generation failed. Please try again."
+                            yield _sse("error", {"message": _err_msg})
+                            _err_latency = int((time.time() - start_time) * 1000)
+                            yield _sse("answer_done", {"leader": leader_name, "leader_specialty": leader_specialty, "latency_ms": _err_latency, "trace_id": trace, "status": "ERROR"})
+                            return
 
-                    final_text, drf_verification = await _pipe_task
+                    else:
+                        # ── 기존 직렬 실행 (fallback) ──
+                        _progress_q = asyncio.Queue()
+
+                        async def _progress_cb(step, message):
+                            await _progress_q.put({"step": step, "message": message})
+
+                        async def _pipeline_runner():
+                            return await _run_legal_pipeline(
+                                query, analysis, tools, gemini_history,
+                                now_kst, ssot_available,
+                                lang=lang, mode=stream_mode,
+                                rag_context=rag_context_pre,
+                                progress_callback=_progress_cb,
+                            )
+
+                        _pipe_task = asyncio.create_task(_pipeline_runner())
+
+                        while not _pipe_task.done():
+                            try:
+                                prog = await asyncio.wait_for(_progress_q.get(), timeout=1.0)
+                                yield _sse("progress", prog)
+                            except asyncio.TimeoutError:
+                                pass
+                        while not _progress_q.empty():
+                            try:
+                                prog = _progress_q.get_nowait()
+                                yield _sse("progress", prog)
+                            except Exception:
+                                break
+
+                        final_text, drf_verification = await _pipe_task
+
+                        # 가짜 스트리밍
+                        yield _sse("answer_start", {"speaker": leader_name, "role": leader_specialty})
+                        if final_text:
+                            _elapsed_so_far = time.time() - start_time
+                            _chunk_delay = 0.015 if _elapsed_so_far > 8 else 0.04
+                            _lines = final_text.split("\n")
+                            for _li, _line in enumerate(_lines):
+                                _ltext = _line if _li == len(_lines) - 1 else _line + "\n"
+                                yield _sse("answer_chunk", {"text": _ltext})
+                                if _li < len(_lines) - 1:
+                                    await asyncio.sleep(_chunk_delay)
 
                 # 타입 안전: final_text가 문자열이 아닌 경우 방어
                 if not isinstance(final_text, str):
@@ -1552,7 +1604,6 @@ async def ask_stream(request: Request):
                     yield _sse("error", {"message": _retry_msg})
                     _timeout_latency = int((time.time() - start_time) * 1000)
                     yield _sse("answer_done", {"leader": leader_name, "leader_specialty": leader_specialty, "latency_ms": _timeout_latency, "trace_id": trace, "status": "TIMEOUT"})
-                    # TIMEOUT이어도 DB에 기록
                     try:
                         _db = _optional_import_fn("connectors.db_client_v2")
                         if _db and hasattr(_db, "save_chat_history"):
@@ -1599,18 +1650,7 @@ async def ask_stream(request: Request):
                     yield _sse("answer_done", {"leader": leader_name, "leader_specialty": leader_specialty, "latency_ms": int((time.time() - start_time) * 1000), "trace_id": trace, "status": "ERROR"})
                     return
 
-                # answer_start → answer_chunk 스트리밍 → answer_done
-                yield _sse("answer_start", {"speaker": leader_name, "role": leader_specialty})
-                if final_text:
-                    _elapsed_so_far = time.time() - start_time
-                    _chunk_delay = 0.015 if _elapsed_so_far > 8 else 0.04
-                    _lines = final_text.split("\n")
-                    for _li, _line in enumerate(_lines):
-                        _ltext = _line if _li == len(_lines) - 1 else _line + "\n"
-                        yield _sse("answer_chunk", {"text": _ltext})
-                        if _li < len(_lines) - 1:
-                            await asyncio.sleep(_chunk_delay)
-
+                # 실시간 스트리밍 시 answer_start가 이미 전송됨; fallback 시 위에서 전송됨
                 swarm_mode = False
 
             # 후처리

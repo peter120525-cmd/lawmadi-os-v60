@@ -1027,6 +1027,14 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                     streamContent.innerHTML = this._renderStreamingText(accumulatedText);
                     this._smartScroll(false);
 
+                } else if (eventType === 'answer_replace') {
+                    // 후처리(DRF 검증 등)로 텍스트가 변경된 경우 전체 교체
+                    accumulatedText = payload.text || accumulatedText;
+                    if (streamDivAttached) {
+                        streamContent.innerHTML = this._renderStreamingText(accumulatedText);
+                        this._smartScroll(false);
+                    }
+
                 } else if (eventType === 'answer_done') {
                     leaderName = payload.leader || leaderName;
                     leaderSpecialty = payload.leader_specialty || payload.specialty || leaderSpecialty;
