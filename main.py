@@ -268,8 +268,8 @@ _METRICS_LOCK = threading.Lock()
 # 짧은 시간에 429를 반복 수신하는 IP를 자동 차단
 # =============================================================
 _BLACKLIST_WINDOW = 60          # 60초 내
-_BLACKLIST_THRESHOLD = 20       # 429가 20회 이상이면 블랙리스트
-_BLACKLIST_DURATION = 3600      # 1시간 차단
+_BLACKLIST_THRESHOLD = 10       # 429가 10회 이상이면 블랙리스트 (20→10 강화)
+_BLACKLIST_DURATION = 86400     # 24시간 차단 (1시간→24시간 강화)
 _ip_429_hits: Dict[str, List[float]] = {}   # IP → [timestamp, ...]
 _ip_blacklist: Dict[str, float] = {}        # IP → 차단 해제 시각 (UNIX ts)
 _blacklist_lock = threading.Lock()
@@ -416,16 +416,25 @@ async def blacklist_middleware(request: Request, call_next):
             status_code=403,
             content={"error": "Access denied."}
         )
-    # 봇 UA 차단: /ask 계열 엔드포인트만 적용 (Admin 키 보유 시 우회)
+    # 봇 UA 차단: /ask 계열 엔드포인트만 적용 (유효한 Admin 키 보유 시에만 우회)
     if request.url.path in _BOT_PROTECTED_PATHS:
         ua = request.headers.get("user-agent", "")
-        auth = request.headers.get("authorization", "") or request.headers.get("x-admin-key", "")
-        if not auth and _BOT_UA_PATTERNS.search(ua):
-            logger.warning(f"[BOT-BLOCK] UA blocked: {ua[:80]} | IP: {_sha256(ip)[:12]}")
-            return JSONResponse(
-                status_code=403,
-                content={"error": "Automated requests are not allowed."}
-            )
+        if _BOT_UA_PATTERNS.search(ua):
+            # Admin 키가 유효한 경우에만 봇 차단 우회 허용
+            _admin_key = os.getenv("MCP_API_KEY", "").strip() or os.getenv("INTERNAL_API_KEY", "").strip()
+            is_valid_admin = False
+            if _admin_key and len(_admin_key) >= 32:
+                req_key = (request.headers.get("x-admin-key", "").strip()
+                           or request.headers.get("authorization", "").removeprefix("Bearer ").strip())
+                if req_key and hmac.compare_digest(req_key, _admin_key):
+                    is_valid_admin = True
+            if not is_valid_admin:
+                _record_429(ip)  # 봇 시도도 429 카운터에 반영 → 자동 블랙리스트
+                logger.warning(f"[BOT-BLOCK] UA blocked: {ua[:80]} | IP: {_sha256(ip)[:12]}")
+                return JSONResponse(
+                    status_code=403,
+                    content={"error": "Automated requests are not allowed."}
+                )
     response = await call_next(request)
     if response.status_code == 429:
         _record_429(ip)
@@ -433,18 +442,20 @@ async def blacklist_middleware(request: Request, call_next):
 
 
 def _get_client_ip_fast(request: Request) -> str:
-    """블랙리스트 미들웨어용 IP 추출 (_get_client_ip와 동일 로직)."""
+    """블랙리스트 미들웨어용 IP 추출 — IPv6 정규화 포함."""
     import ipaddress as _ipa
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
         for ip in reversed([s.strip() for s in forwarded.split(",")]):
             try:
-                _ipa.ip_address(ip)
-                return ip
+                return str(_ipa.ip_address(ip))  # IPv6 정규화
             except (ValueError, TypeError):
                 continue
     if request.client and request.client.host:
-        return request.client.host
+        try:
+            return str(_ipa.ip_address(request.client.host))
+        except (ValueError, TypeError):
+            return request.client.host
     return "unknown"
 
 
@@ -785,14 +796,17 @@ def _get_client_ip(request: Request) -> str:
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
         ips = [ip.strip() for ip in forwarded.split(",")]
-        # 마지막(LB 추가) IP 사용, 형식 검증
+        # 마지막(LB 추가) IP 사용, 형식 검증 + IPv6 정규화
         for ip in reversed(ips):
             if _is_valid_ip(ip):
-                return ip
+                return str(ipaddress.ip_address(ip))  # 정규화
 
     # 직접 연결
     if request.client and request.client.host:
-        return request.client.host
+        try:
+            return str(ipaddress.ip_address(request.client.host))
+        except (ValueError, TypeError):
+            return request.client.host
     return "unknown"
 
 def _now_iso() -> str:
@@ -837,6 +851,7 @@ def _check_expert_access(request: Request) -> bool:
     return plan_cfg.get("expert_access", False)
 
 _rate_usage: Dict[str, List[float]] = {}  # 인메모리 fallback용
+_rate_usage_lock = threading.Lock()       # TOCTOU 방지
 _SAFE_DEVICE_ID_RE = re.compile(r'^[a-fA-F0-9\-]{4,64}$')  # 핑거프린트/디바이스토큰 검증
 _KST = datetime.timezone(datetime.timedelta(hours=9))
 
@@ -970,59 +985,57 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
     if _dt and _SAFE_DEVICE_ID_RE.match(_dt):
         rate_keys.append(f"dt:{_sha256(_dt)}")
 
-    # DB 우선: 어느 식별자라도 한도 초과면 즉시 블랙리스트 + 차단
+    # DB 우선: 원자적 체크+기록 (TOCTOU 방지)
     try:
-        from connectors.db_client_v2 import rate_limit_check, rate_limit_hit
+        from connectors.db_client_v2 import rate_limit_check_and_hit
         for rk in rate_keys:
-            if not rate_limit_check(rk, window_limit):
-                # 한도 초과 → 즉시 블랙리스트 등록 (1시간 차단)
+            if not rate_limit_check_and_hit(rk, window_limit, window_seconds=window_seconds):
                 _add_to_blacklist(ip, duration=_BLACKLIST_DURATION, reason=f"daily_limit_exceeded:{rk}")
                 logger.warning(f"[BLACKLIST] 일일 한도 초과 즉시 차단: {ip_hash[:12]} (key={rk})")
                 return {"blocked": True, "retry_at_kst": "00:00", "login_required": True, "blacklisted": True}
-        for rk in rate_keys:
-            rate_limit_hit(rk, window_seconds=window_seconds)
         return True
     except Exception:
         pass
 
-    # 인메모리 fallback
+    # 인메모리 fallback (락으로 TOCTOU 방지)
     now = time.time()
     today_start = _kst_today_start_ts()
     _MAX_TIMESTAMPS_PER_IP = 200
 
-    # 매 요청마다 stale 엔트리 점진 정리 (최대 50개씩)
-    _MAX_RATE_ENTRIES = 10000
-    if len(_rate_usage) > 100:
-        _stale = [k for k, v in list(_rate_usage.items())[:50] if not v or max(v) < today_start]
-        for k in _stale:
-            _rate_usage.pop(k, None)
-
-    # 어느 식별자라도 한도 초과면 즉시 블랙리스트 + 차단
-    for rk in rate_keys:
-        timestamps = _rate_usage.get(rk, [])
-        timestamps = [t for t in timestamps if t >= today_start][-_MAX_TIMESTAMPS_PER_IP:]
-        if len(timestamps) >= window_limit:
-            _rate_usage[rk] = timestamps
-            _add_to_blacklist(ip, duration=_BLACKLIST_DURATION, reason=f"daily_limit_exceeded:{rk}")
-            logger.warning(f"[BLACKLIST] 일일 한도 초과 즉시 차단 (fallback): {_sha256(ip)[:12]} (key={rk})")
-            return {"blocked": True, "retry_at_kst": "00:00", "login_required": True, "blacklisted": True}
-
-    # 모든 식별자에 기록
-    for rk in rate_keys:
-        timestamps = _rate_usage.get(rk, [])
-        timestamps = [t for t in timestamps if t >= today_start][-_MAX_TIMESTAMPS_PER_IP:]
-        timestamps.append(now)
-        _rate_usage[rk] = timestamps
-
-    # 하드 리밋: 최대 엔트리 수 초과 시 강제 정리
-    if len(_rate_usage) > _MAX_RATE_ENTRIES:
-        stale_keys = [k for k, v in list(_rate_usage.items()) if not v or max(v) < today_start]
-        for k in stale_keys:
-            _rate_usage.pop(k, None)
-        if len(_rate_usage) > _MAX_RATE_ENTRIES:
-            sorted_keys = sorted(_rate_usage.keys(), key=lambda k: max(_rate_usage.get(k, [0]), default=0))
-            for k in sorted_keys[:len(_rate_usage) // 2]:
+    with _rate_usage_lock:
+        # stale 엔트리 점진 정리 (최대 50개씩)
+        _MAX_RATE_ENTRIES = 10000
+        if len(_rate_usage) > 100:
+            _stale = [k for k, v in list(_rate_usage.items())[:50] if not v or max(v) < today_start]
+            for k in _stale:
                 _rate_usage.pop(k, None)
+
+        # 어느 식별자라도 한도 초과면 즉시 블랙리스트 + 차단
+        for rk in rate_keys:
+            timestamps = _rate_usage.get(rk, [])
+            timestamps = [t for t in timestamps if t >= today_start][-_MAX_TIMESTAMPS_PER_IP:]
+            if len(timestamps) >= window_limit:
+                _rate_usage[rk] = timestamps
+                _add_to_blacklist(ip, duration=_BLACKLIST_DURATION, reason=f"daily_limit_exceeded:{rk}")
+                logger.warning(f"[BLACKLIST] 일일 한도 초과 즉시 차단 (fallback): {_sha256(ip)[:12]} (key={rk})")
+                return {"blocked": True, "retry_at_kst": "00:00", "login_required": True, "blacklisted": True}
+
+        # 모든 식별자에 원자적으로 기록
+        for rk in rate_keys:
+            timestamps = _rate_usage.get(rk, [])
+            timestamps = [t for t in timestamps if t >= today_start][-_MAX_TIMESTAMPS_PER_IP:]
+            timestamps.append(now)
+            _rate_usage[rk] = timestamps
+
+        # 하드 리밋: 최대 엔트리 수 초과 시 강제 정리
+        if len(_rate_usage) > _MAX_RATE_ENTRIES:
+            stale_keys = [k for k, v in list(_rate_usage.items()) if not v or max(v) < today_start]
+            for k in stale_keys:
+                _rate_usage.pop(k, None)
+            if len(_rate_usage) > _MAX_RATE_ENTRIES:
+                sorted_keys = sorted(_rate_usage.keys(), key=lambda k: max(_rate_usage.get(k, [0]), default=0))
+                for k in sorted_keys[:len(_rate_usage) // 2]:
+                    _rate_usage.pop(k, None)
 
     return True
 

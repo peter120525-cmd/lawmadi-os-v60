@@ -215,6 +215,61 @@ def rate_limit_hit(provider: str, window_seconds: int = 60):
         if cur: cur.close()
         if conn:
            release_connection(conn)
+def rate_limit_check_and_hit(provider: str, limit: int, window_seconds: int = 60) -> bool:
+    """
+    원자적 rate limit 체크+기록 (TOCTOU 방지).
+    한도 내이면 카운트 증가 후 True, 초과면 증가 없이 False 반환.
+    """
+    if not _db_enabled():
+        return True
+
+    conn = get_connection()
+    cur = None
+    try:
+        now = datetime.now(timezone.utc)
+        new_window_end = now + timedelta(seconds=window_seconds)
+
+        cur = conn.cursor()
+        # 단일 쿼리로 체크+증가를 원자적으로 수행
+        cur.execute(
+            """
+            INSERT INTO rate_limit_tracker (provider, call_count, window_start, window_end, env_version)
+            VALUES (%s, 1, %s, %s, %s)
+            ON CONFLICT (provider)
+            DO UPDATE SET
+                call_count = CASE
+                    WHEN rate_limit_tracker.window_end <= %s THEN 1
+                    WHEN rate_limit_tracker.call_count < %s THEN rate_limit_tracker.call_count + 1
+                    ELSE rate_limit_tracker.call_count
+                END,
+                window_start = CASE
+                    WHEN rate_limit_tracker.window_end <= %s THEN %s
+                    ELSE rate_limit_tracker.window_start
+                END,
+                window_end = CASE
+                    WHEN rate_limit_tracker.window_end <= %s THEN %s
+                    ELSE rate_limit_tracker.window_end
+                END
+            RETURNING call_count, (call_count <= %s) AS allowed;
+            """,
+            (provider, now, new_window_end, _ENV_VERSION,
+             now, limit, now, now, now, new_window_end, limit)
+        )
+        row = cur.fetchone()
+        conn.commit()
+        if row:
+            return bool(row[1])  # allowed
+        return True
+    except Exception as e:
+        logger.warning(f"⚠️ [DB] rate_limit_check_and_hit 실패 (fail-soft): {e}")
+        return True
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            release_connection(conn)
+
+
 def add_audit_log(
     query: str,
     response: str,

@@ -1761,6 +1761,12 @@ async def ask_expert(request: Request):
 
     # 전문가 모드 접근 권한 체크 (프리미엄 또는 관리자만)
     if _check_expert_access_fn and not _check_expert_access_fn(request):
+        # 동시 요청 락 해제 (rate limit 통과 시 증가된 카운터 복원)
+        if _release_user_lock_fn:
+            try:
+                _release_user_lock_fn(request)
+            except Exception:
+                pass
         return {
             "trace_id": "",
             "status": "FORBIDDEN",
