@@ -231,6 +231,7 @@ def rate_limit_check_and_hit(provider: str, limit: int, window_seconds: int = 60
 
         cur = conn.cursor()
         # 단일 쿼리로 체크+증가를 원자적으로 수행
+        # 항상 count+1 → RETURNING에서 count <= limit 판정
         cur.execute(
             """
             INSERT INTO rate_limit_tracker (provider, call_count, window_start, window_end, env_version)
@@ -239,8 +240,7 @@ def rate_limit_check_and_hit(provider: str, limit: int, window_seconds: int = 60
             DO UPDATE SET
                 call_count = CASE
                     WHEN rate_limit_tracker.window_end <= %s THEN 1
-                    WHEN rate_limit_tracker.call_count < %s THEN rate_limit_tracker.call_count + 1
-                    ELSE rate_limit_tracker.call_count
+                    ELSE rate_limit_tracker.call_count + 1
                 END,
                 window_start = CASE
                     WHEN rate_limit_tracker.window_end <= %s THEN %s
@@ -253,7 +253,7 @@ def rate_limit_check_and_hit(provider: str, limit: int, window_seconds: int = 60
             RETURNING call_count, (call_count <= %s) AS allowed;
             """,
             (provider, now, new_window_end, _ENV_VERSION,
-             now, limit, now, now, now, new_window_end, limit)
+             now, now, now, now, new_window_end, limit)
         )
         row = cur.fetchone()
         conn.commit()
