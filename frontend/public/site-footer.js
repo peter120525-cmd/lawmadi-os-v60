@@ -28,7 +28,7 @@
             + '</div>'
             + '<div class="footer-biz">'
             + '<span style="font-weight:700;color:#D4E4DA;">Lawmadi</span>'
-            + '<span class="sep">|</span>CEO: Jaenam Choi'
+            + '<span class="sep">|</span>CEO: Choe Jainam'
             + '<span class="sep">|</span>Business Reg: 751-29-01826'
             + '<br>'
             + '<span>E-Commerce Reg: 2026-울산울주-0086</span>'

@@ -10,7 +10,7 @@
 - **Type**: Korean Legal Decision Operating System
 - **Description**: 대한민국 법령·판례·행정규칙 기반 법률 자문 멀티에이전트 AI 운영체제.
   60개 도메인 특화 라우팅(키워드 + Gemini 분류)으로 사용자 질의에 대한 법적 분석 및 경로를 제공한다.
-- **Copyright**: Copyright (c) 2026 Jainam Choe (최재남). All Rights Reserved.
+- **Copyright**: Copyright (c) 2026 Choe Jainam (최재남). All Rights Reserved.
 - **License**: LAWMADI OS COMPREHENSIVE PROPRIETARY LICENSE v2.0.0 (비공개 독점 라이선스)
 - **Governing Law**: Republic of Korea (대한민국 법)
 - **Contact**: choepeter@outlook.kr
@@ -669,7 +669,7 @@ engines.response_verifier  → ResponseVerifier (Gemini SSOT 검증)
 **Type**: Proprietary (비공개 독점) — NOT open source
 **Version**: LAWMADI OS COMPREHENSIVE PROPRIETARY LICENSE v2.0.0
 **Effective Date**: 2026-02-09
-**Copyright**: (c) 2026 Jainam Choe (최재남). All Rights Reserved.
+**Copyright**: (c) 2026 Choe Jainam (최재남). All Rights Reserved.
 
 ### What is Permitted
 - Read/evaluate this software for personal, non-commercial, non-competitive purposes
