@@ -219,7 +219,19 @@
         body:not(.dark-mode) .stage-content h3, body:not(.dark-mode) .layer-card .layer-name,
         body:not(.dark-mode) .tech-card h4, body:not(.dark-mode) .data-card h4,
         body:not(.dark-mode) .principle-card h4 { color: #1A2E22; }
+        body:not(.dark-mode) .stats-bar { background: rgba(255,255,255,0.8); border-color: #D4E4DA; }
+        body:not(.dark-mode) .stat-box { background: rgba(255,255,255,0.8); }
         body:not(.dark-mode) .stat-number { color: #3D8B5E; -webkit-text-fill-color: #3D8B5E; }
+        body:not(.dark-mode) .stat-label { color: #5D7D6D; }
+        body:not(.dark-mode) .section-desc { color: #4A6B56; }
+        body:not(.dark-mode) .stage-tag { background: rgba(61,139,94,0.1); color: #3D8B5E; border-color: rgba(61,139,94,0.2); }
+        body:not(.dark-mode) .stage-content p { color: #5D7D6D; }
+        body:not(.dark-mode) .layer-card .layer-desc { color: #5D7D6D; }
+        body:not(.dark-mode) .tech-card p, body:not(.dark-mode) .data-card p { color: #5D7D6D; }
+        body:not(.dark-mode) .principle-card p { color: #5D7D6D; }
+        body:not(.dark-mode) .pipeline-connector { background: linear-gradient(180deg, rgba(61,139,94,0.3), rgba(61,139,94,0.1)); }
+        body:not(.dark-mode) .header p { color: #5D7D6D; }
+        body:not(.dark-mode) .cta-section { background: transparent; }
         body:not(.dark-mode) .back-button { background: rgba(0,0,0,0.05); border-color: #D4E4DA; color: #1A2E22; }
         @media (min-width: 1440px) { .container { max-width: 1320px; } }
         @media (min-width: 1920px) { .container { max-width: 1440px; } }
@@ -227,7 +239,7 @@
     <script src="/cookie-consent.js"></script>
 </head>
 <body>
-<script>try{if(localStorage.getItem("lawmadi-dark-mode")==="true")document.body.classList.add("dark-mode")}catch(e){}</script>
+<script>try{if(localStorage.getItem("lawmadi-dark-mode")!=="false")document.body.classList.add("dark-mode")}catch(e){}</script>
     <a href="/architecture" style="position:fixed;top:16px;right:16px;background:rgba(255,255,255,0.15);color:#fff;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;z-index:1000;backdrop-filter:blur(8px);">KO</a>
     <div class="animated-bg">
         <div class="grid-pattern"></div>
