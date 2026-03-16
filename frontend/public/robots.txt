@@ -3,107 +3,180 @@
 # https://lawmadi.com/robots.txt
 # =============================================================
 
-# --- AI Crawlers: Welcome ---
-# We actively provide llms.txt and llms-full.txt for AI systems.
-# AI crawlers are encouraged to read /llms.txt for system overview.
-
-User-agent: GPTBot
+# --- Googlebot & Bingbot: Public pages only ---
+User-agent: Googlebot
 Allow: /
+Allow: /en
+Allow: /about
+Allow: /about-en
+Allow: /leaders
+Allow: /leaders-en
+Allow: /leader-profile
+Allow: /leader-profile-en
+Allow: /clevel
+Allow: /clevel-en
+Allow: /architecture
+Allow: /architecture-en
+Allow: /pricing
+Allow: /pricing-en
+Allow: /terms
+Allow: /terms-en
+Allow: /privacy
+Allow: /privacy-en
+Allow: /refund
+Allow: /refund-en
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /openapi.json
+Disallow: /api/
 Disallow: /ask
 Disallow: /ask-stream
 Disallow: /ask-expert
+Disallow: /auth/
+Disallow: /health
+Disallow: /metrics
+Disallow: /diagnostics
+Disallow: /export-pdf
+Disallow: /upload
+Disallow: /analyze-document
+Disallow: /feedback
+Disallow: /suggest-questions
+Disallow: /search
+Disallow: /trending
+Disallow: /plans
+Disallow: /generate-document
+Disallow: /document-types
+Disallow: /dashboard
+Disallow: /conversion
+Disallow: /retention
+Disallow: /cost-estimate
+Disallow: /feedback-summary
+
+User-agent: Bingbot
+Allow: /
+Allow: /en
+Allow: /about
+Allow: /about-en
+Allow: /leaders
+Allow: /leaders-en
+Allow: /architecture
+Allow: /architecture-en
+Allow: /pricing
+Allow: /pricing-en
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
 Disallow: /api/
+Disallow: /ask
+Disallow: /ask-stream
+Disallow: /ask-expert
+Disallow: /auth/
+Disallow: /health
+Disallow: /metrics
+Disallow: /diagnostics
+Disallow: /export-pdf
+Disallow: /upload
+Disallow: /analyze-document
+Disallow: /feedback
+Disallow: /suggest-questions
+Disallow: /search
+Disallow: /trending
+Disallow: /plans
+Disallow: /generate-document
+Disallow: /document-types
+Disallow: /dashboard
+
+# --- AI Crawlers: Welcome ---
+# Read /llms.txt for system overview, /llms-full.txt for full spec.
+User-agent: GPTBot
+Allow: /
+Disallow: /api/
+Disallow: /ask
+Disallow: /ask-stream
+Disallow: /ask-expert
+Disallow: /auth/
 Disallow: /health
 Disallow: /export-pdf
 
 User-agent: ChatGPT-User
 Allow: /
+Disallow: /api/
 Disallow: /ask
 Disallow: /ask-stream
 Disallow: /ask-expert
-Disallow: /api/
+Disallow: /auth/
 Disallow: /health
 Disallow: /export-pdf
 
 User-agent: anthropic-ai
 Allow: /
+Disallow: /api/
 Disallow: /ask
 Disallow: /ask-stream
 Disallow: /ask-expert
-Disallow: /api/
+Disallow: /auth/
 Disallow: /health
 Disallow: /export-pdf
 
 User-agent: Claude-Web
 Allow: /
+Disallow: /api/
 Disallow: /ask
 Disallow: /ask-stream
 Disallow: /ask-expert
-Disallow: /api/
+Disallow: /auth/
 Disallow: /health
 Disallow: /export-pdf
 
 User-agent: PerplexityBot
 Allow: /
+Disallow: /api/
 Disallow: /ask
 Disallow: /ask-stream
 Disallow: /ask-expert
-Disallow: /api/
+Disallow: /auth/
 Disallow: /health
 Disallow: /export-pdf
 
 User-agent: Google-Extended
 Allow: /
+Disallow: /api/
 Disallow: /ask
 Disallow: /ask-stream
 Disallow: /ask-expert
-Disallow: /api/
-Disallow: /health
-Disallow: /export-pdf
-
-User-agent: Googlebot
-Allow: /
-Disallow: /ask
-Disallow: /ask-stream
-Disallow: /ask-expert
-Disallow: /api/
-Disallow: /health
-Disallow: /export-pdf
-
-User-agent: Bingbot
-Allow: /
-Disallow: /ask
-Disallow: /ask-stream
-Disallow: /ask-expert
-Disallow: /api/
+Disallow: /auth/
 Disallow: /health
 Disallow: /export-pdf
 
 User-agent: CCBot
 Allow: /
+Disallow: /api/
 Disallow: /ask
 Disallow: /ask-stream
 Disallow: /ask-expert
-Disallow: /api/
+Disallow: /auth/
 Disallow: /health
 Disallow: /export-pdf
 
 User-agent: cohere-ai
 Allow: /
+Disallow: /api/
 Disallow: /ask
 Disallow: /ask-stream
 Disallow: /ask-expert
-Disallow: /api/
+Disallow: /auth/
 Disallow: /health
 Disallow: /export-pdf
 
 # --- All other bots ---
 User-agent: *
 Allow: /
+Disallow: /api/
 Disallow: /ask
 Disallow: /ask-stream
 Disallow: /ask-expert
-Disallow: /api/
+Disallow: /auth/
 Disallow: /health
 Disallow: /export-pdf
 
