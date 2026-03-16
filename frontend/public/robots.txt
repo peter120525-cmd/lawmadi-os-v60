@@ -1,3 +1,103 @@
+# =============================================================
+# Lawmadi OS v60 — robots.txt
+# https://lawmadi.com/robots.txt
+# =============================================================
+
+# --- AI Crawlers: Welcome ---
+# We actively provide llms.txt and llms-full.txt for AI systems.
+# AI crawlers are encouraged to read /llms.txt for system overview.
+
+User-agent: GPTBot
+Allow: /
+Disallow: /ask
+Disallow: /ask-stream
+Disallow: /ask-expert
+Disallow: /api/
+Disallow: /health
+Disallow: /export-pdf
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /ask
+Disallow: /ask-stream
+Disallow: /ask-expert
+Disallow: /api/
+Disallow: /health
+Disallow: /export-pdf
+
+User-agent: anthropic-ai
+Allow: /
+Disallow: /ask
+Disallow: /ask-stream
+Disallow: /ask-expert
+Disallow: /api/
+Disallow: /health
+Disallow: /export-pdf
+
+User-agent: Claude-Web
+Allow: /
+Disallow: /ask
+Disallow: /ask-stream
+Disallow: /ask-expert
+Disallow: /api/
+Disallow: /health
+Disallow: /export-pdf
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /ask
+Disallow: /ask-stream
+Disallow: /ask-expert
+Disallow: /api/
+Disallow: /health
+Disallow: /export-pdf
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /ask
+Disallow: /ask-stream
+Disallow: /ask-expert
+Disallow: /api/
+Disallow: /health
+Disallow: /export-pdf
+
+User-agent: Googlebot
+Allow: /
+Disallow: /ask
+Disallow: /ask-stream
+Disallow: /ask-expert
+Disallow: /api/
+Disallow: /health
+Disallow: /export-pdf
+
+User-agent: Bingbot
+Allow: /
+Disallow: /ask
+Disallow: /ask-stream
+Disallow: /ask-expert
+Disallow: /api/
+Disallow: /health
+Disallow: /export-pdf
+
+User-agent: CCBot
+Allow: /
+Disallow: /ask
+Disallow: /ask-stream
+Disallow: /ask-expert
+Disallow: /api/
+Disallow: /health
+Disallow: /export-pdf
+
+User-agent: cohere-ai
+Allow: /
+Disallow: /ask
+Disallow: /ask-stream
+Disallow: /ask-expert
+Disallow: /api/
+Disallow: /health
+Disallow: /export-pdf
+
+# --- All other bots ---
 User-agent: *
 Allow: /
 Disallow: /ask
@@ -7,4 +107,5 @@ Disallow: /api/
 Disallow: /health
 Disallow: /export-pdf
 
-Sitemap: https://lawmadi-db.web.app/sitemap.xml
+# --- Discovery ---
+Sitemap: https://lawmadi.com/sitemap.xml

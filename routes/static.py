@@ -1,13 +1,27 @@
 """Static page routes — no RUNTIME dependency."""
 import os
-from fastapi import APIRouter
+import logging
+from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from core.constants import OS_VERSION
+
+logger = logging.getLogger("lawmadi.static")
 
 router = APIRouter()
 
 # Project root: routes/ is a subdirectory, so go up one level
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
+
+
+def _log_ai_access(request: Request, file_name: str):
+    """Log AI crawler access to llms.txt / llms-full.txt for analytics."""
+    ua = request.headers.get("user-agent", "unknown")
+    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "unknown")
+    referer = request.headers.get("referer", "-")
+    logger.info(
+        "AI_DISCOVERY_ACCESS | file=%s | ip=%s | ua=%s | referer=%s",
+        file_name, ip, ua, referer,
+    )
 
 
 @router.get("/")
@@ -34,8 +48,9 @@ async def serve_homepage_en():
 # =============================================================
 
 @router.get("/llms.txt")
-async def serve_llms_txt():
+async def serve_llms_txt(request: Request):
     """llms.txt — machine-readable AI system specification"""
+    _log_ai_access(request, "llms.txt")
     for candidate in [
         os.path.join(_PROJECT_ROOT, "llms.txt"),
         os.path.join(_PROJECT_ROOT, "frontend", "public", "llms.txt"),
@@ -43,6 +58,19 @@ async def serve_llms_txt():
         if os.path.exists(candidate):
             return FileResponse(candidate, media_type="text/plain; charset=utf-8")
     return JSONResponse(status_code=404, content={"error": "llms.txt not found"})
+
+
+@router.get("/llms-full.txt")
+async def serve_llms_full_txt(request: Request):
+    """llms-full.txt — detailed AI system specification"""
+    _log_ai_access(request, "llms-full.txt")
+    for candidate in [
+        os.path.join(_PROJECT_ROOT, "llms-full.txt"),
+        os.path.join(_PROJECT_ROOT, "frontend", "public", "llms-full.txt"),
+    ]:
+        if os.path.exists(candidate):
+            return FileResponse(candidate, media_type="text/plain; charset=utf-8")
+    return JSONResponse(status_code=404, content={"error": "llms-full.txt not found"})
 
 
 @router.get("/README.md")
