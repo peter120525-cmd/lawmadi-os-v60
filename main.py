@@ -503,7 +503,7 @@ async def security_headers_middleware(request: Request, call_next):
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' https: data:; "
         f"connect-src 'self' {LAWMADI_OS_API_URL} https://www.google-analytics.com https://region1.google-analytics.com https://*.paddle.com; "
-        "frame-src 'self' https://*.paddle.com; "
+        "frame-src 'self' https://*.paddle.com https://www.youtube.com; "
         "frame-ancestors 'none'; "
         "object-src 'none'; "
         "base-uri 'self'; "
