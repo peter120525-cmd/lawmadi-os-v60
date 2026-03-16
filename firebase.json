@@ -166,6 +166,26 @@
         "destination": "/architecture-en.html"
       },
       {
+        "source": "/guide-wrongful-dismissal",
+        "destination": "/guide-wrongful-dismissal.html"
+      },
+      {
+        "source": "/guide-deposit-return",
+        "destination": "/guide-deposit-return.html"
+      },
+      {
+        "source": "/guide-fraud-complaint",
+        "destination": "/guide-fraud-complaint.html"
+      },
+      {
+        "source": "/guide-traffic-accident",
+        "destination": "/guide-traffic-accident.html"
+      },
+      {
+        "source": "/guide-divorce-property",
+        "destination": "/guide-divorce-property.html"
+      },
+      {
         "source": "/leader-en",
         "destination": "/leader-profile-en.html"
       },

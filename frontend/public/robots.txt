@@ -17,6 +17,11 @@ Allow: /clevel
 Allow: /clevel-en
 Allow: /architecture
 Allow: /architecture-en
+Allow: /guide-wrongful-dismissal
+Allow: /guide-deposit-return
+Allow: /guide-fraud-complaint
+Allow: /guide-traffic-accident
+Allow: /guide-divorce-property
 Allow: /pricing
 Allow: /pricing-en
 Allow: /terms
