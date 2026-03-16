@@ -33,7 +33,7 @@
 
     // ─── 다크모드 복원 ───
     var savedDark = localStorage.getItem('lawmadi-dark-mode');
-    if (savedDark === 'true') {
+    if (savedDark !== 'false') {
         document.body.classList.add('dark-mode');
     }
 
