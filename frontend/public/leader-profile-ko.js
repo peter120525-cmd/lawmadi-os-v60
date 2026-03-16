@@ -115,6 +115,16 @@ function renderProfile(basic, profile, code) {
         document.getElementById('visionCard').innerHTML = '<p>' + esc(profile.vision) + '</p>';
     }
 
+    // YouTube Shorts
+    if (profile.youtube) {
+        var ytSection = document.getElementById('sectionYoutube');
+        var ytEmbed = document.getElementById('youtubeEmbed');
+        if (ytSection && ytEmbed) {
+            ytEmbed.src = 'https://www.youtube.com/embed/' + encodeURIComponent(profile.youtube) + '?rel=0';
+            ytSection.style.display = '';
+        }
+    }
+
     // Chat CTA link
     var chatCta = document.getElementById('chatCta');
     if (chatCta) chatCta.href = '/leader-chat?id=' + encodeURIComponent(code);
