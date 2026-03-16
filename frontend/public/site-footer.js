@@ -86,13 +86,8 @@
         + '.footer-copy{font-size:0.72rem;opacity:0.6;}';
     document.head.appendChild(style);
 
-    var scripts = document.body.querySelectorAll('body > script');
     var temp = document.createElement('div');
     temp.innerHTML = footerHTML;
     var footerEl = temp.firstChild;
-    if (scripts.length > 0) {
-        document.body.insertBefore(footerEl, scripts[0]);
-    } else {
-        document.body.appendChild(footerEl);
-    }
+    document.body.appendChild(footerEl);
 })();
