@@ -22,6 +22,16 @@ Allow: /guide-deposit-return
 Allow: /guide-fraud-complaint
 Allow: /guide-traffic-accident
 Allow: /guide-divorce-property
+Allow: /guide-small-claims
+Allow: /guide-inheritance
+Allow: /guide-unpaid-wages
+Allow: /guide-real-estate
+Allow: /guide-debt-recovery
+Allow: /guide-damages
+Allow: /guide-workplace-bullying
+Allow: /guide-dui
+Allow: /guide-defamation
+Allow: /guide-industrial-accident
 Allow: /pricing
 Allow: /pricing-en
 Allow: /terms
