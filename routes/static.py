@@ -106,6 +106,25 @@ async def serve_leaders():
     return {"message": "Leaders page not found", "version": OS_VERSION}
 
 
+_SEO_GUIDES = {
+    "/guide-wrongful-dismissal": "guide-wrongful-dismissal.html",
+    "/guide-deposit-return": "guide-deposit-return.html",
+    "/guide-fraud-complaint": "guide-fraud-complaint.html",
+    "/guide-traffic-accident": "guide-traffic-accident.html",
+    "/guide-divorce-property": "guide-divorce-property.html",
+}
+
+for _path, _file in _SEO_GUIDES.items():
+    def _make_guide(filename=_file):
+        async def _serve():
+            fp = os.path.join(_PROJECT_ROOT, "frontend", "public", filename)
+            if os.path.exists(fp):
+                return FileResponse(fp)
+            return JSONResponse(status_code=404, content={"error": "Guide not found"})
+        return _serve
+    router.add_api_route(_path, _make_guide(), methods=["GET"])
+
+
 @router.get("/architecture")
 async def serve_architecture():
     """Architecture page (Korean)"""
