@@ -2,219 +2,219 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <!-- Main Pages -->
   <url>
-    <loc>https://lawmadi-db.web.app/</loc>
+    <loc>https://lawmadi.com/</loc>
     <lastmod>2026-03-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://lawmadi-db.web.app/en</loc>
+    <loc>https://lawmadi.com/en</loc>
     <lastmod>2026-03-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <!-- Legal Guides (SEO) -->
-  <url><loc>https://lawmadi-db.web.app/guide-wrongful-dismissal</loc><lastmod>2026-03-16</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://lawmadi-db.web.app/guide-deposit-return</loc><lastmod>2026-03-16</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://lawmadi-db.web.app/guide-fraud-complaint</loc><lastmod>2026-03-16</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://lawmadi-db.web.app/guide-traffic-accident</loc><lastmod>2026-03-16</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
-  <url><loc>https://lawmadi-db.web.app/guide-divorce-property</loc><lastmod>2026-03-16</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://lawmadi.com/guide-wrongful-dismissal</loc><lastmod>2026-03-16</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://lawmadi.com/guide-deposit-return</loc><lastmod>2026-03-16</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://lawmadi.com/guide-fraud-complaint</loc><lastmod>2026-03-16</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://lawmadi.com/guide-traffic-accident</loc><lastmod>2026-03-16</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://lawmadi.com/guide-divorce-property</loc><lastmod>2026-03-16</lastmod><changefreq>monthly</changefreq><priority>0.9</priority></url>
   <!-- Architecture -->
   <url>
-    <loc>https://lawmadi-db.web.app/architecture</loc>
+    <loc>https://lawmadi.com/architecture</loc>
     <lastmod>2026-03-16</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://lawmadi-db.web.app/architecture-en</loc>
+    <loc>https://lawmadi.com/architecture-en</loc>
     <lastmod>2026-03-16</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <!-- Leaders Directory -->
   <url>
-    <loc>https://lawmadi-db.web.app/leaders</loc>
+    <loc>https://lawmadi.com/leaders</loc>
     <lastmod>2026-03-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://lawmadi-db.web.app/leaders-en</loc>
+    <loc>https://lawmadi.com/leaders-en</loc>
     <lastmod>2026-03-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <!-- C-Level Pages -->
   <url>
-    <loc>https://lawmadi-db.web.app/clevel</loc>
+    <loc>https://lawmadi.com/clevel</loc>
     <lastmod>2026-03-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://lawmadi-db.web.app/clevel-en</loc>
+    <loc>https://lawmadi.com/clevel-en</loc>
     <lastmod>2026-03-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <!-- About -->
   <url>
-    <loc>https://lawmadi-db.web.app/about</loc>
+    <loc>https://lawmadi.com/about</loc>
     <lastmod>2026-03-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://lawmadi-db.web.app/about-en</loc>
+    <loc>https://lawmadi.com/about-en</loc>
     <lastmod>2026-03-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <!-- Leader Profiles KO (60 leaders) -->
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L01</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L02</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L03</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L04</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L05</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L06</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L07</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L08</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L09</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L10</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L11</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L12</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L13</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L14</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L15</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L16</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L17</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L18</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L19</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L20</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L21</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L22</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L23</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L24</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L25</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L26</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L27</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L28</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L29</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L30</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L31</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L32</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L33</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L34</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L35</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L36</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L37</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L38</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L39</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L40</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L41</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L42</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L43</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L44</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L45</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L46</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L47</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L48</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L49</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L50</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L51</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L52</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L53</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L54</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L55</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L56</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L57</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L58</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L59</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile?id=L60</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L01</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L02</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L03</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L04</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L05</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L06</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L07</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L08</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L09</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L10</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L11</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L12</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L13</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L14</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L15</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L16</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L17</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L18</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L19</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L20</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L21</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L22</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L23</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L24</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L25</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L26</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L27</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L28</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L29</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L30</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L31</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L32</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L33</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L34</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L35</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L36</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L37</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L38</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L39</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L40</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L41</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L42</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L43</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L44</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L45</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L46</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L47</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L48</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L49</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L50</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L51</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L52</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L53</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L54</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L55</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L56</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L57</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L58</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L59</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile?id=L60</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <!-- Leader Profiles EN (60 leaders) -->
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L01</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L02</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L03</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L04</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L05</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L06</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L07</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L08</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L09</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L10</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L11</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L12</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L13</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L14</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L15</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L16</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L17</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L18</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L19</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L20</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L21</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L22</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L23</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L24</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L25</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L26</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L27</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L28</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L29</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L30</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L31</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L32</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L33</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L34</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L35</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L36</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L37</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L38</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L39</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L40</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L41</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L42</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L43</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L44</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L45</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L46</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L47</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L48</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L49</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L50</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L51</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L52</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L53</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L54</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L55</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L56</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L57</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L58</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L59</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/leader-profile-en?id=L60</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L01</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L02</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L03</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L04</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L05</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L06</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L07</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L08</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L09</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L10</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L11</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L12</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L13</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L14</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L15</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L16</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L17</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L18</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L19</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L20</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L21</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L22</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L23</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L24</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L25</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L26</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L27</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L28</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L29</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L30</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L31</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L32</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L33</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L34</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L35</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L36</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L37</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L38</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L39</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L40</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L41</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L42</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L43</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L44</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L45</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L46</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L47</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L48</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L49</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L50</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L51</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L52</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L53</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L54</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L55</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L56</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L57</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L58</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L59</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/leader-profile-en?id=L60</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <!-- Pricing -->
   <url>
-    <loc>https://lawmadi-db.web.app/pricing</loc>
+    <loc>https://lawmadi.com/pricing</loc>
     <lastmod>2026-03-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://lawmadi-db.web.app/pricing-en</loc>
+    <loc>https://lawmadi.com/pricing-en</loc>
     <lastmod>2026-03-13</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <!-- Legal Pages -->
-  <url><loc>https://lawmadi-db.web.app/terms</loc><lastmod>2026-03-13</lastmod><changefreq>yearly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://lawmadi-db.web.app/terms-en</loc><lastmod>2026-03-13</lastmod><changefreq>yearly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://lawmadi-db.web.app/privacy</loc><lastmod>2026-03-13</lastmod><changefreq>yearly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://lawmadi-db.web.app/privacy-en</loc><lastmod>2026-03-13</lastmod><changefreq>yearly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://lawmadi-db.web.app/refund</loc><lastmod>2026-03-13</lastmod><changefreq>yearly</changefreq><priority>0.4</priority></url>
-  <url><loc>https://lawmadi-db.web.app/refund-en</loc><lastmod>2026-03-13</lastmod><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://lawmadi.com/terms</loc><lastmod>2026-03-13</lastmod><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://lawmadi.com/terms-en</loc><lastmod>2026-03-13</lastmod><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://lawmadi.com/privacy</loc><lastmod>2026-03-13</lastmod><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://lawmadi.com/privacy-en</loc><lastmod>2026-03-13</lastmod><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://lawmadi.com/refund</loc><lastmod>2026-03-13</lastmod><changefreq>yearly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://lawmadi.com/refund-en</loc><lastmod>2026-03-13</lastmod><changefreq>yearly</changefreq><priority>0.4</priority></url>
   <!-- AI Discovery -->
-  <url><loc>https://lawmadi-db.web.app/llms.txt</loc><lastmod>2026-03-16</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://lawmadi-db.web.app/llms-full.txt</loc><lastmod>2026-03-16</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://lawmadi-db.web.app/openapi.json</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://lawmadi.com/llms.txt</loc><lastmod>2026-03-16</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://lawmadi.com/llms-full.txt</loc><lastmod>2026-03-16</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://lawmadi.com/openapi.json</loc><lastmod>2026-03-13</lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
 </urlset>
