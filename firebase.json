@@ -186,6 +186,46 @@
         "destination": "/guide-divorce-property.html"
       },
       {
+        "source": "/guide-small-claims",
+        "destination": "/guide-small-claims.html"
+      },
+      {
+        "source": "/guide-inheritance",
+        "destination": "/guide-inheritance.html"
+      },
+      {
+        "source": "/guide-unpaid-wages",
+        "destination": "/guide-unpaid-wages.html"
+      },
+      {
+        "source": "/guide-real-estate",
+        "destination": "/guide-real-estate.html"
+      },
+      {
+        "source": "/guide-debt-recovery",
+        "destination": "/guide-debt-recovery.html"
+      },
+      {
+        "source": "/guide-damages",
+        "destination": "/guide-damages.html"
+      },
+      {
+        "source": "/guide-workplace-bullying",
+        "destination": "/guide-workplace-bullying.html"
+      },
+      {
+        "source": "/guide-dui",
+        "destination": "/guide-dui.html"
+      },
+      {
+        "source": "/guide-defamation",
+        "destination": "/guide-defamation.html"
+      },
+      {
+        "source": "/guide-industrial-accident",
+        "destination": "/guide-industrial-accident.html"
+      },
+      {
         "source": "/leader-en",
         "destination": "/leader-profile-en.html"
       },
