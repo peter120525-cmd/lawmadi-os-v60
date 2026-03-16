@@ -75,7 +75,7 @@
         ]
       },
       {
-        "source": "/@(page-common|clevel-page|leaders-ko|leaders-en|leader-profile-ko|leader-profile-en).js",
+        "source": "/@(page-common|site-nav|site-footer|auth-modal|lawmadi-monitor|clevel-page|leaders-ko|leaders-en|leader-profile-ko|leader-profile-en).js",
         "headers": [
           { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
         ]
