@@ -158,6 +158,14 @@
         "destination": "/clevel.html"
       },
       {
+        "source": "/architecture",
+        "destination": "/architecture.html"
+      },
+      {
+        "source": "/architecture-en",
+        "destination": "/architecture-en.html"
+      },
+      {
         "source": "/leader-en",
         "destination": "/leader-profile-en.html"
       },

@@ -50,6 +50,7 @@ Civil Law, Real Estate, Construction, Redevelopment, Medical Law, Damages, Traff
 - English: https://lawmadi.com/en
 - Pricing: https://lawmadi.com/pricing
 - Leader Directory: https://lawmadi.com/leaders
+- Architecture: https://lawmadi.com/architecture
 - API Documentation: https://lawmadi.com/openapi.json
 - Full Technical Spec: https://lawmadi.com/llms-full.txt
 
