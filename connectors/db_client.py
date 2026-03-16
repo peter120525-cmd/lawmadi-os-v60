@@ -6,6 +6,7 @@ import hashlib
 import queue
 import threading
 import logging
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 
@@ -26,6 +27,8 @@ _pool_lock = threading.Lock()
 _MIN_CONN = 2
 _MAX_CONN = 10
 _ENV_VERSION = 'v60.0.0'
+_CONN_MAX_LIFETIME = 600  # 커넥션 최대 수명 10분 (Cloud SQL idle timeout 대응)
+_conn_created: dict = {}  # id(conn) → creation timestamp
 
 def _env(name: str) -> Optional[str]:
     v = os.getenv(name)
@@ -60,7 +63,9 @@ def _get_pool() -> queue.Queue:
 
         try:
             for _ in range(_MIN_CONN):
-                _pool.put(create_connection())
+                conn = create_connection()
+                _conn_created[id(conn)] = time.monotonic()
+                _pool.put(conn)
             logger.info(f"✅ [DB] Cloud SQL 커넥션 풀 초기화 완료 (Version: {_ENV_VERSION})")
         except Exception as e:
             logger.error(f"🚨 [DB] 커넥션 풀 생성 중 치명적 오류: {e}")
@@ -68,6 +73,37 @@ def _get_pool() -> queue.Queue:
     return _pool
 
 _conn_semaphore = threading.Semaphore(_MAX_CONN)
+
+def _is_conn_alive(conn) -> bool:
+    """커넥션 헬스체크: SELECT 1로 활성 여부 확인."""
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT 1")
+        cur.close()
+        return True
+    except Exception:
+        return False
+
+def _is_conn_expired(conn) -> bool:
+    """커넥션 수명 초과 여부 확인 (Cloud SQL idle timeout 대응)."""
+    created = _conn_created.get(id(conn))
+    if created is None:
+        return True  # 추적 안 되는 커넥션은 만료 처리
+    return (time.monotonic() - created) > _CONN_MAX_LIFETIME
+
+def _create_tracked_connection():
+    """커넥션 생성 + 수명 추적 등록."""
+    conn = create_connection()
+    _conn_created[id(conn)] = time.monotonic()
+    return conn
+
+def _discard_connection(conn):
+    """만료/불량 커넥션 정리."""
+    _conn_created.pop(id(conn), None)
+    try:
+        conn.close()
+    except Exception:
+        pass
 
 def get_connection():
     pool = _get_pool()
@@ -78,28 +114,41 @@ def get_connection():
         raise RuntimeError("DB 커넥션 한도 초과 (동시 접속 제한)")
 
     try:
-        conn = pool.get_nowait()
-    except queue.Empty:
-        try:
-            conn = create_connection()
-        except Exception:
-            _conn_semaphore.release()
-            raise
+        # 풀에서 건강한 커넥션을 찾을 때까지 시도
+        while True:
+            try:
+                conn = pool.get_nowait()
+            except queue.Empty:
+                break
+            # 수명 초과 또는 죽은 커넥션 → 폐기 후 재시도
+            if _is_conn_expired(conn) or not _is_conn_alive(conn):
+                logger.info("[DB] 만료/불량 커넥션 폐기, 신규 생성")
+                _discard_connection(conn)
+                continue
+            return conn
+        # 풀에 사용 가능한 커넥션 없음 → 신규 생성
+        conn = _create_tracked_connection()
+    except Exception:
+        _conn_semaphore.release()
+        raise
     return conn
 
 def release_connection(conn):
     pool = _get_pool()
     try:
+        # 수명 초과 커넥션은 반납 대신 폐기
+        if _is_conn_expired(conn):
+            _discard_connection(conn)
+            return
         try:
             conn.rollback()
         except Exception:
-            pass
+            # rollback 실패 → 커넥션 불량, 폐기
+            _discard_connection(conn)
+            return
         pool.put_nowait(conn)
     except queue.Full:
-        try:
-            conn.close()
-        except Exception:
-            pass
+        _discard_connection(conn)
     finally:
         _conn_semaphore.release()
 
