@@ -877,7 +877,8 @@ if _ELAW_CACHE:
                 _law_name = _m.group(1).strip()
                 _art_num = _m.group(2)
                 _cached = _ELAW_CACHE.get(_law_name, {})
-                _art_text = _cached.get("articles", {}).get(_art_num, "")
+                _arts = _cached.get("articles", {})
+                _art_text = _arts.get(_art_num, "") if isinstance(_arts, dict) else ""
                 if _art_text and _cached.get("name_en"):
                     _en_lines.append(f"• {_cached['name_en']} {_art_text}")
                     continue
