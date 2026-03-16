@@ -1238,7 +1238,7 @@ policy:            FAIL_CLOSED (실패 시 응답 차단)
 
 ```
 LAWMADI OS — COMPREHENSIVE PROPRIETARY LICENSE v2.0.0
-Copyright (c) 2026 Jainam Choe (최재남). All rights reserved.
+Copyright (c) 2026 Choe Jainam (최재남). All rights reserved.
 
 Effective Date: 2026-02-09
 ```
@@ -1276,7 +1276,7 @@ Effective Date: 2026-02-09
 본 소프트웨어를 허용 범위 내에서 참조할 경우 다음 귀속 표시를 명시해야 합니다:
 
 > **Lawmadi OS — Legal Decision Operating System.**
-> Copyright (c) 2026 Jainam Choe (최재남). All rights reserved.
+> Copyright (c) 2026 Choe Jainam (최재남). All rights reserved.
 
 ### 준거법 및 관할
 
@@ -1304,7 +1304,7 @@ AI 학습/임베딩/벡터DB/RAG/벤치마킹 목적 사용은 금지됩니다.
 
 | 항목 | 내용 |
 |:---|:---|
-| **저작권자** | Jainam Choe (최재남) |
+| **저작권자** | Choe Jainam (최재남) |
 | **이메일** | choepeter@outlook.kr |
 | **프로젝트** | Lawmadi OS — Legal Decision Operating System |
 | **라이선스 문의 제목** | `Lawmadi OS License Inquiry / Permission Request` |
@@ -1322,7 +1322,7 @@ AI 학습/임베딩/벡터DB/RAG/벤치마킹 목적 사용은 금지됩니다.
 
 [🌐 서비스 이용](https://lawmadi-db.web.app) · [⚙️ API 상태](https://lawmadi-os-v60-938146962157.asia-northeast3.run.app/health) · [📮 문의](mailto:choepeter@outlook.kr)
 
-*Copyright (c) 2026 Jainam Choe (최재남). All rights reserved.*
+*Copyright (c) 2026 Choe Jainam (최재남). All rights reserved.*
 *최종 업데이트: 2026-03-11 | 운영 환경: GCP asia-northeast3 | Gemini 2.5 Flash + Paddle Billing*
 
 </div>
