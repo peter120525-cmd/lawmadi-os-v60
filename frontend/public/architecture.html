@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Lawmadi OS 아키텍처 - AI 법률 운영체제의 기술 구조</title>
+    <meta name="description" content="Lawmadi OS의 8계층 처리 파이프라인, 60명 AI 리더 스웜 엔진, 국가법령정보센터 실시간 검증 시스템의 기술 아키텍처를 소개합니다.">
+    <link rel="canonical" href="https://lawmadi.com/architecture" />
+    <link rel="alternate" hreflang="ko" href="https://lawmadi.com/architecture" />
+    <link rel="alternate" hreflang="en" href="https://lawmadi.com/architecture-en" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Lawmadi OS 아키텍처" />
+    <meta property="og:description" content="AI 법률 운영체제의 기술 구조: 8계층 파이프라인, 60명 스웜 엔진, 실시간 법령 검증" />
+    <meta property="og:url" content="https://lawmadi.com/architecture" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:image" content="https://lawmadi-db.web.app/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#3D8B5E">
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="icon" type="image/png" href="/icon-192.png" />
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Lawmadi OS 아키텍처 — AI 법률 운영체제의 기술 구조",
+        "description": "8계층 처리 파이프라인, 60명 AI 리더 스웜 엔진, 국가법령정보센터 실시간 DRF 검증 시스템의 기술 아키텍처",
+        "author": {"@type": "Organization", "name": "Lawmadi", "url": "https://lawmadi.com"},
+        "publisher": {"@type": "Organization", "name": "Lawmadi"},
+        "mainEntityOfPage": "https://lawmadi.com/architecture",
+        "inLanguage": "ko",
+        "about": {
+            "@type": "SoftwareApplication",
+            "name": "Lawmadi OS",
+            "applicationCategory": "LegalService",
+            "operatingSystem": "Web",
+            "softwareVersion": "v60.0.0"
+        },
+        "keywords": ["Legal AI", "Korean Law", "법률 AI", "법률 운영체제", "NLU", "RAG", "DRF 검증"]
+    }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #3D8B5E; --gold: #B8922D; --purple: #6DBB8F; --green: #3D8B5E;
+            --blue: #4A7BB5; --red: #C45454;
+            --bg-dark: #101A15; --bg-card: #1A2E22;
+            --text-primary: #E4EDE8; --text-secondary: #8BAA9A;
+        }
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #101A15 0%, #1A2E22 50%, #2D4038 100%);
+            min-height: 100vh; color: var(--text-primary); overflow-x: hidden;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        .animated-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; overflow: hidden; pointer-events: none; }
+        .grid-pattern {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: linear-gradient(rgba(74,155,110,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(74,155,110,0.03) 1px, transparent 1px);
+            background-size: 50px 50px; animation: gridMove 20s linear infinite;
+        }
+        @keyframes gridMove { 0% { transform: translate(0,0); } 100% { transform: translate(50px,50px); } }
+        .floating-shape { position: absolute; border-radius: 50%; opacity: 0.04; animation: float 25s infinite ease-in-out; }
+        .shape1 { width: 400px; height: 400px; background: #4A9B6E; top: 5%; left: 5%; }
+        .shape2 { width: 300px; height: 300px; background: #B8922D; top: 50%; right: 5%; animation-delay: 8s; }
+        .shape3 { width: 350px; height: 350px; background: #6DBB8F; bottom: 5%; left: 40%; animation-delay: 16s; }
+        @keyframes float {
+            0%, 100% { transform: translate(0,0) rotate(0deg); }
+            25% { transform: translate(40px,-40px) rotate(90deg); }
+            50% { transform: translate(-30px,30px) rotate(180deg); }
+            75% { transform: translate(30px,40px) rotate(270deg); }
+        }
+        .container { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 40px 20px calc(80px + env(safe-area-inset-bottom, 0px)); }
+        .header { text-align: center; margin-bottom: 60px; animation: fadeInDown 0.8s ease; }
+        .back-button {
+            position: absolute; top: 40px; left: 20px; display: flex; align-items: center; gap: 8px;
+            padding: 14px 28px; background: rgba(255,255,255,0.1); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; color: white; text-decoration: none;
+            font-size: 1.05rem; font-weight: 600; transition: all 0.3s; z-index: 10;
+        }
+        .back-button:hover { background: rgba(255,255,255,0.2); transform: translateX(-5px); }
+        .header-badge {
+            display: inline-block; padding: 10px 24px;
+            background: linear-gradient(135deg, #4A9B6E 0%, #6DBB8F 100%);
+            border-radius: 20px; font-size: 1.05rem; font-weight: 700; letter-spacing: 1px; margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(74,155,110,0.3);
+        }
+        .header h1 {
+            font-size: 3.5rem; font-weight: 900;
+            background: linear-gradient(135deg, #fff 0%, #8BAA9A 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            margin-bottom: 16px; letter-spacing: -1px;
+        }
+        .header p { font-size: 1.4rem; color: var(--text-secondary); max-width: 700px; margin: 0 auto; line-height: 1.6; }
+        .section-title {
+            font-size: 2rem; font-weight: 900; color: white; margin-bottom: 24px;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .section-title::before {
+            content: ''; width: 6px; height: 32px;
+            background: linear-gradient(135deg, #4A9B6E 0%, #6DBB8F 100%);
+            border-radius: 3px; flex-shrink: 0;
+        }
+        .section { margin-bottom: 60px; animation: fadeInUp 0.8s ease; }
+        .section-desc { font-size: 1.15rem; color: var(--text-secondary); line-height: 1.7; margin-bottom: 28px; }
+
+        /* Pipeline Flow */
+        .pipeline-flow { display: flex; flex-direction: column; gap: 0; position: relative; }
+        .pipeline-stage {
+            display: flex; align-items: stretch; gap: 20px;
+            background: rgba(26,46,34,0.6); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;
+            padding: 28px; transition: all 0.3s; position: relative;
+        }
+        .pipeline-stage:hover { background: rgba(26,46,34,0.9); border-color: var(--stage-color, var(--primary)); transform: translateX(8px); }
+        .pipeline-connector {
+            width: 4px; height: 28px; background: linear-gradient(180deg, rgba(74,155,110,0.4), rgba(74,155,110,0.1));
+            margin: 0 auto; border-radius: 2px;
+        }
+        .stage-badge {
+            width: 64px; min-height: 64px; border-radius: 16px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-weight: 900; color: white; flex-shrink: 0; gap: 2px;
+            background: linear-gradient(135deg, var(--stage-color, var(--primary)) 0%, rgba(255,255,255,0.1) 100%);
+        }
+        .stage-badge .stage-num { font-size: 0.75rem; opacity: 0.8; }
+        .stage-badge .stage-icon { font-size: 1.6rem; }
+        .stage-content { flex: 1; }
+        .stage-content h3 { font-size: 1.3rem; font-weight: 800; color: white; margin-bottom: 8px; }
+        .stage-content p { font-size: 1.05rem; color: var(--text-secondary); line-height: 1.6; }
+        .stage-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .stage-tag {
+            padding: 4px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+            background: rgba(255,255,255,0.08); color: var(--text-secondary); border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        /* Layer Cards */
+        .layer-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        .layer-card {
+            background: rgba(26,46,34,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px;
+            padding: 20px; text-align: center; transition: all 0.3s; position: relative; overflow: hidden;
+        }
+        .layer-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+            background: var(--layer-color, var(--primary)); border-radius: 14px 14px 0 0;
+        }
+        .layer-card:hover { transform: translateY(-4px); border-color: var(--layer-color, var(--primary)); box-shadow: 0 12px 32px rgba(0,0,0,0.3); }
+        .layer-card .layer-id { font-size: 0.8rem; font-weight: 700; color: var(--layer-color, var(--primary)); margin-bottom: 6px; }
+        .layer-card .layer-name { font-size: 1rem; font-weight: 800; color: white; margin-bottom: 4px; }
+        .layer-card .layer-desc { font-size: 0.85rem; color: var(--text-secondary); }
+
+        /* Tech Stack */
+        .tech-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .tech-card {
+            background: rgba(26,46,34,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px;
+            padding: 24px; transition: all 0.3s;
+        }
+        .tech-card:hover { border-color: var(--primary); transform: translateY(-3px); }
+        .tech-card h4 { font-size: 1.1rem; font-weight: 800; color: white; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .tech-card p { font-size: 0.95rem; color: var(--text-secondary); line-height: 1.5; }
+        .tech-card .tech-icon { font-size: 1.4rem; color: var(--primary); }
+
+        /* Data Sources */
+        .data-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        .data-card {
+            background: rgba(26,46,34,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px;
+            padding: 24px; display: flex; align-items: center; gap: 16px; transition: all 0.3s;
+        }
+        .data-card:hover { border-color: var(--gold); }
+        .data-card .data-icon { font-size: 2rem; color: var(--gold); flex-shrink: 0; }
+        .data-card h4 { font-size: 1.05rem; font-weight: 700; color: white; margin-bottom: 4px; }
+        .data-card p { font-size: 0.9rem; color: var(--text-secondary); }
+
+        /* Stats */
+        .stats-bar {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; padding: 40px;
+            background: rgba(0,0,0,0.2); border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .stat-box { text-align: center; padding: 16px; }
+        .stat-number {
+            font-size: 2.4rem; font-weight: 900;
+            background: linear-gradient(135deg, #4A9B6E 0%, #6DBB8F 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 8px;
+        }
+        .stat-label { font-size: 0.95rem; color: var(--text-secondary); font-weight: 600; }
+
+        /* Principle Grid */
+        .principle-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .principle-card {
+            background: rgba(26,46,34,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;
+            padding: 28px; text-align: center; transition: all 0.3s;
+        }
+        .principle-card:hover { border-color: var(--green); transform: translateY(-4px); }
+        .principle-card .p-icon { font-size: 2.4rem; color: var(--green); margin-bottom: 12px; }
+        .principle-card h4 { font-size: 1.1rem; font-weight: 800; color: white; margin-bottom: 8px; }
+        .principle-card p { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5; }
+
+        /* CTA */
+        .cta-section { text-align: center; padding: 60px 20px calc(20px + env(safe-area-inset-bottom, 0px)); }
+        .cta-button {
+            display: inline-flex; align-items: center; gap: 12px; padding: 22px 56px;
+            background: linear-gradient(135deg, var(--primary) 0%, #4A9B6E 100%);
+            border: none; border-radius: 16px; color: white; font-size: 1.35rem; font-weight: 800;
+            text-decoration: none; transition: all 0.4s; box-shadow: 0 8px 32px rgba(61,139,94,0.4); cursor: pointer;
+        }
+        .cta-button:hover { transform: translateY(-4px); box-shadow: 0 16px 48px rgba(61,139,94,0.5); }
+
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .layer-grid { grid-template-columns: repeat(2, 1fr); }
+            .tech-grid, .principle-grid { grid-template-columns: repeat(2, 1fr); }
+            .stats-bar { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .container { padding: 20px 16px calc(60px + env(safe-area-inset-bottom, 0px)); }
+            .back-button { top: 12px; left: 12px; padding: 8px 14px; font-size: 0.85rem; min-height: 44px; }
+            .header { margin-top: 40px; margin-bottom: 40px; }
+            .header h1 { font-size: 2rem; }
+            .header p { font-size: 1rem; }
+            .layer-grid, .tech-grid, .data-grid, .principle-grid { grid-template-columns: 1fr; }
+            .stats-bar { grid-template-columns: repeat(2, 1fr); padding: 24px; gap: 12px; }
+            .stat-number { font-size: 1.8rem; }
+            .section-title { font-size: 1.3rem; }
+            .pipeline-stage { padding: 18px; gap: 14px; }
+            .stage-badge { width: 48px; min-height: 48px; }
+            .stage-badge .stage-icon { font-size: 1.2rem; }
+            .cta-button { padding: 16px 36px; font-size: 1rem; }
+            .floating-shape, .grid-pattern { animation: none !important; opacity: 0.03; }
+        }
+        @media (max-width: 400px) {
+            .back-button { top: 8px; left: 8px; padding: 6px 12px; font-size: 0.8rem; }
+            .header { margin-top: 48px; }
+            .stats-bar { padding: 16px; gap: 8px; }
+            .stat-number { font-size: 1.5rem; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .grid-pattern, .floating-shape, .section, .header { animation: none !important; }
+            .pipeline-stage, .layer-card, .tech-card, .data-card, .principle-card, .cta-button, .back-button { transition: none !important; }
+        }
+        body.is-inapp-browser .pipeline-stage, body.is-inapp-browser .layer-card,
+        body.is-inapp-browser .tech-card, body.is-inapp-browser .data-card,
+        body.is-inapp-browser .principle-card {
+            -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); background: rgba(26,46,34,0.95);
+        }
+        body.is-inapp-browser .back-button { -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); background: rgba(255,255,255,0.15); }
+
+        /* Light Mode */
+        body:not(.dark-mode) { background: linear-gradient(135deg, #F4F8F5 0%, #D4E4DA 50%, #8BAA9A 100%); color: #1A2E22; --text-secondary: #5D7D6D; }
+        body:not(.dark-mode) .header h1 { background: linear-gradient(135deg, #1A2E22 0%, #2D4038 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        body:not(.dark-mode) .section-title { color: #1A2E22; }
+        body:not(.dark-mode) .pipeline-stage, body:not(.dark-mode) .layer-card,
+        body:not(.dark-mode) .tech-card, body:not(.dark-mode) .data-card,
+        body:not(.dark-mode) .principle-card { background: #fff; border-color: #D4E4DA; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        body:not(.dark-mode) .stage-content h3, body:not(.dark-mode) .layer-card .layer-name,
+        body:not(.dark-mode) .tech-card h4, body:not(.dark-mode) .data-card h4,
+        body:not(.dark-mode) .principle-card h4 { color: #1A2E22; }
+        body:not(.dark-mode) .stat-number { color: #3D8B5E; -webkit-text-fill-color: #3D8B5E; }
+        body:not(.dark-mode) .back-button { background: rgba(0,0,0,0.05); border-color: #D4E4DA; color: #1A2E22; }
+
+        @media (min-width: 1440px) { .container { max-width: 1320px; } }
+        @media (min-width: 1920px) { .container { max-width: 1440px; } }
+    </style>
+    <script src="/cookie-consent.js"></script>
+</head>
+<body>
+<script>try{if(localStorage.getItem("lawmadi-dark-mode")==="true")document.body.classList.add("dark-mode")}catch(e){}</script>
+    <a href="/architecture-en" style="position:fixed;top:16px;right:16px;background:rgba(255,255,255,0.15);color:#fff;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;z-index:1000;backdrop-filter:blur(8px);">EN</a>
+    <div class="animated-bg">
+        <div class="grid-pattern"></div>
+        <div class="floating-shape shape1"></div>
+        <div class="floating-shape shape2"></div>
+        <div class="floating-shape shape3"></div>
+    </div>
+
+    <a href="/" class="back-button">
+        <span class="material-symbols-outlined">arrow_back</span>
+        메인으로
+    </a>
+
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-badge">ARCHITECTURE · v60</div>
+            <h1>시스템 아키텍처</h1>
+            <p>질문에서 검증된 답변까지 — Lawmadi OS의 기술 구조</p>
+        </header>
+
+        <!-- Section 1: Overview Stats -->
+        <div class="section">
+            <div class="stats-bar">
+                <div class="stat-box">
+                    <div class="stat-number">8</div>
+                    <div class="stat-label">처리 계층</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">60</div>
+                    <div class="stat-label">AI 법률 리더</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">14,601</div>
+                    <div class="stat-label">RAG 문서</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">20,798</div>
+                    <div class="stat-label">법령 조문 캐시</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">DRF 전수 검증</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Pipeline -->
+        <div class="section">
+            <h2 class="section-title">4단계 하이브리드 파이프라인</h2>
+            <p class="section-desc">모든 법률 질의는 4단계 파이프라인을 거쳐 검증된 답변으로 전달됩니다. 각 단계는 독립적으로 실패 감지·복구가 가능하며, 검증 실패 시 답변을 차단하는 Fail-Closed 정책을 적용합니다.</p>
+
+            <div class="pipeline-flow">
+                <div class="pipeline-stage" style="--stage-color: #4A9B6E;">
+                    <div class="stage-badge" style="--stage-color: #4A9B6E;">
+                        <span class="stage-num">STAGE</span>
+                        <span class="stage-icon material-symbols-outlined">psychology</span>
+                    </div>
+                    <div class="stage-content">
+                        <h3>Stage 0+1 — 분류 + RAG 검색 (병렬)</h3>
+                        <p>NLU 의도 분석으로 60명 중 최적 리더를 배정하고, 동시에 Vertex AI Search와 법령 캐시에서 관련 법조문·판례를 검색합니다. 3계층 라우팅(인사 → 비법률 → 법률)으로 질의를 분류합니다.</p>
+                        <div class="stage-tags">
+                            <span class="stage-tag">NLU 의도 분석</span>
+                            <span class="stage-tag">키워드 매칭</span>
+                            <span class="stage-tag">Vertex AI Search</span>
+                            <span class="stage-tag">리더 자동 배정</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pipeline-connector"></div>
+
+                <div class="pipeline-stage" style="--stage-color: #B8922D;">
+                    <div class="stage-badge" style="--stage-color: #B8922D;">
+                        <span class="stage-num">STAGE</span>
+                        <span class="stage-icon material-symbols-outlined">auto_fix_high</span>
+                    </div>
+                    <div class="stage-content">
+                        <h3>Stage 1.5~1.7 — 법령 보강</h3>
+                        <p>배정된 리더의 핵심 법률을 주입(LAW_BOOST)하고, 위임 조문·시행령 서식을 3단 비교로 연결합니다. DRF API에서 실제 조문 전문을 프리패치하여 정확도를 극대화합니다.</p>
+                        <div class="stage-tags">
+                            <span class="stage-tag">LAW_BOOST 주입</span>
+                            <span class="stage-tag">3단 비교 (위임·서식)</span>
+                            <span class="stage-tag">DRF 조문 프리패치</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pipeline-connector"></div>
+
+                <div class="pipeline-stage" style="--stage-color: #6DBB8F;">
+                    <div class="stage-badge" style="--stage-color: #6DBB8F;">
+                        <span class="stage-num">STAGE</span>
+                        <span class="stage-icon material-symbols-outlined">edit_note</span>
+                    </div>
+                    <div class="stage-content">
+                        <h3>Stage 3 — Gemini 실시간 스트리밍 분석</h3>
+                        <p>리더 페르소나와 RAG 컨텍스트를 기반으로 Gemini 2.5 Flash가 실시간 SSE 스트리밍으로 답변을 생성합니다. 5단계 프레임워크(공감 → 진단 → 행동계획 → 안전장치 → 마무리)로 구조화된 법률 분석을 제공합니다.</p>
+                        <div class="stage-tags">
+                            <span class="stage-tag">Gemini 2.5 Flash</span>
+                            <span class="stage-tag">SSE 토큰 스트리밍</span>
+                            <span class="stage-tag">5단계 분석 프레임워크</span>
+                            <span class="stage-tag">2,500자+ 심층 분석</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pipeline-connector"></div>
+
+                <div class="pipeline-stage" style="--stage-color: #C45454;">
+                    <div class="stage-badge" style="--stage-color: #C45454;">
+                        <span class="stage-num">STAGE</span>
+                        <span class="stage-icon material-symbols-outlined">verified_user</span>
+                    </div>
+                    <div class="stage-content">
+                        <h3>Stage 4 — DRF 전수 검증 (Fail-Closed)</h3>
+                        <p>답변에 인용된 모든 법조문·판례·헌재결정을 국가법령정보센터(law.go.kr) DRF API에서 실시간으로 교차 검증합니다. 미검증 비율 0.1% 이상이면 답변을 차단하고, 검증 후 수정된 텍스트를 실시간 교체합니다.</p>
+                        <div class="stage-tags">
+                            <span class="stage-tag">DRF 실시간 교차검증</span>
+                            <span class="stage-tag">Fail-Closed 정책</span>
+                            <span class="stage-tag">answer_replace 실시간 교체</span>
+                            <span class="stage-tag">감사 로그 기록</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: 8 Layers -->
+        <div class="section">
+            <h2 class="section-title">8계층 처리 아키텍처</h2>
+            <p class="section-desc">Lawmadi OS는 운영체제처럼 8개 계층으로 설계되어, 각 계층이 독립적 역할을 수행합니다.</p>
+            <div class="layer-grid">
+                <div class="layer-card" style="--layer-color: #C45454;">
+                    <div class="layer-id">L0</div>
+                    <div class="layer-name">KERNEL</div>
+                    <div class="layer-desc">오케스트레이션 · 서킷브레이커 · 레이트 리밋</div>
+                </div>
+                <div class="layer-card" style="--layer-color: #B8922D;">
+                    <div class="layer-id">L1</div>
+                    <div class="layer-name">VISION</div>
+                    <div class="layer-desc">법률 문서 OCR · 레이아웃 분석</div>
+                </div>
+                <div class="layer-card" style="--layer-color: #4A9B6E;">
+                    <div class="layer-id">L2</div>
+                    <div class="layer-name">SWARM</div>
+                    <div class="layer-desc">60명 멀티에이전트 병렬 처리</div>
+                </div>
+                <div class="layer-card" style="--layer-color: #6DBB8F;">
+                    <div class="layer-id">L3</div>
+                    <div class="layer-name">SHORT_SYNC</div>
+                    <div class="layer-desc">실시간 법령 데이터 통합</div>
+                </div>
+                <div class="layer-card" style="--layer-color: #4A7BB5;">
+                    <div class="layer-id">L4</div>
+                    <div class="layer-name">PERSONA</div>
+                    <div class="layer-desc">적응형 상호작용 · 위기 감지</div>
+                </div>
+                <div class="layer-card" style="--layer-color: #B8922D;">
+                    <div class="layer-id">L5</div>
+                    <div class="layer-name">JURISPRUDENCE</div>
+                    <div class="layer-desc">판례 매칭 · 시간축 검증</div>
+                </div>
+                <div class="layer-card" style="--layer-color: #6DBB8F;">
+                    <div class="layer-id">L6</div>
+                    <div class="layer-name">SCENARIO</div>
+                    <div class="layer-desc">법적 경로 · 리스크 · 기한 산출</div>
+                </div>
+                <div class="layer-card" style="--layer-color: #3D8B5E;">
+                    <div class="layer-id">L7</div>
+                    <div class="layer-name">RENDERER</div>
+                    <div class="layer-desc">법률근거 / 참고정보 분리 출력</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 4: Data Sources -->
+        <div class="section">
+            <h2 class="section-title">SSOT 데이터 소스</h2>
+            <p class="section-desc">모든 답변은 대한민국 공식 법령 데이터베이스(Single Source of Truth)에 근거합니다. 자체 추론이나 생성은 금지됩니다.</p>
+            <div class="data-grid">
+                <div class="data-card">
+                    <span class="material-symbols-outlined data-icon">gavel</span>
+                    <div>
+                        <h4>현행법령</h4>
+                        <p>법률·시행령·시행규칙 전문</p>
+                    </div>
+                </div>
+                <div class="data-card">
+                    <span class="material-symbols-outlined data-icon">balance</span>
+                    <div>
+                        <h4>대법원 판례</h4>
+                        <p>대법원·고등법원 판례 전문</p>
+                    </div>
+                </div>
+                <div class="data-card">
+                    <span class="material-symbols-outlined data-icon">account_balance</span>
+                    <div>
+                        <h4>헌재 결정례</h4>
+                        <p>헌법재판소 결정례</p>
+                    </div>
+                </div>
+                <div class="data-card">
+                    <span class="material-symbols-outlined data-icon">description</span>
+                    <div>
+                        <h4>행정규칙 · 자치법규</h4>
+                        <p>훈령·예규·고시·조례</p>
+                    </div>
+                </div>
+                <div class="data-card">
+                    <span class="material-symbols-outlined data-icon">question_answer</span>
+                    <div>
+                        <h4>법령해석례</h4>
+                        <p>법제처 법령해석 사례</p>
+                    </div>
+                </div>
+                <div class="data-card">
+                    <span class="material-symbols-outlined data-icon">public</span>
+                    <div>
+                        <h4>조약 · 법령용어</h4>
+                        <p>국제조약 및 법률 용어사전</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 5: Tech Stack -->
+        <div class="section">
+            <h2 class="section-title">기술 스택</h2>
+            <div class="tech-grid">
+                <div class="tech-card">
+                    <h4><span class="material-symbols-outlined tech-icon">smart_toy</span> AI 엔진</h4>
+                    <p>Gemini 2.5 Flash — 실시간 SSE 스트리밍, 429 지수 백오프</p>
+                </div>
+                <div class="tech-card">
+                    <h4><span class="material-symbols-outlined tech-icon">search</span> RAG 검색</h4>
+                    <p>Vertex AI Search — 14,601 법률 문서 색인, 추출형 답변</p>
+                </div>
+                <div class="tech-card">
+                    <h4><span class="material-symbols-outlined tech-icon">api</span> 백엔드</h4>
+                    <p>FastAPI + Uvicorn — Python 비동기 처리, Cloud Run (서울)</p>
+                </div>
+                <div class="tech-card">
+                    <h4><span class="material-symbols-outlined tech-icon">storage</span> 데이터베이스</h4>
+                    <p>Cloud SQL PostgreSQL 17 — 법령 캐시, 감사 로그, 세션 관리</p>
+                </div>
+                <div class="tech-card">
+                    <h4><span class="material-symbols-outlined tech-icon">language</span> 프론트엔드</h4>
+                    <p>Firebase Hosting — 한국어/영어 정적 페이지, PWA 지원</p>
+                </div>
+                <div class="tech-card">
+                    <h4><span class="material-symbols-outlined tech-icon">rocket_launch</span> CI/CD</h4>
+                    <p>GitHub Actions 5단계 — 테스트 → 스테이징 → 프로덕션 → 프론트엔드 → 알림</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 6: Constitutional Principles -->
+        <div class="section">
+            <h2 class="section-title">6대 헌법 원칙</h2>
+            <p class="section-desc">Lawmadi OS의 모든 답변은 6가지 헌법 원칙에 의해 통제됩니다. 이 원칙은 코드 레벨에서 강제되며 예외 없이 적용됩니다.</p>
+            <div class="principle-grid">
+                <div class="principle-card">
+                    <div class="p-icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">verified</span></div>
+                    <h4>SSOT_FACT_ONLY</h4>
+                    <p>모든 답변은 국가법령정보센터 실시간 데이터에 근거</p>
+                </div>
+                <div class="principle-card">
+                    <div class="p-icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">block</span></div>
+                    <h4>ZERO_INFERENCE</h4>
+                    <p>검증된 데이터 외 법률·판례를 생성하거나 추론하지 않음</p>
+                </div>
+                <div class="principle-card">
+                    <div class="p-icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">front_hand</span></div>
+                    <h4>FAIL_CLOSED</h4>
+                    <p>검증 실패 시 답변 생성 중단, 보안 경고 출력</p>
+                </div>
+                <div class="principle-card">
+                    <div class="p-icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">shield</span></div>
+                    <h4>IDENTITY</h4>
+                    <p>불법 행위 권장 및 증거 인멸 정보 제공 금지</p>
+                </div>
+                <div class="principle-card">
+                    <div class="p-icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">schedule</span></div>
+                    <h4>TIMELINE_RULE</h4>
+                    <p>행위시법 우선, 신법 경과조치 필수 대조</p>
+                </div>
+                <div class="principle-card">
+                    <div class="p-icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">link</span></div>
+                    <h4>SOURCE_TRANSPARENCY</h4>
+                    <p>인용 법령에 법령ID + 시행일자 필수 포함</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="cta-section">
+            <a href="/" class="cta-button">
+                <span class="material-symbols-outlined">chat</span>
+                지금 무료로 법률 분석 시작하기
+            </a>
+        </div>
+    </div>
+
+    <script src="/page-common.js"></script>
+    <script src="/lawmadi-monitor.js" defer></script>
+    <script src="/site-nav.js" defer></script>
+    <script src="/site-footer.js" defer></script>
+    <script src="/auth-modal.js" defer></script>
+</body>
+</html>

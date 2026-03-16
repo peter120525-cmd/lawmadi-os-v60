@@ -106,6 +106,24 @@ async def serve_leaders():
     return {"message": "Leaders page not found", "version": OS_VERSION}
 
 
+@router.get("/architecture")
+async def serve_architecture():
+    """Architecture page (Korean)"""
+    frontend_path = os.path.join(_PROJECT_ROOT, "frontend", "public", "architecture.html")
+    if os.path.exists(frontend_path):
+        return FileResponse(frontend_path)
+    return {"message": "Architecture page not found", "version": OS_VERSION}
+
+
+@router.get("/architecture-en")
+async def serve_architecture_en():
+    """Architecture page (English)"""
+    frontend_path = os.path.join(_PROJECT_ROOT, "frontend", "public", "architecture-en.html")
+    if os.path.exists(frontend_path):
+        return FileResponse(frontend_path)
+    return {"message": "Architecture page not found", "version": OS_VERSION}
+
+
 @router.get("/about")
 async def serve_about():
     """About page"""
@@ -222,6 +240,8 @@ _HTML_REDIRECTS = {
     "/terms-en.html": "/terms-en",
     "/privacy-en.html": "/privacy-en",
     "/index-en.html": "/en",
+    "/architecture.html": "/architecture",
+    "/architecture-en.html": "/architecture-en",
 }
 
 for _src, _dst in _HTML_REDIRECTS.items():
