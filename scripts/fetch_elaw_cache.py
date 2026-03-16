@@ -83,25 +83,24 @@ def search_elaw(law_name_kr: str) -> dict | None:
     def strip_html(s):
         return re.sub(r'<[^>]+>', '', s).strip()
 
-    # 정확 매칭 우선
+    def _make_result(law, kr_name):
+        return {
+            "mst": str(law.get("MST", law.get("법령일련번호", ""))),
+            "name_en": strip_html(law.get("법령명영문", "")),
+            "name_kr": kr_name,
+        }
+
+    # 1차: 정확 매칭 (현행 우선)
     for law in laws:
         kr_name = strip_html(law.get("법령명한글", ""))
         if kr_name == law_name_kr:
-            return {
-                "mst": str(law.get("MST", law.get("법령일련번호", ""))),
-                "name_en": law.get("법령명영문", ""),
-                "name_kr": kr_name,
-            }
+            return _make_result(law, kr_name)
 
-    # 부분 매칭 (법령명 포함)
+    # 2차: 부분 매칭 (법령명 포함, 길이 차이 4자 이내)
     for law in laws:
         kr_name = strip_html(law.get("법령명한글", ""))
         if law_name_kr in kr_name and len(kr_name) - len(law_name_kr) <= 4:
-            return {
-                "mst": str(law.get("MST", law.get("법령일련번호", ""))),
-                "name_en": law.get("법령명영문", ""),
-                "name_kr": kr_name,
-            }
+            return _make_result(law, kr_name)
 
     return None
 
