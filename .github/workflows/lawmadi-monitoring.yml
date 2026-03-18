@@ -1,7 +1,7 @@
 name: Lawmadi OS Health Monitor
 
 on:
-  # 6시간마다 자동 실행
+  # 6시간마다 헬스체크만 실행
   schedule:
     - cron: '0 */6 * * *'
   # 수동 실행 지원
@@ -10,7 +10,7 @@ on:
       include_simulation:
         description: '시뮬레이션 포함 여부'
         required: false
-        default: 'true'
+        default: 'false'
         type: choice
         options:
           - 'true'
@@ -157,7 +157,7 @@ jobs:
           PYEOF
 
       - name: Simulation Test
-        if: ${{ always() && github.event.inputs.include_simulation != 'false' }}
+        if: ${{ always() && github.event.inputs.include_simulation == 'true' }}
         id: simulation
         run: |
           python - <<'PYEOF'

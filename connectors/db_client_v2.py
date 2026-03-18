@@ -1316,20 +1316,23 @@ def get_visitor_stats() -> Dict[str, Any]:
 # =====================================================
 
 def get_dashboard_metrics(days: int = 7) -> dict:
-    """DAU, 일/주/월 쿼리 수, 평균 latency, 에러율, 상위 법률 카테고리"""
+    """DAU, 일/주/월 쿼리 수, 평균 latency, 에러율, 상위 법률 카테고리
+    관리자 테스트(is_admin=TRUE) 쿼리는 통계에서 자동 제외.
+    """
+    admin_filter = "AND (is_admin IS NULL OR is_admin = FALSE)"
     try:
         # Daily active users
         dau_result = execute(
-            """SELECT COUNT(DISTINCT visitor_id) as dau
+            f"""SELECT COUNT(DISTINCT visitor_id) as dau
                FROM chat_history
-               WHERE created_at >= NOW() - INTERVAL '1 day' * %s""",
+               WHERE created_at >= NOW() - INTERVAL '1 day' * %s {admin_filter}""",
             (days,), fetch="one"
         )
         dau = dau_result.get("data", [0])[0] if dau_result.get("ok") else 0
 
         # Query counts
         query_result = execute(
-            """SELECT
+            f"""SELECT
                 COUNT(*) as total_queries,
                 COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '1 day') as daily_queries,
                 COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') as weekly_queries,
@@ -1337,15 +1340,16 @@ def get_dashboard_metrics(days: int = 7) -> dict:
                 COALESCE(AVG(latency_ms), 0) as avg_latency,
                 COUNT(*) FILTER (WHERE status = 'error') as error_count
                FROM chat_history
-               WHERE created_at >= NOW() - INTERVAL '1 day' * %s""",
+               WHERE created_at >= NOW() - INTERVAL '1 day' * %s {admin_filter}""",
             (days,), fetch="one"
         )
 
         # Top categories
         cat_result = execute(
-            """SELECT query_category, COUNT(*) as cnt
+            f"""SELECT query_category, COUNT(*) as cnt
                FROM chat_history
                WHERE created_at >= NOW() - INTERVAL '1 day' * %s AND query_category IS NOT NULL
+                     {admin_filter}
                GROUP BY query_category
                ORDER BY cnt DESC
                LIMIT 10""",
@@ -1374,10 +1378,10 @@ def get_dashboard_metrics(days: int = 7) -> dict:
 
 
 def get_conversion_metrics(days: int = 30) -> dict:
-    """총 쿼리 수, 변호사 문의 수, 피드백 수, 전환율"""
+    """총 쿼리 수, 변호사 문의 수, 피드백 수, 전환율 (관리자 테스트 제외)"""
     try:
         q_result = execute(
-            "SELECT COUNT(*) FROM chat_history WHERE created_at >= NOW() - INTERVAL '1 day' * %s",
+            "SELECT COUNT(*) FROM chat_history WHERE created_at >= NOW() - INTERVAL '1 day' * %s AND (is_admin IS NULL OR is_admin = FALSE)",
             (days,), fetch="one"
         )
         li_result = execute(

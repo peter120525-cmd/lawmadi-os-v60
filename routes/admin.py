@@ -123,7 +123,7 @@ async def admin_chat_usage(
     leader: Optional[str] = Query(default=None),
     status: Optional[str] = Query(default=None),
     query_type: Optional[str] = Query(default=None),
-    exclude_admin: bool = Query(default=False),
+    exclude_admin: bool = Query(default=True),
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     authorization: str = Header(default=""),
