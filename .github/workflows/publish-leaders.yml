@@ -1,0 +1,133 @@
+name: Publish Leaders to Dev.to (2/day)
+
+on:
+  schedule:
+    # 매일 KST 10:00, 16:00 (UTC 01:00, 07:00) — 하루 2회, 1개씩
+    - cron: '0 1 * * *'
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+env:
+  DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
+
+jobs:
+  publish-one:
+    name: Publish Next Leader
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Publish next unpublished leader
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, sys, time, requests
+
+          DEVTO_API_KEY = os.environ.get("DEVTO_API_KEY", "")
+          if not DEVTO_API_KEY:
+              print("❌ DEVTO_API_KEY not set")
+              sys.exit(1)
+
+          DEVTO_URL = "https://dev.to/api/articles"
+          RESULTS_FILE = "scripts/publish_results.json"
+
+          # Load results
+          with open(RESULTS_FILE) as f:
+              results = json.load(f)
+
+          # Find next unpublished leader
+          target = None
+          target_idx = None
+          for i, r in enumerate(results):
+              if not r.get("devto_id"):
+                  target = r
+                  target_idx = i
+                  break
+
+          if not target:
+              print("✅ All leaders already published!")
+              sys.exit(0)
+
+          leader_id = target["leader"]
+          name = target.get("name", "")
+          specialty = target.get("specialty", "")
+
+          print(f"📝 Publishing: {leader_id} - {name} ({specialty})")
+
+          # Import leader data from publish_leaders.py
+          sys.path.insert(0, ".")
+          from scripts.publish_leaders import LEADERS, generate_title, generate_post_content
+
+          # Find matching leader
+          leader_data = None
+          for ld in LEADERS:
+              if ld[0] == leader_id:
+                  leader_data = ld
+                  break
+
+          if not leader_data:
+              print(f"❌ Leader {leader_id} not found in LEADERS list")
+              sys.exit(1)
+
+          lid, name_ko, spec_ko, spec_en, domain, personality, catchphrase, topics = leader_data
+          title = generate_title(lid, name_ko, spec_en)
+          content = generate_post_content(lid, name_ko, spec_ko, spec_en, personality, catchphrase, topics)
+          tags = ["ai", "legaltech", "korean", spec_en.lower().replace(" ", "").replace("&", "")[:20]]
+
+          # Publish to Dev.to
+          payload = {
+              "article": {
+                  "title": title,
+                  "published": True,
+                  "body_markdown": content,
+                  "tags": tags[:4],
+                  "series": "Lawmadi OS Leaders"
+              }
+          }
+
+          resp = requests.post(
+              DEVTO_URL,
+              headers={"api-key": DEVTO_API_KEY, "Content-Type": "application/json"},
+              json=payload,
+              timeout=30
+          )
+
+          if resp.status_code in (200, 201):
+              data = resp.json()
+              devto_id = data.get("id")
+              devto_url = data.get("url", "")
+              print(f"✅ Published: {devto_url}")
+              print(f"   ID: {devto_id}")
+
+              # Update results
+              results[target_idx]["devto_id"] = devto_id
+              results[target_idx]["devto_url"] = devto_url
+
+              with open(RESULTS_FILE, "w") as f:
+                  json.dump(results, f, indent=2, ensure_ascii=False)
+
+              # Summary
+              remaining = sum(1 for r in results if not r.get("devto_id"))
+              print(f"   Remaining: {remaining}/{len(results)}")
+          else:
+              print(f"❌ Failed: HTTP {resp.status_code}")
+              print(f"   {resp.text[:200]}")
+              sys.exit(1)
+          PYEOF
+
+      - name: Commit updated results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add scripts/publish_results.json
+          git diff --cached --quiet && echo "No changes" || git commit -m "chore: update Dev.to publish results [skip ci]" && git push
