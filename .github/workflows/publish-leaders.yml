@@ -10,6 +10,9 @@ on:
 env:
   DEVTO_API_KEY: ${{ secrets.DEVTO_API_KEY }}
 
+permissions:
+  contents: write
+
 jobs:
   publish-one:
     name: Publish Next Leader
