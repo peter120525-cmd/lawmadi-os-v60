@@ -1,0 +1,533 @@
+[
+  {
+    "leader": "L02",
+    "name": "보늬",
+    "specialty": "Real Estate Law",
+    "devto_id": 3346552,
+    "devto_url": "https://dev.to/peter_choe_74edfaa33306ed/im-bonyi-leader-02-of-lawmadi-os-your-ai-real-estate-law-expert-for-korean-law-8g9",
+    "hashnode_id": "69b3b3d6d865de567b09e6a7",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-02-of-lawmadi-os-your-ai-real-estate-law-expert-for-korean-law"
+  },
+  {
+    "leader": "L03",
+    "name": "담슬",
+    "specialty": "Construction Law",
+    "devto_id": 3346553,
+    "devto_url": "https://dev.to/peter_choe_74edfaa33306ed/im-damseul-leader-03-of-lawmadi-os-your-ai-construction-law-expert-for-korean-law-4jh8",
+    "hashnode_id": "69b3b3ded293cdd3163e6fff",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-03-of-lawmadi-os-your-ai-construction-law-expert-for-korean-law"
+  },
+  {
+    "leader": "L04",
+    "name": "아키",
+    "specialty": "Urban Redevelopment",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b3e774ca2f628195cadf",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-04-of-lawmadi-os-your-ai-urban-redevelopment-expert-for-korean-law"
+  },
+  {
+    "leader": "L05",
+    "name": "연우",
+    "specialty": "Medical Law",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b3ee08ba23ca912b6994",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-05-of-lawmadi-os-your-ai-medical-law-expert-for-korean-law"
+  },
+  {
+    "leader": "L06",
+    "name": "벼리",
+    "specialty": "Damages & Compensation",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b3f608ba23ca912b6996",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-06-of-lawmadi-os-your-ai-damages-compensation-expert-for-korean-law"
+  },
+  {
+    "leader": "L07",
+    "name": "하늬",
+    "specialty": "Traffic Accidents",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b3fe08ba23ca912b6998",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-07-of-lawmadi-os-your-ai-traffic-accidents-expert-for-korean-law"
+  },
+  {
+    "leader": "L08",
+    "name": "온유",
+    "specialty": "Lease & Housing",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b406d293cdd3163e7001",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-08-of-lawmadi-os-your-ai-lease-housing-expert-for-korean-law"
+  },
+  {
+    "leader": "L09",
+    "name": "한울",
+    "specialty": "Government Contracts",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b40e6933ced54a95bfdc",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-09-of-lawmadi-os-your-ai-government-contracts-expert-for-korean-law"
+  },
+  {
+    "leader": "L10",
+    "name": "결휘",
+    "specialty": "Civil Enforcement",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b42f4992303edefd57bf",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-10-of-lawmadi-os-your-ai-civil-enforcement-expert-for-korean-law"
+  },
+  {
+    "leader": "L11",
+    "name": "오름",
+    "specialty": "Debt Collection & Recovery",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b43780f243a5a3245170",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-11-of-lawmadi-os-your-ai-debt-collection-recovery-expert-for-korean-law"
+  },
+  {
+    "leader": "L12",
+    "name": "아슬",
+    "specialty": "Registry & Auction",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b43f6933ced54a95bfde",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-12-of-lawmadi-os-your-ai-registry-auction-expert-for-korean-law"
+  },
+  {
+    "leader": "L13",
+    "name": "누리",
+    "specialty": "Commercial Law",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b4464fd2bd8adab3d24c",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-13-of-lawmadi-os-your-ai-commercial-law-expert-for-korean-law"
+  },
+  {
+    "leader": "L14",
+    "name": "다솜",
+    "specialty": "Corporate & M&A",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b44ed293cdd3163e7003",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-14-of-lawmadi-os-your-ai-corporate-ma-expert-for-korean-law"
+  },
+  {
+    "leader": "L15",
+    "name": "별하",
+    "specialty": "Startup & Venture",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b4566933ced54a95bfe0",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-15-of-lawmadi-os-your-ai-startup-venture-expert-for-korean-law"
+  },
+  {
+    "leader": "L16",
+    "name": "슬아",
+    "specialty": "Insurance Law",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b45d047d93fe145924eb",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-16-of-lawmadi-os-your-ai-insurance-law-expert-for-korean-law"
+  },
+  {
+    "leader": "L17",
+    "name": "미르",
+    "specialty": "International Trade Law",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b465738421438b6d466c",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-17-of-lawmadi-os-your-ai-international-trade-law-expert-for-korean-law"
+  },
+  {
+    "leader": "L18",
+    "name": "다온",
+    "specialty": "Energy & Resources",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b4879c8b334561b633b7",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-18-of-lawmadi-os-your-ai-energy-resources-expert-for-korean-law"
+  },
+  {
+    "leader": "L19",
+    "name": "슬옹",
+    "specialty": "Maritime & Aviation",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b48e9c8b334561b633b9",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-19-of-lawmadi-os-your-ai-maritime-aviation-expert-for-korean-law"
+  },
+  {
+    "leader": "L20",
+    "name": "찬솔",
+    "specialty": "Tax & Finance",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b49744e137af9c25e397",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-20-of-lawmadi-os-your-ai-tax-finance-expert-for-korean-law"
+  },
+  {
+    "leader": "L21",
+    "name": "휘윤",
+    "specialty": "IT & Cybersecurity",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b49ed293cdd3163e7005",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-21-of-lawmadi-os-your-ai-it-cybersecurity-expert-for-korean-law"
+  },
+  {
+    "leader": "L22",
+    "name": "무결",
+    "specialty": "Criminal Law",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b4a62eef863cdef61ffa",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-22-of-lawmadi-os-your-ai-criminal-law-expert-for-korean-law"
+  },
+  {
+    "leader": "L23",
+    "name": "가비",
+    "specialty": "Entertainment Law",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b4ae4ab375fd788ac7a4",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-23-of-lawmadi-os-your-ai-entertainment-law-expert-for-korean-law"
+  },
+  {
+    "leader": "L24",
+    "name": "도울",
+    "specialty": "Tax Appeals",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b4b6a838e8f2024534b5",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-24-of-lawmadi-os-your-ai-tax-appeals-expert-for-korean-law"
+  },
+  {
+    "leader": "L25",
+    "name": "강무",
+    "specialty": "Military Law",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b4bda838e8f2024534b7",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-25-of-lawmadi-os-your-ai-military-law-expert-for-korean-law"
+  },
+  {
+    "leader": "L26",
+    "name": "루다",
+    "specialty": "Intellectual Property",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b4e02eef863cdef61ffc",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-26-of-lawmadi-os-your-ai-intellectual-property-expert-for-korean-law"
+  },
+  {
+    "leader": "L27",
+    "name": "수림",
+    "specialty": "Environmental Law",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b4e8c2474f7120ab7b73",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-27-of-lawmadi-os-your-ai-environmental-law-expert-for-korean-law"
+  },
+  {
+    "leader": "L28",
+    "name": "해슬",
+    "specialty": "Trade & Customs",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b4ef99d7b789115dc514",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-28-of-lawmadi-os-your-ai-trade-customs-expert-for-korean-law"
+  },
+  {
+    "leader": "L29",
+    "name": "라온",
+    "specialty": "Gaming & Content",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b4f7e20f1fed1f64e312",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-29-of-lawmadi-os-your-ai-gaming-content-expert-for-korean-law"
+  },
+  {
+    "leader": "L30",
+    "name": "담우",
+    "specialty": "Labor & Employment",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b4fec2474f7120ab7b75",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-30-of-lawmadi-os-your-ai-labor-employment-expert-for-korean-law"
+  },
+  {
+    "leader": "L31",
+    "name": "로운",
+    "specialty": "Administrative Law",
+    "devto_id": 3346571,
+    "devto_url": "https://dev.to/peter_choe_74edfaa33306ed/im-roun-leader-31-of-lawmadi-os-your-ai-administrative-law-expert-for-korean-law-453g",
+    "hashnode_id": "69b3b5064fd2bd8adab3d24e",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-31-of-lawmadi-os-your-ai-administrative-law-expert-for-korean-law"
+  },
+  {
+    "leader": "L32",
+    "name": "바름",
+    "specialty": "Fair Trade & Antitrust",
+    "devto_id": 3346572,
+    "devto_url": "https://dev.to/peter_choe_74edfaa33306ed/im-bareum-leader-32-of-lawmadi-os-your-ai-fair-trade-antitrust-expert-for-korean-law-27hh",
+    "hashnode_id": "69b3b50e664bcd11e83491c2",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-32-of-lawmadi-os-your-ai-fair-trade-antitrust-expert-for-korean-law"
+  },
+  {
+    "leader": "L33",
+    "name": "별이",
+    "specialty": "Space & Aerospace",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b5162eef863cdef61ffe",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-33-of-lawmadi-os-your-ai-space-aerospace-expert-for-korean-law"
+  },
+  {
+    "leader": "L34",
+    "name": "지누",
+    "specialty": "Privacy & Data Protection",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b5384fd2bd8adab3d250",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-34-of-lawmadi-os-your-ai-privacy-data-protection-expert-for-korean-law"
+  },
+  {
+    "leader": "L35",
+    "name": "마루",
+    "specialty": "Constitutional Law",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b53fb5c4d2f31d7aef83",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-35-of-lawmadi-os-your-ai-constitutional-law-expert-for-korean-law"
+  },
+  {
+    "leader": "L36",
+    "name": "단아",
+    "specialty": "Cultural Heritage & Religion",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b547b5c4d2f31d7aef85",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-36-of-lawmadi-os-your-ai-cultural-heritage-religion-expert-for-korean-law"
+  },
+  {
+    "leader": "L37",
+    "name": "예솔",
+    "specialty": "Juvenile Law",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b54e664bcd11e83491c4",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-37-of-lawmadi-os-your-ai-juvenile-law-expert-for-korean-law"
+  },
+  {
+    "leader": "L38",
+    "name": "슬비",
+    "specialty": "Consumer Protection",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b5567b891917d6335424",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-38-of-lawmadi-os-your-ai-consumer-protection-expert-for-korean-law"
+  },
+  {
+    "leader": "L39",
+    "name": "가온",
+    "specialty": "Telecommunications",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b55e5e37557a83f1fe79",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-39-of-lawmadi-os-your-ai-telecommunications-expert-for-korean-law"
+  },
+  {
+    "leader": "L40",
+    "name": "한결",
+    "specialty": "Human Rights",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b566c5e2ef8ba50ffc16",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-40-of-lawmadi-os-your-ai-human-rights-expert-for-korean-law"
+  },
+  {
+    "leader": "L41",
+    "name": "산들",
+    "specialty": "Family & Divorce",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b56e664bcd11e83491c6",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-41-of-lawmadi-os-your-ai-family-divorce-expert-for-korean-law"
+  },
+  {
+    "leader": "L42",
+    "name": "하람",
+    "specialty": "Copyright",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b58f21fe3016447d4336",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-42-of-lawmadi-os-your-ai-copyright-expert-for-korean-law"
+  },
+  {
+    "leader": "L43",
+    "name": "해나",
+    "specialty": "Industrial Accidents",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b59799d7b789115dc516",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-43-of-lawmadi-os-your-ai-industrial-accidents-expert-for-korean-law"
+  },
+  {
+    "leader": "L44",
+    "name": "보람",
+    "specialty": "Social Welfare",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b59f99d7b789115dc518",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-44-of-lawmadi-os-your-ai-social-welfare-expert-for-korean-law"
+  },
+  {
+    "leader": "L45",
+    "name": "이룸",
+    "specialty": "Education & Youth",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b5a6e20f1fed1f64e314",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-45-of-lawmadi-os-your-ai-education-youth-expert-for-korean-law"
+  },
+  {
+    "leader": "L46",
+    "name": "다올",
+    "specialty": "Pension & Insurance",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b5aee20f1fed1f64e316",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-46-of-lawmadi-os-your-ai-pension-insurance-expert-for-korean-law"
+  },
+  {
+    "leader": "L47",
+    "name": "새론",
+    "specialty": "Venture & New Industries",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b5b621fe3016447d4338",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-47-of-lawmadi-os-your-ai-venture-new-industries-expert-for-korean-law"
+  },
+  {
+    "leader": "L48",
+    "name": "나래",
+    "specialty": "Arts & Culture",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b5bd99d7b789115dc51a",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-48-of-lawmadi-os-your-ai-arts-culture-expert-for-korean-law"
+  },
+  {
+    "leader": "L49",
+    "name": "가람",
+    "specialty": "Food & Health Safety",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b5c599d7b789115dc51c",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-49-of-lawmadi-os-your-ai-food-health-safety-expert-for-korean-law"
+  },
+  {
+    "leader": "L50",
+    "name": "빛나",
+    "specialty": "Multicultural & Immigration",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b5e68a9d95859a9e5fb5",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-50-of-lawmadi-os-your-ai-multicultural-immigration-expert-for-korean-law"
+  },
+  {
+    "leader": "L51",
+    "name": "소울",
+    "specialty": "Religion & Tradition",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b5eec2474f7120ab7b77",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-51-of-lawmadi-os-your-ai-religion-tradition-expert-for-korean-law"
+  },
+  {
+    "leader": "L52",
+    "name": "미소",
+    "specialty": "Media & Press",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b5f68a9d95859a9e5fb7",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-52-of-lawmadi-os-your-ai-media-press-expert-for-korean-law"
+  },
+  {
+    "leader": "L53",
+    "name": "늘솔",
+    "specialty": "Agriculture & Livestock",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b5fe664bcd11e83491c8",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-53-of-lawmadi-os-your-ai-agriculture-livestock-expert-for-korean-law"
+  },
+  {
+    "leader": "L54",
+    "name": "이서",
+    "specialty": "Marine & Fisheries",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b6068a9d95859a9e5fb9",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-54-of-lawmadi-os-your-ai-marine-fisheries-expert-for-korean-law"
+  },
+  {
+    "leader": "L55",
+    "name": "윤빛",
+    "specialty": "Science & Technology",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b60e0c480ce78c7e8ef4",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-55-of-lawmadi-os-your-ai-science-technology-expert-for-korean-law"
+  },
+  {
+    "leader": "L56",
+    "name": "다인",
+    "specialty": "Disability Rights",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b6160c480ce78c7e8ef6",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-56-of-lawmadi-os-your-ai-disability-rights-expert-for-korean-law"
+  },
+  {
+    "leader": "L57",
+    "name": "세움",
+    "specialty": "Inheritance & Trust",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b61d76388b4714e16381",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-57-of-lawmadi-os-your-ai-inheritance-trust-expert-for-korean-law"
+  },
+  {
+    "leader": "L58",
+    "name": "예온",
+    "specialty": "Sports & Leisure",
+    "devto_id": 3346592,
+    "devto_url": "https://dev.to/peter_choe_74edfaa33306ed/im-yeon-leader-58-of-lawmadi-os-your-ai-sports-leisure-expert-for-korean-law-1nlf",
+    "hashnode_id": "69b3b6400e7a8579da9c4189",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-58-of-lawmadi-os-your-ai-sports-leisure-expert-for-korean-law"
+  },
+  {
+    "leader": "L59",
+    "name": "한빛",
+    "specialty": "Data & AI Ethics",
+    "devto_id": 3346594,
+    "devto_url": "https://dev.to/peter_choe_74edfaa33306ed/im-hanbic-leader-59-of-lawmadi-os-your-ai-data-ai-ethics-expert-for-korean-law-3app",
+    "hashnode_id": "69b3b648f6fad969ff64b74e",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-59-of-lawmadi-os-your-ai-data-ai-ethics-expert-for-korean-law"
+  },
+  {
+    "leader": "L60",
+    "name": "마디",
+    "specialty": "General Legal Coordinator",
+    "devto_id": null,
+    "devto_url": null,
+    "hashnode_id": "69b3b64ff6fad969ff64b750",
+    "hashnode_url": "https://lawmadi.hashnode.dev/im-leader-60-of-lawmadi-os-your-ai-general-legal-coordinator-expert-for-korean-law"
+  }
+]
