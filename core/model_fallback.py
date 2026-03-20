@@ -1,7 +1,7 @@
 """
 Gemini 모델 관리 + 429 지수 백오프 재시도.
 
-asia-northeast3 리전: gemini-2.5-flash 단일 모델 사용.
+기본 모델: gemini-3-flash-preview (API key 모드, 리전 무관).
 환경변수 GEMINI_MODEL로 오버라이드 가능.
 
 사용법:
@@ -17,8 +17,7 @@ from typing import Any, Optional
 logger = logging.getLogger("LawmadiOS.ModelFallback")
 
 # ─── 모델 설정 (단일 소스: GEMINI_MODEL 환경변수) ───
-# asia-northeast3: gemini-2.5-flash만 안정적 사용 가능
-_DEFAULT_MODEL = "gemini-2.5-flash"
+_DEFAULT_MODEL = "gemini-3-flash-preview"
 MODEL_CHAIN = [
     os.getenv("GEMINI_MODEL", _DEFAULT_MODEL),
 ]
@@ -33,7 +32,7 @@ _RETRY_BASE_SEC = float(os.getenv("GEMINI_RETRY_BASE_SEC", "2.0"))
 
 
 def get_model(mode: str = "") -> str:
-    """현재 활성 모델명 반환 (gemini-2.5-flash).
+    """현재 활성 모델명 반환 (gemini-3-flash-preview).
     읽기 경로는 lock-free (동시 요청 직렬화 방지).
     mode 파라미터는 하위호환용 (현재 모든 모드에서 동일 모델 반환).
     """

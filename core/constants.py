@@ -11,9 +11,9 @@ import os
 # [감사 #3.6] 버전 단일 소스
 OS_VERSION = "v60.0.0"
 
-# Gemini 모델 — 단일 소스: GEMINI_MODEL 환경변수 (기본 gemini-2.5-flash)
+# Gemini 모델 — 단일 소스: GEMINI_MODEL 환경변수 (기본 gemini-3-flash-preview)
 # 동적 조회는 core.model_fallback.get_model() 사용 권장
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview"
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
 
 # LawmadiLM API 설정 (주력 답변 생성기)
