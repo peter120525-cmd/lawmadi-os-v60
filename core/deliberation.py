@@ -114,32 +114,28 @@ async def _single_leader_call(
     """
     from google.genai import types as genai_types
 
-    from core.constants import USE_VERTEX_AI
-
     full_prompt = f"[페르소나]\n{persona}\n\n[지시]\n{prompt}"
     model_name = get_model()
 
-    # Safety settings: 법률 상담 주제 차단 방지 (Vertex AI 모드)
-    safety_settings = None
-    if USE_VERTEX_AI:
-        safety_settings = [
-            genai_types.SafetySetting(
-                category="HARM_CATEGORY_HARASSMENT",
-                threshold="BLOCK_ONLY_HIGH",
-            ),
-            genai_types.SafetySetting(
-                category="HARM_CATEGORY_HATE_SPEECH",
-                threshold="BLOCK_ONLY_HIGH",
-            ),
-            genai_types.SafetySetting(
-                category="HARM_CATEGORY_DANGEROUS_CONTENT",
-                threshold="BLOCK_ONLY_HIGH",
-            ),
-            genai_types.SafetySetting(
-                category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                threshold="BLOCK_MEDIUM_AND_ABOVE",
-            ),
-        ]
+    # Safety settings: 법률 상담 주제 차단 방지 (API Key/Vertex AI 공통 적용)
+    safety_settings = [
+        genai_types.SafetySetting(
+            category="HARM_CATEGORY_HARASSMENT",
+            threshold="BLOCK_ONLY_HIGH",
+        ),
+        genai_types.SafetySetting(
+            category="HARM_CATEGORY_HATE_SPEECH",
+            threshold="BLOCK_ONLY_HIGH",
+        ),
+        genai_types.SafetySetting(
+            category="HARM_CATEGORY_DANGEROUS_CONTENT",
+            threshold="BLOCK_ONLY_HIGH",
+        ),
+        genai_types.SafetySetting(
+            category="HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            threshold="BLOCK_MEDIUM_AND_ABOVE",
+        ),
+    ]
 
     def _sync_call():
         import time as _time
