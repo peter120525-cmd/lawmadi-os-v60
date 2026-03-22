@@ -242,6 +242,8 @@
                 let _cardHtml;
                 if (_retryAt === 'concurrent_limit') {
                     _cardHtml = '<p>' + (pageLang === 'en' ? 'Your previous request is still processing. Please try again in a moment.' : '이전 요청이 처리 중입니다. 잠시 후 다시 시도해주세요.') + '</p>';
+                } else if (_retryAt === 'service_temporarily_unavailable') {
+                    _cardHtml = '<p>' + (pageLang === 'en' ? 'Service is temporarily unavailable. Please try again shortly.' : '서비스가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요.') + '</p>';
                 } else {
                     let _title, _desc;
                     if (pageLang === 'en') {
