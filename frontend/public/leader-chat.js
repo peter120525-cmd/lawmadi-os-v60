@@ -233,13 +233,44 @@
 
             if (response.status === 429) {
                 hideTyping();
-                try {
-                    var errData = await response.json();
-                    var errMsg = errData.error || '일일 무료 이용 한도에 도달했습니다.';
-                    appendMessage('ai', '<p>' + esc(errMsg) + ' <a href="/pricing">크레딧 구매</a></p>');
-                } catch(e) {
-                    appendMessage('ai', '<p>' + (pageLang === 'en' ? 'Daily free limit reached.' : '일일 무료 이용 한도에 도달했습니다.') + ' <a href="' + (pageLang === 'en' ? '/pricing-en' : '/pricing') + '">' + (pageLang === 'en' ? 'Buy credits' : '크레딧 구매') + '</a></p>');
+                let errData = {};
+                try { errData = await response.json(); } catch(e) {}
+                const _retryAt = errData.retry_at_kst || '';
+                const _loginReq = errData.login_required || false;
+                const _isLoggedIn = window.__lawmadiAuth && window.__lawmadiAuth.authenticated;
+                const _pricingUrl = pageLang === 'en' ? '/pricing-en' : '/pricing';
+                let _cardHtml;
+                if (_retryAt === 'concurrent_limit') {
+                    _cardHtml = '<p>' + (pageLang === 'en' ? 'Your previous request is still processing. Please try again in a moment.' : '이전 요청이 처리 중입니다. 잠시 후 다시 시도해주세요.') + '</p>';
+                } else {
+                    let _title, _desc;
+                    if (pageLang === 'en') {
+                        _title = _retryAt === 'credits_exhausted' ? 'Your credits have been exhausted'
+                               : (_retryAt === 'leader_chat_limit' || _retryAt === 'leader_chat_credits_required') ? 'Free leader chat limit reached'
+                               : 'Daily free limit reached';
+                        _desc = _retryAt === 'credits_exhausted' ? 'Top up your credits to continue using Lawmadi OS.'
+                              : (_retryAt === 'leader_chat_limit' || _retryAt === 'leader_chat_credits_required') ? 'Top up your credits to continue chatting with legal leaders.'
+                              : "Buy credits to continue without waiting until tomorrow's reset.";
+                    } else {
+                        _title = _retryAt === 'credits_exhausted' ? '크레딧이 모두 소진되었습니다'
+                               : (_retryAt === 'leader_chat_limit' || _retryAt === 'leader_chat_credits_required') ? '리더 채팅 무료 횟수를 모두 사용했습니다'
+                               : '오늘 무료 이용 한도에 도달했습니다';
+                        _desc = _retryAt === 'credits_exhausted' ? '추가 크레딧을 충전하면 바로 계속 이용할 수 있습니다.'
+                              : (_retryAt === 'leader_chat_limit' || _retryAt === 'leader_chat_credits_required') ? '크레딧을 충전하면 추가 이용할 수 있습니다.'
+                              : '크레딧을 충전하면 내일까지 기다리지 않고 바로 계속 이용할 수 있습니다.';
+                    }
+                    const _btnLabel = pageLang === 'en' ? 'Buy Credits →' : '크레딧 충전하기 →';
+                    const _loginHint = (!_isLoggedIn || _loginReq)
+                        ? '<p style="margin:12px 0 0;font-size:0.87em;color:#666;">' + (pageLang === 'en' ? 'Already purchased? Click <strong>Login</strong> in the header.' : '이미 크레딧을 구매하셨나요? 헤더의 <strong>Login</strong> 버튼을 눌러주세요.') + '</p>'
+                        : '';
+                    _cardHtml = '<div style="background:#f0f7f3;border:1px solid #c5dece;border-radius:12px;padding:16px 18px;margin-top:4px;">'
+                        + '<p style="margin:0 0 8px;font-weight:700;color:#1a5c3a;">' + _title + '</p>'
+                        + '<p style="margin:0 0 14px;color:#444;font-size:0.93em;">' + _desc + '</p>'
+                        + '<a href="' + _pricingUrl + '" style="display:inline-block;background:#2d7a4f;color:#fff;padding:9px 20px;border-radius:8px;font-weight:700;text-decoration:none;font-size:0.95em;">' + _btnLabel + '</a>'
+                        + _loginHint
+                        + '</div>';
                 }
+                appendMessage('ai', _cardHtml);
                 isSending = false;
                 sendBtn.disabled = false;
                 return;

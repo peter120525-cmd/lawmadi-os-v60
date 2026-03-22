@@ -571,6 +571,39 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             return div.innerHTML;
         },
 
+        _buildLimitCard(errData) {
+            const retryAt = errData.retry_at_kst || '';
+            const loginReq = errData.login_required || false;
+            const isLoggedIn = window.__lawmadiAuth && window.__lawmadiAuth.authenticated;
+            if (retryAt === 'concurrent_limit')
+                return '<p>이전 요청이 처리 중입니다. 잠시 후 다시 시도해주세요.</p>';
+            if (retryAt === 'service_temporarily_unavailable')
+                return '<p>서비스가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요.</p>';
+            let title, desc;
+            if (retryAt === 'credits_exhausted') {
+                title = '크레딧이 모두 소진되었습니다';
+                desc = '추가 크레딧을 충전하면 바로 계속 이용할 수 있습니다.';
+            } else if (retryAt === 'credits_required_for_expert') {
+                title = '전문가 답변은 크레딧이 필요합니다';
+                desc = '크레딧을 충전하면 심층적인 전문가 답변을 받을 수 있습니다.';
+            } else if (retryAt === 'leader_chat_limit' || retryAt === 'leader_chat_credits_required') {
+                title = '리더 채팅 무료 횟수를 모두 사용했습니다';
+                desc = '크레딧을 충전하면 추가 이용할 수 있습니다.';
+            } else {
+                title = '오늘 무료 이용 한도에 도달했습니다';
+                desc = '크레딧을 충전하면 내일까지 기다리지 않고 바로 계속 이용할 수 있습니다.';
+            }
+            const loginHint = (!isLoggedIn || loginReq)
+                ? '<p style="margin:12px 0 0;font-size:0.87em;color:#666;">이미 크레딧을 구매하셨나요? 헤더의 <strong>Login</strong> 버튼을 눌러주세요.</p>'
+                : '';
+            return '<div style="background:#f0f7f3;border:1px solid #c5dece;border-radius:12px;padding:16px 18px;margin-top:4px;">'
+                + '<p style="margin:0 0 8px;font-weight:700;color:#1a5c3a;">' + title + '</p>'
+                + '<p style="margin:0 0 14px;color:#444;font-size:0.93em;">' + desc + '</p>'
+                + '<a href="/pricing" style="display:inline-block;background:#2d7a4f;color:#fff;padding:9px 20px;border-radius:8px;font-weight:700;text-decoration:none;font-size:0.95em;">크레딧 충전하기 →</a>'
+                + loginHint
+                + '</div>';
+        },
+
         handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -840,16 +873,9 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             clearTimeout(timeoutId);
             if (response.status === 429) {
                 this.hideTypingIndicator();
-                var limitMsg = '<p>일일 무료 이용 한도에 도달했습니다.</p>'
-                    + '<p style="margin-top:8px;"><a href="/pricing" style="color:#3D8B5E;font-weight:700;text-decoration:underline;">크레딧 구매</a>하시면 계속 이용 가능합니다.</p>';
-                if (window.__lawmadiAuth && !window.__lawmadiAuth.authenticated) {
-                    limitMsg += '<p style="margin-top:4px;font-size:0.9em;color:#5D7D6D;">이미 크레딧을 구매하셨다면 헤더의 <strong>Login</strong> 버튼으로 로그인하세요.</p>';
-                }
-                try {
-                    const errData = await response.json();
-                    if (errData.error) limitMsg = `<p>${this.escapeHtml(errData.error)}</p>`;
-                } catch {}
-                this.appendMessage('ai', limitMsg);
+                let errData = {};
+                try { errData = await response.json(); } catch {}
+                this.appendMessage('ai', this._buildLimitCard(errData));
                 return;
             }
             if (!response.ok) throw new Error(`서버 오류 (${response.status})`);
@@ -901,16 +927,9 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             clearTimeout(timeoutId);
             if (response.status === 429) {
                 this.hideTypingIndicator();
-                var limitMsg = '<p>일일 무료 이용 한도에 도달했습니다.</p>'
-                    + '<p style="margin-top:8px;"><a href="/pricing" style="color:#3D8B5E;font-weight:700;text-decoration:underline;">크레딧 구매</a>하시면 계속 이용 가능합니다.</p>';
-                if (window.__lawmadiAuth && !window.__lawmadiAuth.authenticated) {
-                    limitMsg += '<p style="margin-top:4px;font-size:0.9em;color:#5D7D6D;">이미 크레딧을 구매하셨다면 헤더의 <strong>Login</strong> 버튼으로 로그인하세요.</p>';
-                }
-                try {
-                    const errData = await response.json();
-                    if (errData.error) limitMsg = `<p>${this.escapeHtml(errData.error)}</p>`;
-                } catch {}
-                this.appendMessage('ai', limitMsg);
+                let errData = {};
+                try { errData = await response.json(); } catch {}
+                this.appendMessage('ai', this._buildLimitCard(errData));
                 return;
             }
             if (!response.ok) throw new Error(`서버 오류 (${response.status})`);
