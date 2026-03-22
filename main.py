@@ -270,31 +270,33 @@ _METRICS_LOCK = threading.Lock()
 _BLACKLIST_WINDOW = 60          # 60초 내
 _BLACKLIST_THRESHOLD = 10       # 429가 10회 이상이면 블랙리스트 (20→10 강화)
 _BLACKLIST_DURATION = 86400     # 24시간 차단 (1시간→24시간 강화)
-_ip_429_hits: Dict[str, List[float]] = {}   # IP → [timestamp, ...]
-_ip_blacklist: Dict[str, float] = {}        # IP → 차단 해제 시각 (UNIX ts)
+_ip_429_hits: Dict[str, List[float]] = {}   # ip_hash → [timestamp, ...]
+_ip_blacklist: Dict[str, float] = {}        # ip_hash → 차단 해제 시각 (UNIX ts)
 _blacklist_lock = threading.Lock()
 
 def _record_429(ip: str):
     """429 응답 시 호출 — 임계치 초과 시 자동 블랙리스트 등록."""
     now = time.time()
+    ip_hash = _sha256(ip)
     with _blacklist_lock:
-        hits = _ip_429_hits.get(ip, [])
+        hits = _ip_429_hits.get(ip_hash, [])
         hits = [t for t in hits if now - t < _BLACKLIST_WINDOW]
         hits.append(now)
-        _ip_429_hits[ip] = hits
+        _ip_429_hits[ip_hash] = hits
         if len(hits) >= _BLACKLIST_THRESHOLD:
-            _ip_blacklist[ip] = now + _BLACKLIST_DURATION
-            _ip_429_hits.pop(ip, None)
-            logger.warning(f"[BLACKLIST] IP auto-blocked: {_sha256(ip)[:12]} ({len(hits)} hits in {_BLACKLIST_WINDOW}s)")
+            _ip_blacklist[ip_hash] = now + _BLACKLIST_DURATION
+            _ip_429_hits.pop(ip_hash, None)
+            logger.warning(f"[BLACKLIST] IP auto-blocked: {ip_hash[:12]} ({len(hits)} hits in {_BLACKLIST_WINDOW}s)")
 
 def _is_blacklisted(ip: str) -> bool:
     """IP가 현재 블랙리스트에 있는지 확인."""
+    ip_hash = _sha256(ip)
     with _blacklist_lock:
-        expires = _ip_blacklist.get(ip)
+        expires = _ip_blacklist.get(ip_hash)
         if expires is None:
             return False
         if time.time() >= expires:
-            _ip_blacklist.pop(ip, None)
+            _ip_blacklist.pop(ip_hash, None)
             return False
         return True
 
@@ -302,23 +304,23 @@ def _cleanup_blacklist():
     """만료된 블랙리스트/429 기록 정리."""
     now = time.time()
     with _blacklist_lock:
-        expired = [ip for ip, exp in _ip_blacklist.items() if now >= exp]
-        for ip in expired:
-            _ip_blacklist.pop(ip, None)
-        stale = [ip for ip, hits in _ip_429_hits.items()
+        expired = [h for h, exp in _ip_blacklist.items() if now >= exp]
+        for h in expired:
+            _ip_blacklist.pop(h, None)
+        stale = [h for h, hits in _ip_429_hits.items()
                  if not hits or now - max(hits) > _BLACKLIST_WINDOW]
-        for ip in stale:
-            _ip_429_hits.pop(ip, None)
+        for h in stale:
+            _ip_429_hits.pop(h, None)
 
 def _get_blacklist_entries() -> list:
     """Admin API용: 현재 블랙리스트 목록 반환."""
     now = time.time()
     entries = []
     with _blacklist_lock:
-        for ip, expires in _ip_blacklist.items():
+        for ip_hash, expires in _ip_blacklist.items():
             remaining = max(0, int(expires - now))
             entries.append({
-                "ip_hash": _sha256(ip)[:12],
+                "ip_hash": ip_hash[:12],
                 "remaining_seconds": remaining,
                 "expires_utc": datetime.datetime.utcfromtimestamp(expires).isoformat() + "Z",
             })
@@ -327,9 +329,9 @@ def _get_blacklist_entries() -> list:
 def _remove_from_blacklist(ip_hash_prefix: str) -> bool:
     """Admin API용: IP 해시 prefix로 블랙리스트 해제 + DB 삭제."""
     with _blacklist_lock:
-        to_remove = [ip for ip in _ip_blacklist if _sha256(ip)[:12] == ip_hash_prefix]
-        for ip in to_remove:
-            _ip_blacklist.pop(ip, None)
+        to_remove = [h for h in _ip_blacklist if h[:12] == ip_hash_prefix]
+        for h in to_remove:
+            _ip_blacklist.pop(h, None)
     # DB에서도 삭제
     if to_remove:
         try:
@@ -337,8 +339,8 @@ def _remove_from_blacklist(ip_hash_prefix: str) -> bool:
             conn = get_connection()
             try:
                 cur = conn.cursor()
-                for ip in to_remove:
-                    cur.execute("DELETE FROM ip_blacklist WHERE ip_hash = %s", (_sha256(ip)[:64],))
+                for h in to_remove:
+                    cur.execute("DELETE FROM ip_blacklist WHERE ip_hash = %s", (h[:64],))
                 conn.commit()
                 cur.close()
             finally:
@@ -350,10 +352,11 @@ def _remove_from_blacklist(ip_hash_prefix: str) -> bool:
 def _add_to_blacklist(ip: str, duration: int = 3600, reason: str = "manual"):
     """Admin API용: 수동 블랙리스트 추가 + DB 영구 저장."""
     expires = time.time() + duration
+    ip_hash = _sha256(ip)
     with _blacklist_lock:
-        _ip_blacklist[ip] = expires
-    logger.warning(f"[BLACKLIST] Manual block: {_sha256(ip)[:12]} for {duration}s")
-    # DB 영구 저장
+        _ip_blacklist[ip_hash] = expires
+    logger.warning(f"[BLACKLIST] Manual block: {ip_hash[:12]} for {duration}s")
+    # DB 영구 저장 (평문 IP 미저장)
     try:
         from connectors.db_client import get_connection, release_connection
         conn = get_connection()
@@ -361,10 +364,10 @@ def _add_to_blacklist(ip: str, duration: int = 3600, reason: str = "manual"):
             cur = conn.cursor()
             cur.execute("""
                 INSERT INTO ip_blacklist (ip_hash, ip_addr, expires_at, reason)
-                VALUES (%s, %s, TO_TIMESTAMP(%s), %s)
+                VALUES (%s, NULL, TO_TIMESTAMP(%s), %s)
                 ON CONFLICT (ip_hash) DO UPDATE
                 SET expires_at = EXCLUDED.expires_at, reason = EXCLUDED.reason
-            """, (_sha256(ip)[:64], ip, expires, reason))
+            """, (ip_hash[:64], expires, reason))
             conn.commit()
             cur.close()
         finally:
@@ -374,14 +377,14 @@ def _add_to_blacklist(ip: str, duration: int = 3600, reason: str = "manual"):
 
 
 def _load_blacklist_from_db():
-    """DB에서 만료되지 않은 블랙리스트를 인메모리로 로드."""
+    """DB에서 만료되지 않은 블랙리스트를 인메모리로 로드 (해시 기반)."""
     try:
         from connectors.db_client import get_connection, release_connection
         conn = get_connection()
         try:
             cur = conn.cursor()
             cur.execute("""
-                SELECT ip_addr, EXTRACT(EPOCH FROM expires_at) AS expires_ts
+                SELECT ip_hash, EXTRACT(EPOCH FROM expires_at) AS expires_ts
                 FROM ip_blacklist WHERE expires_at > NOW()
             """)
             rows = cur.fetchall()
@@ -389,8 +392,8 @@ def _load_blacklist_from_db():
         finally:
             release_connection(conn)
         with _blacklist_lock:
-            for ip_addr, expires_ts in rows:
-                _ip_blacklist[ip_addr] = float(expires_ts)
+            for ip_hash, expires_ts in rows:
+                _ip_blacklist[ip_hash] = float(expires_ts)
         if rows:
             logger.info(f"✅ [BLACKLIST] DB에서 {len(rows)}건 로드")
     except Exception as e:
