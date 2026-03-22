@@ -9,9 +9,9 @@ import sys
 import os
 import requests
 
-DEVTO_API_KEY = "zKcasoDpi6ofxdeccErmcDNj"
-HASHNODE_TOKEN = "c175d079-56cb-49ec-874d-4c5f60243395"
-HASHNODE_PUB_ID = "69b28b023a0845121d627eb5"
+DEVTO_API_KEY = os.environ.get("DEVTO_API_KEY", "")
+HASHNODE_TOKEN = os.environ.get("HASHNODE_TOKEN", "")
+HASHNODE_PUB_ID = os.environ.get("HASHNODE_PUB_ID", "69b28b023a0845121d627eb5")
 
 DEVTO_URL = "https://dev.to/api/articles"
 HASHNODE_URL = "https://gql.hashnode.com"
