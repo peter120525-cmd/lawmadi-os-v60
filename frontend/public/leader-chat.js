@@ -263,12 +263,12 @@
                     }
                     const _btnLabel = pageLang === 'en' ? 'Buy Credits →' : '크레딧 충전하기 →';
                     const _loginHint = (!_isLoggedIn || _loginReq)
-                        ? '<p style="margin:12px 0 0;font-size:0.87em;color:#666;">' + (pageLang === 'en' ? 'Already purchased? Click <strong>Login</strong> in the header.' : '이미 크레딧을 구매하셨나요? 헤더의 <strong>Login</strong> 버튼을 눌러주세요.') + '</p>'
+                        ? '<p style="margin:12px 0 0;font-size:0.87em;color:#666;line-height:1.5;">' + (pageLang === 'en' ? 'Already purchased? Click <strong>Login</strong> in the header.' : '이미 크레딧을 구매하셨나요? 헤더의 <strong>Login</strong> 버튼을 눌러주세요.') + '</p>'
                         : '';
-                    _cardHtml = '<div style="background:#f0f7f3;border:1px solid #c5dece;border-radius:12px;padding:16px 18px;margin-top:4px;">'
-                        + '<p style="margin:0 0 8px;font-weight:700;color:#1a5c3a;">' + _title + '</p>'
-                        + '<p style="margin:0 0 14px;color:#444;font-size:0.93em;">' + _desc + '</p>'
-                        + '<a href="' + _pricingUrl + '" style="display:inline-block;background:#2d7a4f;color:#fff;padding:9px 20px;border-radius:8px;font-weight:700;text-decoration:none;font-size:0.95em;">' + _btnLabel + '</a>'
+                    _cardHtml = '<div style="background:#f0f7f3;border:1px solid #c5dece;border-radius:12px;padding:16px 18px;margin-top:4px;line-height:1.5;">'
+                        + '<p style="margin:0 0 8px;font-weight:700;color:#1a5c3a;line-height:1.5;">' + _title + '</p>'
+                        + '<p style="margin:0 0 14px;color:#444;font-size:0.93em;line-height:1.5;">' + _desc + '</p>'
+                        + '<a href="' + _pricingUrl + '" style="display:inline-block;background:#2d7a4f;color:#fff;padding:9px 20px;border-radius:8px;font-weight:700;text-decoration:none;font-size:0.95em;border-bottom:none;line-height:1.5;">' + _btnLabel + '</a>'
                         + _loginHint
                         + '</div>';
                 }

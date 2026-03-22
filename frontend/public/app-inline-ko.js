@@ -594,12 +594,12 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 desc = '크레딧을 충전하면 내일까지 기다리지 않고 바로 계속 이용할 수 있습니다.';
             }
             const loginHint = (!isLoggedIn || loginReq)
-                ? '<p style="margin:12px 0 0;font-size:0.87em;color:#666;">이미 크레딧을 구매하셨나요? 헤더의 <strong>Login</strong> 버튼을 눌러주세요.</p>'
+                ? '<p style="margin:12px 0 0;font-size:0.87em;color:#666;line-height:1.5;">이미 크레딧을 구매하셨나요? 헤더의 <strong>Login</strong> 버튼을 눌러주세요.</p>'
                 : '';
-            return '<div style="background:#f0f7f3;border:1px solid #c5dece;border-radius:12px;padding:16px 18px;margin-top:4px;">'
-                + '<p style="margin:0 0 8px;font-weight:700;color:#1a5c3a;">' + title + '</p>'
-                + '<p style="margin:0 0 14px;color:#444;font-size:0.93em;">' + desc + '</p>'
-                + '<a href="/pricing" style="display:inline-block;background:#2d7a4f;color:#fff;padding:9px 20px;border-radius:8px;font-weight:700;text-decoration:none;font-size:0.95em;">크레딧 충전하기 →</a>'
+            return '<div class="limit-card" style="background:#f0f7f3;border:1px solid #c5dece;border-radius:12px;padding:16px 18px;margin-top:4px;line-height:1.5;">'
+                + '<p style="margin:0 0 8px;font-weight:700;color:#1a5c3a;line-height:1.5;">' + title + '</p>'
+                + '<p style="margin:0 0 14px;color:#444;font-size:0.93em;line-height:1.5;">' + desc + '</p>'
+                + '<a href="/pricing" style="display:inline-block;background:#2d7a4f;color:#fff;padding:9px 20px;border-radius:8px;font-weight:700;text-decoration:none;font-size:0.95em;border-bottom:none;line-height:1.5;">크레딧 충전하기 →</a>'
                 + loginHint
                 + '</div>';
         },
