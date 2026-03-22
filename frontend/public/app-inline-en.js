@@ -587,6 +587,39 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             return div.innerHTML;
         },
 
+        _buildLimitCard(errData) {
+            const retryAt = errData.retry_at_kst || '';
+            const loginReq = errData.login_required || false;
+            const isLoggedIn = window.__lawmadiAuth && window.__lawmadiAuth.authenticated;
+            if (retryAt === 'concurrent_limit')
+                return '<p>Your previous request is still processing. Please try again in a moment.</p>';
+            if (retryAt === 'service_temporarily_unavailable')
+                return '<p>Service is temporarily unavailable. Please try again shortly.</p>';
+            let title, desc;
+            if (retryAt === 'credits_exhausted') {
+                title = 'Your credits have been exhausted';
+                desc = 'Top up your credits to continue using Lawmadi OS right away.';
+            } else if (retryAt === 'credits_required_for_expert') {
+                title = 'Expert answers require credits';
+                desc = 'Buy credits to receive in-depth expert legal advice.';
+            } else if (retryAt === 'leader_chat_limit' || retryAt === 'leader_chat_credits_required') {
+                title = 'Free leader chat limit reached';
+                desc = 'Top up your credits to continue chatting with legal leaders.';
+            } else {
+                title = 'Daily free limit reached';
+                desc = "Buy credits to continue without waiting until tomorrow's reset.";
+            }
+            const loginHint = (!isLoggedIn || loginReq)
+                ? '<p style="margin:12px 0 0;font-size:0.87em;color:#666;">Already purchased? Click <strong>Login</strong> in the header.</p>'
+                : '';
+            return '<div style="background:#f0f7f3;border:1px solid #c5dece;border-radius:12px;padding:16px 18px;margin-top:4px;">'
+                + '<p style="margin:0 0 8px;font-weight:700;color:#1a5c3a;">' + title + '</p>'
+                + '<p style="margin:0 0 14px;color:#444;font-size:0.93em;">' + desc + '</p>'
+                + '<a href="/pricing-en" style="display:inline-block;background:#2d7a4f;color:#fff;padding:9px 20px;border-radius:8px;font-weight:700;text-decoration:none;font-size:0.95em;">Buy Credits →</a>'
+                + loginHint
+                + '</div>';
+        },
+
         handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -857,16 +890,9 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             clearTimeout(timeoutId);
             if (response.status === 429) {
                 this.hideTypingIndicator();
-                var limitMsg = '<p>Daily free limit reached.</p>'
-                    + '<p style="margin-top:8px;"><a href="/pricing-en" style="color:#3D8B5E;font-weight:700;text-decoration:underline;">Buy credits</a> to continue using Lawmadi OS.</p>';
-                if (window.__lawmadiAuth && !window.__lawmadiAuth.authenticated) {
-                    limitMsg += '<p style="margin-top:4px;font-size:0.9em;color:#5D7D6D;">Already purchased? Click <strong>Login</strong> in the header.</p>';
-                }
-                try {
-                    const errData = await response.json();
-                    if (errData.error) limitMsg = `<p>${this.escapeHtml(errData.error)}</p>`;
-                } catch {}
-                this.appendMessage('ai', limitMsg);
+                let errData = {};
+                try { errData = await response.json(); } catch {}
+                this.appendMessage('ai', this._buildLimitCard(errData));
                 return;
             }
             if (!response.ok) throw new Error(`Server error (${response.status})`);
@@ -919,16 +945,9 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             clearTimeout(timeoutId);
             if (response.status === 429) {
                 this.hideTypingIndicator();
-                var limitMsg = '<p>Daily free limit reached.</p>'
-                    + '<p style="margin-top:8px;"><a href="/pricing-en" style="color:#3D8B5E;font-weight:700;text-decoration:underline;">Buy credits</a> to continue using Lawmadi OS.</p>';
-                if (window.__lawmadiAuth && !window.__lawmadiAuth.authenticated) {
-                    limitMsg += '<p style="margin-top:4px;font-size:0.9em;color:#5D7D6D;">Already purchased? Click <strong>Login</strong> in the header.</p>';
-                }
-                try {
-                    const errData = await response.json();
-                    if (errData.error) limitMsg = `<p>${this.escapeHtml(errData.error)}</p>`;
-                } catch {}
-                this.appendMessage('ai', limitMsg);
+                let errData = {};
+                try { errData = await response.json(); } catch {}
+                this.appendMessage('ai', this._buildLimitCard(errData));
                 return;
             }
             if (!response.ok) throw new Error(`Server error (${response.status})`);
