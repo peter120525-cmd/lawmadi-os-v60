@@ -2828,8 +2828,35 @@ async def _run_legal_pipeline(
     # Check Grounding 태스크 (Vertex Search 모드에서만)
     grounding_task = None
     if USE_VERTEX_SEARCH and _vertex_check_grounding_fn and rag_context and rag_context.matched_laws:
+        # ── 개선 1: DRF prefetch 조문을 grounding facts에 추가 ──
+        _grounding_facts = list(rag_context.matched_laws)
+        if _drf_prefetch_cache:
+            for _pf_law, _pf_raw in _drf_prefetch_cache.items():
+                _pf_articles = _extract_articles_from_drf(_pf_raw)
+                if _pf_articles:
+                    _pf_texts = []
+                    for _art in _pf_articles[:20]:
+                        _content = _art.get("조문내용", "") or _art.get("조문", "") or ""
+                        if _content:
+                            _pf_texts.append(_content.strip()[:500])
+                    if _pf_texts:
+                        _grounding_facts.append({
+                            "law": _pf_law,
+                            "label": "DRF 조문",
+                            "key_article_texts": _pf_texts,
+                        })
+
+        # ── 개선 2: 법률 근거 섹션만 추출하여 grounding 대상 한정 ──
+        _grounding_target = final_text
+        _basis_match = re.search(r'##\s*법률\s*근거(.+?)(?=\n##|\Z)', final_text, re.S)
+        if not _basis_match:
+            _basis_match = re.search(r'##\s*Legal\s*Basis(.+?)(?=\n##|\Z)', final_text, re.S | re.I)
+        if _basis_match:
+            _grounding_target = _basis_match.group(1).strip()
+            logger.info(f"[CheckGrounding] 법률 근거 섹션만 추출 ({len(_grounding_target)}자)")
+
         grounding_task = asyncio.create_task(
-            _vertex_check_grounding_fn(final_text, rag_context.matched_laws)
+            _vertex_check_grounding_fn(_grounding_target, _grounding_facts)
         )
         grounding_task.add_done_callback(
             lambda t: logger.warning(f"⚠️ [CheckGrounding] 예외: {t.exception()}") if t.exception() else None
