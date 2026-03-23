@@ -6178,7 +6178,7 @@
                 <p>Use AI-organized legal information to communicate efficiently during attorney consultations</p>
                 <button class="lawyer-cta-landing" id="lawyerCtaLanding">
                     <span class="material-symbols-outlined" style="font-size: 1.1rem; vertical-align: middle;">gavel</span>
-                    Attorney Referral Request
+                    Find a Specialist Attorney
                 </button>
             </div>
 
@@ -6246,37 +6246,14 @@
             <span class="material-symbols-outlined">close</span>
         </button>
         <div id="lawyerFormView">
-            <h3>Attorney Referral Request</h3>
-            <p class="modal-desc">We will guide you to relevant attorneys based on Lawmadi OS analysis results</p>
-            <form id="lawyerForm">
-                <div class="form-group">
-                    <label for="lawyerName">Name *</label>
-                    <input type="text" id="lawyerName" required maxlength="50" placeholder="John Doe">
-                </div>
-                <div class="form-group">
-                    <label for="lawyerPhone">Phone *</label>
-                    <input type="tel" id="lawyerPhone" required maxlength="20" placeholder="+82-10-1234-5678">
-                </div>
-                <div class="form-group">
-                    <label for="lawyerSummary">Consultation Summary</label>
-                    <textarea id="lawyerSummary" maxlength="500" placeholder="Briefly describe what you need consultation on"></textarea>
-                </div>
-                <input type="hidden" id="lawyerLeader" value="">
-                <label class="lawyer-consent-label" style="display:flex;align-items:flex-start;gap:8px;margin:12px 0;font-size:0.82rem;color:#5D7D6D;">
-                  <input type="checkbox" id="lawyerPrivacyConsent" required style="margin-top:3px;">
-                  <span>I consent to the collection and use of personal information. (Name, phone number, consultation details — for attorney referral purposes, deleted within 30 days after referral) <a href="/privacy-en" target="_blank" style="color:#6DBB8F;">Privacy Policy</a></span>
-                </label>
-                <button type="submit" class="modal-submit" id="lawyerSubmitBtn">Request Attorney Referral</button>
-            </form>
-        </div>
-        <div id="lawyerSuccessView" style="display:none;">
-            <div class="modal-success">
-                <div class="success-icon">&#9989;</div>
-                <p>Your attorney referral request has been received</p>
-                <p style="font-size: 0.78rem; color: var(--text-muted, #5D7D6D); margin-top: 8px;">We will guide you to relevant attorneys shortly</p>
-                <button class="modal-submit" style="margin-top: 16px;" id="lawyerSuccessCloseBtn">OK</button>
+            <div style="text-align:center;padding:32px 8px;">
+                <span class="material-symbols-outlined" style="font-size:3rem;color:#3D8B5E;display:block;margin-bottom:16px;">gavel</span>
+                <h3 style="margin-bottom:12px;">Find a Specialist Attorney</h3>
+                <p class="modal-desc">This feature is currently under preparation.<br>It will be available soon.</p>
+                <button class="modal-submit" style="margin-top:24px;" id="lawyerSuccessCloseBtn">OK</button>
             </div>
         </div>
+        <div id="lawyerSuccessView" style="display:none;"></div>
     </div>
 </div>
 
