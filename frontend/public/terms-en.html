@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Terms of Service - Lawmadi OS</title>
-    <meta name="description" content="Lawmadi OS Terms of Service. Terms and conditions for using the legal information service.">
+    <meta name="description" content="Lawmadi OS Terms of Service. Terms and conditions for using the AI legal information service and attorney search service.">
     <link rel="canonical" href="https://lawmadi.com/terms-en" />
     <link rel="alternate" hreflang="ko" href="https://lawmadi.com/terms" />
     <link rel="alternate" hreflang="en" href="https://lawmadi.com/terms-en" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Terms of Service - Lawmadi OS" />
-    <meta property="og:description" content="Lawmadi OS Terms of Service. Terms and conditions for using the legal information service." />
+    <meta property="og:description" content="Lawmadi OS Terms of Service. Terms and conditions for using the AI legal information service and attorney search service." />
     <meta property="og:url" content="https://lawmadi.com/terms-en" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:image" content="https://lawmadi.com/og-image.png" />
@@ -21,409 +21,131 @@
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
-            --primary: #3D8B5E;
-            --gold: #B8922D;
-            --purple: #6DBB8F;
-            --green: #3D8B5E;
-            --red: #C45454;
-            --bg-dark: #101A15;
-            --bg-card: #1A2E22;
-            --text-primary: #E4EDE8;
-            --text-secondary: #8BAA9A;
+            --primary: #3D8B5E; --gold: #B8922D; --purple: #6DBB8F; --green: #3D8B5E;
+            --red: #C45454; --bg-dark: #101A15; --bg-card: #1A2E22;
+            --text-primary: #E4EDE8; --text-secondary: #8BAA9A;
         }
-
         body {
             font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
             background: linear-gradient(135deg, #101A15 0%, #1A2E22 50%, #2D4038 100%);
-            min-height: 100vh;
-            color: var(--text-primary);
-            overflow-x: hidden;
+            min-height: 100vh; color: var(--text-primary); overflow-x: hidden;
         }
-
-        /* Animated Background */
-        .animated-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-            overflow: hidden;
-            pointer-events: none;
-        }
-
+        .animated-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; overflow: hidden; pointer-events: none; }
         .grid-pattern {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image:
-                linear-gradient(rgba(74, 155, 110, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(74, 155, 110, 0.03) 1px, transparent 1px);
-            background-size: 50px 50px;
-            animation: gridMove 20s linear infinite;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: linear-gradient(rgba(74,155,110,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(74,155,110,0.03) 1px, transparent 1px);
+            background-size: 50px 50px; animation: gridMove 20s linear infinite;
         }
-
-        @keyframes gridMove {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(50px, 50px); }
-        }
-
-        .floating-shape {
-            position: absolute;
-            border-radius: 50%;
-            opacity: 0.04;
-            animation: float 25s infinite ease-in-out;
-        }
-
+        @keyframes gridMove { 0% { transform: translate(0,0); } 100% { transform: translate(50px,50px); } }
+        .floating-shape { position: absolute; border-radius: 50%; opacity: 0.04; animation: float 25s infinite ease-in-out; }
         .shape1 { width: 400px; height: 400px; background: #4A9B6E; top: 5%; left: 5%; animation-delay: 0s; }
         .shape2 { width: 300px; height: 300px; background: #B8922D; top: 50%; right: 5%; animation-delay: 8s; }
         .shape3 { width: 350px; height: 350px; background: #6DBB8F; bottom: 5%; left: 40%; animation-delay: 16s; }
-
         @keyframes float {
-            0%, 100% { transform: translate(0, 0) rotate(0deg); }
-            25% { transform: translate(40px, -40px) rotate(90deg); }
-            50% { transform: translate(-30px, 30px) rotate(180deg); }
-            75% { transform: translate(30px, 40px) rotate(270deg); }
+            0%, 100% { transform: translate(0,0) rotate(0deg); }
+            25% { transform: translate(40px,-40px) rotate(90deg); }
+            50% { transform: translate(-30px,30px) rotate(180deg); }
+            75% { transform: translate(30px,40px) rotate(270deg); }
         }
-
-        .container {
-            position: relative;
-            z-index: 1;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 40px 20px 80px;
-        }
-
-        /* Header */
-        .header {
-            text-align: center;
-            margin-bottom: 60px;
-            animation: fadeInDown 0.8s ease;
-        }
-
+        .container { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 40px 20px 80px; }
+        .header { text-align: center; margin-bottom: 60px; animation: fadeInDown 0.8s ease; }
         .back-button {
-            position: absolute;
-            top: 40px;
-            left: 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 24px;
-            background: rgba(255, 255, 255, 0.1);
-            -webkit-backdrop-filter: blur(10px);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            color: white;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s;
-            z-index: 10;
+            position: absolute; top: 40px; left: 20px; display: flex; align-items: center; gap: 8px;
+            padding: 12px 24px; background: rgba(255,255,255,0.1); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; color: white; text-decoration: none;
+            font-weight: 600; transition: all 0.3s; z-index: 10;
         }
-
-        .back-button:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateX(-5px);
-        }
-
+        .back-button:hover { background: rgba(255,255,255,0.2); transform: translateX(-5px); }
         .header-badge {
-            display: inline-block;
-            padding: 8px 20px;
+            display: inline-block; padding: 8px 20px;
             background: linear-gradient(135deg, #4A9B6E 0%, #6DBB8F 100%);
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 700;
-            letter-spacing: 1px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 20px rgba(74, 155, 110, 0.3);
+            border-radius: 20px; font-size: 0.85rem; font-weight: 700; letter-spacing: 1px;
+            margin-bottom: 20px; box-shadow: 0 4px 20px rgba(74,155,110,0.3);
         }
-
         .header h1 {
-            font-size: 3rem;
-            font-weight: 900;
+            font-size: 3rem; font-weight: 900;
             background: linear-gradient(135deg, #fff 0%, #8BAA9A 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 16px;
-            letter-spacing: -1px;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            margin-bottom: 16px; letter-spacing: -1px;
         }
-
-        .header p {
-            font-size: 1.2rem;
-            color: var(--text-secondary);
-            max-width: 600px;
-            margin: 0 auto;
-            line-height: 1.6;
-        }
-
-        /* Article Card */
+        .header p { font-size: 1.2rem; color: var(--text-secondary); max-width: 600px; margin: 0 auto; line-height: 1.6; }
         .article-card {
-            background: rgba(26, 46, 34, 0.7);
-            -webkit-backdrop-filter: blur(20px);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 36px 32px;
-            margin-bottom: 24px;
-            transition: all 0.3s;
-            opacity: 0; transform: translateY(30px);
+            background: rgba(26,46,34,0.7); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 36px 32px;
+            margin-bottom: 24px; transition: all 0.3s; opacity: 0; transform: translateY(30px);
         }
-        .article-card.visible {
-            opacity: 1; transform: translateY(0);
-            transition: opacity 0.6s ease, transform 0.6s ease, border-color 0.3s, box-shadow 0.3s;
-        }
-
-        .article-card:hover {
-            border-color: rgba(74, 155, 110, 0.3);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-        }
-
-        .article-number {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 16px;
-        }
-
+        .article-card.visible { opacity: 1; transform: translateY(0); transition: opacity 0.6s ease, transform 0.6s ease, border-color 0.3s, box-shadow 0.3s; }
+        .article-card:hover { border-color: rgba(74,155,110,0.3); box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+        .article-number { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 16px; }
         .article-number .num {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
+            width: 36px; height: 36px; border-radius: 10px;
             background: linear-gradient(135deg, var(--primary) 0%, var(--purple) 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.9rem;
-            font-weight: 900;
-            color: white;
-            flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.9rem; font-weight: 900; color: white; flex-shrink: 0;
         }
-
-        .article-number h2 {
-            font-size: 1.25rem;
-            font-weight: 800;
-            color: white;
-        }
-
-        .article-card p {
-            font-size: 0.95rem;
-            color: var(--text-secondary);
-            line-height: 1.8;
-            margin-bottom: 12px;
-        }
-
-        .article-card p:last-child {
-            margin-bottom: 0;
-        }
-
-        .article-card ul {
-            list-style: none;
-            padding: 0;
-            margin: 0 0 12px 0;
-        }
-
-        .article-card ul li {
-            font-size: 0.95rem;
-            color: var(--text-secondary);
-            line-height: 1.8;
-            padding-left: 20px;
-            position: relative;
-        }
-
-        .article-card ul li::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 11px;
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--primary);
-        }
-
+        .article-number h2 { font-size: 1.25rem; font-weight: 800; color: white; }
+        .article-card p { font-size: 0.95rem; color: var(--text-secondary); line-height: 1.8; margin-bottom: 12px; }
+        .article-card p:last-child { margin-bottom: 0; }
+        .article-card ul { list-style: none; padding: 0; margin: 0 0 12px 0; }
+        .article-card ul li { font-size: 0.95rem; color: var(--text-secondary); line-height: 1.8; padding-left: 20px; position: relative; }
+        .article-card ul li::before { content: ''; position: absolute; left: 0; top: 11px; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
         .highlight-box {
-            background: rgba(196, 84, 84, 0.1);
-            border: 1px solid rgba(196, 84, 84, 0.3);
-            border-radius: 12px;
-            padding: 16px 20px;
-            margin-top: 12px;
+            background: rgba(196,84,84,0.1); border: 1px solid rgba(196,84,84,0.3);
+            border-radius: 12px; padding: 16px 20px; margin-top: 12px;
         }
-
-        .highlight-box p {
-            color: #D4A0A0;
-            font-weight: 600;
-            margin-bottom: 0;
-        }
-
-        .highlight-box .material-symbols-outlined {
-            font-size: 1.1rem;
-            vertical-align: middle;
-            margin-right: 6px;
-        }
-
+        .highlight-box p { color: #D4A0A0; font-weight: 600; margin-bottom: 0; }
+        .highlight-box .material-symbols-outlined { font-size: 1.1rem; vertical-align: middle; margin-right: 6px; }
         .info-box {
-            background: rgba(61, 139, 94, 0.1);
-            border: 1px solid rgba(61, 139, 94, 0.3);
-            border-radius: 12px;
-            padding: 16px 20px;
-            margin-top: 12px;
+            background: rgba(61,139,94,0.1); border: 1px solid rgba(61,139,94,0.3);
+            border-radius: 12px; padding: 16px 20px; margin-top: 12px;
         }
-
-        .info-box p {
-            color: #8DD4AA;
-            font-weight: 600;
-            margin-bottom: 0;
+        .info-box p { color: #8DD4AA; font-weight: 600; margin-bottom: 0; }
+        .info-box .material-symbols-outlined { font-size: 1.1rem; vertical-align: middle; margin-right: 6px; }
+        .chapter-divider { text-align: center; padding: 40px 0 24px; opacity: 0; transform: translateY(30px); }
+        .chapter-divider.visible { opacity: 1; transform: translateY(0); transition: opacity 0.6s ease, transform 0.6s ease; }
+        .chapter-divider .chapter-badge {
+            display: inline-block; padding: 10px 24px;
+            background: linear-gradient(135deg, rgba(184,146,45,0.2), rgba(184,146,45,0.05));
+            border: 1px solid rgba(184,146,45,0.3); border-radius: 30px;
+            font-size: 1rem; font-weight: 800; color: #D4B96A; letter-spacing: 2px;
         }
-
-        .info-box .material-symbols-outlined {
-            font-size: 1.1rem;
-            vertical-align: middle;
-            margin-right: 6px;
-        }
-
-        /* Effective Date */
-        .effective-date {
-            text-align: center;
-            padding: 40px 20px;
-            opacity: 0; transform: translateY(30px);
-        }
-        .effective-date.visible {
-            opacity: 1; transform: translateY(0);
-            transition: opacity 0.6s ease, transform 0.6s ease;
-        }
-
-        .effective-date p {
-            font-size: 1rem;
-            color: var(--text-secondary);
-            font-weight: 600;
-        }
-
+        .chapter-divider h3 { font-size: 1.5rem; font-weight: 900; color: white; margin-top: 12px; }
+        .chapter-divider p { font-size: 0.9rem; color: var(--text-secondary); margin-top: 6px; }
+        .effective-date { text-align: center; padding: 40px 20px; opacity: 0; transform: translateY(30px); }
+        .effective-date.visible { opacity: 1; transform: translateY(0); transition: opacity 0.6s ease, transform 0.6s ease; }
+        .effective-date p { font-size: 1rem; color: var(--text-secondary); font-weight: 600; }
         .effective-date .date {
-            font-size: 1.4rem;
-            font-weight: 900;
+            font-size: 1.4rem; font-weight: 900;
             background: linear-gradient(135deg, #4A9B6E 0%, #6DBB8F 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-top: 8px;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-top: 8px;
         }
-
-        /* Footer Nav */
-        .footer-nav {
-            display: flex;
-            justify-content: center;
-            gap: 24px;
-            padding: 40px 20px 0;
-            opacity: 0; transform: translateY(30px);
-        }
-        .footer-nav.visible {
-            opacity: 1; transform: translateY(0);
-            transition: opacity 0.6s ease, transform 0.6s ease;
-        }
-
+        .footer-nav { display: flex; justify-content: center; gap: 24px; padding: 40px 20px 0; opacity: 0; transform: translateY(30px); }
+        .footer-nav.visible { opacity: 1; transform: translateY(0); transition: opacity 0.6s ease, transform 0.6s ease; }
         .footer-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 14px 28px;
-            background: rgba(255, 255, 255, 0.08);
-            -webkit-backdrop-filter: blur(10px);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 14px;
-            color: white;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 0.95rem;
-            transition: all 0.3s;
+            display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px;
+            background: rgba(255,255,255,0.08); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.15); border-radius: 14px; color: white; text-decoration: none;
+            font-weight: 700; font-size: 0.95rem; transition: all 0.3s;
         }
-
-        .footer-link:hover {
-            background: rgba(61, 139, 94, 0.2);
-            border-color: var(--primary);
-            transform: translateY(-3px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Animations */
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-
-        /* Responsive */
+        .footer-link:hover { background: rgba(61,139,94,0.2); border-color: var(--primary); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+        @keyframes fadeInDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
         @media (max-width: 768px) {
-            .container {
-                padding: 20px 16px 60px;
-            }
-
-            .back-button {
-                top: 12px;
-                left: 12px;
-                padding: 8px 14px;
-                font-size: 0.85rem;
-                min-height: 44px;
-            }
-
-            .header {
-                margin-top: 40px;
-                margin-bottom: 40px;
-            }
-
-            .header h1 {
-                font-size: 2rem;
-            }
-
-            .header p {
-                font-size: 1rem;
-            }
-
-            .article-card {
-                padding: 24px 20px;
-            }
-
-            .article-number h2 {
-                font-size: 1.1rem;
-            }
-
-            .footer-nav {
-                flex-direction: column;
-                align-items: center;
-                gap: 12px;
-            }
-
-            .footer-link {
-                width: 100%;
-                max-width: 300px;
-                justify-content: center;
-            }
+            .container { padding: 20px 16px 60px; }
+            .back-button { top: 12px; left: 12px; padding: 8px 14px; font-size: 0.85rem; min-height: 44px; }
+            .header { margin-top: 40px; margin-bottom: 40px; }
+            .header h1 { font-size: 2rem; } .header p { font-size: 1rem; }
+            .article-card { padding: 24px 20px; } .article-number h2 { font-size: 1.1rem; }
+            .footer-nav { flex-direction: column; align-items: center; gap: 12px; }
+            .footer-link { width: 100%; max-width: 300px; justify-content: center; }
         }
-
         @media (max-width: 480px) {
-            .container { padding: 16px 12px 48px; }
-            .header h1 { font-size: 1.6rem; }
-            .header p { font-size: 0.85rem; }
-            .article-card { padding: 18px 14px; }
+            .container { padding: 16px 12px 48px; } .header h1 { font-size: 1.6rem; }
+            .header p { font-size: 0.85rem; } .article-card { padding: 18px 14px; }
             .article-number h2 { font-size: 1rem; }
         }
-
-        /* ─── Light Mode ─── */
         body:not(.dark-mode) { background: linear-gradient(135deg, #F4F8F5 0%, #D4E4DA 50%, #8BAA9A 100%); color: #1A2E22; --text-secondary: #5D7D6D; }
         body:not(.dark-mode) .article-card a, body:not(.dark-mode) .contact-box a { color: #3D8B5E; }
         body:not(.dark-mode) .header { background: rgba(255,255,255,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid #D4E4DA; }
@@ -437,34 +159,15 @@
         body:not(.dark-mode) .effective-date { background: rgba(255,255,255,0.8); border-color: #D4E4DA; color: #5D7D6D; }
         body:not(.dark-mode) .back-button { background: rgba(0,0,0,0.05); border-color: #D4E4DA; color: #1A2E22; }
         body:not(.dark-mode) .footer-link { background: rgba(0,0,0,0.05); border-color: #D4E4DA; color: #1A2E22; }
-
-        /* ── In-app browser compat (backdrop-filter fallback for WebViews) ── */
-        body.is-inapp-browser {
-            height: 100vh;
-            height: -webkit-fill-available;
-            position: relative;
-        }
-        body.is-inapp-browser .header {
-            -webkit-backdrop-filter: blur(20px);
-            background: rgba(16, 26, 21, 0.98);
-        }
-        body:not(.dark-mode).is-inapp-browser .header {
-            background: rgba(255, 255, 255, 0.98);
-        }
-        body.is-inapp-browser .article-card {
-            -webkit-backdrop-filter: blur(12px);
-            background: rgba(26, 46, 34, 0.95);
-        }
-        body:not(.dark-mode).is-inapp-browser .article-card {
-            background: rgba(255, 255, 255, 0.98);
-        }
-        body.is-inapp-browser .back-button {
-            -webkit-backdrop-filter: blur(8px);
-            background: rgba(255, 255, 255, 0.15);
-        }
-        body:not(.dark-mode).is-inapp-browser .back-button {
-            background: rgba(0, 0, 0, 0.06);
-        }
+        body:not(.dark-mode) .chapter-divider .chapter-badge { background: rgba(184,146,45,0.1); border-color: rgba(184,146,45,0.2); color: #8B6914; }
+        body:not(.dark-mode) .chapter-divider h3 { color: #1A2E22; }
+        body.is-inapp-browser { height: 100vh; height: -webkit-fill-available; position: relative; }
+        body.is-inapp-browser .header { -webkit-backdrop-filter: blur(20px); background: rgba(16,26,21,0.98); }
+        body:not(.dark-mode).is-inapp-browser .header { background: rgba(255,255,255,0.98); }
+        body.is-inapp-browser .article-card { -webkit-backdrop-filter: blur(12px); background: rgba(26,46,34,0.95); }
+        body:not(.dark-mode).is-inapp-browser .article-card { background: rgba(255,255,255,0.98); }
+        body.is-inapp-browser .back-button { -webkit-backdrop-filter: blur(8px); background: rgba(255,255,255,0.15); }
+        body:not(.dark-mode).is-inapp-browser .back-button { background: rgba(0,0,0,0.06); }
     </style>
     <script src="/cookie-consent.js"></script>
 </head>
@@ -478,258 +181,555 @@
         <div class="floating-shape shape3"></div>
     </div>
 
-    <a href="/en" class="back-button">
+    <a href="/" class="back-button">
         <span class="material-symbols-outlined">arrow_back</span>
         Home
     </a>
 
     <div class="container">
-        <!-- Header -->
         <header class="header" style="margin-bottom:40px;">
             <div class="header-badge">TERMS OF SERVICE</div>
             <h1>Terms of Service</h1>
-            <div style="display:inline-block;margin-top:12px;padding:6px 16px;background:rgba(61,139,94,0.15);border:1px solid rgba(61,139,94,0.3);border-radius:20px;font-size:0.8rem;font-weight:600;color:#8DD4AA;">E-Commerce Act · Standardized Contracts Act</div>
+            <div style="display:inline-block;margin-top:12px;padding:6px 16px;background:rgba(61,139,94,0.15);border:1px solid rgba(61,139,94,0.3);border-radius:20px;font-size:0.8rem;font-weight:600;color:#8DD4AA;">E-Commerce Act &middot; Terms Regulation Act &middot; Attorney Search Service Guidelines</div>
         </header>
 
-        <!-- Article 1: Purpose and Acceptance -->
+        <!-- ═══════════════════════════════════════ -->
+        <!-- Chapter 1: General Provisions -->
+        <!-- ═══════════════════════════════════════ -->
+        <div class="chapter-divider">
+            <div class="chapter-badge">CHAPTER 1</div>
+            <h3>General Provisions</h3>
+        </div>
+
+        <!-- Article 1 -->
         <div class="article-card">
             <div class="article-number">
                 <div class="num">1</div>
-                <h2>Purpose and Acceptance</h2>
+                <h2>Purpose and Consent</h2>
             </div>
-            <p>These Terms of Service set forth the basic terms and conditions governing the use of the legal information services provided by Lawmadi OS (hereinafter referred to as the "Service").</p>
-            <p>Lawmadi OS is a legal information service that searches, analyzes, and organizes legal information through 60 expert leaders and real-time verification with the Korea National Law Information Center (SSOT). The Service operates based on official data from the Korea National Law Information Center (Ministry of Government Legislation).</p>
+            <p>These Terms govern the use of the AI legal information service and attorney search service provided by Lawmadi OS (the "Service").</p>
+            <p>Lawmadi OS operates an AI legal information service that searches, analyzes, and organizes legal information through 60 AI expert leaders and real-time verification via the Korean National Law Information Center (SSOT), together with an attorney search service that allows users to search for attorneys by specialty.</p>
             <div class="info-box">
-                <p><span class="material-symbols-outlined">info</span>By submitting a legal query, purchasing credits, or completing OTP email verification, you are deemed to have agreed to these Terms of Service.</p>
+                <p><span class="material-symbols-outlined">info</span>By submitting a legal query, searching for an attorney, purchasing credits, or completing OTP email verification, you are deemed to have agreed to these Terms.</p>
             </div>
         </div>
 
-        <!-- Article 2: Definitions -->
+        <!-- Article 2 -->
         <div class="article-card">
             <div class="article-number">
                 <div class="num">2</div>
                 <h2>Definitions</h2>
             </div>
-            <p>The terms used in these Terms of Service are defined as follows:</p>
+            <p>The following terms are used in these Terms:</p>
             <ul>
-                <li><strong>"Service"</strong> refers to all functions provided by Lawmadi OS, including legal information search, analysis, and document drafting assistance.</li>
-                <li><strong>"User"</strong> refers to any person who uses the Service in accordance with these Terms.</li>
-                <li><strong>"Legal Information"</strong> refers to law-related information provided through the Service, including statutes, case law, legal interpretations, and analysis results. This is distinct from legal advice.</li>
-                <li><strong>"Credits"</strong> refers to the prepaid payment units used for legal Q&A within the Service. 1 credit per standard query, 2 credits per expert answer.</li>
+                <li><strong>"Service"</strong> means all functions provided by Lawmadi OS, including the AI legal information service and attorney search service.</li>
+                <li><strong>"AI Legal Information Service"</strong> means the service that uses AI technology to search, analyze, and organize legal information. This is not legal advice provided by an attorney.</li>
+                <li><strong>"Attorney Search Service"</strong> means the service that enables users to search for attorneys and law firms matching specified search criteria in connection with legal matters.</li>
+                <li><strong>"Operator"</strong> means Lawmadi OS, which operates the Attorney Search Service.</li>
+                <li><strong>"User"</strong> means any person who uses the Service under these Terms.</li>
+                <li><strong>"Attorney(s)"</strong> means attorneys, law firms, limited liability law firms, law firm partnerships under the Attorney-at-Law Act, and foreign legal consultants and their firms under the Foreign Legal Consultant Act.</li>
+                <li><strong>"Member Attorney(s)"</strong> means attorneys who have registered with the Attorney Search Service.</li>
+                <li><strong>"Paid Member Attorney(s)"</strong> means member attorneys who pay advertising fees to the Operator.</li>
+                <li><strong>"Free Member Attorney(s)"</strong> means member attorneys who do not pay advertising fees to the Operator.</li>
+                <li><strong>"Search Criteria"</strong> means the conditions entered by users to search for attorneys.</li>
+                <li><strong>"Search Results"</strong> means the results presented to users after applying search criteria.</li>
+                <li><strong>"Sorting Criteria"</strong> means the criteria that determine the order in which attorneys are sorted, displayed, and shown in search results.</li>
+                <li><strong>"Advertising Fees"</strong> means any consideration paid by attorneys to the Operator for displaying information about themselves or their legal services to users.</li>
+                <li><strong>"Legal Information"</strong> means statutes, case law, legal interpretations, and analysis results provided through the Service. This is distinct from legal advice.</li>
+                <li><strong>"Credits"</strong> means the prepaid units used for legal Q&amp;A within the Service: 1 credit per standard query, 2 credits per expert analysis.</li>
             </ul>
         </div>
 
-        <!-- Article 3: Service Description -->
+        <!-- Article 3 -->
         <div class="article-card">
             <div class="article-number">
                 <div class="num">3</div>
-                <h2>Service Description</h2>
+                <h2>Service Classification</h2>
             </div>
-            <p>Lawmadi OS provides the following services:</p>
+            <p>Lawmadi OS operates the following two services separately:</p>
             <ul>
-                <li>Legal Q&A and legal information analysis</li>
-                <li>Statute search and verification through real-time integration with the Korea National Law Information Center</li>
-                <li>Domain-specific legal analysis through 60 expert leaders</li>
-                <li>Analysis results through a 4-stage verification process</li>
-                <li>Legal document drafting assistance</li>
+                <li><strong>AI Legal Information Service (Track 1)</strong>: Legal Q&amp;A, statute search and verification, field-specific legal analysis, and legal document drafting support using AI technology. This service is not legal advice by an attorney. The 60 AI expert leaders are fictional AI characters and are not actual attorneys.</li>
+                <li><strong>Attorney Search Service (Track 2)</strong>: A service that allows users to search for attorneys using standardized criteria such as specialty and region. This service is operated in compliance with the Ministry of Justice's "Attorney Search Service Operation Guidelines."</li>
             </ul>
             <div class="highlight-box">
-                <p><span class="material-symbols-outlined">warning</span>This Service provides legal information and is NOT legal advice from an attorney. Information provided by the Service should be used for reference purposes only.</p>
+                <p><span class="material-symbols-outlined">warning</span>The AI leader responses in the AI Legal Information Service and the attorney information in the Attorney Search Service are separate services. AI leaders do not recommend or imply recommendation of any specific attorney.</p>
             </div>
         </div>
 
-        <!-- Article 4: Legal Disclaimer -->
+        <!-- ═══════════════════════════════════════ -->
+        <!-- Chapter 2: AI Legal Information Service -->
+        <!-- ═══════════════════════════════════════ -->
+        <div class="chapter-divider">
+            <div class="chapter-badge">CHAPTER 2</div>
+            <h3>AI Legal Information Service</h3>
+            <p>Track 1 &mdash; AI-powered legal information</p>
+        </div>
+
+        <!-- Article 4 -->
         <div class="article-card">
             <div class="article-number">
                 <div class="num">4</div>
-                <h2>Legal Disclaimer</h2>
+                <h2>Service Description</h2>
             </div>
-            <p>This Service does not constitute legal practice under the Attorney-at-Law Act and does not guarantee legal effect.</p>
+            <p>The AI Legal Information Service provides the following functions:</p>
             <ul>
-                <li>Lawmadi OS is not a law firm or attorney, and does not establish an attorney-client relationship.</li>
-                <li>All responses provided by the Service are system-generated legal information and cannot substitute for professional legal advice.</li>
-                <li>For important legal matters such as disputes, litigation, or contracts, you must consult a qualified attorney.</li>
+                <li>Legal Q&amp;A and legal information analysis</li>
+                <li>Statute search and verification via real-time integration with the National Law Information Center</li>
+                <li>Field-specific legal analysis through 60 AI expert leaders</li>
+                <li>Analysis results through a 4-stage verification process</li>
+                <li>Legal document drafting support</li>
             </ul>
             <div class="highlight-box">
-                <p><span class="material-symbols-outlined">gavel</span>This Service does not constitute legal practice and does not guarantee legal effect.</p>
+                <p><span class="material-symbols-outlined">warning</span>This service provides legal information, not legal advice by an attorney. Information provided should be used for reference purposes only.</p>
             </div>
         </div>
 
-        <!-- Article 5: User Obligations -->
+        <!-- Article 5 -->
         <div class="article-card">
             <div class="article-number">
                 <div class="num">5</div>
+                <h2>Attorney Act Disclaimer &amp; Nature of AI Leaders</h2>
+            </div>
+            <p>This service does not constitute legal services under the Attorney-at-Law Act and does not guarantee legal effect.</p>
+            <ul>
+                <li>Lawmadi OS is not an attorney or law firm and does not form an attorney-client relationship.</li>
+                <li>All responses are AI-generated legal information and cannot substitute for professional legal advice.</li>
+                <li>The 60 AI expert leaders (Damwoo, Onyu, Sandeul, etc.) are fictional AI characters and do not refer to or represent any actual attorney or law firm.</li>
+                <li>AI leader responses are not recommendations, referrals, or endorsements of any specific attorney.</li>
+                <li>For legal disputes, litigation, contracts, and other important legal matters, please consult a qualified attorney.</li>
+            </ul>
+            <div class="highlight-box">
+                <p><span class="material-symbols-outlined">gavel</span>This service does not constitute legal services under the Attorney-at-Law Act. AI leaders are fictional AI characters, not actual attorneys.</p>
+            </div>
+        </div>
+
+        <!-- Article 6 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">6</div>
+                <h2>Limitations of AI Responses</h2>
+            </div>
+            <p>Users should be aware of the following when using the AI Legal Information Service:</p>
+            <ul>
+                <li>AI-generated responses are based on training data and algorithms and may contain errors, omissions, or inaccuracies.</li>
+                <li>AI responses cannot fully reflect the specific circumstances of individual cases and do not substitute for professional judgment.</li>
+                <li>AI responses are not advertisements, recommendations, or quality guarantees for any specific attorney or law firm.</li>
+                <li>Due to amendments or changes in statutes and case law, AI responses may not reflect the most current legal status.</li>
+            </ul>
+        </div>
+
+        <!-- ═══════════════════════════════════════ -->
+        <!-- Chapter 3: Attorney Search Service -->
+        <!-- ═══════════════════════════════════════ -->
+        <div class="chapter-divider">
+            <div class="chapter-badge">CHAPTER 3</div>
+            <h3>Attorney Search Service</h3>
+            <p>Track 2 &mdash; Ministry of Justice Guidelines Compliant</p>
+        </div>
+
+        <!-- Article 7 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">7</div>
+                <h2>Fundamental Principles</h2>
+            </div>
+            <p>The Operator adheres to the following principles in operating the Attorney Search Service:</p>
+            <ul>
+                <li>Respects the public nature of the attorney system, fair case acquisition practices, and protection of attorney independence as intended by the Attorney-at-Law Act.</li>
+                <li>Does not advertise or represent that the Service or Operator directly handles legal matters.</li>
+                <li>Does not recommend or imply recommendation of any specific attorney.</li>
+                <li>Does not create a false impression of affiliation or business interest with member attorneys.</li>
+                <li>Does not set advertising fees excessively high in a manner that could cause excessive increases in legal costs.</li>
+                <li>Does not subordinate attorneys to the Service by influencing their specific work performance or requiring exclusive contracts.</li>
+            </ul>
+        </div>
+
+        <!-- Article 8 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">8</div>
+                <h2>Search Criteria</h2>
+            </div>
+            <p>Search criteria for the Attorney Search Service are operated as follows:</p>
+            <ul>
+                <li>Only pre-defined, standardized, objective, and value-neutral search criteria (specialty, region, experience, etc.) are permitted.</li>
+                <li>Search criteria that harm the public nature of the attorney system, such as advertising personal connections with public officials or implying influence, are not permitted.</li>
+                <li>Searching for attorneys by processing or analyzing non-standardized information from individual, case-specific user inputs at the Operator's discretion is not permitted.</li>
+            </ul>
+            <div class="info-box">
+                <p><span class="material-symbols-outlined">info</span>Q&amp;A content from the AI Legal Information Service is not automatically linked to or used as search criteria in the Attorney Search Service.</p>
+            </div>
+        </div>
+
+        <!-- Article 9 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">9</div>
+                <h2>Sorting Criteria</h2>
+            </div>
+            <p>Sorting criteria for search results are operated as follows:</p>
+            <ul>
+                <li>Sorting criteria must be fair and reasonable.</li>
+                <li>Random sorting is considered fair and reasonable.</li>
+                <li>Sorting criteria are clearly disclosed on the search results screen so that users can immediately view, select, and change them.</li>
+            </ul>
+        </div>
+
+        <!-- Article 10 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">10</div>
+                <h2>Display of Search Results</h2>
+            </div>
+            <p>Search results are displayed according to the following principles:</p>
+            <ul>
+                <li>Non-member attorneys may be displayed with their consent.</li>
+                <li>Member attorneys or paid member attorneys may be displayed exclusively or given priority in sorting.</li>
+                <li>Paid member attorneys may receive certain benefits in prominence (font, size, etc.), but excessive disparity is not permitted.</li>
+            </ul>
+            <div class="highlight-box">
+                <p><span class="material-symbols-outlined">warning</span>The following sorting methods are prohibited: (1) sorting paid members by advertising fee amount, (2) sorting by consultation fee amount, (3) any other sorting based on cost or monetary amounts.</p>
+            </div>
+        </div>
+
+        <!-- Article 11 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">11</div>
+                <h2>Advertising Disclosure</h2>
+            </div>
+            <p>The Operator discloses the following regarding advertising in the Attorney Search Service:</p>
+            <ul>
+                <li>Ensures users can recognize that search results are advertisements, not objective, value-neutral factual displays.</li>
+                <li>When displaying only paid member attorneys, giving them sorting priority, or providing prominence benefits, prominently notifies users of this fact through pop-ups or similar methods.</li>
+                <li>When search results are effectively limited due to the amount of information provided by attorneys to the Operator, users are also notified.</li>
+            </ul>
+        </div>
+
+        <!-- Article 12 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">12</div>
+                <h2>Consultation Fee Display</h2>
+            </div>
+            <p>Attorney consultation fees are handled as follows:</p>
+            <ul>
+                <li>Attorneys may display pre-engagement initial consultation fees.</li>
+                <li>Free or unreasonably low consultation fees may not be displayed.</li>
+                <li>When initial consultation fees are displayed, the scope of legal services covered must be clearly communicated to users.</li>
+                <li>Actual case handling fees (engagement fees) may not be displayed.</li>
+            </ul>
+        </div>
+
+        <!-- Article 13 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">13</div>
+                <h2>Specialty &amp; Keyword Display</h2>
+            </div>
+            <p>Attorney specialty advertising is operated as follows:</p>
+            <ul>
+                <li>Specialty advertisements using practice areas as search criteria or keywords may be offered.</li>
+                <li>The number of specialty advertisements each attorney may purchase is limited to a reasonable range. However, specialties registered with the Korean Bar Association are not counted toward this limit.</li>
+                <li>Users are clearly informed that specialty advertisements are self-designated by attorneys and are not based on objective professional standards.</li>
+                <li>Specialty advertisements are clearly distinguished from Korean Bar Association-registered specialties to avoid confusion.</li>
+                <li>The complete list of all specialty advertisements purchased by each attorney, and case handling statistics (if provided), are disclosed to users.</li>
+            </ul>
+        </div>
+
+        <!-- Article 14 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">14</div>
+                <h2>Location Display</h2>
+            </div>
+            <p>Attorney location information is displayed as follows:</p>
+            <ul>
+                <li>For individual attorneys: the location and address of their actual office and their affiliated local bar association.</li>
+                <li>For law firms: the location and address of main and branch offices, and the local bar association affiliation of attorneys at each office.</li>
+                <li>For foreign legal consultants and their firms: the location and address of their office.</li>
+                <li>The Operator may request corrections if location information is displayed inaccurately.</li>
+            </ul>
+        </div>
+
+        <!-- Article 15 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">15</div>
+                <h2>Prohibited Expressions</h2>
+            </div>
+            <p>The following expressions are prohibited in search results or linked pages:</p>
+            <ul>
+                <li>Expressions implying recommendation of specific attorneys, such as "excellent" or "recommended"</li>
+                <li>Expressions claiming exclusivity, such as "best," "top," or "only"</li>
+                <li>Any other expressions that create an impression of guaranteeing the quality of legal services</li>
+            </ul>
+            <div class="info-box">
+                <p><span class="material-symbols-outlined">info</span>Objectively verifiable metrics accumulated within the Service (such as consultation count) may be displayed in search results or profile pages.</p>
+            </div>
+        </div>
+
+        <!-- Article 16 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">16</div>
+                <h2>Contact &amp; Legal Consultation</h2>
+            </div>
+            <p>Communication between users and attorneys is operated as follows:</p>
+            <ul>
+                <li>The Service may provide means for users to contact attorneys via phone, video call, masked number, or similar methods.</li>
+                <li>Attorneys are permitted to display their personal or office phone numbers in search results or profile pages so users can contact them directly.</li>
+                <li>When users engage in legal consultation with attorneys, the following is prominently disclosed:</li>
+            </ul>
+            <div class="highlight-box">
+                <p><span class="material-symbols-outlined">gavel</span>(1) The attorney-client relationship is formed only between the user and the attorney. (2) The Operator is not responsible for the content of consultations. (3) The consultation provider is the attorney, not the Operator.</p>
+            </div>
+            <p style="margin-top:12px;">The Operator makes efforts to prevent "name lending" or "office manager consultations" by notifying the Korean Bar Association when it is confirmed that an attorney did not personally conduct the consultation.</p>
+        </div>
+
+        <!-- Article 17 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">17</div>
+                <h2>Consultation Fees &amp; Commissions</h2>
+            </div>
+            <p>The following principles apply to legal consultation fees:</p>
+            <ul>
+                <li>The Operator does not demand or collect consultation fees from users for legal consultations provided by attorneys.</li>
+                <li>The Operator does not receive any share of fees from attorneys for case consultation, engagement, handling, or other professional services. However, fixed actual-cost reimbursement necessary for building and maintaining the system is an exception.</li>
+                <li>The Operator may facilitate payment through a contracted electronic payment processor and handle refunds on behalf of users.</li>
+            </ul>
+            <div class="highlight-box">
+                <p><span class="material-symbols-outlined">warning</span>The following are prohibited: (1) forcing in-app purchase payment methods, (2) unnecessarily delaying payment after consultation completion, (3) deducting a portion of user payments as advertising fees before paying the remainder to attorneys.</p>
+            </div>
+        </div>
+
+        <!-- Article 18 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">18</div>
+                <h2>User Reviews &amp; Feedback</h2>
+            </div>
+            <p>User reviews and feedback ("Reviews") regarding attorneys are operated as follows:</p>
+            <p><strong>Posting Format</strong></p>
+            <ul>
+                <li>Users may post Reviews about legal services received from attorneys.</li>
+                <li>Ratings in numerical form such as stars, scores, or grades are not permitted.</li>
+                <li>Aggregate ratings with weighted scores applied at the Operator's discretion are not permitted.</li>
+            </ul>
+            <p><strong>Management Obligations</strong></p>
+            <ul>
+                <li>Reviews may only be posted when objectively verified that the user actually experienced the attorney's services (including consultation-only interactions).</li>
+                <li>Reviews may be published with the poster's consent and are not arbitrarily modified by the Operator.</li>
+                <li>Reviews containing profanity, false information, irrelevant content, paid postings, or illegal/improper content may be removed, and the user will be notified of the action and reason.</li>
+                <li>The Operator makes efforts to prevent hidden advertisements and ensure the authenticity of Reviews.</li>
+            </ul>
+            <p><strong>Attorney Rights</strong></p>
+            <ul>
+                <li>Attorneys may request deletion of Reviews or posting of rebuttals when their rights are infringed by false content.</li>
+                <li>When it is difficult to determine whether rights have been infringed, access to the Review may be temporarily blocked for up to 30 days, with notification to the user of the action and reason.</li>
+            </ul>
+        </div>
+
+        <!-- ═══════════════════════════════════════ -->
+        <!-- Chapter 4: Common Provisions -->
+        <!-- ═══════════════════════════════════════ -->
+        <div class="chapter-divider">
+            <div class="chapter-badge">CHAPTER 4</div>
+            <h3>Common Provisions</h3>
+        </div>
+
+        <!-- Article 19 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">19</div>
                 <h2>User Obligations</h2>
             </div>
             <p>Users must comply with the following when using the Service:</p>
             <ul>
-                <li>Users must provide accurate information when using the Service.</li>
-                <li>The Service must not be used for illegal purposes or to infringe upon the rights of others.</li>
-                <li>The Service must not be misused to create false legal documents or for fraud, threats, or similar activities.</li>
-                <li>Users must not interfere with the normal operation of the Service.</li>
-                <li>Users must not collect or use other users' personal information without authorization.</li>
+                <li>Provide accurate information when using the Service.</li>
+                <li>Not use the Service for illegal purposes or to infringe on others' rights.</li>
+                <li>Not misuse the Service to create fraudulent legal documents or for fraud, extortion, or similar purposes.</li>
+                <li>Not interfere with the normal operation of the Service.</li>
+                <li>Not collect or use other users' personal information without authorization.</li>
+                <li>Not distort or manipulate Attorney Search Service search results.</li>
             </ul>
         </div>
 
-        <!-- Article 6: Account and Authentication -->
+        <!-- Article 20 -->
         <div class="article-card">
             <div class="article-number">
-                <div class="num">6</div>
-                <h2>Account and Authentication</h2>
+                <div class="num">20</div>
+                <h2>Attorney Responsibility</h2>
             </div>
-            <p>Email verification (OTP) is required for credit purchases and paid service usage.</p>
+            <p>Attorneys bear independent responsibility for information displayed in search results and linked pages under the following laws:</p>
             <ul>
-                <li>Users enter their email address and verify their identity through a 6-digit code sent to their email.</li>
-                <li>Upon successful verification, a session cookie (__session) is created and maintains login status for 30 days.</li>
-                <li>Users must not use another person's email for verification or share verification codes with others.</li>
-                <li>After 5 failed verification attempts, the code expires and a new one must be requested.</li>
-                <li>Sessions are immediately deleted upon logout. Clearing browser cookies will require re-authentication.</li>
+                <li>Article 23 (Advertising) of the Attorney-at-Law Act</li>
+                <li>Act on Fair Labeling and Advertising</li>
+                <li>Other applicable laws and regulations</li>
             </ul>
         </div>
 
-        <!-- Article 7: Minors -->
+        <!-- Article 21 -->
         <div class="article-card">
             <div class="article-number">
-                <div class="num">7</div>
-                <h2>Minors</h2>
+                <div class="num">21</div>
+                <h2>Account &amp; Authentication</h2>
             </div>
-            <p>Children under the age of 14 may not use the Service without the consent of a legal guardian.</p>
+            <p>Email verification (OTP) is required for credit purchases and paid service use.</p>
             <ul>
-                <li>When a minor aged 14 or older but under 19 purchases credits, it is deemed that the consent of a legal guardian has been obtained.</li>
-                <li>Credit purchases made by a minor without the consent of a legal guardian may be cancelled by the legal guardian.</li>
+                <li>Users enter their email address and complete identity verification through a 6-digit code sent to their email.</li>
+                <li>Upon verification, a session cookie (__session) is created and login status is maintained for 30 days.</li>
+                <li>Users must not use others' email addresses for verification or share verification codes.</li>
+                <li>After 5 or more failed verification attempts, the verification expires and a new code must be requested.</li>
+                <li>Sessions are immediately deleted upon logout; re-verification is required if browser cookies are cleared.</li>
+            </ul>
+        </div>
+
+        <!-- Article 22 -->
+        <div class="article-card">
+            <div class="article-number">
+                <div class="num">22</div>
+                <h2>Minor Users</h2>
+            </div>
+            <p>Children under 14 years of age may not use the Service without parental consent.</p>
+            <ul>
+                <li>When minors aged 14 to 18 purchase credits, parental consent is deemed to have been given.</li>
+                <li>Credit purchases made by minors without parental consent may be cancelled by a legal guardian.</li>
                 <li>For inquiries regarding minors, please contact <a href="mailto:choepeter@outlook.kr" style="color:#3D8B5E;">choepeter@outlook.kr</a>.</li>
             </ul>
         </div>
 
-        <!-- Article 8: Intellectual Property -->
+        <!-- Article 23 -->
         <div class="article-card">
             <div class="article-number">
-                <div class="num">8</div>
+                <div class="num">23</div>
                 <h2>Intellectual Property</h2>
             </div>
-            <p>All intellectual property rights for Lawmadi OS content are protected.</p>
+            <p>All intellectual property rights in Lawmadi OS content are protected.</p>
             <ul>
-                <li>All copyrights and intellectual property rights for the Service's design, logos, text, software, and system configurations belong to Lawmadi OS.</li>
-                <li>Users may only use information obtained through the Service for personal, non-commercial purposes.</li>
+                <li>Copyright and intellectual property rights in all content including design, logos, text, software, and system architecture belong to Lawmadi OS.</li>
+                <li>Users may use information obtained through the Service for personal, non-commercial purposes only.</li>
                 <li>Reproduction, distribution, transmission, or modification of Service content without prior consent is prohibited.</li>
             </ul>
         </div>
 
-        <!-- Article 9: Limitation of Liability -->
+        <!-- Article 24 -->
         <div class="article-card">
             <div class="article-number">
-                <div class="num">9</div>
-                <h2>Limitation of Liability</h2>
+                <div class="num">24</div>
+                <h2>Disclaimer</h2>
             </div>
-            <p>Lawmadi OS shall not be liable for the following:</p>
+            <p>Lawmadi OS is not responsible for the following:</p>
             <ul>
-                <li>Guarantees regarding the accuracy, completeness, or timeliness of system-generated responses</li>
+                <li>Accuracy, completeness, or timeliness of AI-generated responses</li>
                 <li>Decisions made by users based on information provided by the Service and their consequences</li>
+                <li>Content and outcomes of legal consultations provided by attorneys connected through the Attorney Search Service</li>
+                <li>Accuracy of information displayed by attorneys in search results and profiles</li>
                 <li>Service interruptions due to force majeure such as natural disasters or system failures</li>
-                <li>Service usage disruptions caused by the user's own fault</li>
+                <li>Service access issues caused by user negligence</li>
             </ul>
             <div class="info-box">
-                <p><span class="material-symbols-outlined">info</span>System responses are for reference purposes only. For final judgments, please consult a qualified legal professional.</p>
+                <p><span class="material-symbols-outlined">info</span>AI responses are for reference only. Consultations through the Attorney Search Service are provided directly by attorneys, and the Operator is not responsible for their content. Always consult a qualified legal professional for final decisions.</p>
             </div>
         </div>
 
-        <!-- Article 10: Pricing and Payment -->
+        <!-- Article 25 -->
         <div class="article-card">
             <div class="article-number">
-                <div class="num">10</div>
-                <h2>Pricing and Payment</h2>
+                <div class="num">25</div>
+                <h2>Fees &amp; Payment</h2>
             </div>
-            <p>The Service may be used through a free plan and paid credit purchases.</p>
+            <p>The Service is available through a free plan and paid credit purchases.</p>
             <ul>
-                <li>Free Plan: 2 free legal queries per day (resets at 00:00 KST).</li>
-                <li>Paid Credits: Purchase credits to use the Service without daily limits. 1 credit per standard query, 2 credits per expert answer.</li>
-                <li>Credits never expire once purchased.</li>
-                <li>Payments are processed through Paddle (payment processor), which acts as the Merchant of Record and manages taxes and payments.</li>
-                <li>Credits cannot be transferred to others or refunded for cash, except as provided in the <a href="/refund-en" style="color:#3D8B5E;">Refund Policy</a>.</li>
-                <li>All displayed prices include applicable taxes (VAT).</li>
+                <li>Free plan: 2 free legal queries per day (resets at 00:00 KST).</li>
+                <li>Paid credits: Purchase credits for unlimited daily use. 1 credit per standard query, 2 credits per expert analysis.</li>
+                <li>Credits have no expiration date after purchase.</li>
+                <li>Payments are processed through Paddle (payment processor), which serves as the Merchant of Record managing taxes and payments.</li>
+                <li>Credits cannot be transferred or refunded for cash, except as provided in the <a href="/refund-en" style="color:#3D8B5E;">Refund Policy</a>.</li>
+                <li>Displayed prices include VAT.</li>
             </ul>
             <div class="info-box">
-                <p><span class="material-symbols-outlined">info</span>Credit products and pricing are available on the <a href="/pricing-en" style="color:#3D8B5E;">Pricing</a> page.</p>
+                <p><span class="material-symbols-outlined">info</span>Credit plans and pricing are available on the <a href="/pricing" style="color:#3D8B5E;">Pricing</a> page.</p>
             </div>
         </div>
 
-        <!-- Article 11: Service Changes and Suspension -->
+        <!-- Article 26 -->
         <div class="article-card">
             <div class="article-number">
-                <div class="num">11</div>
-                <h2>Service Changes and Suspension</h2>
+                <div class="num">26</div>
+                <h2>Service Changes &amp; Suspension</h2>
             </div>
-            <p>Lawmadi OS may change or suspend all or part of the Service to improve stability and quality.</p>
+            <p>Lawmadi OS may change or suspend all or part of the Service for stability and quality improvement.</p>
             <ul>
-                <li>Users will be notified in advance through in-service notices when the Service is changed or suspended.</li>
+                <li>Users will be notified in advance through in-service announcements of any changes or suspensions.</li>
                 <li>In unavoidable cases such as emergency system maintenance or security issues, notification may be provided after the fact.</li>
-                <li>No separate compensation will be provided for changes or suspension of free services.</li>
-                <li>In case of permanent service termination, users with paid credits will receive refunds for unused credits.</li>
+                <li>No compensation is provided for changes or suspension of free services.</li>
+                <li>Users holding paid credits will receive refunds for unused credits in case of permanent service termination.</li>
             </ul>
         </div>
 
-        <!-- Article 12: Amendment of Terms -->
+        <!-- Article 27 -->
         <div class="article-card">
             <div class="article-number">
-                <div class="num">12</div>
+                <div class="num">27</div>
                 <h2>Amendment of Terms</h2>
             </div>
-            <p>Lawmadi OS may amend these Terms to the extent permitted by applicable law.</p>
+            <p>Lawmadi OS may amend these Terms within the scope permitted by applicable laws.</p>
             <ul>
-                <li>When amending the Terms, the changes and effective date shall be notified to users at least 7 days prior to the effective date through in-service notices or email.</li>
-                <li>For amendments unfavorable to users, notification shall be provided at least 30 days prior to the effective date, with individual notice via email or other means.</li>
-                <li>Users who do not agree with the amended Terms may discontinue use and withdraw from the Service.</li>
-                <li>If a user does not expressly object by the effective date after notification, the user is deemed to have agreed to the amended Terms.</li>
+                <li>When amending the Terms, users will be notified at least 7 days before the effective date through in-service announcements or email, specifying the changes and effective date.</li>
+                <li>For amendments disadvantageous to users, notification will be given at least 30 days before the effective date, with individual notice via email.</li>
+                <li>Users who do not agree to the amended Terms may discontinue use and withdraw.</li>
+                <li>If users do not expressly reject the changes by the effective date after notification, they are deemed to have agreed to the amended Terms.</li>
             </ul>
         </div>
 
-        <!-- Article 13: Governing Law and Jurisdiction -->
+        <!-- Article 28 -->
         <div class="article-card">
             <div class="article-number">
-                <div class="num">13</div>
-                <h2>Governing Law and Jurisdiction</h2>
+                <div class="num">28</div>
+                <h2>Governing Law &amp; Jurisdiction</h2>
             </div>
-            <p>The interpretation and application of these Terms shall be as follows:</p>
+            <p>The following applies to the interpretation and application of these Terms:</p>
             <ul>
-                <li>These Terms shall be interpreted and applied in accordance with the laws of the Republic of Korea.</li>
-                <li>In the event of a dispute arising from Service use, the Seoul Central District Court shall be the exclusive court of first instance.</li>
-                <li>Users may also utilize alternative dispute resolution (ADR) procedures, including the Korea Consumer Agency (1372), the Korea Internet & Security Agency Privacy Violation Report Center (118), and the Electronic Commerce Dispute Resolution Committee.</li>
-                <li>Matters not stipulated in these Terms shall be governed by applicable laws including the Act on the Consumer Protection in Electronic Commerce and the Regulation of Standardized Contracts Act.</li>
+                <li>These Terms are governed by and construed in accordance with the laws of the Republic of Korea.</li>
+                <li>The Seoul Central District Court shall have exclusive jurisdiction as the court of first instance for disputes arising from Service use.</li>
+                <li>Users may use alternative dispute resolution (ADR) procedures including the Korea Consumer Agency (1372), KISA Privacy Violation Center (118), and E-Commerce Dispute Resolution Committee.</li>
+                <li>Matters not specified in these Terms shall be governed by the Act on Consumer Protection in Electronic Commerce, the Regulation of Standardized Contracts Act, the Attorney-at-Law Act, the Ministry of Justice's "Attorney Search Service Operation Guidelines," and other applicable laws and customs.</li>
             </ul>
         </div>
 
-        <!-- Article 14: Privacy Officer -->
+        <!-- Article 29 -->
         <div class="article-card">
             <div class="article-number">
-                <div class="num">14</div>
-                <h2>Privacy Officer</h2>
+                <div class="num">29</div>
+                <h2>Data Protection Officer</h2>
             </div>
-            <p>A Privacy Officer has been designated to oversee personal information processing and to handle user complaints and remedies.</p>
+            <p>The following Data Protection Officer is designated to oversee personal information processing and handle user complaints and remedies:</p>
             <ul>
-                <li>Name: Choe Jainam</li>
+                <li>Name: Jainam Choe</li>
                 <li>Email: <a href="mailto:choepeter@outlook.kr">choepeter@outlook.kr</a></li>
-                <li>Inquiries, access/correction/deletion requests, and complaint handling regarding personal information</li>
+                <li>Inquiries regarding personal information, access/correction/deletion requests, complaint handling</li>
             </ul>
         </div>
 
-        <!-- Article 15: Effective Date -->
+        <!-- Article 30 -->
         <div class="article-card">
             <div class="article-number">
-                <div class="num">15</div>
+                <div class="num">30</div>
                 <h2>Effective Date</h2>
             </div>
-            <p>These Terms shall take effect from the effective date below.</p>
+            <p>These Terms take effect from the effective date below.</p>
+            <p>The previous Terms (effective March 10, 2026) are superseded by these Terms as of the effective date.</p>
         </div>
 
-        <!-- Effective Date -->
         <div class="effective-date">
             <p>Effective Date</p>
-            <div class="date">March 10, 2026</div>
+            <div class="date">March 23, 2026</div>
         </div>
 
-        <!-- Footer Navigation -->
         <div class="footer-nav">
-            <a href="/en" class="footer-link">
+            <a href="/" class="footer-link">
                 <span class="material-symbols-outlined">home</span>
                 Home
             </a>
@@ -737,13 +737,13 @@
                 <span class="material-symbols-outlined">shield</span>
                 Privacy Policy
             </a>
-            <a href="/pricing-en" class="footer-link">
+            <a href="/pricing" class="footer-link">
                 <span class="material-symbols-outlined">payments</span>
                 Pricing
             </a>
             <a href="/refund-en" class="footer-link">
                 <span class="material-symbols-outlined">receipt_long</span>
-                Refund
+                Refund Policy
             </a>
         </div>
     </div>
