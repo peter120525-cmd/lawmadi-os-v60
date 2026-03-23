@@ -518,7 +518,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             } finally {
                 if (submitBtn) {
                     submitBtn.disabled = false;
-                    submitBtn.textContent = 'Submit';
+                    submitBtn.textContent = 'Request Attorney Referral';
                 }
             }
             return false;
@@ -2233,7 +2233,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         if (!lNames.every(n => clevelOnly.includes(n))) {
                             const lawyerCta = document.createElement('button');
                             lawyerCta.className = 'bottom-cta-btn lawyer';
-                            lawyerCta.innerHTML = '<span class="material-symbols-outlined">gavel</span> Attorney Consultation Guide';
+                            lawyerCta.innerHTML = '<span class="material-symbols-outlined">gavel</span> Attorney Referral Request';
                             lawyerCta.onclick = () => UI.openLawyerModal(originalQuery, leaderName);
                             ctaBar.appendChild(lawyerCta);
                         }
