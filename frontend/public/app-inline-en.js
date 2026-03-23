@@ -375,7 +375,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             var modalClose = document.getElementById('modalCloseBtn');
             if (modalClose) modalClose.addEventListener('click', () => this.closeLawyerModal());
             var lawyerForm = document.getElementById('lawyerForm');
-            if (lawyerForm) lawyerForm.addEventListener('submit', (e) => this.submitLawyerInquiry(e));
+            // Coming soon — form submission disabled
             var successClose = document.getElementById('lawyerSuccessCloseBtn');
             if (successClose) successClose.addEventListener('click', () => this.closeLawyerModal());
             var moreOverlay = document.getElementById('moreSheetOverlay');
@@ -518,7 +518,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
             } finally {
                 if (submitBtn) {
                     submitBtn.disabled = false;
-                    submitBtn.textContent = 'Request Attorney Referral';
+                    submitBtn.textContent = 'Find a Specialist Attorney';
                 }
             }
             return false;
@@ -2233,7 +2233,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         if (!lNames.every(n => clevelOnly.includes(n))) {
                             const lawyerCta = document.createElement('button');
                             lawyerCta.className = 'bottom-cta-btn lawyer';
-                            lawyerCta.innerHTML = '<span class="material-symbols-outlined">gavel</span> Attorney Referral Request';
+                            lawyerCta.innerHTML = '<span class="material-symbols-outlined">gavel</span> Find a Specialist Attorney';
                             lawyerCta.onclick = () => UI.openLawyerModal(originalQuery, leaderName);
                             ctaBar.appendChild(lawyerCta);
                         }
