@@ -730,7 +730,7 @@
             <p>Lawmadi OS (hereinafter referred to as the "Service") processes personal information for the following purposes. Personal information collected will not be used for purposes other than those stated below. Prior consent will be obtained if the purpose of processing changes.</p>
             <ul>
                 <li><strong>Providing AI legal information services</strong> — To analyze user queries and search, analyze, and organize legal information through AI</li>
-                <li><strong>Providing attorney search services</strong> — To enable users to search for attorneys by specialty, region, and other criteria, display attorney advertisements, and facilitate consultation connections between users and attorneys</li>
+                <li><strong>Providing attorney search services</strong> — To enable users to search for attorneys by specialty, region, and other criteria, and display attorney profiles and advertisements</li>
                 <li><strong>Service security and stability</strong> — Detecting abnormal access, preventing service abuse, fraud prevention (device identification), and maintaining system stability</li>
                 <li><strong>Service improvement and statistical analysis</strong> — Improving service quality and features through usage pattern analysis</li>
             </ul>
@@ -763,11 +763,6 @@
                         <td>Service usage</td>
                         <td>Conversation history, uploaded documents</td>
                         <td>Automatically collected during use</td>
-                    </tr>
-                    <tr>
-                        <td>Attorney inquiry</td>
-                        <td>Name, phone number</td>
-                        <td>Directly entered by user</td>
                     </tr>
                     <tr>
                         <td>Credit payment</td>
@@ -856,11 +851,6 @@
                         <td>Session token</td>
                         <td>30 days (immediately deleted on logout)</td>
                         <td>Login session maintenance</td>
-                    </tr>
-                    <tr>
-                        <td>Attorney inquiry info</td>
-                        <td>Deleted immediately after connection</td>
-                        <td>Deleted upon purpose fulfillment</td>
                     </tr>
                     <tr>
                         <td>Device identification</td>
@@ -985,25 +975,6 @@
                     </tr>
                 </tbody>
             </table>
-            <h3 style="margin-top:24px;margin-bottom:8px;">Attorney Consultation Referral</h3>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Recipient</th>
-                        <th>Purpose</th>
-                        <th>Data Provided</th>
-                        <th>Retention</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Member attorneys</td>
-                        <td>Facilitating consultation (with user consent)</td>
-                        <td>Name, phone number, consultation summary</td>
-                        <td>30 days after completion</td>
-                    </tr>
-                </tbody>
-            </table>
             <h3 style="margin-top:24px;margin-bottom:8px;">Attorney Search Service — Third-Party Sharing</h3>
             <table class="data-table">
                 <thead>
@@ -1015,12 +986,6 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>Member attorneys</td>
-                        <td>When user requests consultation connection (consent-based)</td>
-                        <td>User contact info, desired consultation area</td>
-                        <td>User consent</td>
-                    </tr>
                     <tr>
                         <td>Korean Bar Association / Local bar associations</td>
                         <td>Notification of confirmed name-lending or unauthorized consultation</td>
