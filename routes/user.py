@@ -120,10 +120,10 @@ async def submit_lawyer_inquiry(request: Request):
                 LAWYER_INQUIRY_STORE.pop(0)
             logger.info(f"[LAWYER-INQUIRY] Saved in-memory (total={len(LAWYER_INQUIRY_STORE)})")
 
-        return {"ok": True, "message": "변호사 상담 신청이 접수되었습니다. 빠른 시일 내 연락드리겠습니다."}
+        return {"ok": True, "message": "변호사 추천 신청이 접수되었습니다. 빠른 시일 내 연락드리겠습니다."}
     except Exception as e:
         logger.warning(f"[LAWYER-INQUIRY] error: {e}")
-        return JSONResponse(status_code=400, content={"error": "상담 신청 처리 중 오류가 발생했습니다."})
+        return JSONResponse(status_code=400, content={"error": "변호사 추천 신청 처리 중 오류가 발생했습니다."})
 
 
 # =============================================================

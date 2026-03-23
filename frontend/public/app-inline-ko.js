@@ -497,12 +497,12 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                 if (formView) formView.style.display = 'none';
                 if (successView) successView.style.display = 'block';
             } catch (err) {
-                alert('상담 신청 접수에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+                alert('변호사 추천 신청 접수에 실패했습니다. 잠시 후 다시 시도해 주세요.');
                 console.error('Lawyer inquiry failed:', err);
             } finally {
                 if (submitBtn) {
                     submitBtn.disabled = false;
-                    submitBtn.textContent = '상담 신청';
+                    submitBtn.textContent = '변호사 추천 신청하기';
                 }
             }
             return false;
@@ -1911,7 +1911,7 @@ function _sanitize(html) { if (typeof DOMPurify !== 'undefined') return DOMPurif
                         if (!lNames.every(n => clevelOnly.includes(n))) {
                             const lawyerCta = document.createElement('button');
                             lawyerCta.className = 'bottom-cta-btn lawyer';
-                            lawyerCta.innerHTML = '<span class="material-symbols-outlined">gavel</span> 변호사 상담 안내';
+                            lawyerCta.innerHTML = '<span class="material-symbols-outlined">gavel</span> 변호사 추천 신청';
                             lawyerCta.onclick = () => UI.openLawyerModal(originalQuery, leaderName);
                             ctaBar.appendChild(lawyerCta);
                         }
