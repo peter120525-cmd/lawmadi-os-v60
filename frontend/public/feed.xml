@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>법마디(Lawmadi OS) - AI 법률 정보 가이드</title>
+    <link>https://www.lawmadi.com</link>
+    <description>60개 전문 AI 리더가 분야별 법률 정보를 안내하는 법마디 OS 공식 가이드</description>
+    <language>ko</language>
+    <copyright>Copyright 2026 Lawmadi</copyright>
+    <atom:link href="https://www.lawmadi.com/feed.xml" rel="self" type="application/rss+xml"/>
+    <lastBuildDate>Mon, 23 Mar 2026 00:00:00 +0900</lastBuildDate>
+
+    <item>
+      <title>부당해고 구제 방법 - 노동위원회 신청부터 소송까지</title>
+      <link>https://www.lawmadi.com/guide-wrongful-dismissal</link>
+      <description>부당해고를 당했나요? 구제신청 절차, 노동위원회 심판, 퇴직금·미지급 임금 청구 방법을 AI 법률 전문가가 안내합니다.</description>
+      <pubDate>Mon, 17 Mar 2026 09:00:00 +0900</pubDate>
+      <guid isPermaLink="true">https://www.lawmadi.com/guide-wrongful-dismissal</guid>
+    </item>
+
+    <item>
+      <title>전세 보증금 반환 방법 - 내용증명부터 소송까지</title>
+      <link>https://www.lawmadi.com/guide-deposit-return</link>
+      <description>전세 보증금을 못 돌려받고 있나요? 내용증명, 임차권등기명령, 보증금반환 소송 절차를 AI 법률 전문가가 안내합니다.</description>
+      <pubDate>Mon, 17 Mar 2026 09:00:00 +0900</pubDate>
+      <guid isPermaLink="true">https://www.lawmadi.com/guide-deposit-return</guid>
+    </item>
+
+    <item>
+      <title>사기죄 고소장 작성 방법 - 절차와 핵심 포인트</title>
+      <link>https://www.lawmadi.com/guide-fraud-complaint</link>
+      <description>사기 피해를 입었나요? 고소장 작성법, 경찰 수사 절차, 필요 증거, 합의·처벌 방향을 AI 법률 전문가가 안내합니다.</description>
+      <pubDate>Mon, 17 Mar 2026 09:00:00 +0900</pubDate>
+      <guid isPermaLink="true">https://www.lawmadi.com/guide-fraud-complaint</guid>
+    </item>
+
+    <item>
+      <title>교통사고 합의금 산정 기준 - 보상·합의·소송 가이드</title>
+      <link>https://www.lawmadi.com/guide-traffic-accident</link>
+      <description>교통사고 합의금이 적정한지 모르겠나요? 합의금 산정 기준, 보험사 대응, 소송 절차를 AI 법률 전문가가 안내합니다.</description>
+      <pubDate>Mon, 17 Mar 2026 09:00:00 +0900</pubDate>
+      <guid isPermaLink="true">https://www.lawmadi.com/guide-traffic-accident</guid>
+    </item>
+
+    <item>
+      <title>이혼 시 재산분할 기준 - 절차와 판례 가이드</title>
+      <link>https://www.lawmadi.com/guide-divorce-property</link>
+      <description>이혼 시 재산분할 비율, 위자료, 양육권은 어떻게 결정되나요? 협의이혼과 재판이혼 절차를 AI 법률 전문가가 안내합니다.</description>
+      <pubDate>Mon, 17 Mar 2026 09:00:00 +0900</pubDate>
+      <guid isPermaLink="true">https://www.lawmadi.com/guide-divorce-property</guid>
+    </item>
+
+    <item>
+      <title>소액소송 및 지급명령 신청 방법 - 혼자서도 할 수 있는 법적 절차</title>
+      <link>https://www.lawmadi.com/guide-small-claims</link>
+      <description>소액소송 신청 방법이 궁금하신가요? 3,000만 원 이하 소송 절차, 지급명령 신청을 AI 법률 전문가가 안내합니다.</description>
+      <pubDate>Mon, 17 Mar 2026 09:00:00 +0900</pubDate>
+      <guid isPermaLink="true">https://www.lawmadi.com/guide-small-claims</guid>
+    </item>
+
+    <item>
+      <title>상속 절차와 유언장 작성 가이드 - 상속포기부터 유류분 청구까지</title>
+      <link>https://www.lawmadi.com/guide-inheritance</link>
+      <description>상속 절차가 궁금하신가요? 법정상속 순위, 유언장 작성, 상속포기, 유류분 청구 방법을 AI 법률 전문가가 안내합니다.</description>
+      <pubDate>Mon, 17 Mar 2026 09:00:00 +0900</pubDate>
+      <guid isPermaLink="true">https://www.lawmadi.com/guide-inheritance</guid>
+    </item>
+
+    <item>
+      <title>임금체불 및 퇴직금 청구 방법 - 고용노동부 진정부터 소송까지</title>
+      <link>https://www.lawmadi.com/guide-unpaid-wages</link>
+      <description>임금체불 당하셨나요? 고용노동부 진정, 퇴직금 계산, 체불임금 소송 방법을 AI 법률 전문가가 안내합니다.</description>
+      <pubDate>Mon, 17 Mar 2026 09:00:00 +0900</pubDate>
+      <guid isPermaLink="true">https://www.lawmadi.com/guide-unpaid-wages</guid>
+    </item>
+
+    <item>
+      <title>부동산 매매계약 체크리스트 - 등기부등본 확인부터 잔금까지</title>
+      <link>https://www.lawmadi.com/guide-real-estate</link>
+      <description>부동산 매매계약 시 확인해야 할 사항이 궁금하신가요? 등기부등본, 계약서 검토, 잔금 절차를 AI 법률 전문가가 안내합니다.</description>
+      <pubDate>Mon, 17 Mar 2026 09:00:00 +0900</pubDate>
+      <guid isPermaLink="true">https://www.lawmadi.com/guide-real-estate</guid>
+    </item>
+
+    <item>
+      <title>개인회생 및 파산 신청 방법 - 채무 탕감부터 면책까지</title>
+      <link>https://www.lawmadi.com/guide-debt-recovery</link>
+      <description>개인회생과 파산 신청 절차, 면책 조건, 채무 탕감 방법을 AI 법률 전문가가 안내합니다.</description>
+      <pubDate>Mon, 17 Mar 2026 09:00:00 +0900</pubDate>
+      <guid isPermaLink="true">https://www.lawmadi.com/guide-debt-recovery</guid>
+    </item>
+
+    <item>
+      <title>손해배상 청구 방법 - 민사 손해배상 소송 절차 가이드</title>
+      <link>https://www.lawmadi.com/guide-damages</link>
+      <description>손해배상 청구 방법이 궁금하신가요? 민사 소송 절차, 위자료, 과실상계까지 AI 법률 전문가가 안내합니다.</description>
+      <pubDate>Mon, 17 Mar 2026 09:00:00 +0900</pubDate>
+      <guid isPermaLink="true">https://www.lawmadi.com/guide-damages</guid>
+    </item>
+
+    <item>
+      <title>직장내 괴롭힘 대응 방법 - 신고 절차와 법적 보호</title>
+      <link>https://www.lawmadi.com/guide-workplace-bullying</link>
+      <description>직장내 괴롭힘 신고 절차, 증거 확보, 법적 보호 수단을 AI 법률 전문가가 안내합니다.</description>
+      <pubDate>Mon, 17 Mar 2026 09:00:00 +0900</pubDate>
+      <guid isPermaLink="true">https://www.lawmadi.com/guide-workplace-bullying</guid>
+    </item>
+
+    <item>
+      <title>음주운전 처벌 기준과 대응 방법 - 면허취소부터 형사처벌까지</title>
+      <link>https://www.lawmadi.com/guide-dui</link>
+      <description>음주운전 처벌 기준, 면허취소·정지 기준, 형사재판 절차를 AI 법률 전문가가 안내합니다.</description>
+      <pubDate>Mon, 17 Mar 2026 09:00:00 +0900</pubDate>
+      <guid isPermaLink="true">https://www.lawmadi.com/guide-dui</guid>
+    </item>
+
+    <item>
+      <title>명예훼손 및 사이버 모욕 대응 방법 - 고소부터 손해배상까지</title>
+      <link>https://www.lawmadi.com/guide-defamation</link>
+      <description>명예훼손 고소 절차, 증거 확보, 손해배상 청구 방법을 AI 법률 전문가가 안내합니다.</description>
+      <pubDate>Mon, 17 Mar 2026 09:00:00 +0900</pubDate>
+      <guid isPermaLink="true">https://www.lawmadi.com/guide-defamation</guid>
+    </item>
+
+    <item>
+      <title>산업재해 보상 신청 방법 - 산재보험 급여부터 손해배상까지</title>
+      <link>https://www.lawmadi.com/guide-industrial-accident</link>
+      <description>산재보험 신청 절차, 급여 종류, 사업주 손해배상 청구 방법을 AI 법률 전문가가 안내합니다.</description>
+      <pubDate>Mon, 17 Mar 2026 09:00:00 +0900</pubDate>
+      <guid isPermaLink="true">https://www.lawmadi.com/guide-industrial-accident</guid>
+    </item>
+
+  </channel>
+</rss>
