@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>About Lawmadi OS - AI Legal System for Everyone</title>
-    <meta name="description" content="60 expert leaders analyze your legal issues together. Lawmadi OS provides real-time Gemini streaming, 14,000+ statutes, 7,400 Supreme Court precedents, and 4-stage verified analysis.">
+    <meta name="description" content="60 expert leaders analyze your legal issues together. Lawmadi OS provides AI legal information and attorney search services. Real-time Gemini streaming, 14,000+ statutes, 7,400 Supreme Court precedents, and 4-stage verified analysis.">
     <link rel="canonical" href="https://lawmadi.com/about-en" />
     <link rel="alternate" hreflang="ko" href="https://lawmadi.com/about" />
     <link rel="alternate" hreflang="en" href="https://lawmadi.com/about-en" />
@@ -200,7 +200,7 @@
 
         .keyword-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 20px;
         }
 
@@ -464,7 +464,7 @@
 
         .trust-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 16px;
         }
 
@@ -573,8 +573,12 @@
         .section:nth-child(6) { animation-delay: 0.3s; }
 
         @media (max-width: 1024px) {
-            .keyword-grid,
-            .trust-grid,
+            .keyword-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .trust-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
             .clevel-row {
                 grid-template-columns: repeat(2, 1fr);
             }
@@ -746,7 +750,7 @@
         </header>
 
         <div class="section">
-            <div class="hero-text">60 Expert Leaders Analyze Your Legal Issues Together</div>
+            <div class="hero-text">AI Legal Info + Attorney Search — Two Services to Solve Your Legal Issues</div>
             <div class="keyword-grid">
                 <div class="keyword-card">
                     <div class="icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">verified</span></div>
@@ -762,6 +766,11 @@
                     <div class="icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">fact_check</span></div>
                     <h3>Statute Cross-verification</h3>
                     <p>Every cited statute is verified directly against the official law database</p>
+                </div>
+                <div class="keyword-card">
+                    <div class="icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">person_search</span></div>
+                    <h3>Attorney Search</h3>
+                    <p>Search attorneys by specialty with fair criteria, completely free for users</p>
                 </div>
             </div>
         </div>
@@ -886,6 +895,14 @@
                 <div class="trust-card">
                     <div class="icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">link</span></div>
                     <h4>Transparent Sources</h4>
+                </div>
+                <div class="trust-card">
+                    <div class="icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">ads_click</span></div>
+                    <h4>Clear Ad Disclosure</h4>
+                </div>
+                <div class="trust-card">
+                    <div class="icon"><span class="material-symbols-outlined" style="font-size:inherit;color:inherit">balance</span></div>
+                    <h4>Fair Search Results</h4>
                 </div>
             </div>
         </div>
