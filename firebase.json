@@ -126,6 +126,9 @@
       }
     ],
     "rewrites": [
+      { "source": "/FEED", "destination": "/feed.xml" },
+      { "source": "/feed", "destination": "/feed.xml" },
+      { "source": "/rss", "destination": "/feed.xml" },
       {
         "source": "/en",
         "destination": "/index-en.html"
