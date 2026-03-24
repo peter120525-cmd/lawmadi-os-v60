@@ -6,6 +6,8 @@
 [![Tests](https://img.shields.io/badge/tests-282%20passed-brightgreen)]()
 [![MCP](https://img.shields.io/badge/MCP-compatible-blue)](https://lawmadi.com/mcp)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
+[![Glama](https://glama.ai/mcp/servers/peter120525-cmd/lawmadi-os-v60/badges/score.svg)](https://glama.ai/mcp/servers/peter120525-cmd/lawmadi-os-v60)
+[![Smithery](https://smithery.ai/badge/lawmadi-os)](https://smithery.ai/server/lawmadi-os)
 
 **[lawmadi.com](https://lawmadi.com)** · [MCP Endpoint](https://lawmadi.com/mcp) · [API Docs](https://lawmadi.com/.well-known/openapi-public.json)
 
