@@ -2,8 +2,8 @@
   "schema_version": "v1",
   "name_for_human": "Lawmadi OS — Korean Legal AI",
   "name_for_model": "lawmadi_legal_ai",
-  "description_for_human": "AI-powered Korean legal consultation with 60 specialized agents. Get verified legal analysis on labor law, housing, divorce, criminal law, and 56 more domains.",
-  "description_for_model": "Lawmadi OS is a Korean legal AI operating system with 60 domain-specialized agents. Use this plugin to ask legal questions about Korean law. The system verifies every statute citation against Korea's official legislative database in real-time. Supports Korean and English queries. Pass 'lang: en' for English responses. Rate limited to 2 free queries per day per IP.",
+  "description_for_human": "법마디(Lawmadi) OS — Korean Legal AI with 60 specialized agents. Real-time statute verification. Free 2 queries/day. Korean & English.",
+  "description_for_model": "Lawmadi OS is a Korean legal AI with 60 domain-specialized agents. Call /ask with {query, lang} to get verified legal analysis. Every statute citation is checked against law.go.kr in real-time. Pass lang:'en' for English. Rate limit: 2 free queries/day per IP. Covers labor, housing, divorce, criminal, tax, corporate, IP, immigration, and 52 more domains.",
   "auth": {
     "type": "none"
   },

@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "법마디(Lawmadi) OS — Korean Legal AI API",
-    "description": "Public API for Korean legal consultation. 60 domain-specialized AI agents with real-time statute verification.",
+    "description": "법마디(Lawmadi) OS — Korean Legal AI with 60 specialized agents and real-time statute verification via law.go.kr. Free: 2 queries/day. Korean & English.",
     "version": "60.0.0",
     "contact": {
       "email": "choepeter@outlook.kr"
