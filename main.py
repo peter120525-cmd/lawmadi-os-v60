@@ -1763,6 +1763,153 @@ mcp = FastApiMCP(
         dependencies=[Depends(_verify_mcp_auth)],
     ),
 )
+
+# ── MCP Tool Annotations (readOnly, destructive hints) ────────────────
+from mcp.types import ToolAnnotations as _ToolAnnotations
+
+_TOOL_ANNOTATIONS = {
+    "ask":               _ToolAnnotations(title="Ask Legal Question",       readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
+    "ask_stream":        _ToolAnnotations(title="Ask Legal Question (SSE)", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
+    "ask_expert":        _ToolAnnotations(title="Expert Legal Analysis",    readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
+    "get_leaders":       _ToolAnnotations(title="List Legal Agents",        readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
+    "chat_leader":       _ToolAnnotations(title="Chat with Legal Agent",    readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
+    "search":            _ToolAnnotations(title="Search Korean Law",        readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
+    "suggest_questions": _ToolAnnotations(title="Suggest Follow-ups",       readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
+}
+for tool in mcp.tools:
+    ann = _TOOL_ANNOTATIONS.get(tool.name)
+    if ann:
+        tool.annotations = ann
+
+# ── MCP Prompts (template-based prompt suggestions) ───────────────────
+_mcp_server = mcp.server
+
+@_mcp_server.list_prompts()
+async def _handle_list_prompts():
+    from mcp.types import Prompt, PromptArgument
+    return [
+        Prompt(
+            name="legal_question",
+            description="Ask a Korean legal question — routed to the best specialist among 60 agents",
+            arguments=[
+                PromptArgument(name="question", description="Your legal question in Korean or English", required=True),
+                PromptArgument(name="lang", description="Response language: ko or en", required=False),
+            ],
+        ),
+        Prompt(
+            name="expert_analysis",
+            description="Deep 4-stage expert legal analysis with full statute verification",
+            arguments=[
+                PromptArgument(name="question", description="Legal question for expert analysis", required=True),
+            ],
+        ),
+        Prompt(
+            name="find_specialist",
+            description="Find the right legal specialist for your situation",
+            arguments=[
+                PromptArgument(name="situation", description="Describe your legal situation", required=True),
+            ],
+        ),
+    ]
+
+@_mcp_server.get_prompt()
+async def _handle_get_prompt(name: str, arguments: dict | None = None):
+    from mcp.types import PromptMessage, TextContent, GetPromptResult
+    args = arguments or {}
+    if name == "legal_question":
+        q = args.get("question", "")
+        lang = args.get("lang", "ko")
+        return GetPromptResult(
+            description="Korean legal question prompt",
+            messages=[
+                PromptMessage(role="user", content=TextContent(type="text", text=(
+                    f"I have a Korean legal question. Please use the 'ask' tool with "
+                    f"query=\"{q}\" and lang=\"{lang}\" to get a verified legal analysis."
+                ))),
+            ],
+        )
+    elif name == "expert_analysis":
+        q = args.get("question", "")
+        return GetPromptResult(
+            description="Expert legal analysis prompt",
+            messages=[
+                PromptMessage(role="user", content=TextContent(type="text", text=(
+                    f"Please perform a deep expert legal analysis using the 'ask_expert' tool "
+                    f"with query=\"{q}\". This uses the full 4-stage legal pipeline."
+                ))),
+            ],
+        )
+    elif name == "find_specialist":
+        situation = args.get("situation", "")
+        return GetPromptResult(
+            description="Find legal specialist prompt",
+            messages=[
+                PromptMessage(role="user", content=TextContent(type="text", text=(
+                    f"I need to find the right legal specialist for this situation: {situation}\n\n"
+                    f"First use 'get_leaders' to see all available specialists, "
+                    f"then use 'ask' to route my question to the best match."
+                ))),
+            ],
+        )
+    raise ValueError(f"Unknown prompt: {name}")
+
+# ── MCP Resources (server info + law domains) ────────────────────────
+@_mcp_server.list_resources()
+async def _handle_list_resources():
+    from mcp.types import Resource
+    return [
+        Resource(
+            uri="lawmadi://about",
+            name="About Lawmadi OS",
+            description="Overview of the Korean Legal AI service",
+            mimeType="text/plain",
+        ),
+        Resource(
+            uri="lawmadi://domains",
+            name="Legal Domains",
+            description="All 60 specialized legal domains covered by Lawmadi OS",
+            mimeType="text/plain",
+        ),
+    ]
+
+@_mcp_server.read_resource()
+async def _handle_read_resource(uri):
+    uri_str = str(uri)
+    if uri_str == "lawmadi://about":
+        return (
+            "Lawmadi OS (법마디) — Korean Legal AI\n\n"
+            "60 specialized AI legal agents with real-time statute verification "
+            "via law.go.kr (Korea's official legislative database).\n\n"
+            "Features:\n"
+            "- 60 domain-specific legal agents\n"
+            "- Real-time statute verification (DRF API)\n"
+            "- Bilingual: Korean & English\n"
+            "- Free tier: 2 queries/day\n\n"
+            "Website: https://lawmadi.com\n"
+            "MCP Endpoint: https://lawmadi.com/mcp"
+        )
+    elif uri_str == "lawmadi://domains":
+        return (
+            "60 Legal Domains:\n\n"
+            "Civil Law, Real Estate, Construction, Urban Redevelopment, Medical Law, "
+            "Damages, Traffic Accidents, Lease & Housing, Government Contracts, "
+            "Civil Enforcement, Debt Collection, Registry & Auction, Commercial Law, "
+            "Corporate & M&A, Startup & Venture, Insurance, International Trade, "
+            "Energy & Resources, Maritime & Aviation, Tax & Finance, IT & Cybersecurity, "
+            "Criminal Law, Entertainment, Tax Appeals, Military Law, Intellectual Property, "
+            "Environmental Law, Trade & Customs, Gaming & Content, Labor & Employment, "
+            "Administrative Law, Fair Trade, Space & Aerospace, Privacy & Data Protection, "
+            "Constitutional Law, Cultural Heritage, Juvenile Law, Consumer Protection, "
+            "Telecommunications, Human Rights, Family & Divorce, Copyright, "
+            "Industrial Accidents, Social Welfare, Education & Youth, Pension & Insurance, "
+            "Venture & New Industries, Arts & Culture, Food & Health Safety, "
+            "Multicultural & Immigration, Religion & Tradition, Media & Press, "
+            "Agriculture & Livestock, Marine & Fisheries, Science & Technology, "
+            "Disability Rights, Inheritance & Trust, Sports & Leisure, Data & AI Ethics, "
+            "General Legal"
+        )
+    raise ValueError(f"Unknown resource: {uri_str}")
+
 mcp.mount_http()
 
 # =============================================================

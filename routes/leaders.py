@@ -9,8 +9,9 @@ import logging
 import re
 from typing import Any, Callable, Dict, List, Optional
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Body
 from fastapi.responses import JSONResponse, StreamingResponse
+from routes.schemas import ChatLeaderRequest
 
 from core.leader_intake import run_leader_triage
 from core.model_fallback import get_model
@@ -255,7 +256,7 @@ def _convert_history(raw_history: list) -> list:
 
 @router.get("/api/leaders")
 async def get_leaders():
-    """CSO/CTO/CCO + L01~L60 리더 목록 반환."""
+    """List all 60+ specialist legal agents (leaders) with their names, specialties, and profiles."""
     leaders = []
     for lid, entry in sorted(_LEADER_REGISTRY.items()):
         specialty = entry.get("specialty", "") or entry.get("role", "")
@@ -277,8 +278,8 @@ async def get_leaders():
 # ---------------------------------------------------------------------------
 
 @router.post("/api/chat-leader")
-async def chat_leader(request: Request):
-    """리더 1:1 채팅 (SSE 스트리밍)."""
+async def chat_leader(request: Request, body: ChatLeaderRequest = Body(...)):
+    """1:1 chat with a specific legal specialist leader via SSE streaming."""
     # Rate limit
     rate_check = _check_rate_limit_fn(request)
     if rate_check is not True:
@@ -290,15 +291,9 @@ async def chat_leader(request: Request):
         if lc_check is not True:
             return _rate_limit_response_fn(lc_check.get("retry_at_kst", ""))
 
-    # Parse body
-    try:
-        body = await request.json()
-    except Exception:
-        return JSONResponse({"error": "Invalid JSON"}, status_code=400)
-
-    leader_id = body.get("leader_id", "").strip().upper()
-    query = body.get("query", "").strip()
-    history = body.get("history", [])
+    leader_id = (body.leader_id or "").strip().upper()
+    query = (body.query or "").strip()
+    history = body.history or []
 
     if not leader_id or not query:
         return JSONResponse({"error": "leader_id and query are required"}, status_code=400)

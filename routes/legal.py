@@ -16,8 +16,9 @@ import traceback
 import threading
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from fastapi import APIRouter, Request, HTTPException, Query
+from fastapi import APIRouter, Request, HTTPException, Query, Body
 from fastapi.responses import JSONResponse, StreamingResponse
+from routes.schemas import AskRequest, AskStreamRequest, AskExpertRequest
 from google.genai import types as genai_types
 from core.metrics import record_request, record_event, record_error
 
@@ -254,7 +255,8 @@ def _build_yuna_fallback(lang: str = "") -> str:
 # =============================================================
 
 @router.post("/ask")
-async def ask(request: Request):
+async def ask(request: Request, body: AskRequest = Body(...)):
+    """Main legal question endpoint — routes to 1 of 60 specialist agents with real-time statute verification."""
 
     # 4시간당 10회 제한
     rate_check = _check_rate_limit_fn(request)
@@ -265,23 +267,17 @@ async def ask(request: Request):
     start_time = time.time()
 
     try:
-        body = await request.body()
-        _MAX_BODY_SIZE = 128 * 1024
-        if len(body) > _MAX_BODY_SIZE:
-            return JSONResponse(status_code=413, content={"error": "요청이 너무 큽니다 (128KB 제한)", "blocked": True})
-
-        data = json.loads(body)
-        query = (data.get("query", "") or "").strip()
-        raw_history = data.get("history", [])
-        lang = (data.get("lang", "") or "").strip().lower()
+        query = (body.query or "").strip()
+        raw_history = body.history or []
+        lang = (body.lang or "").strip().lower()
         if lang not in ("en", "ko", ""):
             lang = ""
         if not lang:
             lang = _detect_lang(query)
 
         # 리더 협의/인수인계 상태
-        ask_current_leader = data.get("current_leader")  # {"name": ..., "specialty": ...} or None
-        ask_is_first_question = bool(data.get("is_first_question", True))
+        ask_current_leader = body.current_leader.model_dump() if body.current_leader else None
+        ask_is_first_question = bool(body.is_first_question)
 
         # 입력 길이 제한 (DoS 방지)
         MAX_QUERY_LEN = 2000
@@ -989,8 +985,8 @@ def _classify_error_category(e: Exception) -> str:
 # =============================================================
 
 @router.post("/ask-stream")
-async def ask_stream(request: Request):
-    """SSE 스트리밍 엔드포인트 — 실시간 토큰 전송"""
+async def ask_stream(request: Request, body: AskStreamRequest = Body(...)):
+    """SSE streaming legal question — real-time token-by-token response with statute verification."""
 
     # 기본 레이트리밋
     rate_check = _check_rate_limit_fn(request)
@@ -1001,31 +997,23 @@ async def ask_stream(request: Request):
     start_time = time.time()
 
     try:
-        body = await request.body()
-        _MAX_BODY_SIZE = 128 * 1024
-        if len(body) > _MAX_BODY_SIZE:
-            async def _size_err():
-                yield f"event: error\ndata: {json.dumps({'message': '요청이 너무 큽니다 (128KB 제한)'}, ensure_ascii=False)}\n\n"
-            return StreamingResponse(_size_err(), media_type="text/event-stream")
-
-        data = json.loads(body)
-        query = (data.get("query", "") or "").strip()
-        raw_history = data.get("history", [])
-        lang = (data.get("lang", "") or "").strip().lower()
+        query = (body.query or "").strip()
+        raw_history = body.history or []
+        lang = (body.lang or "").strip().lower()
         if lang not in ("en", "ko", ""):
             lang = ""
         if not lang:
             lang = _detect_lang(query)
-        stream_mode = (data.get("mode", "") or "").strip().lower() or "general"
+        stream_mode = (body.mode or "").strip().lower() or "general"
         if stream_mode not in ("general", "leader_chat", "expert"):
             stream_mode = "general"
 
         # 리더 협의/인수인계 상태
-        req_current_leader = data.get("current_leader")  # {"name": ..., "specialty": ...} or None
-        req_leader_id = (data.get("leader_id", "") or "").strip()  # leader-chat.js sends leader_id
+        req_current_leader = body.current_leader.model_dump() if body.current_leader else None
+        req_leader_id = (body.leader_id or "").strip()  # leader-chat.js sends leader_id
         if not req_current_leader and req_leader_id:
             req_current_leader = {"leader_id": req_leader_id}  # leader_id만으로도 1:1 채팅 식별
-        req_is_first_question = bool(data.get("is_first_question", True))
+        req_is_first_question = bool(body.is_first_question)
 
         # 1:1 채팅이면 stream_mode를 leader_chat으로 설정
         if req_current_leader and stream_mode == "general":
@@ -1751,8 +1739,8 @@ async def ask_stream(request: Request):
 # =============================================================
 
 @router.post("/ask-expert")
-async def ask_expert(request: Request):
-    """전문가용 답변: 4-Stage Legal Pipeline 통합 사용."""
+async def ask_expert(request: Request, body: AskExpertRequest = Body(...)):
+    """Expert mode — full 4-Stage Legal Pipeline with deep analysis and comprehensive statute verification."""
 
     # Rate limit 체크
     rate_check = _check_rate_limit_fn(request)
@@ -1777,13 +1765,9 @@ async def ask_expert(request: Request):
     start = time.time()
 
     try:
-        raw_body = await request.body()
-        if len(raw_body) > 128 * 1024:
-            return {"trace_id": trace, "status": "ERROR", "response": "요청이 너무 큽니다."}
-        body = await request.json()
-        query = str(body.get("query", "")).strip()
-        original_response = str(body.get("original_response", "")).strip()
-        lang = str(body.get("lang", "")).strip().lower()
+        query = str(body.query or "").strip()
+        original_response = str(body.original_response or "").strip()
+        lang = str(body.lang or "").strip().lower()
         if lang not in ("en", "ko", ""):
             lang = ""
         if not lang:
@@ -1930,7 +1914,11 @@ async def ask_expert(request: Request):
 # =============================================================
 
 @router.get("/search")
-async def search(q: str, limit: int = Query(default=10, ge=1, le=100), request: Request = None):
+async def search(
+    q: str = Query(..., description="Search query for Korean law topics (min 2 chars, max 200 chars). Example: '근로기준법'"),
+    limit: int = Query(default=10, ge=1, le=100, description="Maximum number of results to return (1-100, default 10)"),
+    request: Request = None,
+):
     svc = _RUNTIME.get("search_service")
     if not svc:
         return {"status": "ERROR", "message": "SearchService not ready"}

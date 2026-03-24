@@ -4,8 +4,9 @@ import json
 import re
 import logging
 from typing import Any, Dict, List, Callable, Coroutine
-from fastapi import APIRouter, Request, Header, HTTPException
+from fastapi import APIRouter, Request, Header, HTTPException, Body
 from fastapi.responses import JSONResponse
+from routes.schemas import SuggestQuestionsRequest
 from google.genai import types as genai_types
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -163,13 +164,12 @@ async def submit_feedback(request: Request):
 
 @router.post("/suggest-questions")
 @limiter.limit("20/hour")
-async def suggest_questions(request: Request):
-    """Suggest 3 follow-up questions based on current query/leader."""
+async def suggest_questions(request: Request, body: SuggestQuestionsRequest = Body(...)):
+    """Suggest 3 contextual follow-up questions based on the current query and leader specialty."""
     try:
-        data = await request.json()
-        query = str(data.get("query", ""))[:500]
-        leader = str(data.get("leader", ""))[:50]
-        specialty = str(data.get("specialty", ""))[:50]
+        query = str(body.query or "")[:500]
+        leader = str(body.leader or "")[:50]
+        specialty = str(body.specialty or "")[:50]
 
         if not query:
             return {"suggestions": []}
