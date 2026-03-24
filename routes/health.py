@@ -58,6 +58,12 @@ def _diagnostic_snapshot() -> Dict[str, Any]:
     }
 
 
+@router.get("/ping")
+async def ping():
+    """Lightweight ping for mcp-proxy and load balancers."""
+    return {"status": "ok"}
+
+
 @router.get("/health")
 async def health():
     """Health check endpoint — minimal info only (diagnostics require auth)."""
