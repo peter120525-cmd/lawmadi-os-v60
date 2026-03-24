@@ -120,7 +120,16 @@ def verify_internal_key(authorization: str = Header(default="")) -> None:
 
 
 def verify_mcp_key(authorization: str = Header(default="")) -> None:
-    """MCP_API_KEY 기반 인증 검증."""
+    """MCP 인증 검증 — 퍼블릭 모드 지원.
+
+    - Authorization 헤더 있음: MCP_API_KEY 검증 (무제한)
+    - Authorization 헤더 없음: 퍼블릭 모드 (기존 rate limit 적용)
+    """
+    # 인증 헤더가 없으면 퍼블릭 모드 허용 (rate limit은 /ask 엔드포인트에서 처리)
+    if not authorization or not authorization.strip():
+        logger.info("[Auth] MCP public access (no auth header)")
+        return
+
     api_key = os.getenv("MCP_API_KEY", "").strip()
     if not api_key:
         # Fallback to INTERNAL_API_KEY

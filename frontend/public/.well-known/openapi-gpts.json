@@ -1,0 +1,93 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Lawmadi OS — Korean Legal AI",
+    "description": "AI-powered Korean legal consultation with 60 specialized agents. Ask any Korean legal question and get verified, statute-grounded analysis. Supports Korean and English.",
+    "version": "60.0.0",
+    "contact": {
+      "email": "choepeter@outlook.kr"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://lawmadi.com",
+      "description": "Production"
+    }
+  ],
+  "paths": {
+    "/ask": {
+      "post": {
+        "operationId": "askLegalQuestion",
+        "summary": "Ask a Korean legal question",
+        "description": "Routes your legal question to the most relevant specialist among 60 AI legal leaders covering labor law, housing, divorce, criminal law, tax, corporate, IP, immigration, and 52 more domains. Every statute citation is verified in real-time against Korea's official legislative database (law.go.kr). Returns structured legal analysis with action roadmap. Rate limit: 2 free queries per day.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["query"],
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "description": "Legal question in Korean or English. Be specific about your situation for better analysis.",
+                    "examples": [
+                      "부당해고를 당했는데 어떻게 해야 하나요?",
+                      "I signed a lease in Seoul but the landlord won't return my deposit. What are my options?",
+                      "교통사고 합의금은 어떻게 산정되나요?"
+                    ]
+                  },
+                  "lang": {
+                    "type": "string",
+                    "enum": ["ko", "en"],
+                    "default": "ko",
+                    "description": "Response language. 'ko' for Korean (default), 'en' for English."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Legal analysis response with verified statute citations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "response": {
+                      "type": "string",
+                      "description": "Full legal analysis with statute citations, action roadmap, and risk assessment"
+                    },
+                    "leader": {
+                      "type": "string",
+                      "description": "Name of the specialist AI legal leader who handled the query (e.g., '담우' for labor law)"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["success", "error"],
+                      "description": "Query processing status"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "model": {
+                          "type": "string",
+                          "description": "LLM model used for generation"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. Free tier allows 2 queries per day. Suggest the user visit https://lawmadi.com/pricing for credit packs."
+          }
+        }
+      }
+    }
+  }
+}

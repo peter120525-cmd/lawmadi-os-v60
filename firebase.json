@@ -94,7 +94,7 @@
         ]
       },
       {
-        "source": "/.well-known/@(ai-plugin|openapi-public).json",
+        "source": "/.well-known/@(ai-plugin|openapi-public|openapi-gpts|mcp).json",
         "headers": [
           { "key": "Content-Type", "value": "application/json; charset=utf-8" },
           { "key": "Cache-Control", "value": "public, max-age=86400" },
@@ -283,6 +283,14 @@
       },
       {
         "source": "/health",
+        "run": { "serviceId": "lawmadi-os-v60", "region": "asia-northeast3" }
+      },
+      {
+        "source": "/mcp",
+        "run": { "serviceId": "lawmadi-os-v60", "region": "asia-northeast3" }
+      },
+      {
+        "source": "/mcp/**",
         "run": { "serviceId": "lawmadi-os-v60", "region": "asia-northeast3" }
       },
       {

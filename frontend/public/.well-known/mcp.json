@@ -1,0 +1,55 @@
+{
+  "name": "Lawmadi OS",
+  "description": "Korean Legal AI — 60 domain-specialized AI legal leaders with real-time statute verification against Korea's official legislative database (law.go.kr).",
+  "url": "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app/mcp",
+  "transport": "streamable-http",
+  "version": "60.0.0",
+  "auth": {
+    "type": "bearer",
+    "description": "Optional. Without auth: 2 free queries/day. With Bearer token: unlimited.",
+    "required": false
+  },
+  "capabilities": {
+    "tools": [
+      {
+        "name": "askLegalQuestion",
+        "description": "Submit a Korean legal question. Routes to the most relevant specialist among 60 legal domain leaders. Returns verified legal analysis with statute citations.",
+        "inputSchema": {
+          "type": "object",
+          "required": ["query"],
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Legal question in Korean or English"
+            },
+            "lang": {
+              "type": "string",
+              "enum": ["ko", "en"],
+              "default": "ko",
+              "description": "Response language"
+            }
+          }
+        }
+      }
+    ],
+    "domains": [
+      "Civil Law", "Real Estate", "Construction", "Medical Law", "Damages",
+      "Traffic Accidents", "Lease & Housing", "Commercial Law", "Corporate & M&A",
+      "Startup & Venture", "Tax & Finance", "Criminal Law", "Labor & Employment",
+      "Family & Divorce", "Intellectual Property", "Immigration",
+      "Environmental Law", "Consumer Protection", "Data & AI Ethics"
+    ],
+    "languages": ["ko", "en"],
+    "agents": 60
+  },
+  "contact": {
+    "email": "choepeter@outlook.kr"
+  },
+  "links": {
+    "website": "https://lawmadi.com",
+    "terms": "https://lawmadi.com/terms",
+    "privacy": "https://lawmadi.com/privacy",
+    "openapi": "https://lawmadi.com/.well-known/openapi-public.json",
+    "llms_txt": "https://lawmadi.com/llms.txt"
+  }
+}
