@@ -1750,6 +1750,15 @@ mcp = FastApiMCP(
     ),
     describe_all_responses=True,
     describe_full_response_schema=True,
+    include_operations=[
+        "ask",              # POST /ask — 법률 질문 (핵심)
+        "ask_stream",       # POST /ask-stream — 스트리밍 법률 질문
+        "ask_expert",       # POST /ask-expert — 전문가 4-Stage 답변
+        "get_leaders",      # GET /api/leaders — 60명 리더 목록
+        "chat_leader",      # POST /api/chat-leader — 리더 1:1 채팅
+        "search",           # GET /search — 법률 검색
+        "suggest_questions", # POST /suggest-questions — 추천 질문
+    ],
     auth_config=AuthConfig(
         dependencies=[Depends(_verify_mcp_auth)],
     ),
