@@ -1744,9 +1744,9 @@ mcp = FastApiMCP(
     app,
     name="Lawmadi OS",
     description=(
-        "한국 법률 분석 시스템. 60명의 AI 전문 리더가 법률 질문에 답변합니다. "
-        "Korean Legal AI with 60 domain-specialized agents and real-time statute verification. "
-        "Public access: 2 free queries/day. Authenticated: unlimited."
+        "법마디(Lawmadi) OS — 한국 법률 AI. 60명의 전문 리더가 실시간 법령 검증으로 답변합니다. "
+        "Korean Legal AI with 60 specialized agents and real-time statute verification via law.go.kr. "
+        "Free: 2 queries/day. Authenticated: unlimited. Supports Korean & English (lang: en)."
     ),
     describe_all_responses=True,
     describe_full_response_schema=True,
