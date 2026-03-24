@@ -1751,13 +1751,13 @@ mcp = FastApiMCP(
     describe_all_responses=True,
     describe_full_response_schema=True,
     include_operations=[
-        "ask",              # POST /ask — 법률 질문 (핵심)
-        "ask_stream",       # POST /ask-stream — 스트리밍 법률 질문
-        "ask_expert",       # POST /ask-expert — 전문가 4-Stage 답변
-        "get_leaders",      # GET /api/leaders — 60명 리더 목록
-        "chat_leader",      # POST /api/chat-leader — 리더 1:1 채팅
-        "search",           # GET /search — 법률 검색
-        "suggest_questions", # POST /suggest-questions — 추천 질문
+        "ask_ask_post",                              # POST /ask
+        "ask_stream_ask_stream_post",                # POST /ask-stream
+        "ask_expert_ask_expert_post",                # POST /ask-expert
+        "get_leaders_api_leaders_get",               # GET /api/leaders
+        "chat_leader_api_chat_leader_post",          # POST /api/chat-leader
+        "search_search_get",                         # GET /search
+        "suggest_questions_suggest_questions_post",  # POST /suggest-questions
     ],
     auth_config=AuthConfig(
         dependencies=[Depends(_verify_mcp_auth)],
@@ -1768,13 +1768,13 @@ mcp = FastApiMCP(
 from mcp.types import ToolAnnotations as _ToolAnnotations
 
 _TOOL_ANNOTATIONS = {
-    "ask":               _ToolAnnotations(title="Ask Legal Question",       readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
-    "ask_stream":        _ToolAnnotations(title="Ask Legal Question (SSE)", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
-    "ask_expert":        _ToolAnnotations(title="Expert Legal Analysis",    readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
-    "get_leaders":       _ToolAnnotations(title="List Legal Agents",        readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
-    "chat_leader":       _ToolAnnotations(title="Chat with Legal Agent",    readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
-    "search":            _ToolAnnotations(title="Search Korean Law",        readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
-    "suggest_questions": _ToolAnnotations(title="Suggest Follow-ups",       readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
+    "ask_ask_post":                              _ToolAnnotations(title="Ask Legal Question",       readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
+    "ask_stream_ask_stream_post":                _ToolAnnotations(title="Ask Legal Question (SSE)", readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
+    "ask_expert_ask_expert_post":                _ToolAnnotations(title="Expert Legal Analysis",    readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
+    "get_leaders_api_leaders_get":               _ToolAnnotations(title="List Legal Agents",        readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
+    "chat_leader_api_chat_leader_post":          _ToolAnnotations(title="Chat with Legal Agent",    readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
+    "search_search_get":                         _ToolAnnotations(title="Search Korean Law",        readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
+    "suggest_questions_suggest_questions_post":   _ToolAnnotations(title="Suggest Follow-ups",      readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False),
 }
 for tool in mcp.tools:
     ann = _TOOL_ANNOTATIONS.get(tool.name)
