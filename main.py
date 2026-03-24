@@ -1743,7 +1743,11 @@ from core.auth import verify_mcp_key as _verify_mcp_auth
 mcp = FastApiMCP(
     app,
     name="Lawmadi OS",
-    description="한국 법률 분석 시스템. 60명의 AI 전문 리더와 3명의 C-Level 임원이 법률 질문에 답변합니다.",
+    description=(
+        "한국 법률 분석 시스템. 60명의 AI 전문 리더가 법률 질문에 답변합니다. "
+        "Korean Legal AI with 60 domain-specialized agents and real-time statute verification. "
+        "Public access: 2 free queries/day. Authenticated: unlimited."
+    ),
     describe_all_responses=True,
     describe_full_response_schema=True,
     auth_config=AuthConfig(
