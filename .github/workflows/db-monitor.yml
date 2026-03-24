@@ -1,0 +1,133 @@
+name: DB & Infrastructure Monitor
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 매일 KST 09:00
+  workflow_dispatch:
+
+jobs:
+  db-monitor:
+    name: DB & Infra Health
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Check Cloud SQL
+        id: sql
+        run: |
+          echo "=== Cloud SQL 상태 ==="
+
+          # 인스턴스 상태
+          STATE=$(gcloud sql instances describe lawmadi-db-v1 --project=lawmadi-db --format="value(state)" 2>/dev/null)
+          echo "state=$STATE" >> $GITHUB_OUTPUT
+          echo "상태: $STATE"
+
+          # 디스크 사용량
+          DISK_SIZE=$(gcloud sql instances describe lawmadi-db-v1 --project=lawmadi-db --format="value(settings.dataDiskSizeGb)" 2>/dev/null)
+          echo "disk_size=$DISK_SIZE" >> $GITHUB_OUTPUT
+          echo "디스크: ${DISK_SIZE}GB"
+
+          # 최근 1시간 CPU/메모리 (Cloud Monitoring)
+          echo ""
+          echo "=== Cloud Monitoring ==="
+          # CPU 사용률
+          gcloud monitoring metrics list --project=lawmadi-db --filter="metric.type=cloudsql.googleapis.com/database/cpu/utilization" --format="table(metric.type)" 2>/dev/null | head -3 || echo "Monitoring API 미활성"
+
+      - name: Check Cloud Run
+        id: run
+        run: |
+          echo "=== Cloud Run 상태 ==="
+
+          # 리비전 수
+          REVISIONS=$(gcloud run revisions list --service=lawmadi-os-v60 --region=asia-northeast3 --project=lawmadi-db --format="value(name)" 2>/dev/null | wc -l)
+          echo "revisions=$REVISIONS" >> $GITHUB_OUTPUT
+          echo "리비전: ${REVISIONS}개"
+
+          # 이미지 수
+          IMAGES=$(gcloud artifacts docker images list asia-northeast3-docker.pkg.dev/lawmadi-db/lawmadi-repo/lawmadi-os-v60 --format="value(version)" 2>/dev/null | wc -l)
+          echo "images=$IMAGES" >> $GITHUB_OUTPUT
+          echo "이미지: ${IMAGES}개"
+
+          # 리소스 설정
+          gcloud run services describe lawmadi-os-v60 --region=asia-northeast3 --project=lawmadi-db \
+            --format="yaml(spec.template.spec.containers[0].resources,spec.template.metadata.annotations[autoscaling.knative.dev/minScale],spec.template.metadata.annotations[autoscaling.knative.dev/maxScale])" 2>/dev/null
+
+      - name: Check GCS storage
+        run: |
+          echo "=== GCS 사용량 ==="
+          gsutil du -s gs://lawmadi-media/ 2>/dev/null | awk '{printf "lawmadi-media: %.1f MB\n", $1/1024/1024}'
+
+      - name: API health probe
+        id: health
+        env:
+          ADMIN_KEY: ${{ secrets.MCP_API_KEY }}
+        run: |
+          API="https://lawmadi-os-v60-938146962157.asia-northeast3.run.app"
+
+          # Health
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" "$API/health")
+          echo "health_status=$HTTP" >> $GITHUB_OUTPUT
+
+          # Dashboard 24h
+          DASH=$(curl -s -H "Authorization: Bearer $ADMIN_KEY" "$API/api/admin/dashboard?days=1")
+          echo "$DASH" | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          print(f'DAU: {d.get(\"dau\", \"?\")}')
+          print(f'일 쿼리: {d.get(\"daily_queries\", \"?\")}')
+          print(f'평균 레이턴시: {d.get(\"avg_latency_ms\", 0)/1000:.1f}s')
+          print(f'에러율: {d.get(\"error_rate\", \"?\")}%')
+          "
+
+      - name: Threshold alerts
+        run: |
+          python3 - <<'PYEOF'
+          import os
+          alerts = []
+
+          revisions = int(os.environ.get("REVISIONS", "0") or "0")
+          images = int(os.environ.get("IMAGES", "0") or "0")
+          state = "${{ steps.sql.outputs.state }}"
+          health = "${{ steps.health.outputs.health_status }}"
+
+          if state != "RUNNABLE":
+              alerts.append(f"🔴 Cloud SQL 상태 이상: {state}")
+          if health != "200":
+              alerts.append(f"🔴 API 헬스 실패: HTTP {health}")
+          if revisions > 5:
+              alerts.append(f"⚠️ 리비전 {revisions}개 — 정리 필요")
+          if images > 5:
+              alerts.append(f"⚠️ 이미지 {images}개 — 정리 필요")
+
+          if alerts:
+              print("=== ALERTS ===")
+              for a in alerts:
+                  print(a)
+          else:
+              print("✅ 모든 인프라 정상")
+          PYEOF
+        env:
+          REVISIONS: ${{ steps.run.outputs.revisions }}
+          IMAGES: ${{ steps.run.outputs.images }}
+
+      - name: Generate summary
+        if: always()
+        run: |
+          echo "## DB & 인프라 모니터링" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Cloud SQL**: ${{ steps.sql.outputs.state }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **디스크**: ${{ steps.sql.outputs.disk_size }}GB" >> $GITHUB_STEP_SUMMARY
+          echo "- **리비전**: ${{ steps.run.outputs.revisions }}개" >> $GITHUB_STEP_SUMMARY
+          echo "- **이미지**: ${{ steps.run.outputs.images }}개" >> $GITHUB_STEP_SUMMARY
+          echo "- **API Health**: HTTP ${{ steps.health.outputs.health_status }}" >> $GITHUB_STEP_SUMMARY

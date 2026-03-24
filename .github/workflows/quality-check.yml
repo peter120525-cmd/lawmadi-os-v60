@@ -1,0 +1,200 @@
+name: Response Quality Check
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'  # 매주 월요일 KST 12:00
+  workflow_dispatch:
+
+env:
+  API_URL: https://lawmadi-os-v60-938146962157.asia-northeast3.run.app
+
+jobs:
+  quality-check:
+    name: Response Quality Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run quality check
+        id: quality
+        env:
+          ADMIN_KEY: ${{ secrets.MCP_API_KEY }}
+        run: |
+          python3 - <<'PYEOF'
+          import requests, json, time, os, sys
+
+          API = os.environ["API_URL"]
+          KEY = os.environ.get("ADMIN_KEY", "")
+          HEADERS = {"X-Admin-Key": KEY, "Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
+          TIMEOUT = 120
+
+          # 분야별 테스트 쿼리 (KO 7 + EN 3)
+          SCENARIOS = [
+              {"query": "부당해고 구제신청 절차를 알려주세요", "field": "노동", "lang": "ko", "expected_leader": "담우"},
+              {"query": "전세 보증금 반환 소송 절차", "field": "임대차", "lang": "ko", "expected_leader": "온유"},
+              {"query": "이혼 시 재산분할 기준", "field": "가족", "lang": "ko", "expected_leader": "산들"},
+              {"query": "교통사고 합의금 산정 기준", "field": "교통", "lang": "ko", "expected_leader": "하늬"},
+              {"query": "사기죄 고소장 작성 방법", "field": "형사", "lang": "ko", "expected_leader": "무결"},
+              {"query": "상속 포기 절차와 기한", "field": "상속", "lang": "ko", "expected_leader": "세움"},
+              {"query": "개인정보 유출 손해배상", "field": "정보보호", "lang": "ko", "expected_leader": "지누"},
+              {"query": "How to file for wrongful termination in Korea?", "field": "labor_en", "lang": "en"},
+              {"query": "What are my rights as a tenant in Seoul?", "field": "lease_en", "lang": "en"},
+              {"query": "How does child custody work in Korean divorce?", "field": "family_en", "lang": "en"},
+          ]
+
+          results = []
+          total_score = 0
+
+          # 워밍업
+          print("🔥 워밍업...")
+          try:
+              requests.post(f"{API}/ask", json={"query": "안녕하세요"}, headers=HEADERS, timeout=TIMEOUT)
+          except:
+              pass
+          time.sleep(5)
+
+          for i, sc in enumerate(SCENARIOS):
+              print(f"\n[{i+1}/{len(SCENARIOS)}] {sc['field']} ({sc['lang']})")
+              body = {"query": sc["query"]}
+              if sc["lang"] == "en":
+                  body["lang"] = "en"
+
+              try:
+                  start = time.time()
+                  r = requests.post(f"{API}/ask", json=body, headers=HEADERS, timeout=TIMEOUT)
+                  latency = time.time() - start
+
+                  if r.status_code == 429:
+                      print(f"  ⏭️ Rate limited — 스킵")
+                      time.sleep(15)
+                      continue
+
+                  if r.status_code != 200:
+                      print(f"  ❌ HTTP {r.status_code}")
+                      results.append({"field": sc["field"], "score": 0, "error": f"HTTP {r.status_code}"})
+                      continue
+
+                  d = r.json()
+                  resp = d.get("response", "")
+                  leader = d.get("leader", "")
+                  status = d.get("status", "")
+
+                  # 품질 채점 (100점 만점)
+                  score = 0
+                  checks = {}
+
+                  # 1. 성공 여부 (20점)
+                  checks["success"] = status == "SUCCESS"
+                  if checks["success"]: score += 20
+
+                  # 2. 구조화 — ## 헤딩 (15점)
+                  checks["structured"] = "##" in resp
+                  if checks["structured"]: score += 15
+
+                  # 3. 볼드 강조 (10점)
+                  checks["bold"] = "**" in resp
+                  if checks["bold"]: score += 10
+
+                  # 4. 조문 인용 (20점)
+                  if sc["lang"] == "ko":
+                      checks["statute"] = "제" in resp and "조" in resp
+                  else:
+                      checks["statute"] = "Article" in resp or "Act" in resp
+                  if checks["statute"]: score += 20
+
+                  # 5. 응답 길이 (15점) — 최소 500자
+                  checks["length"] = len(resp) >= 500
+                  if checks["length"]: score += 15
+
+                  # 6. 리더 매칭 (10점)
+                  expected = sc.get("expected_leader", "")
+                  checks["leader_match"] = (leader == expected) if expected else True
+                  if checks["leader_match"]: score += 10
+
+                  # 7. 레이턴시 < 60초 (10점)
+                  checks["latency_ok"] = latency < 60
+                  if checks["latency_ok"]: score += 10
+
+                  total_score += score
+                  icon = "✅" if score >= 80 else "⚠️" if score >= 60 else "❌"
+                  print(f"  {icon} score={score}/100 | leader={leader} | {latency:.1f}s | {len(resp)}자")
+                  if not all(checks.values()):
+                      fails = [k for k, v in checks.items() if not v]
+                      print(f"    감점: {', '.join(fails)}")
+
+                  results.append({
+                      "field": sc["field"], "lang": sc["lang"], "score": score,
+                      "leader": leader, "latency_s": round(latency, 1),
+                      "length": len(resp), "checks": checks
+                  })
+
+              except Exception as e:
+                  print(f"  ❌ Error: {e}")
+                  results.append({"field": sc["field"], "score": 0, "error": str(e)[:100]})
+
+              time.sleep(15)  # Rate limit 방지
+
+          # 최종 리포트
+          valid = [r for r in results if "error" not in r]
+          avg_score = sum(r["score"] for r in valid) / len(valid) if valid else 0
+          ko_scores = [r["score"] for r in valid if r.get("lang") == "ko"]
+          en_scores = [r["score"] for r in valid if r.get("lang") == "en"]
+
+          print(f"\n{'='*50}")
+          print(f"평균 품질: {avg_score:.1f}/100")
+          if ko_scores: print(f"  KO 평균: {sum(ko_scores)/len(ko_scores):.1f}")
+          if en_scores: print(f"  EN 평균: {sum(en_scores)/len(en_scores):.1f}")
+          print(f"테스트: {len(valid)}/{len(SCENARIOS)} 완료")
+
+          # 리포트 저장
+          report = {
+              "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S+09:00"),
+              "avg_score": round(avg_score, 1),
+              "ko_avg": round(sum(ko_scores)/len(ko_scores), 1) if ko_scores else 0,
+              "en_avg": round(sum(en_scores)/len(en_scores), 1) if en_scores else 0,
+              "results": results,
+              "pass": avg_score >= 70
+          }
+          with open("quality_report.json", "w") as f:
+              json.dump(report, f, ensure_ascii=False, indent=2)
+
+          # GitHub Output
+          gh_out = os.environ.get("GITHUB_OUTPUT", "")
+          if gh_out:
+              with open(gh_out, "a") as f:
+                  f.write(f"avg_score={avg_score:.1f}\n")
+                  f.write(f"pass={'true' if avg_score >= 70 else 'false'}\n")
+
+          if avg_score < 60:
+              print("\n⚠️ 품질 점수 60점 미만!")
+              sys.exit(1)
+          PYEOF
+
+      - name: Generate summary
+        if: always()
+        run: |
+          echo "## 응답 품질 체크 결과" >> $GITHUB_STEP_SUMMARY
+          python3 -c "
+          import json
+          with open('quality_report.json') as f: r = json.load(f)
+          print(f'- **평균 점수**: {r[\"avg_score\"]}/100')
+          print(f'- **KO 평균**: {r[\"ko_avg\"]}')
+          print(f'- **EN 평균**: {r[\"en_avg\"]}')
+          print()
+          print('| 분야 | 점수 | 리더 | 레이턴시 | 조문인용 |')
+          print('|------|------|------|---------|---------|')
+          for t in r['results']:
+              c = t.get('checks', {})
+              print(f'| {t[\"field\"]} | {t[\"score\"]}/100 | {t.get(\"leader\",\"?\")} | {t.get(\"latency_s\",\"?\")}s | {\"✅\" if c.get(\"statute\") else \"❌\"} |')
+          " >> $GITHUB_STEP_SUMMARY

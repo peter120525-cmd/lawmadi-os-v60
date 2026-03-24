@@ -1,0 +1,107 @@
+name: Law Amendment Check
+
+on:
+  # 매일 KST 09:00 (UTC 00:00) 실행
+  schedule:
+    - cron: '0 0 * * *'
+  # 수동 실행
+  workflow_dispatch:
+    inputs:
+      update_cache:
+        description: '캐시 업데이트 여부'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+env:
+  LAWGO_DRF_OC: ${{ secrets.LAWGO_DRF_OC }}
+
+jobs:
+  check-amendments:
+    name: Check Law Amendments
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run amendment check
+        id: check
+        continue-on-error: true
+        run: |
+          if [ "${{ github.event.inputs.update_cache }}" = "false" ]; then
+            python3 scripts/check_law_amendments.py
+          else
+            python3 scripts/check_law_amendments.py --update
+          fi
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: amendment-report
+          path: data/amendment_report.json
+          retention-days: 30
+
+      - name: Check for amendments
+        if: steps.check.outcome == 'failure'
+        run: |
+          echo "⚠️ 개정 법률 감지!"
+          cat data/amendment_report.json | python3 -c "
+          import json, sys
+          r = json.load(sys.stdin)
+          print(f'개정 감지: {len(r.get(\"amended\", []))}건')
+          for a in r.get('amended', []):
+              print(f'  - {a[\"law\"]}: {a[\"amendment_type\"]} (시행 {a[\"effective_date\"]})')
+          "
+
+      - name: Commit cache update
+        if: steps.check.outcome == 'failure' && github.event.inputs.update_cache != 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/elaw_cache.json data/amendment_report.json
+          git diff --cached --quiet || git commit -m "chore: 개정 법률 캐시 자동 업데이트
+
+          $(cat data/amendment_report.json | python3 -c "
+          import json, sys
+          r = json.load(sys.stdin)
+          for a in r.get('amended', []):
+              print(f'- {a[\"law\"]}: {a[\"amendment_type\"]} (시행 {a[\"effective_date\"]})')
+          ")
+
+          Co-Authored-By: github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          git push
+
+      - name: Generate summary
+        if: always()
+        run: |
+          echo "## 개정 법률 체크 결과" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat data/amendment_report.json | python3 -c "
+          import json, sys
+          r = json.load(sys.stdin)
+          print(f'- **시각**: {r[\"check_time\"]}')
+          print(f'- **총 법령**: {r[\"total_laws\"]}개')
+          print(f'- **체크 완료**: {r[\"checked\"]}개')
+          print(f'- **변경 없음**: {r[\"unchanged\"]}개')
+          print(f'- **개정 감지**: {len(r.get(\"amended\", []))}건')
+          print(f'- **에러**: {len(r.get(\"errors\", []))}건')
+          if r.get('amended'):
+              print()
+              print('### 개정된 법령')
+              for a in r['amended']:
+                  print(f'- **{a[\"law\"]}**: {a[\"amendment_type\"]} (시행 {a[\"effective_date\"]})')
+          " >> $GITHUB_STEP_SUMMARY

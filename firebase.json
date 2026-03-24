@@ -282,6 +282,10 @@
         "run": { "serviceId": "lawmadi-os-v60", "region": "asia-northeast3" }
       },
       {
+        "source": "/search",
+        "run": { "serviceId": "lawmadi-os-v60", "region": "asia-northeast3" }
+      },
+      {
         "source": "/ping",
         "run": { "serviceId": "lawmadi-os-v60", "region": "asia-northeast3" }
       },
