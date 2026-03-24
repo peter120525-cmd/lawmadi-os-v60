@@ -15,4 +15,4 @@ startCommand:
         type: string
         default: ""
         description: "Optional API key for authenticated access (unlimited queries). Leave empty for free tier (2 queries/day)."
-  url: "https://lawmadi-os-v60-938146962157.asia-northeast3.run.app/mcp"
+  url: "https://lawmadi.com/mcp"
