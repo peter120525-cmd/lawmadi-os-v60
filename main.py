@@ -1043,31 +1043,60 @@ def _check_rate_limit(request: Request) -> Union[bool, dict]:
     return True
 
 def _rate_limit_response(retry_at_kst: str = "", login_required: bool = False):
-    """제한 초과 시 응답 — 다음 이용 가능 시각 안내"""
-    if retry_at_kst == "concurrent_limit":
-        msg = "이전 요청이 처리 중입니다. 잠시 후 다시 시도해주세요."
-    elif retry_at_kst == "service_temporarily_unavailable":
-        msg = "서비스가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요."
-    elif retry_at_kst == "credits_exhausted":
-        msg = "크레딧이 모두 소진되었습니다. 추가 크레딧을 충전해주세요."
-    elif retry_at_kst == "credits_required_for_expert":
-        msg = "전문가 답변은 크레딧이 필요합니다. 크레딧을 구매해주세요."
-    elif retry_at_kst == "leader_chat_limit":
-        msg = f"오늘 리더 채팅 무료 {LEADER_CHAT_DAILY_FREE}회를 모두 사용했습니다. 크레딧을 충전하면 추가 이용이 가능합니다."
-    elif retry_at_kst == "leader_chat_credits_required":
-        msg = f"리더 채팅 추가 이용에는 {LEADER_CHAT_EXTRA_COST}크레딧이 필요합니다. 크레딧을 충전해주세요."
-    elif retry_at_kst == "daily_limit_reached":
-        msg = "오늘 무료 이용 한도에 도달했습니다. 내일 00:00(한국시간) 이후 다시 이용 가능합니다."
-    elif retry_at_kst:
-        msg = "오늘 무료 이용 한도에 도달했습니다. 내일 00:00(한국시간) 이후 다시 이용 가능합니다."
-    else:
-        msg = "이용 한도에 도달했습니다. 잠시 후 다시 이용해주세요."
+    """제한 초과 시 응답 — 다음 이용 가능 시각 안내 (한/영 병기)"""
+    _MSGS = {
+        "concurrent_limit": (
+            "이전 요청이 처리 중입니다. 잠시 후 다시 시도해주세요.",
+            "A previous request is still processing. Please try again shortly."),
+        "service_temporarily_unavailable": (
+            "서비스가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요.",
+            "Service temporarily unavailable. Please try again shortly."),
+        "credits_exhausted": (
+            "크레딧이 모두 소진되었습니다. 추가 크레딧을 충전해주세요.",
+            "Credits exhausted. Please purchase more credits to continue."),
+        "credits_required_for_expert": (
+            "전문가 답변은 크레딧이 필요합니다. 크레딧을 구매해주세요.",
+            "Expert answers require credits. Please purchase credits."),
+        "leader_chat_limit": (
+            f"오늘 리더 채팅 무료 {LEADER_CHAT_DAILY_FREE}회를 모두 사용했습니다. 크레딧을 충전하면 추가 이용이 가능합니다.",
+            f"You've used all {LEADER_CHAT_DAILY_FREE} free leader chats today. Purchase credits for more."),
+        "leader_chat_credits_required": (
+            f"리더 채팅 추가 이용에는 {LEADER_CHAT_EXTRA_COST}크레딧이 필요합니다. 크레딧을 충전해주세요.",
+            f"Additional leader chats require {LEADER_CHAT_EXTRA_COST} credits. Please purchase credits."),
+        "daily_limit_reached": (
+            "오늘 무료 이용 한도에 도달했습니다. 내일 00:00(한국시간) 이후 다시 이용 가능합니다.",
+            "Daily free limit reached. Available again after 00:00 KST tomorrow."),
+    }
+    pair = _MSGS.get(retry_at_kst, (
+        "오늘 무료 이용 한도에 도달했습니다. 내일 00:00(한국시간) 이후 다시 이용 가능합니다." if retry_at_kst else "이용 한도에 도달했습니다. 잠시 후 다시 이용해주세요.",
+        "Daily free limit reached. Available again after 00:00 KST tomorrow." if retry_at_kst else "Rate limit reached. Please try again later.",
+    ))
     if login_required:
-        msg = "무료 이용 한도에 도달했습니다. 로그인하면 크레딧으로 계속 이용할 수 있습니다."
-    return JSONResponse(
-        status_code=429,
-        content={"error": msg, "blocked": True, "retry_at_kst": retry_at_kst, "login_required": login_required}
-    )
+        pair = (
+            "무료 이용 한도에 도달했습니다. 로그인하면 크레딧으로 계속 이용할 수 있습니다.",
+            "Free limit reached. Log in and use credits to continue.",
+        )
+    msg = pair[0]
+    msg_en = pair[1]
+    content: dict = {"error": msg, "error_en": msg_en, "blocked": True, "retry_at_kst": retry_at_kst, "login_required": login_required}
+    # Payment guidance for MCP / API clients — direct checkout access (ko + en)
+    if retry_at_kst in ("daily_limit_reached", "credits_exhausted", "credits_required_for_expert",
+                         "leader_chat_limit", "leader_chat_credits_required") or login_required:
+        _BASE = "https://lawmadi.com"
+        content["pricing_url"] = {"ko": f"{_BASE}/pricing", "en": f"{_BASE}/pricing-en"}
+        content["upgrade_hint"] = {
+            "ko": "크레딧을 충전하면 계속 이용할 수 있습니다.",
+            "en": "Purchase credits to continue using the service.",
+        }
+        content["credit_packs"] = [
+            {"name": "starter",  "credits": 20,  "price_krw": "₩2,100", "price_usd": "$1.50",
+             "checkout_url": {"ko": f"{_BASE}/pricing?pack=starter", "en": f"{_BASE}/pricing-en?pack=starter"}},
+            {"name": "standard", "credits": 100, "price_krw": "₩7,000", "price_usd": "$4.99",
+             "checkout_url": {"ko": f"{_BASE}/pricing?pack=standard", "en": f"{_BASE}/pricing-en?pack=standard"}},
+            {"name": "pro",      "credits": 300, "price_krw": "₩13,800", "price_usd": "$9.99",
+             "checkout_url": {"ko": f"{_BASE}/pricing?pack=pro", "en": f"{_BASE}/pricing-en?pack=pro"}},
+        ]
+    return JSONResponse(status_code=429, content=content)
 
 
 def _release_user_lock(request: Request):

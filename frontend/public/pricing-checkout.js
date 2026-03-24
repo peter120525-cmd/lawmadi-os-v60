@@ -290,6 +290,30 @@
         el.style.color = isError ? '#C45454' : '#3D8B5E';
     }
 
+    // ─── Auto-checkout from ?pack= query param (MCP/API redirect) ───
+    function handleAutoCheckout() {
+        var params = new URLSearchParams(location.search);
+        var autoPack = params.get('pack');
+        if (!autoPack || !['starter', 'standard', 'pro'].includes(autoPack)) return;
+        // Clean URL
+        history.replaceState(null, '', location.pathname);
+        state.selectedPack = autoPack;
+        // Wait for Paddle init, then trigger checkout
+        var attempts = 0;
+        var interval = setInterval(function() {
+            attempts++;
+            if (state.paddleReady && state.paddleConfig) {
+                clearInterval(interval);
+                if (state.authenticated) {
+                    openPaddleCheckout(autoPack);
+                } else {
+                    showModal();
+                }
+            }
+            if (attempts > 30) clearInterval(interval); // 3s timeout
+        }, 100);
+    }
+
     // Init
     initPaddle();
     checkSession();
@@ -297,4 +321,7 @@
     // Restore email from storage
     var savedEmail = localStorage.getItem('lm_email');
     if (savedEmail) state.email = savedEmail;
+
+    // Auto-checkout if redirected from MCP/API rate limit
+    handleAutoCheckout();
 })();
