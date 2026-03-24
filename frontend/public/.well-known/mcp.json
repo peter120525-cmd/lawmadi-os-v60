@@ -3,34 +3,111 @@
   "description": "법마디(Lawmadi) OS — Korean Legal AI with 60 specialized agents and real-time statute verification via law.go.kr. Free: 2 queries/day. Korean & English.",
   "url": "https://lawmadi.com/mcp",
   "transport": "streamable-http",
-  "version": "60.0.0",
+  "version": "60.0.1",
   "auth": {
     "type": "bearer",
-    "description": "Optional. Without auth: 2 free queries/day. With Bearer token: unlimited.",
+    "header": "Authorization",
+    "description": "Optional. Without auth: 2 free queries/day (rate-limited). With 'Bearer <API_KEY>': unlimited.",
     "required": false
   },
   "capabilities": {
     "tools": [
       {
-        "name": "askLegalQuestion",
+        "name": "ask_ask_post",
+        "title": "Ask Legal Question",
         "description": "Submit a Korean legal question. Routes to the most relevant specialist among 60 legal domain leaders. Returns verified legal analysis with statute citations.",
         "inputSchema": {
           "type": "object",
           "required": ["query"],
           "properties": {
-            "query": {
-              "type": "string",
-              "description": "Legal question in Korean or English"
-            },
-            "lang": {
-              "type": "string",
-              "enum": ["ko", "en"],
-              "default": "ko",
-              "description": "Response language"
-            }
+            "query": { "type": "string", "description": "Legal question in Korean or English (max 2000 chars)" },
+            "lang": { "type": "string", "enum": ["ko", "en"], "default": "ko", "description": "Response language" },
+            "history": { "type": "array", "description": "Conversation history (max 6 recent turns)", "default": [] }
+          }
+        }
+      },
+      {
+        "name": "ask_stream_ask_stream_post",
+        "title": "Ask Legal Question (SSE Stream)",
+        "description": "Streaming version of legal question — returns SSE events for real-time display.",
+        "inputSchema": {
+          "type": "object",
+          "required": ["query"],
+          "properties": {
+            "query": { "type": "string", "description": "Legal question (max 2000 chars)" },
+            "lang": { "type": "string", "enum": ["ko", "en"], "default": "ko" }
+          }
+        }
+      },
+      {
+        "name": "ask_expert_ask_expert_post",
+        "title": "Expert Legal Analysis",
+        "description": "Deep 4-stage expert analysis with full statute verification (credits required).",
+        "inputSchema": {
+          "type": "object",
+          "required": ["query"],
+          "properties": {
+            "query": { "type": "string", "description": "Legal question for expert analysis (max 2000 chars)" },
+            "lang": { "type": "string", "enum": ["ko", "en"], "default": "ko" }
+          }
+        }
+      },
+      {
+        "name": "get_leaders_api_leaders_get",
+        "title": "List Legal Agents",
+        "description": "Get all 60 legal specialist agents with name, specialty, description, and ID.",
+        "inputSchema": { "type": "object", "properties": {} }
+      },
+      {
+        "name": "chat_leader_api_chat_leader_post",
+        "title": "Chat with Legal Agent",
+        "description": "Direct chat with a specific legal agent by leader ID.",
+        "inputSchema": {
+          "type": "object",
+          "required": ["leader_id", "query"],
+          "properties": {
+            "leader_id": { "type": "string", "description": "Leader ID (e.g. L01, L02, ... L60)" },
+            "query": { "type": "string", "description": "Question for the specific leader (max 2000 chars)" },
+            "lang": { "type": "string", "enum": ["ko", "en"], "default": "ko" }
+          }
+        }
+      },
+      {
+        "name": "search_search_get",
+        "title": "Search Korean Law",
+        "description": "Search Korean statutes and legal provisions via law.go.kr.",
+        "inputSchema": {
+          "type": "object",
+          "required": ["q"],
+          "properties": {
+            "q": { "type": "string", "description": "Search query for Korean law" },
+            "limit": { "type": "integer", "default": 10, "description": "Max results (1-50)" }
+          }
+        }
+      },
+      {
+        "name": "suggest_questions_suggest_questions_post",
+        "title": "Suggest Follow-up Questions",
+        "description": "Generate 3 contextual follow-up questions based on current query and leader specialty.",
+        "inputSchema": {
+          "type": "object",
+          "required": ["query"],
+          "properties": {
+            "query": { "type": "string", "description": "Current question context" },
+            "leader": { "type": "string", "description": "Leader name" },
+            "specialty": { "type": "string", "description": "Leader specialty area" }
           }
         }
       }
+    ],
+    "prompts": [
+      { "name": "legal_question", "description": "Ask a Korean legal question — routed to the best specialist among 60 agents" },
+      { "name": "expert_analysis", "description": "Deep 4-stage expert legal analysis with full statute verification" },
+      { "name": "find_specialist", "description": "Find the right legal specialist for your situation" }
+    ],
+    "resources": [
+      { "uri": "lawmadi://about", "name": "About Lawmadi OS", "description": "Overview of the Korean Legal AI service" },
+      { "uri": "lawmadi://domains", "name": "Legal Domains", "description": "All 60 specialized legal domains covered" }
     ],
     "domains": [
       "Civil Law", "Real Estate", "Construction", "Medical Law", "Damages",
@@ -41,6 +118,11 @@
     ],
     "languages": ["ko", "en"],
     "agents": 60
+  },
+  "rate_limits": {
+    "free": { "queries_per_day": 2, "reset": "00:00 KST" },
+    "authenticated": "unlimited",
+    "pricing_url": { "ko": "https://lawmadi.com/pricing", "en": "https://lawmadi.com/pricing-en" }
   },
   "contact": {
     "email": "choepeter@outlook.kr"
