@@ -41,7 +41,7 @@ jobs:
 
       - name: Audit dependencies for vulnerabilities
         run: |
-          pip-audit --strict --desc
+          pip-audit --strict --desc --ignore-vuln CVE-2026-4539  # pygments ReDoS (local-only, test dep, no fix available)
 
       - name: Run unit tests (pure functions)
         run: |
