@@ -395,27 +395,34 @@ async def _send_otp_email(email: str, code: str) -> bool:
         from email.mime.multipart import MIMEMultipart
 
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = "[Lawmadi] Your Verification Code"
-        msg["From"] = f"Lawmadi OS <{smtp_from}>"
+        msg["Subject"] = "[법마디] 인증번호 안내 / Verification Code"
+        msg["From"] = f"=?UTF-8?B?67KV66eI65SUIChMYXdtYWRpKSDsnbjspp0=?= <{smtp_from}>"
         msg["To"] = email
+        msg["Reply-To"] = "noreply@lawmadi.com"
 
         html = f"""
-        <div style="font-family:-apple-system,sans-serif;max-width:400px;margin:0 auto;padding:40px 24px;">
-            <div style="text-align:center;margin-bottom:24px;">
-                <h2 style="color:#1e293b;margin:0;">Lawmadi OS</h2>
-                <p style="color:#94a3b8;font-size:13px;margin-top:4px;">AI Legal Analysis</p>
+        <div style="font-family:-apple-system,'Malgun Gothic','맑은 고딕',sans-serif;max-width:440px;margin:0 auto;padding:40px 24px;background:#ffffff;">
+            <div style="text-align:center;margin-bottom:28px;">
+                <h2 style="color:#1e293b;margin:0;font-size:22px;">법마디 (Lawmadi)</h2>
+                <p style="color:#94a3b8;font-size:13px;margin-top:4px;">AI 법률 분석 서비스</p>
             </div>
-            <p style="color:#475569;font-size:15px;margin-bottom:4px;">Your verification code:</p>
+            <p style="color:#475569;font-size:15px;margin-bottom:4px;">인증번호를 확인해 주세요.</p>
+            <p style="color:#94a3b8;font-size:12px;margin-top:2px;margin-bottom:12px;">Your verification code:</p>
             <div style="background:#f1f5f9;border-radius:12px;padding:24px;text-align:center;margin:16px 0;">
                 <span style="font-size:36px;font-weight:900;letter-spacing:10px;color:#2563eb;">{code}</span>
             </div>
-            <p style="color:#94a3b8;font-size:13px;line-height:1.6;">
-                This code expires in 5 minutes.<br>
-                If you did not request this code, please ignore this email.
+            <p style="color:#94a3b8;font-size:13px;line-height:1.8;">
+                이 인증번호는 5분 후 만료됩니다.<br>
+                본인이 요청하지 않았다면 이 메일을 무시하세요.<br>
+                <span style="color:#b0b8c4;font-size:12px;">
+                This code expires in 5 minutes. Ignore if not requested.
+                </span>
             </p>
             <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0;">
-            <p style="color:#cbd5e1;font-size:11px;text-align:center;">
-                Lawmadi OS &middot; lawmadi-db.web.app
+            <p style="color:#cbd5e1;font-size:11px;text-align:center;line-height:1.6;">
+                법마디 (Lawmadi) &middot; <a href="https://lawmadi.com" style="color:#cbd5e1;text-decoration:none;">lawmadi.com</a><br>
+                이 메일은 발송 전용이며 회신할 수 없습니다.<br>
+                <span style="font-size:10px;">This is an automated message. Please do not reply.</span>
             </p>
         </div>
         """
