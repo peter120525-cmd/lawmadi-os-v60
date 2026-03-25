@@ -1,18 +1,26 @@
-# Smithery configuration — https://smithery.ai/docs/config
+# Smithery configuration — https://smithery.ai/docs/build/session-config
 # Lawmadi OS is a hosted remote MCP server (no local startup needed)
 
 startCommand:
   type: "http"
   configSchema:
     type: object
+    required: []
     properties:
       lang:
         type: string
+        title: "Response Language"
         enum: ["ko", "en"]
         default: "ko"
         description: "Default response language. 'ko' for Korean (default), 'en' for English."
       apiKey:
         type: string
+        title: "API Key"
         default: ""
         description: "Optional API key for authenticated access (unlimited queries). Leave empty for free tier (2 queries/day)."
+        x-to:
+          header: "Authorization"
   url: "https://lawmadi.com/mcp"
+  exampleConfig:
+    lang: "ko"
+    apiKey: ""
