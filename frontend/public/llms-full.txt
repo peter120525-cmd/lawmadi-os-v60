@@ -1,5 +1,5 @@
 # Lawmadi OS — LLM System Specification
-> Version: v60.0.0 | Last Updated: 2026-03-11 | Format: llms.txt/1.0
+> Version: v60.0.0 | Last Updated: 2026-03-25 | Format: llms.txt/1.0
 
 ---
 
@@ -60,7 +60,7 @@ L7 RENDERER    → Legal vs Reference Output Segregation (Section Divider, Discl
 |-----------|-----------|
 | Backend Framework | FastAPI 0.128.0 + Uvicorn 0.40.0 |
 | Runtime | Python 3.10+ |
-| Primary LLM | Google Gemini 2.5 Flash (`gemini-2.5-flash`) — single model, 429 exponential backoff |
+| Primary LLM | Google Gemini 3 Flash (`gemini-3-flash-preview`) — single model, 429 exponential backoff |
 | LawmadiLM | v4.0 (Qwen3-1.7B QLoRA) — currently **disabled** (`ENABLE_LAWMADILM=false`) |
 | RAG Engine | Vertex AI Search (lawmadi-legal-cache, ~14,601 docs) + law_cache keyword matching |
 | NLU Intent Detection | Regex-based Korean/English legal intent patterns + keyword + Gemini 3-layer routing |
@@ -78,7 +78,7 @@ L7 RENDERER    → Legal vs Reference Output Segregation (Section Divider, Discl
 | Mobile Header | Login + Lang toggle left, Favorites + Dark mode right (balanced layout) |
 | PWA Icons | Custom PNG icons: 192x192 + 512x512 (resized from 1024x1024 source) |
 | Database | Cloud SQL (PostgreSQL) via cloud-sql-python-connector |
-| Secret Management | GCP Secret Manager (18 secrets) |
+| Secret Management | GCP Secret Manager (20 secrets) |
 | CI/CD | GitHub Actions (5-job pipeline: Test → Staging → Backend → Frontend → Notify) |
 
 ### Runtime Constants
@@ -86,8 +86,8 @@ L7 RENDERER    → Legal vs Reference Output Segregation (Section Divider, Discl
 ```
 OS_VERSION          = "v60.0.0"
 SOFT_MODE           = true (default)
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
-MODEL_CHAIN         = ["gemini-2.5-flash"] (single model, 429 exponential backoff 2→4→8s)
+DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview"
+MODEL_CHAIN         = ["gemini-3-flash-preview"] (single model, 429 exponential backoff 2→4→8s)
 ENABLE_LAWMADILM    = false (disabled)
 USE_VERTEX_AI       = true
 USE_VERTEX_SEARCH   = true
@@ -223,7 +223,7 @@ Deploy Region:    asia-southeast1
 국가법령정보센터 API → collect_laws_v35.py (126 laws)
                     → collect_v40.py (4,726 precedents + 2,049 constitutional decisions)
                     → convert_to_qa_v35.py (articles → Q&A)
-                    → run_clevel_v40.py (C-Level 3,450 via Gemini 2.5 Flash)
+                    → run_clevel_v40.py (C-Level 3,450 via Gemini 3 Flash)
                     → merge_v40.py (dedup + validate → 85,909 pairs)
                     → train_v40_light.py (QLoRA → GGUF)
                     → Cloud Run deploy (llm + rag)
@@ -237,7 +237,7 @@ Every `/ask` and `/ask-stream` request flows through this pipeline:
 
 ```
 Stage 0+1: CLASSIFICATION + RAG (PARALLEL EXECUTION)
-  ├─ [Stage 0] Question Classification (Gemini 2.5 Flash)
+  ├─ [Stage 0] Question Classification (Gemini 3 Flash)
   │     NLU intent detection (regex patterns for Korean/English legal contexts)
   │     + Keyword matching → leader candidate selection
   │     + Gemini Flash analysis → tier (1-3), leader (L01-L60), specialty
@@ -256,7 +256,7 @@ Stage 2: LAWMADILM ENHANCED ANSWER (CURRENTLY DISABLED)
   └─ Current flow: Stage 0+1 → Stage 3 (Gemini) → Stage 4 (DRF)
 
 Stage 3: GEMINI ANSWER GENERATION (PRIMARY GENERATOR)
-  ├─ Gemini 2.5 Flash with full context:
+  ├─ Gemini 3 Flash with full context:
   │     System instruction + leader persona + RAG context + 5-step framework
   │     5-step: Acknowledge → Diagnose → Action Roadmap → Safety Net → Closing
   ├─ Max output: 3,000 tokens (standard) / 5,000 tokens (expert)
@@ -487,6 +487,7 @@ Allowed Origins:
   - https://www.lawmadi.com
   - https://lawmadi-os.web.app
   - https://lawmadi-db.web.app
+  - https://lawmadi-os-v60.vercel.app
 
 Extension: CORS_EXTRA_ORIGINS environment variable (dev only)
 Wildcard (*): PROHIBITED — blocked by security audit #2.2
@@ -581,26 +582,28 @@ Response on violation: 요청을 처리할 수 없음을 통지하고 로그 기
 
 ## DEPLOYMENT CONFIGURATION
 
-### GCP Secret Manager (18 Secrets)
+### GCP Secret Manager (20 Secrets)
 ```
-GEMINI_API_KEY         — Google Gemini API key
-GEMINI_KEY             — Google Gemini API key (alias)
+GEMINI_KEY             — Google Gemini API key
 LAWGO_DRF_OC           — 법제처 DRF API OC (Open API Client key)
-ANTHROPIC_API_KEY      — Anthropic Claude API key
 CLOUD_SQL_INSTANCE     — Cloud SQL connection name
 DB_USER                — Cloud SQL database user
 DB_PASS                — Cloud SQL database password
 DB_NAME                — Cloud SQL database name
+DATABASE_URL           — Cloud SQL 전체 연결 URL (Production)
+DATABASE_URL_STAGING   — Cloud SQL 전체 연결 URL (Staging)
 MCP_API_KEY            — MCP 서버 Bearer 토큰 인증 키
 API_KEYS               — Zapier/외부 API 인증 키
+INTERNAL_API_KEY       — 내부 관리 API 인증 키
+PREMIUM_KEYS           — 프리미엄 API 인증 키
 JWT_SECRET             — JWT 토큰 서명 키 (RBAC 인증)
 PADDLE_WEBHOOK_SECRET  — Paddle 결제 웹훅 서명 검증
 PADDLE_API_KEY         — Paddle Billing API 키
 PADDLE_CLIENT_TOKEN    — Paddle 클라이언트 토큰
 SMTP_USER              — OTP 이메일 발송 SMTP 계정
-SMTP_PASS              — OTP 이메일 발송 SMTP 비밀번호
-OTP_SECRET             — OTP 해시 서명 키
-PREMIUM_API_KEY        — 프리미엄 API 인증 키
+SMTP_PASSWORD          — OTP 이메일 발송 SMTP 비밀번호
+SMTP_FROM              — OTP 발송 메일 주소
+OTP_HMAC_SECRET        — OTP HMAC-SHA256 해시 서명 키
 ```
 
 ### Required Environment Variables
@@ -633,7 +636,7 @@ lawmadilm-rag     — RAG search (ChromaDB)        | 2 vCPU, 8 GiB  | 0–3 inst
 ### CI/CD Pipeline (GitHub Actions — 5-Job)
 ```
 Job 1: Test     — Unit tests + system integrity + critical file validation
-Job 2: Staging  — Docker build → Cloud Run staging deploy → smoke tests (/health + /diagnostics)
+Job 2: Staging  — Docker build → Cloud Run staging deploy → smoke tests (/health + /api/leaders + /)
 Job 3: Backend  — Production deploy (manual approval gate) → health verification
 Job 4: Frontend — Firebase Hosting deploy → lawmadi-db.web.app verification
 Job 5: Notify   — Deployment summary notification
@@ -661,6 +664,39 @@ core.law_selector          → LawSelector
 connectors.db_client       → db_client
 engines.response_verifier  → ResponseVerifier (Gemini SSOT 검증)
 ```
+
+---
+
+## MCP SERVER (Model Context Protocol)
+
+**Endpoint**: `https://lawmadi.com/mcp` (SSE transport)
+**Package**: `fastapi-mcp` 0.2+
+**Registry**: [Smithery](https://smithery.ai/server/@lawmadi/lawmadi-os), [Glama](https://glama.ai/mcp/servers/@lawmadi/lawmadi-os)
+
+### Authentication
+- **Public mode**: No API key required (rate-limited: 2 queries/day)
+- **Authenticated mode**: `Authorization: Bearer <MCP_API_KEY>` header (unlimited)
+
+### Available Tools (7)
+
+| Tool | Description |
+|------|-------------|
+| `ask` | 법률 질의 처리 — 60명 전문 리더가 법령·판례 기반 분석 제공 |
+| `ask_stream` | SSE 스트리밍 법률 답변 |
+| `ask_expert` | 전문가용 심층 분석 (Gemini 재생성 + DRF SSOT 검증) |
+| `get_leaders` | 60명 법률 리더 전체 목록 조회 |
+| `chat_leader` | 특정 리더와 1:1 채팅 (후속 질문) |
+| `search` | 법령 키워드 검색 |
+| `suggest_questions` | AI 추천 질문 생성 |
+
+### Prompts (3)
+- `legal-question`: 법률 질문 분석 프롬프트
+- `leader-consultation`: 특정 리더 상담 프롬프트
+- `legal-research`: 법령 조사 프롬프트
+
+### Resources (2)
+- `lawmadi://leaders`: 60명 리더 목록 (JSON)
+- `lawmadi://system-info`: 시스템 정보 및 상태
 
 ---
 
@@ -693,4 +729,4 @@ engines.response_verifier  → ResponseVerifier (Gemini SSOT 검증)
 ---
 
 *This llms.txt file conforms to the llms.txt/1.0 specification for machine-readable AI system documentation.*
-*Generated: 2026-03-11 | Lawmadi OS v60.0.0*
+*Generated: 2026-03-25 | Lawmadi OS v60.0.0*
