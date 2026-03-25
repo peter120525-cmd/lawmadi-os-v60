@@ -273,3 +273,48 @@ jobs:
                   print(f"❌ 워밍업 #{i+1} 실패: {e}")
               time.sleep(10)
           PYEOF
+
+      - name: Send alert email (on failure)
+        if: failure()
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASSWORD }}
+        run: |
+          python3 - <<'PYEOF'
+          import smtplib, os
+          from email.mime.text import MIMEText
+
+          user = os.environ.get("SMTP_USER", "")
+          pwd = os.environ.get("SMTP_PASS", "")
+          if not user or not pwd:
+              print("⚠️ SMTP 미설정 — 알림 스킵")
+              exit(0)
+
+          health = "${{ steps.health.outcome }}"
+          sim = "${{ steps.simulation.outcome }}"
+          run_url = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          body = f"""[Lawmadi OS] 시스템 헬스체크 실패 알림
+
+시간: $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')
+헬스체크: {health}
+시뮬레이션: {sim}
+
+워크플로우: {run_url}
+
+자동 복구가 시도되었습니다. 서비스 상태를 확인해 주세요.
+"""
+          msg = MIMEText(body)
+          msg["Subject"] = "[ALERT] Lawmadi OS Health Check Failed"
+          msg["From"] = f"Lawmadi Monitor <{user}>"
+          msg["To"] = user
+
+          try:
+              with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as s:
+                  s.ehlo(); s.starttls(); s.ehlo()
+                  s.login(user, pwd)
+                  s.sendmail(user, user, msg.as_string())
+              print("📧 알림 이메일 발송 완료")
+          except Exception as e:
+              print(f"❌ 이메일 발송 실패: {e}")
+          PYEOF

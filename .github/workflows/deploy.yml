@@ -317,3 +317,63 @@ jobs:
           echo "Staging: ${{ needs.deploy-staging.result }}"
           echo "Backend: Cloud Run (${{ env.SERVICE_NAME }}) — ${{ needs.deploy-backend.result }}"
           echo "Frontend: https://lawmadi-db.web.app — ${{ needs.deploy-frontend.result }}"
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Send deploy result email
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASSWORD }}
+          STAGING: ${{ needs.deploy-staging.result }}
+          BACKEND: ${{ needs.deploy-backend.result }}
+          FRONTEND: ${{ needs.deploy-frontend.result }}
+        run: |
+          python3 - <<'PYEOF'
+          import smtplib, os
+          from email.mime.text import MIMEText
+
+          user = os.environ.get("SMTP_USER", "")
+          pwd = os.environ.get("SMTP_PASS", "")
+          if not user or not pwd:
+              exit(0)
+
+          staging = os.environ.get("STAGING", "?")
+          backend = os.environ.get("BACKEND", "?")
+          frontend = os.environ.get("FRONTEND", "?")
+
+          all_ok = all(r == "success" for r in [staging, backend, frontend])
+          # 전부 성공이면 알림 불필요
+          if all_ok:
+              print("✅ 배포 전체 성공 — 알림 스킵")
+              exit(0)
+
+          run_url = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          commit_msg = "${{ github.event.head_commit.message }}".split("\n")[0][:60]
+
+          body = f"""[Lawmadi OS] 배포 실패 알림
+
+커밋: {commit_msg}
+
+Staging:    {staging}
+Backend:    {backend}
+Frontend:   {frontend}
+
+워크플로우: {run_url}
+"""
+          msg = MIMEText(body)
+          msg["Subject"] = f"[DEPLOY FAIL] Lawmadi: staging={staging} backend={backend} frontend={frontend}"
+          msg["From"] = f"Lawmadi Deploy <{user}>"
+          msg["To"] = user
+
+          try:
+              with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as s:
+                  s.ehlo(); s.starttls(); s.ehlo()
+                  s.login(user, pwd)
+                  s.sendmail(user, user, msg.as_string())
+              print("📧 배포 실패 알림 발송")
+          except Exception as e:
+              print(f"❌ 이메일 실패: {e}")
+          PYEOF

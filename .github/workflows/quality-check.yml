@@ -198,3 +198,66 @@ jobs:
               c = t.get('checks', {})
               print(f'| {t[\"field\"]} | {t[\"score\"]}/100 | {t.get(\"leader\",\"?\")} | {t.get(\"latency_s\",\"?\")}s | {\"✅\" if c.get(\"statute\") else \"❌\"} |')
           " >> $GITHUB_STEP_SUMMARY
+
+      - name: Send quality report email
+        if: always()
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASSWORD }}
+        run: |
+          python3 - <<'PYEOF'
+          import smtplib, os, json
+          from email.mime.text import MIMEText
+
+          user = os.environ.get("SMTP_USER", "")
+          pwd = os.environ.get("SMTP_PASS", "")
+          if not user or not pwd:
+              exit(0)
+
+          try:
+              with open("quality_report.json") as f:
+                  r = json.load(f)
+          except:
+              exit(0)
+
+          avg = r.get("avg_score", 0)
+          passed = r.get("pass", False)
+          run_url = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          lines = [f"[Lawmadi OS] 주간 응답 품질 리포트", ""]
+          lines.append(f"평균 점수: {avg}/100 {'PASS' if passed else 'FAIL'}")
+          lines.append(f"KO 평균: {r.get('ko_avg', 0)} | EN 평균: {r.get('en_avg', 0)}")
+          lines.append("")
+          lines.append(f"{'분야':<12} {'점수':>6} {'리더':<8} {'레이턴시':>8} {'조문':>4}")
+          lines.append("-" * 50)
+          for t in r.get("results", []):
+              c = t.get("checks", {})
+              field = t.get("field", "?")
+              score = t.get("score", 0)
+              leader = t.get("leader", "?")
+              lat = t.get("latency_s", "?")
+              statute = "O" if c.get("statute") else "X"
+              lines.append(f"{field:<12} {score:>4}/100 {leader:<8} {lat:>6}s {statute:>4}")
+
+          if not passed:
+              lines.append("")
+              lines.append("평균 점수 70점 미만 — 품질 점검 필요")
+
+          lines.append(f"\n워크플로우: {run_url}")
+          body = "\n".join(lines)
+
+          subject = f"[{'PASS' if passed else 'ALERT'}] Lawmadi 품질: {avg}/100"
+          msg = MIMEText(body)
+          msg["Subject"] = subject
+          msg["From"] = f"Lawmadi Monitor <{user}>"
+          msg["To"] = user
+
+          try:
+              with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as s:
+                  s.ehlo(); s.starttls(); s.ehlo()
+                  s.login(user, pwd)
+                  s.sendmail(user, user, msg.as_string())
+              print(f"📧 품질 리포트 발송: {avg}/100")
+          except Exception as e:
+              print(f"❌ 이메일 실패: {e}")
+          PYEOF
