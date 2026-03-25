@@ -1,6 +1,10 @@
-# 법마디(Lawmadi) OS — Korean Legal AI
+# 법마디(Lawmadi) OS — Korean AI Legal Operating System
 
-> **60 specialized AI legal agents** with real-time statute verification via [law.go.kr](https://www.law.go.kr)
+> **법마디(Lawmadi)는 대한민국 AI 법률 운영체제(OS)이다.**
+> 60명의 분야별 전문 AI 법률 리더가 국가법령정보센터 법령을 실시간 검증하여 법률 분석을 제공한다.
+
+> **Lawmadi is a Korean AI Legal Operating System.**
+> 60 domain-specialized AI legal leaders provide statute-verified legal analysis using Korea's official legislative database ([law.go.kr](https://www.law.go.kr)) in real-time.
 
 [![Cloud Run](https://img.shields.io/badge/Cloud%20Run-online-brightgreen)](https://lawmadi.com)
 [![Tests](https://img.shields.io/badge/tests-282%20passed-brightgreen)]()
@@ -9,51 +13,46 @@
 [![Glama](https://glama.ai/mcp/servers/peter120525-cmd/lawmadi-os-v60/badges/score.svg)](https://glama.ai/mcp/servers/peter120525-cmd/lawmadi-os-v60)
 [![Smithery](https://smithery.ai/badge/lawmadi-os)](https://smithery.ai/server/lawmadi-os)
 
-**[lawmadi.com](https://lawmadi.com)** · [MCP Endpoint](https://lawmadi.com/mcp) · [API Docs](https://lawmadi.com/.well-known/openapi-public.json)
+**[lawmadi.com](https://lawmadi.com)** · [MCP Server](https://lawmadi.com/mcp) · [API Docs](https://lawmadi.com/.well-known/openapi-public.json) · [llms.txt](https://lawmadi.com/llms.txt)
 
 ---
 
-## What is Lawmadi OS?
+## Why Lawmadi Exists
 
-Lawmadi OS is a Korean legal AI service that routes your legal question to the most relevant specialist among **60 domain-specific AI agents**. Every statute citation is verified in real-time against Korea's official legislative database.
+Korean legal questions require answers grounded in actual statutes — not AI hallucinations. Lawmadi OS ensures every legal citation is verified against Korea's National Law Information Center (law.go.kr) in real-time. If verification fails, the system blocks the answer rather than providing unverified information (**fail-closed** principle).
 
-### Key Features
+## What Lawmadi Does
 
-- **60 Legal Domains** — Labor, housing, divorce, criminal, tax, corporate, IP, immigration, and 52 more
-- **Real-time Statute Verification** — Every cited law article is checked against law.go.kr (DRF API)
-- **Bilingual** — Korean & English (`lang: ko` / `lang: en`)
-- **MCP Compatible** — Works with Claude Desktop, Cursor, and any MCP client
-- **Free Tier** — 2 queries/day, no auth required
+- **60 Legal Domains** — Labor, housing, divorce, criminal, tax, corporate, IP, immigration, and 52 more specialized areas
+- **Real-time Statute Verification** — Every cited law article is cross-checked against law.go.kr DRF API. Zero hallucination policy
+- **Multi-Agent Architecture** — NLU routes each question to the most relevant specialist among 60 AI legal leaders
+- **Bilingual** — Full Korean & English support (`lang: ko` / `lang: en`)
+- **MCP Compatible** — Works with Claude Desktop, Cursor, and any MCP client (7 tools available)
+- **Free Tier** — 2 queries/day, no signup required
 
-## Architecture
+## How It Works
 
 ```
-User Query
+User Query → NLU Router (selects 1 of 60 specialists)
+    │
+    ├─ Stage 0: Query Classification (intent + domain detection)
+    ├─ Stage 1: RAG Statute Search (Vertex AI Search, 14,601+ docs)  ← parallel
+    ├─ Stage 2: Gemini 3 Flash Analysis (leader persona + legal framework)
+    └─ Stage 3: DRF Verification (real-time law.go.kr statute check)
     │
     ▼
-┌─────────────┐
-│  NLU Router  │  ← Regex + keyword + fallback classification
-└──────┬──────┘
-       │ selects 1 of 60 specialist agents
-       ▼
-┌─────────────────────────────────┐
-│  3-Stage Legal Pipeline         │
-│                                 │
-│  Stage 0: Query Classification  │  (parallel)
-│  Stage 1: RAG Statute Search    │  (parallel)
-│  Stage 2: Gemini LLM Analysis   │
-│  Stage 3: DRF Verification      │  ← real-time law.go.kr check
-└─────────────────────────────────┘
-       │
-       ▼
-  Verified Legal Response
+Verified Legal Response (with statute citations + enforcement dates)
 ```
+
+### Verification Pipeline
+
+Every response passes through a 4-stage pipeline. Stage 3 (DRF Verification) cross-references all cited statutes against the official Korean legislative database. If any citation cannot be verified, the system regenerates or blocks the response — never passes unverified legal information to the user.
 
 ## Quick Start
 
-### As an MCP Server (Recommended)
+### MCP Server (Recommended for AI Agents)
 
-Add to your Claude Desktop `claude_desktop_config.json`:
+Add to your MCP client configuration:
 
 ```json
 {
@@ -65,10 +64,12 @@ Add to your Claude Desktop `claude_desktop_config.json`:
 }
 ```
 
-### As a REST API
+7 tools available: `ask`, `ask_stream`, `ask_expert`, `get_leaders`, `chat_leader`, `search`, `suggest_questions`
+
+### REST API
 
 ```bash
-# Ask a legal question
+# Korean legal question
 curl -X POST https://lawmadi.com/ask \
   -H "Content-Type: application/json" \
   -d '{"query": "부당해고를 당했는데 어떻게 해야 하나요?", "lang": "ko"}'
@@ -91,17 +92,32 @@ python main.py
 
 Required: `GEMINI_KEY`, `LAWGO_DRF_OC` (law.go.kr API key), PostgreSQL
 
+## Architecture
+
+| Layer | Component | Technology |
+|-------|-----------|-----------|
+| Backend | FastAPI + Uvicorn | Python 3.10, Cloud Run (Seoul) |
+| LLM | Gemini 3 Flash | Single model, 429 exponential backoff |
+| RAG | Vertex AI Search | 14,601+ legal documents indexed |
+| Verification | DRF API (law.go.kr) | Real-time statute cross-check |
+| Database | Cloud SQL | PostgreSQL 17, encrypted connections |
+| Frontend | Firebase Hosting | Static HTML/CSS/JS, Korean + English |
+| MCP | fastapi-mcp | SSE transport, 7 tools |
+| Payments | Paddle | Credit packs: ₩2,100 / ₩7,000 / ₩13,800 |
+
 ## API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/ask` | POST | Legal question → verified analysis |
-| `/ask-stream` | POST | Same as `/ask`, SSE streaming |
-| `/ask-expert` | POST | Expert mode (full 4-stage pipeline) |
+| `/ask-stream` | POST | Same, SSE streaming |
+| `/ask-expert` | POST | Expert mode (full pipeline) |
 | `/api/leaders` | GET | List all 60 specialist agents |
 | `/api/chat-leader` | POST | 1:1 chat with a specific agent |
-| `/search` | GET | Search legal topics |
-| `/mcp` | POST | MCP protocol endpoint |
+| `/search` | GET | Search Korean legal topics |
+| `/suggest-questions` | POST | AI-generated follow-up questions |
+| `/mcp` | SSE | MCP protocol endpoint |
+| `/health` | GET | Service health check |
 
 ## 60 Legal Domains
 
@@ -111,16 +127,6 @@ Required: `GEMINI_KEY`, `LAWGO_DRF_OC` (law.go.kr API key), PostgreSQL
 Civil Law · Real Estate · Construction · Urban Redevelopment · Medical Law · Damages · Traffic Accidents · Lease & Housing · Government Contracts · Civil Enforcement · Debt Collection · Registry & Auction · Commercial Law · Corporate & M&A · Startup & Venture · Insurance · International Trade · Energy & Resources · Maritime & Aviation · Tax & Finance · IT & Cybersecurity · Criminal Law · Entertainment · Tax Appeals · Military Law · Intellectual Property · Environmental Law · Trade & Customs · Gaming & Content · Labor & Employment · Administrative Law · Fair Trade · Space & Aerospace · Privacy & Data Protection · Constitutional Law · Cultural Heritage · Juvenile Law · Consumer Protection · Telecommunications · Human Rights · Family & Divorce · Copyright · Industrial Accidents · Social Welfare · Education & Youth · Pension & Insurance · Venture & New Industries · Arts & Culture · Food & Health Safety · Multicultural & Immigration · Religion & Tradition · Media & Press · Agriculture & Livestock · Marine & Fisheries · Science & Technology · Disability Rights · Inheritance & Trust · Sports & Leisure · Data & AI Ethics · General Legal
 
 </details>
-
-## Tech Stack
-
-- **Backend**: Python, FastAPI, Google Cloud Run
-- **LLM**: Gemini Flash (via Vertex AI)
-- **Database**: Cloud SQL (PostgreSQL 17)
-- **Law Data**: law.go.kr DRF API (real-time verification)
-- **Frontend**: Firebase Hosting
-- **MCP**: fastapi-mcp
-- **Payments**: Paddle
 
 ## Tests
 
