@@ -48,7 +48,7 @@ jobs:
           fi
 
       - name: Upload report
-        if: always()
+        if: always() && hashFiles('data/amendment_report.json') != ''
         uses: actions/upload-artifact@v7
         with:
           name: amendment-report
@@ -56,7 +56,7 @@ jobs:
           retention-days: 30
 
       - name: Check for amendments
-        if: steps.check.outcome == 'failure'
+        if: steps.check.outcome == 'failure' && hashFiles('data/amendment_report.json') != ''
         run: |
           echo "⚠️ 개정 법률 감지!"
           cat data/amendment_report.json | python3 -c "
@@ -68,7 +68,7 @@ jobs:
           "
 
       - name: Commit cache update
-        if: steps.check.outcome == 'failure' && github.event.inputs.update_cache != 'false'
+        if: steps.check.outcome == 'failure' && hashFiles('data/amendment_report.json') != '' && github.event.inputs.update_cache != 'false'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -88,9 +88,10 @@ jobs:
       - name: Generate summary
         if: always()
         run: |
-          echo "## 개정 법률 체크 결과" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          cat data/amendment_report.json | python3 -c "
+          if [ -f data/amendment_report.json ]; then
+            echo "## 개정 법률 체크 결과" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            cat data/amendment_report.json | python3 -c "
           import json, sys
           r = json.load(sys.stdin)
           print(f'- **시각**: {r[\"check_time\"]}')
@@ -105,3 +106,8 @@ jobs:
               for a in r['amended']:
                   print(f'- **{a[\"law\"]}**: {a[\"amendment_type\"]} (시행 {a[\"effective_date\"]})')
           " >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## 개정 법률 체크 결과" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ 개정 없음 (리포트 미생성)" >> $GITHUB_STEP_SUMMARY
+          fi
