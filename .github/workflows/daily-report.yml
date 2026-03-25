@@ -1,0 +1,177 @@
+name: Daily System Report
+
+on:
+  schedule:
+    - cron: '0 21 * * *'  # UTC 21:00 = KST 06:00
+  workflow_dispatch:
+
+env:
+  API_URL: https://lawmadi-os-v60-938146962157.asia-northeast3.run.app
+
+jobs:
+  daily-report:
+    name: Daily Report (KST 06:00)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_JSON }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Collect system data and send report
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASSWORD }}
+          ADMIN_KEY: ${{ secrets.INTERNAL_API_KEY }}
+        run: |
+          python3 -c "
+          import requests, json, os, smtplib, subprocess, time
+          from email.mime.text import MIMEText
+          from email.mime.multipart import MIMEMultipart
+
+          API = os.environ.get('API_URL', '${{ env.API_URL }}')
+          KEY = os.environ.get('ADMIN_KEY', '')
+          user = os.environ.get('SMTP_USER', '')
+          pwd = os.environ.get('SMTP_PASS', '')
+          headers = {'Authorization': 'Bearer ' + KEY} if KEY else {}
+
+          report = {}
+
+          # 1. Health
+          try:
+              r = requests.get(API + '/health', timeout=15)
+              h = r.json()
+              report['health'] = h.get('status', '?')
+              report['version'] = h.get('os_version', '?')
+          except Exception as e:
+              report['health'] = 'ERROR: ' + str(e)[:50]
+              report['version'] = '?'
+
+          # 2. Dashboard (7d)
+          try:
+              r = requests.get(API + '/api/admin/dashboard?days=1', headers=headers, timeout=15)
+              d = r.json()
+              report['dau'] = d.get('dau', '?')
+              report['daily_queries'] = d.get('daily_queries', '?')
+              report['weekly_queries'] = d.get('weekly_queries', '?')
+              report['avg_latency'] = round(d.get('avg_latency_ms', 0) / 1000, 1)
+              report['error_rate'] = d.get('error_rate', '?')
+          except:
+              report['dau'] = '?'
+              report['daily_queries'] = '?'
+              report['weekly_queries'] = '?'
+              report['avg_latency'] = '?'
+              report['error_rate'] = '?'
+
+          # 3. Cloud SQL
+          try:
+              out = subprocess.check_output(['gcloud', 'sql', 'instances', 'describe', 'lawmadi-db-v1',
+                  '--project=lawmadi-db', '--format=value(state)'], text=True, timeout=30).strip()
+              report['sql_state'] = out
+          except:
+              report['sql_state'] = '?'
+
+          # 4. Revisions
+          try:
+              out = subprocess.check_output(['gcloud', 'run', 'revisions', 'list',
+                  '--service=lawmadi-os-v60', '--region=asia-northeast3', '--project=lawmadi-db',
+                  '--format=value(name)'], text=True, timeout=30).strip()
+              report['revisions'] = len(out.split('\n')) if out else 0
+          except:
+              report['revisions'] = '?'
+
+          # 5. Images
+          try:
+              out = subprocess.check_output(['gcloud', 'artifacts', 'docker', 'images', 'list',
+                  'asia-northeast3-docker.pkg.dev/lawmadi-db/lawmadi-repo/lawmadi-os-v60',
+                  '--format=value(version)'], text=True, timeout=30).strip()
+              report['images'] = len(out.split('\n')) if out else 0
+          except:
+              report['images'] = '?'
+
+          # 6. Error logs (24h)
+          try:
+              out = subprocess.check_output(['gcloud', 'logging', 'read',
+                  'resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"lawmadi-os-v60\" AND severity>=ERROR',
+                  '--project=lawmadi-db', '--limit=50', '--freshness=24h',
+                  '--format=value(timestamp)'], text=True, timeout=30).strip()
+              report['errors_24h'] = len(out.split('\n')) if out else 0
+          except:
+              report['errors_24h'] = '?'
+
+          # Build email
+          from datetime import datetime, timezone, timedelta
+          kst = datetime.now(timezone(timedelta(hours=9))).strftime('%Y-%m-%d %H:%M KST')
+
+          health_ok = report['health'] == 'online'
+          sql_ok = report['sql_state'] == 'RUNNABLE'
+          err_ok = report.get('errors_24h', 0) == 0
+
+          status_icon = 'ALL OK' if (health_ok and sql_ok and err_ok) else 'ISSUES DETECTED'
+
+          lines = []
+          lines.append('[Lawmadi OS] Daily Report - ' + kst)
+          lines.append('')
+          lines.append('=== System Status: ' + status_icon + ' ===')
+          lines.append('')
+          lines.append('Service:     ' + str(report['health']) + ' (' + str(report['version']) + ')')
+          lines.append('Cloud SQL:   ' + str(report['sql_state']))
+          lines.append('Errors(24h): ' + str(report['errors_24h']))
+          lines.append('Revisions:   ' + str(report['revisions']))
+          lines.append('Images:      ' + str(report['images']))
+          lines.append('')
+          lines.append('=== Traffic ===')
+          lines.append('')
+          lines.append('DAU:         ' + str(report['dau']))
+          lines.append('Daily Qry:   ' + str(report['daily_queries']))
+          lines.append('Weekly Qry:  ' + str(report['weekly_queries']))
+          lines.append('Avg Latency: ' + str(report['avg_latency']) + 's')
+          lines.append('Error Rate:  ' + str(report['error_rate']) + '%')
+
+          body = '\n'.join(lines)
+
+          if not user or not pwd:
+              print(body)
+              print('\nSMTP not configured - skip email')
+              exit(0)
+
+          msg = MIMEText(body)
+          subj = '[Daily] Lawmadi ' + status_icon + ' - ' + kst
+          msg['Subject'] = subj
+          msg['From'] = 'Lawmadi Report <' + user + '>'
+          msg['To'] = user
+
+          try:
+              with smtplib.SMTP('smtp.gmail.com', 587, timeout=15) as s:
+                  s.ehlo(); s.starttls(); s.ehlo()
+                  s.login(user, pwd)
+                  s.sendmail(user, user, msg.as_string())
+              print('Daily report sent: ' + status_icon)
+          except Exception as e:
+              print('Email failed: ' + str(e))
+
+          # Also print for GitHub summary
+          print('\n' + body)
+          "
+
+      - name: Generate summary
+        if: always()
+        run: |
+          echo "## Daily System Report" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time**: $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M KST')" >> $GITHUB_STEP_SUMMARY

@@ -330,50 +330,32 @@ jobs:
           STAGING: ${{ needs.deploy-staging.result }}
           BACKEND: ${{ needs.deploy-backend.result }}
           FRONTEND: ${{ needs.deploy-frontend.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          python3 - <<'PYEOF'
+          python3 -c "
           import smtplib, os
           from email.mime.text import MIMEText
-
-          user = os.environ.get("SMTP_USER", "")
-          pwd = os.environ.get("SMTP_PASS", "")
-          if not user or not pwd:
-              exit(0)
-
-          staging = os.environ.get("STAGING", "?")
-          backend = os.environ.get("BACKEND", "?")
-          frontend = os.environ.get("FRONTEND", "?")
-
-          all_ok = all(r == "success" for r in [staging, backend, frontend])
-          # 전부 성공이면 알림 불필요
-          if all_ok:
-              print("✅ 배포 전체 성공 — 알림 스킵")
-              exit(0)
-
-          run_url = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          commit_msg = "${{ github.event.head_commit.message }}".split("\n")[0][:60]
-
-          body = f"""[Lawmadi OS] 배포 실패 알림
-
-커밋: {commit_msg}
-
-Staging:    {staging}
-Backend:    {backend}
-Frontend:   {frontend}
-
-워크플로우: {run_url}
-"""
+          user = os.environ.get('SMTP_USER', '')
+          pwd = os.environ.get('SMTP_PASS', '')
+          if not user or not pwd: exit(0)
+          stg = os.environ.get('STAGING', '?')
+          bk = os.environ.get('BACKEND', '?')
+          fe = os.environ.get('FRONTEND', '?')
+          if all(r == 'success' for r in [stg, bk, fe]): print('All OK'); exit(0)
+          run_url = os.environ.get('RUN_URL', '')
+          body = '[Lawmadi OS] Deploy Failed\n\n'
+          body += 'Staging: ' + stg + '\nBackend: ' + bk + '\nFrontend: ' + fe
+          body += '\n\n' + run_url
           msg = MIMEText(body)
-          msg["Subject"] = f"[DEPLOY FAIL] Lawmadi: staging={staging} backend={backend} frontend={frontend}"
-          msg["From"] = f"Lawmadi Deploy <{user}>"
-          msg["To"] = user
-
+          msg['Subject'] = '[DEPLOY FAIL] stg=' + stg + ' bk=' + bk + ' fe=' + fe
+          msg['From'] = 'Lawmadi Deploy <' + user + '>'
+          msg['To'] = user
           try:
-              with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as s:
+              with smtplib.SMTP('smtp.gmail.com', 587, timeout=15) as s:
                   s.ehlo(); s.starttls(); s.ehlo()
                   s.login(user, pwd)
                   s.sendmail(user, user, msg.as_string())
-              print("📧 배포 실패 알림 발송")
+              print('Email sent')
           except Exception as e:
-              print(f"❌ 이메일 실패: {e}")
-          PYEOF
+              print('Email failed: ' + str(e))
+          "

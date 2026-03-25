@@ -142,57 +142,40 @@ jobs:
           REVISIONS: ${{ steps.run.outputs.revisions }}
           IMAGES: ${{ steps.run.outputs.images }}
           DISK_SIZE: ${{ steps.sql.outputs.disk_size }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          python3 - <<'PYEOF'
+          python3 -c "
           import smtplib, os
           from email.mime.text import MIMEText
-
-          user = os.environ.get("SMTP_USER", "")
-          pwd = os.environ.get("SMTP_PASS", "")
-          if not user or not pwd:
-              exit(0)
-
-          sql_state = os.environ.get("SQL_STATE", "")
-          health = os.environ.get("HEALTH_HTTP", "")
-          revisions = int(os.environ.get("REVISIONS", "0") or "0")
-          images = int(os.environ.get("IMAGES", "0") or "0")
-          disk = os.environ.get("DISK_SIZE", "?")
-
+          user = os.environ.get('SMTP_USER', '')
+          pwd = os.environ.get('SMTP_PASS', '')
+          if not user or not pwd: exit(0)
+          sql = os.environ.get('SQL_STATE', '')
+          health = os.environ.get('HEALTH_HTTP', '')
+          revs = int(os.environ.get('REVISIONS', '0') or '0')
+          imgs = int(os.environ.get('IMAGES', '0') or '0')
+          disk = os.environ.get('DISK_SIZE', '?')
+          run_url = os.environ.get('RUN_URL', '')
           alerts = []
-          if sql_state != "RUNNABLE":
-              alerts.append(f"Cloud SQL 상태 이상: {sql_state}")
-          if health != "200":
-              alerts.append(f"API 헬스 실패: HTTP {health}")
-          if revisions > 5:
-              alerts.append(f"리비전 {revisions}개 — 정리 필요")
-          if images > 5:
-              alerts.append(f"이미지 {images}개 — 정리 필요")
-
-          if not alerts:
-              print("✅ 이상 없음 — 알림 스킵")
-              exit(0)
-
-          run_url = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          body = f"""[Lawmadi OS] 인프라 모니터링 알림
-
-{''.join(f'- {a}' + chr(10) for a in alerts)}
-Cloud SQL: {sql_state} | 디스크: {disk}GB
-리비전: {revisions}개 | 이미지: {images}개
-API Health: HTTP {health}
-
-워크플로우: {run_url}
-"""
+          if sql != 'RUNNABLE': alerts.append('Cloud SQL: ' + sql)
+          if health != '200': alerts.append('API Health: HTTP ' + health)
+          if revs > 5: alerts.append('Revisions: ' + str(revs))
+          if imgs > 5: alerts.append('Images: ' + str(imgs))
+          if not alerts: print('No alerts'); exit(0)
+          body = '[Lawmadi OS] Infra Alert\n\n'
+          body += '\n'.join('- ' + a for a in alerts)
+          body += '\n\nSQL=' + sql + ' Disk=' + disk + 'GB Revs=' + str(revs) + ' Imgs=' + str(imgs)
+          body += '\n\n' + run_url
           msg = MIMEText(body)
-          msg["Subject"] = f"[ALERT] Lawmadi Infra: {len(alerts)}건 주의"
-          msg["From"] = f"Lawmadi Monitor <{user}>"
-          msg["To"] = user
-
+          msg['Subject'] = '[ALERT] Lawmadi Infra: ' + str(len(alerts)) + ' issues'
+          msg['From'] = 'Lawmadi Monitor <' + user + '>'
+          msg['To'] = user
           try:
-              with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as s:
+              with smtplib.SMTP('smtp.gmail.com', 587, timeout=15) as s:
                   s.ehlo(); s.starttls(); s.ehlo()
                   s.login(user, pwd)
                   s.sendmail(user, user, msg.as_string())
-              print(f"📧 알림 발송: {len(alerts)}건")
+              print('Email sent: ' + str(len(alerts)) + ' alerts')
           except Exception as e:
-              print(f"❌ 이메일 실패: {e}")
-          PYEOF
+              print('Email failed: ' + str(e))
+          "
