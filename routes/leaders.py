@@ -5,8 +5,10 @@ POST /api/chat-leader — SSE 스트리밍 1:1 채팅
 """
 import json
 import asyncio
+import hashlib
 import logging
 import re
+import time
 from typing import Any, Callable, Dict, List, Optional
 
 from fastapi import APIRouter, Request, Body
@@ -32,6 +34,7 @@ _check_rate_limit_fn: Optional[Callable] = None
 _check_leader_chat_limit_fn: Optional[Callable] = None
 _rate_limit_response_fn: Optional[Callable] = None
 _get_client_ip_fn: Optional[Callable] = None
+_get_paddle_user_fn: Optional[Callable] = None
 
 MAX_HISTORY = 20
 MAX_QUERY_LEN = 4000
@@ -50,12 +53,13 @@ def set_dependencies(
     check_leader_chat_limit: Optional[Callable] = None,
     leader_profiles: Optional[Dict[str, Any]] = None,
     leader_personas: Optional[Dict[str, Any]] = None,
+    get_paddle_user: Optional[Callable] = None,
 ):
     """Inject shared runtime objects from main.py."""
     global _RUNTIME, _LEADER_REGISTRY, _LEADER_PROFILES, _LEADER_PERSONAS
     global _ensure_genai_client_fn, _check_rate_limit_fn
     global _check_leader_chat_limit_fn
-    global _rate_limit_response_fn, _get_client_ip_fn
+    global _rate_limit_response_fn, _get_client_ip_fn, _get_paddle_user_fn
 
     _RUNTIME = runtime
     _LEADER_REGISTRY = leader_registry
@@ -65,12 +69,61 @@ def set_dependencies(
     _check_rate_limit_fn = check_rate_limit
     _check_leader_chat_limit_fn = check_leader_chat_limit
     _rate_limit_response_fn = rate_limit_response
+    _get_paddle_user_fn = get_paddle_user
     _get_client_ip_fn = get_client_ip
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _get_visitor_id(request: Request) -> str:
+    raw_ip = _get_client_ip_fn(request) if _get_client_ip_fn else "unknown"
+    return hashlib.sha256(raw_ip.encode()).hexdigest()[:12]
+
+
+def _resolve_user_email(request: Request) -> Optional[str]:
+    if not _get_paddle_user_fn:
+        return None
+    try:
+        user = _get_paddle_user_fn(request)
+        if user:
+            return user.get("email")
+    except Exception:
+        pass
+    return None
+
+
+async def _save_leader_chat(
+    request: Request, query: str, response_text: str,
+    leader_name: str, status: str, latency_ms: int,
+    intake_action: Optional[str] = None,
+):
+    """1:1 리더 채팅 기록을 chat_history에 저장."""
+    try:
+        from connectors import db_client_v2 as db
+        if not hasattr(db, "save_chat_history"):
+            return
+        visitor_id = _get_visitor_id(request)
+        user_email = _resolve_user_email(request)
+        is_admin = getattr(request.state, "is_admin", False)
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, lambda: db.save_chat_history(
+            user_query=query,
+            ai_response=response_text[:2000],
+            leader=leader_name,
+            status=status,
+            latency_ms=latency_ms,
+            visitor_id=visitor_id,
+            swarm_mode=False,
+            user_email=user_email,
+            query_type="leader_chat",
+            is_admin=is_admin,
+        ))
+        logger.info(f"[LeaderChat] Saved to DB: leader={leader_name} visitor={visitor_id} action={intake_action}")
+    except Exception as e:
+        logger.warning(f"[LeaderChat] DB save failed: {e}")
+
 
 def _detect_lang(text: str) -> str:
     """ASCII 알파벳 비율로 언어 감지. >60% → 'en', 그 외 → 'ko'."""
@@ -309,6 +362,7 @@ async def chat_leader(request: Request, body: ChatLeaderRequest = Body(...)):
     query = query[:MAX_QUERY_LEN]
 
     async def _stream():
+        start_time = time.time()
         try:
             # answer_start
             yield _sse("answer_start", {
@@ -346,13 +400,19 @@ async def chat_leader(request: Request, body: ChatLeaderRequest = Body(...)):
                 disclaimer = DISCLAIMER_EN if lang == "en" else DISCLAIMER_KO
                 yield _sse("answer_chunk", {"text": disclaimer})
 
+                latency_ms = int((time.time() - start_time) * 1000)
                 yield _sse("answer_done", {
                     "leader": leader_name,
                     "leader_id": leader_id,
                     "leader_specialty": leader_specialty,
                     "intake_action": triage_action,
+                    "latency_ms": latency_ms,
                     "status": "OK",
                 })
+                await _save_leader_chat(
+                    request, query, triage_text[:2000], leader_name,
+                    "success", latency_ms, intake_action=triage_action,
+                )
                 return
 
             # ── fallback: 일반 스트리밍 채팅 ──
@@ -386,22 +446,34 @@ async def chat_leader(request: Request, body: ChatLeaderRequest = Body(...)):
             yield _sse("answer_chunk", {"text": disclaimer})
 
             # answer_done
+            latency_ms = int((time.time() - start_time) * 1000)
             yield _sse("answer_done", {
                 "leader": leader_name,
                 "leader_id": leader_id,
                 "leader_specialty": leader_specialty,
+                "latency_ms": latency_ms,
                 "status": "OK",
             })
+            await _save_leader_chat(
+                request, query, full_text[:2000], leader_name,
+                "success", latency_ms,
+            )
 
         except Exception as e:
             logger.error(f"[LeaderChat] Error for {leader_id}: {e}", exc_info=True)
             err_msg = "서비스 일시 장애가 발생했습니다. 잠시 후 다시 시도해 주세요." if lang == "ko" else "Service temporarily unavailable. Please try again."
             yield _sse("error", {"message": err_msg})
+            latency_ms = int((time.time() - start_time) * 1000)
             yield _sse("answer_done", {
                 "leader": leader_name,
                 "leader_id": leader_id,
+                "latency_ms": latency_ms,
                 "status": "ERROR",
             })
+            await _save_leader_chat(
+                request, query, f"[ERROR] {e}", leader_name,
+                "error", latency_ms,
+            )
 
     return StreamingResponse(
         _stream(),

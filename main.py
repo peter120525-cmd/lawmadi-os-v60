@@ -1702,6 +1702,7 @@ async def startup():
         check_leader_chat_limit=_check_leader_chat_limit,
         leader_profiles=_leader_profiles,
         leader_personas=_leader_personas,
+        get_paddle_user=_get_paddle_user,
     )
 
     METRICS["boot_time"] = _now_iso()
