@@ -36,6 +36,10 @@ _rate_limit_response_fn: Optional[Callable] = None
 _get_client_ip_fn: Optional[Callable] = None
 _get_paddle_user_fn: Optional[Callable] = None
 _release_user_lock_fn: Optional[Callable] = None
+_deduct_credit_fn: Optional[Callable] = None
+_get_leader_chat_today_count_fn: Optional[Callable] = None
+LEADER_CHAT_EXTRA_COST = 2
+LEADER_CHAT_EXTRA_USES = 5
 
 MAX_HISTORY = 20
 MAX_QUERY_LEN = 4000
@@ -56,13 +60,18 @@ def set_dependencies(
     leader_personas: Optional[Dict[str, Any]] = None,
     get_paddle_user: Optional[Callable] = None,
     release_user_lock: Optional[Callable] = None,
+    deduct_credit: Optional[Callable] = None,
+    get_leader_chat_today_count: Optional[Callable] = None,
+    leader_chat_extra_cost: int = 2,
+    leader_chat_extra_uses: int = 5,
 ):
     """Inject shared runtime objects from main.py."""
     global _RUNTIME, _LEADER_REGISTRY, _LEADER_PROFILES, _LEADER_PERSONAS
     global _ensure_genai_client_fn, _check_rate_limit_fn
     global _check_leader_chat_limit_fn
     global _rate_limit_response_fn, _get_client_ip_fn, _get_paddle_user_fn
-    global _release_user_lock_fn
+    global _release_user_lock_fn, _deduct_credit_fn, _get_leader_chat_today_count_fn
+    global LEADER_CHAT_EXTRA_COST, LEADER_CHAT_EXTRA_USES
 
     _RUNTIME = runtime
     _LEADER_REGISTRY = leader_registry
@@ -74,6 +83,10 @@ def set_dependencies(
     _rate_limit_response_fn = rate_limit_response
     _get_paddle_user_fn = get_paddle_user
     _release_user_lock_fn = release_user_lock
+    _deduct_credit_fn = deduct_credit
+    _get_leader_chat_today_count_fn = get_leader_chat_today_count
+    LEADER_CHAT_EXTRA_COST = leader_chat_extra_cost
+    LEADER_CHAT_EXTRA_USES = leader_chat_extra_uses
     _get_client_ip_fn = get_client_ip
 
 
@@ -83,7 +96,7 @@ def set_dependencies(
 
 def _get_visitor_id(request: Request) -> str:
     raw_ip = _get_client_ip_fn(request) if _get_client_ip_fn else "unknown"
-    return hashlib.sha256(raw_ip.encode()).hexdigest()[:12]
+    return hashlib.sha256(raw_ip.encode()).hexdigest()
 
 
 def _resolve_user_email(request: Request) -> Optional[str]:
@@ -331,6 +344,63 @@ async def get_leaders():
 
 
 # ---------------------------------------------------------------------------
+# POST /leader-chat-confirm — 크레딧 차감 확인
+# ---------------------------------------------------------------------------
+
+@router.post("/api/leader-chat-confirm")
+async def leader_chat_confirm(request: Request):
+    """추가 리더 채팅을 위한 크레딧 차감 확인."""
+    if not _get_paddle_user_fn:
+        return JSONResponse({"error": "서비스 일시 장애", "error_en": "Service unavailable"}, status_code=503)
+
+    user = _get_paddle_user_fn(request)
+    if not user:
+        return JSONResponse({
+            "error": "로그인이 필요합니다.",
+            "error_en": "Login required to continue.",
+            "login_required": True,
+        }, status_code=401)
+
+    credit_balance = user.get("credit_balance", 0)
+    if credit_balance < LEADER_CHAT_EXTRA_COST:
+        return JSONResponse({
+            "error": "크레딧이 부족합니다. 충전 후 이용해주세요.",
+            "error_en": "Insufficient credits. Please purchase credits.",
+            "insufficient_credits": True,
+            "credit_balance": credit_balance,
+            "required": LEADER_CHAT_EXTRA_COST,
+        }, status_code=402)
+
+    # visitor_id로 오늘 카운트 조회 → reference_id 생성
+    ip = _get_client_ip_fn(request) if _get_client_ip_fn else "unknown"
+    ip_hash = hashlib.sha256(ip.encode()).hexdigest()
+    today_count = 0
+    if _get_leader_chat_today_count_fn:
+        today_count = _get_leader_chat_today_count_fn(ip_hash)
+    ref_id = f"leader_chat_extra_{today_count}"
+
+    if not _deduct_credit_fn:
+        return JSONResponse({"error": "결제 시스템 오류"}, status_code=503)
+
+    try:
+        _deduct_credit_fn(user["user_id"], LEADER_CHAT_EXTRA_COST, reference_id=ref_id)
+    except Exception as e:
+        logger.error(f"[LeaderChatConfirm] Deduction failed: {e}")
+        return JSONResponse({"error": "크레딧 차감 실패"}, status_code=500)
+
+    new_balance = credit_balance - LEADER_CHAT_EXTRA_COST
+    logger.info(f"[LeaderChatConfirm] 크레딧 차감: user={user.get('email','?')}, "
+                f"cost={LEADER_CHAT_EXTRA_COST}, balance={new_balance}, ref={ref_id}")
+
+    return JSONResponse({
+        "confirmed": True,
+        "credits_deducted": LEADER_CHAT_EXTRA_COST,
+        "credit_balance": new_balance,
+        "extra_uses_granted": LEADER_CHAT_EXTRA_USES,
+    })
+
+
+# ---------------------------------------------------------------------------
 # POST /chat-leader — SSE 스트리밍 1:1 채팅
 # ---------------------------------------------------------------------------
 
@@ -343,10 +413,29 @@ async def chat_leader(request: Request, body: ChatLeaderRequest = Body(...)):
         return _rate_limit_response_fn(rate_check.get("retry_at_kst", ""))
 
     # Leader chat daily limit
+    _extra_remaining = None
+    _extra_total = None
     if _check_leader_chat_limit_fn:
         lc_check = _check_leader_chat_limit_fn(request)
-        if lc_check is not True:
-            return _rate_limit_response_fn(lc_check.get("retry_at_kst", ""))
+        if lc_check is True:
+            pass  # 무료 범위 내
+        elif isinstance(lc_check, dict):
+            if lc_check.get("allowed"):
+                _extra_remaining = lc_check.get("extra_remaining")
+                _extra_total = lc_check.get("extra_total")
+            elif lc_check.get("credit_required"):
+                return JSONResponse({
+                    "credit_required": True,
+                    "daily_used": lc_check["daily_used"],
+                    "daily_free": lc_check["daily_free"],
+                    "extra_cost": lc_check["extra_cost"],
+                    "extra_uses": lc_check["extra_uses"],
+                    "credit_balance": lc_check["credit_balance"],
+                })
+            elif lc_check.get("blocked"):
+                return _rate_limit_response_fn(lc_check.get("retry_at_kst", ""))
+        else:
+            return _rate_limit_response_fn("")
 
     leader_id = (body.leader_id or "").strip().upper()
     query = (body.query or "").strip()
@@ -406,14 +495,18 @@ async def chat_leader(request: Request, body: ChatLeaderRequest = Body(...)):
                 yield _sse("answer_chunk", {"text": disclaimer})
 
                 latency_ms = int((time.time() - start_time) * 1000)
-                yield _sse("answer_done", {
+                _done = {
                     "leader": leader_name,
                     "leader_id": leader_id,
                     "leader_specialty": leader_specialty,
                     "intake_action": triage_action,
                     "latency_ms": latency_ms,
                     "status": "OK",
-                })
+                }
+                if _extra_remaining is not None:
+                    _done["extra_remaining"] = _extra_remaining
+                    _done["extra_total"] = _extra_total
+                yield _sse("answer_done", _done)
                 await _save_leader_chat(
                     request, query, triage_text[:2000], leader_name,
                     "success", latency_ms, intake_action=triage_action,
@@ -454,13 +547,17 @@ async def chat_leader(request: Request, body: ChatLeaderRequest = Body(...)):
 
             # answer_done
             latency_ms = int((time.time() - start_time) * 1000)
-            yield _sse("answer_done", {
+            _done2 = {
                 "leader": leader_name,
                 "leader_id": leader_id,
                 "leader_specialty": leader_specialty,
                 "latency_ms": latency_ms,
                 "status": "OK",
-            })
+            }
+            if _extra_remaining is not None:
+                _done2["extra_remaining"] = _extra_remaining
+                _done2["extra_total"] = _extra_total
+            yield _sse("answer_done", _done2)
             await _save_leader_chat(
                 request, query, full_text[:2000], leader_name,
                 "success", latency_ms,

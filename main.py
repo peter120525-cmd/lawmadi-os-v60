@@ -1177,15 +1177,33 @@ def _check_leader_chat_limit(request: Request) -> Union[bool, dict]:
     extra_used = today_count - LEADER_CHAT_DAILY_FREE
     # 현재 블록 안에서 아직 5회 채우지 않았으면 통과 (이미 크레딧 차감됨)
     if extra_used > 0 and extra_used % LEADER_CHAT_EXTRA_USES != 0:
-        return True  # 현재 추가 블록 내
+        remaining = LEADER_CHAT_EXTRA_USES - (extra_used % LEADER_CHAT_EXTRA_USES)
+        return {
+            "allowed": True,
+            "extra_remaining": remaining,
+            "extra_total": LEADER_CHAT_EXTRA_USES,
+        }
 
-    # 새 블록 시작 → 크레딧 차감 필요
-    if user.get("credit_balance", 0) >= LEADER_CHAT_EXTRA_COST:
-        _deduct_credit(user["user_id"], LEADER_CHAT_EXTRA_COST,
-                       reference_id=f"leader_chat_extra_{today_count}")
-        logger.info(f"[LeaderChat] 추가 5회 크레딧 차감: user={user.get('email', '?')}, "
-                     f"used={today_count}, cost={LEADER_CHAT_EXTRA_COST}")
-        return True
+    # 새 블록 시작 → 크레딧 차감 확인 필요 (자동 차감 대신 프론트 확인)
+    # 이미 확인(차감)된 블록인지 credit_ledger로 확인
+    ref_id = f"leader_chat_extra_{today_count}"
+    if _check_leader_credit_already_deducted(user.get("user_id", ""), ref_id):
+        return {
+            "allowed": True,
+            "extra_remaining": LEADER_CHAT_EXTRA_USES,
+            "extra_total": LEADER_CHAT_EXTRA_USES,
+        }
+
+    credit_balance = user.get("credit_balance", 0)
+    if credit_balance >= LEADER_CHAT_EXTRA_COST:
+        return {
+            "credit_required": True,
+            "daily_used": today_count,
+            "daily_free": LEADER_CHAT_DAILY_FREE,
+            "extra_cost": LEADER_CHAT_EXTRA_COST,
+            "extra_uses": LEADER_CHAT_EXTRA_USES,
+            "credit_balance": credit_balance,
+        }
 
     return {
         "blocked": True,
@@ -1216,6 +1234,24 @@ def _get_leader_chat_today_count(ip_hash: str) -> int:
     today_start = _kst_today_start_ts()
     timestamps = _leader_chat_usage.get(ip_hash, [])
     return len([t for t in timestamps if t >= today_start])
+
+
+def _check_leader_credit_already_deducted(user_id: str, reference_id: str) -> bool:
+    """오늘 해당 reference_id로 이미 크레딧 차감이 되었는지 확인."""
+    if not user_id:
+        return False
+    try:
+        from connectors.db_client_v2 import execute
+        result = execute(
+            """SELECT 1 FROM credit_ledger
+               WHERE user_id = %s AND reference_id = %s
+                 AND created_at >= (NOW() AT TIME ZONE 'Asia/Seoul')::date AT TIME ZONE 'Asia/Seoul'
+               LIMIT 1""",
+            (user_id, reference_id), fetch="one"
+        )
+        return bool(result.get("ok") and result.get("data"))
+    except Exception:
+        return False
 
 
 def _record_leader_chat_usage(ip_hash: str):
@@ -1704,6 +1740,10 @@ async def startup():
         leader_personas=_leader_personas,
         get_paddle_user=_get_paddle_user,
         release_user_lock=_release_user_lock,
+        deduct_credit=_deduct_credit,
+        get_leader_chat_today_count=_get_leader_chat_today_count,
+        leader_chat_extra_cost=LEADER_CHAT_EXTRA_COST,
+        leader_chat_extra_uses=LEADER_CHAT_EXTRA_USES,
     )
 
     METRICS["boot_time"] = _now_iso()

@@ -72,6 +72,134 @@
         }
     }
 
+    function _updateExtraBanner(remaining, total) {
+        var banner = document.getElementById('usageBanner');
+        if (!banner) return;
+        banner.style.display = 'block';
+        banner.innerHTML = pageLang === 'en'
+            ? 'Extra: ' + remaining + '/' + total + ' remaining'
+            : '추가 ' + remaining + '/' + total + '회 남음';
+        banner.style.background = '#F7F5EC'; banner.style.color = '#A07830';
+    }
+
+    function _showCreditConfirmPopup(info) {
+        return new Promise(function(resolve) {
+            var isDark = document.body.classList.contains('dark-mode');
+            var isLoggedIn = window.__lawmadiAuth && window.__lawmadiAuth.authenticated;
+            var pricingUrl = pageLang === 'en' ? '/pricing-en' : '/pricing';
+
+            // 비로그인 → 로그인 유도
+            if (!isLoggedIn) {
+                var loginCard = pageLang === 'en'
+                    ? '<div style="background:#f0f7f3;border:1px solid #c5dece;border-radius:12px;padding:16px 18px;margin-top:4px;line-height:1.6;">'
+                      + '<p style="margin:0 0 8px;font-weight:700;color:#1a5c3a;">Free ' + info.daily_free + ' chats used up</p>'
+                      + '<p style="margin:0 0 14px;color:#444;font-size:0.93em;">Log in and purchase credits to continue chatting with leaders.</p>'
+                      + '<a href="' + pricingUrl + '" style="display:inline-block;background:#2d7a4f;color:#fff;padding:9px 20px;border-radius:8px;font-weight:700;text-decoration:none;font-size:0.95em;">Login & Buy Credits →</a>'
+                      + '</div>'
+                    : '<div style="background:#f0f7f3;border:1px solid #c5dece;border-radius:12px;padding:16px 18px;margin-top:4px;line-height:1.6;">'
+                      + '<p style="margin:0 0 8px;font-weight:700;color:#1a5c3a;">무료 ' + info.daily_free + '회를 모두 사용했습니다</p>'
+                      + '<p style="margin:0 0 14px;color:#444;font-size:0.93em;">로그인 후 크레딧을 충전하면 추가 이용이 가능합니다.</p>'
+                      + '<a href="' + pricingUrl + '" style="display:inline-block;background:#2d7a4f;color:#fff;padding:9px 20px;border-radius:8px;font-weight:700;text-decoration:none;font-size:0.95em;">로그인 & 크레딧 충전 →</a>'
+                      + '</div>';
+                appendMessage('ai', loginCard);
+                resolve(false);
+                return;
+            }
+
+            // 크레딧 부족 → 충전 유도
+            if (info.credit_balance < info.extra_cost) {
+                var buyCard = pageLang === 'en'
+                    ? '<div style="background:#f5f0f0;border:1px solid #dec5c5;border-radius:12px;padding:16px 18px;margin-top:4px;line-height:1.6;">'
+                      + '<p style="margin:0 0 8px;font-weight:700;color:#b04444;">Insufficient credits</p>'
+                      + '<p style="margin:0 0 14px;color:#444;font-size:0.93em;">You need ' + info.extra_cost + ' credits, but have ' + info.credit_balance + '. Purchase credits to continue.</p>'
+                      + '<a href="' + pricingUrl + '" style="display:inline-block;background:#2d7a4f;color:#fff;padding:9px 20px;border-radius:8px;font-weight:700;text-decoration:none;font-size:0.95em;">Buy Credits →</a>'
+                      + '</div>'
+                    : '<div style="background:#f5f0f0;border:1px solid #dec5c5;border-radius:12px;padding:16px 18px;margin-top:4px;line-height:1.6;">'
+                      + '<p style="margin:0 0 8px;font-weight:700;color:#b04444;">크레딧이 부족합니다</p>'
+                      + '<p style="margin:0 0 14px;color:#444;font-size:0.93em;">' + info.extra_cost + '크레딧이 필요하지만 ' + info.credit_balance + '크레딧만 보유 중입니다.</p>'
+                      + '<a href="' + pricingUrl + '" style="display:inline-block;background:#2d7a4f;color:#fff;padding:9px 20px;border-radius:8px;font-weight:700;text-decoration:none;font-size:0.95em;">크레딧 충전하기 →</a>'
+                      + '</div>';
+                appendMessage('ai', buyCard);
+                resolve(false);
+                return;
+            }
+
+            // 크레딧 충분 → 확인 팝업
+            var overlay = document.createElement('div');
+            overlay.id = 'creditConfirmOverlay';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;display:flex;align-items:center;justify-content:center;';
+
+            var cardBg = isDark ? '#1A2E22' : '#fff';
+            var cardColor = isDark ? '#E4EDE8' : '#222';
+            var subColor = isDark ? '#A3BFA8' : '#666';
+
+            var title = pageLang === 'en'
+                ? 'Free ' + info.daily_free + ' chats used'
+                : '무료 ' + info.daily_free + '회 소진';
+            var desc = pageLang === 'en'
+                ? info.extra_cost + ' credits will be deducted for ' + info.extra_uses + ' additional chats.'
+                : info.extra_cost + '크레딧 차감 후 ' + info.extra_uses + '회 추가됩니다.';
+            var balText = pageLang === 'en'
+                ? 'Balance: ' + info.credit_balance + ' credits'
+                : '보유 크레딧: ' + info.credit_balance;
+            var confirmLabel = pageLang === 'en' ? 'Confirm' : '확인';
+            var cancelLabel = pageLang === 'en' ? 'Cancel' : '취소';
+
+            var card = document.createElement('div');
+            card.style.cssText = 'background:' + cardBg + ';border-radius:16px;padding:28px 24px;max-width:340px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.2);color:' + cardColor + ';';
+            card.innerHTML = '<p style="margin:0 0 6px;font-size:1.1em;font-weight:700;">' + title + '</p>'
+                + '<p style="margin:0 0 12px;font-size:0.93em;color:' + subColor + ';">' + desc + '</p>'
+                + '<p style="margin:0 0 18px;font-size:0.87em;color:' + subColor + ';">' + balText + '</p>'
+                + '<div style="display:flex;gap:10px;justify-content:center;">'
+                + '<button id="ccCancel" style="flex:1;padding:10px;border:1px solid #ccc;border-radius:8px;background:transparent;color:' + cardColor + ';font-size:0.95em;cursor:pointer;">' + cancelLabel + '</button>'
+                + '<button id="ccConfirm" style="flex:1;padding:10px;border:none;border-radius:8px;background:#2d7a4f;color:#fff;font-weight:700;font-size:0.95em;cursor:pointer;">' + confirmLabel + '</button>'
+                + '</div>';
+
+            overlay.appendChild(card);
+            document.body.appendChild(overlay);
+
+            document.getElementById('ccConfirm').onclick = async function() {
+                this.disabled = true;
+                this.textContent = '...';
+                try {
+                    var resp = await fetch('/api/leader-chat-confirm', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                    });
+                    overlay.remove();
+                    if (resp.ok) {
+                        resolve(true);
+                    } else {
+                        var err = {};
+                        try { err = await resp.json(); } catch(e) {}
+                        if (err.login_required) {
+                            appendMessage('ai', pageLang === 'en'
+                                ? '<span style="color:#C45454;">Please log in to continue.</span>'
+                                : '<span style="color:#C45454;">로그인이 필요합니다. 헤더의 Login 버튼을 눌러주세요.</span>');
+                        } else if (err.insufficient_credits) {
+                            appendMessage('ai', pageLang === 'en'
+                                ? '<span style="color:#C45454;">Insufficient credits. Please purchase credits.</span>'
+                                : '<span style="color:#C45454;">크레딧이 부족합니다. 충전 후 이용해주세요.</span>');
+                        } else {
+                            appendMessage('ai', '<span style="color:#C45454;">' + (err.error || 'Error') + '</span>');
+                        }
+                        resolve(false);
+                    }
+                } catch(e) {
+                    overlay.remove();
+                    appendMessage('ai', '<span style="color:#C45454;">네트워크 오류</span>');
+                    resolve(false);
+                }
+            };
+
+            document.getElementById('ccCancel').onclick = function() {
+                overlay.remove();
+                resolve(false);
+            };
+        });
+    }
+
     // ── Dark mode sync ──
     (function() {
         var dm = localStorage.getItem('lawmadi-dark-mode');
@@ -231,6 +359,27 @@
                 })
             });
 
+            // credit_required 응답 감지 (JSON, 200)
+            var contentType = response.headers.get('Content-Type') || '';
+            if (response.ok && contentType.indexOf('application/json') !== -1) {
+                var jsonResp = await response.json();
+                if (jsonResp.credit_required) {
+                    hideTyping();
+                    var confirmed = await _showCreditConfirmPopup(jsonResp);
+                    if (confirmed) {
+                        isSending = false;
+                        sendBtn.disabled = false;
+                        userInput.value = query;
+                        await sendMessage();
+                        return;
+                    } else {
+                        isSending = false;
+                        sendBtn.disabled = false;
+                        return;
+                    }
+                }
+            }
+
             if (response.status === 429) {
                 hideTyping();
                 let errData = {};
@@ -328,6 +477,10 @@
                         history.push({ role: 'assistant', content: accumulatedText });
                         saveHistory(history);
                         _incChatCount();
+                        // 추가 블록 남은 횟수 표시
+                        if (eventData.extra_remaining !== undefined) {
+                            _updateExtraBanner(eventData.extra_remaining, eventData.extra_total);
+                        }
                     } else if (eventType === 'error') {
                         hideTyping();
                         var errMsg = eventData.message || '오류가 발생했습니다.';
