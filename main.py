@@ -1703,6 +1703,7 @@ async def startup():
         leader_profiles=_leader_profiles,
         leader_personas=_leader_personas,
         get_paddle_user=_get_paddle_user,
+        release_user_lock=_release_user_lock,
     )
 
     METRICS["boot_time"] = _now_iso()

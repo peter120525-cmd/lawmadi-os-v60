@@ -35,6 +35,7 @@ _check_leader_chat_limit_fn: Optional[Callable] = None
 _rate_limit_response_fn: Optional[Callable] = None
 _get_client_ip_fn: Optional[Callable] = None
 _get_paddle_user_fn: Optional[Callable] = None
+_release_user_lock_fn: Optional[Callable] = None
 
 MAX_HISTORY = 20
 MAX_QUERY_LEN = 4000
@@ -54,12 +55,14 @@ def set_dependencies(
     leader_profiles: Optional[Dict[str, Any]] = None,
     leader_personas: Optional[Dict[str, Any]] = None,
     get_paddle_user: Optional[Callable] = None,
+    release_user_lock: Optional[Callable] = None,
 ):
     """Inject shared runtime objects from main.py."""
     global _RUNTIME, _LEADER_REGISTRY, _LEADER_PROFILES, _LEADER_PERSONAS
     global _ensure_genai_client_fn, _check_rate_limit_fn
     global _check_leader_chat_limit_fn
     global _rate_limit_response_fn, _get_client_ip_fn, _get_paddle_user_fn
+    global _release_user_lock_fn
 
     _RUNTIME = runtime
     _LEADER_REGISTRY = leader_registry
@@ -70,6 +73,7 @@ def set_dependencies(
     _check_leader_chat_limit_fn = check_leader_chat_limit
     _rate_limit_response_fn = rate_limit_response
     _get_paddle_user_fn = get_paddle_user
+    _release_user_lock_fn = release_user_lock
     _get_client_ip_fn = get_client_ip
 
 
@@ -414,6 +418,8 @@ async def chat_leader(request: Request, body: ChatLeaderRequest = Body(...)):
                     request, query, triage_text[:2000], leader_name,
                     "success", latency_ms, intake_action=triage_action,
                 )
+                if _release_user_lock_fn:
+                    _release_user_lock_fn(request)
                 return
 
             # ── fallback: 일반 스트리밍 채팅 ──
@@ -459,6 +465,8 @@ async def chat_leader(request: Request, body: ChatLeaderRequest = Body(...)):
                 request, query, full_text[:2000], leader_name,
                 "success", latency_ms,
             )
+            if _release_user_lock_fn:
+                _release_user_lock_fn(request)
 
         except Exception as e:
             logger.error(f"[LeaderChat] Error for {leader_id}: {e}", exc_info=True)
@@ -475,6 +483,8 @@ async def chat_leader(request: Request, body: ChatLeaderRequest = Body(...)):
                 request, query, f"[ERROR] {e}", leader_name,
                 "error", latency_ms,
             )
+            if _release_user_lock_fn:
+                _release_user_lock_fn(request)
 
     return StreamingResponse(
         _stream(),
