@@ -157,12 +157,26 @@ _SPECIALTY_KEYWORDS = {
 }
 
 
+def _build_leader_list(leader_registry: Optional[Dict[str, Any]] = None) -> str:
+    """REFERRAL 시 사용할 실제 리더 목록 문자열 생성."""
+    if not leader_registry:
+        return ""
+    lines = []
+    for lid, info in sorted(leader_registry.items()):
+        name = info.get("name", lid)
+        spec = info.get("specialty", "") or info.get("role", "")
+        if name and spec:
+            lines.append(f"  - {name}: {spec}")
+    return "\n".join(lines)
+
+
 def _build_triage_prompt(
     leader_name: str,
     specialty: str,
     persona: Dict[str, str],
     intake_fields: List[str],
     lang: str = "",
+    leader_registry: Optional[Dict[str, Any]] = None,
 ) -> str:
     """인테이크 트리아지 시스템 프롬프트 생성."""
     tone = persona.get("tone", "차분한 존댓말")
@@ -170,23 +184,28 @@ def _build_triage_prompt(
     catchphrase = persona.get("catchphrase", "")
 
     fields_str = "\n".join(f"  - {f}" for f in intake_fields)
+    leader_list = _build_leader_list(leader_registry)
 
     if lang == "en":
+        leader_ref_section = f"""
+Available leaders (use ONLY these names when referring):
+{leader_list}
+""" if leader_list else ""
         return f"""You are '{leader_name}', a legal consultation leader specializing in {specialty}.
 Personality: {personality}
 Tone: {tone}
 
 Your role is to help users formulate a clear, complete legal question.
-
+{leader_ref_section}
 ## Rules
 1. ANALYZE the user's message and conversation history.
 2. Decide ONE of three actions:
 
 ### Action A: DOMAIN_MISMATCH
-If the question is clearly outside your specialty ({specialty}), suggest the appropriate leader.
+If the question is clearly outside your specialty ({specialty}), suggest the appropriate leader from the list above.
 Output format:
 [ACTION:REFERRAL]
-(Write a friendly message explaining this isn't your specialty and recommend the right leader by name and specialty)
+(Write a friendly message explaining this isn't your specialty and recommend the right leader by their exact name and specialty from the list above. NEVER invent leader names.)
 
 ### Action B: NEED_MORE_INFO
 If the question matches your specialty but lacks key information, ask follow-up questions.
@@ -206,24 +225,29 @@ Output format:
 - Be warm and professional in your leader persona
 - Ask only what's truly missing, don't repeat what the user already told you
 - When composing the prompt, organize all facts the user provided into a clear legal question
-- ALWAYS start your response with exactly one of: [ACTION:REFERRAL], [ACTION:ASK], or [ACTION:PROMPT]"""
+- ALWAYS start your response with exactly one of: [ACTION:REFERRAL], [ACTION:ASK], or [ACTION:PROMPT]
+- When referring users to another leader, use ONLY names from the leader list above. Never make up leader names."""
     else:
+        leader_ref_section = f"""
+## 리더 목록 (추천 시 반드시 아래 이름만 사용)
+{leader_list}
+""" if leader_list else ""
         return f"""당신은 '{leader_name}' 리더입니다. 전문 분야: {specialty}
 성격: {personality}
 말투: {tone}
 {f'캐치프레이즈: {catchphrase}' if catchphrase else ''}
 
 당신의 역할은 사용자가 명확하고 완전한 법률 질문을 만들도록 돕는 것입니다.
-
+{leader_ref_section}
 ## 규칙
 1. 사용자의 메시지와 대화 기록을 분석하세요.
 2. 다음 세 가지 중 하나를 결정하세요:
 
 ### Action A: 분야 불일치
-질문이 당신의 전문분야({specialty})와 맞지 않으면, 적절한 리더를 추천하세요.
+질문이 당신의 전문분야({specialty})와 맞지 않으면, 위 리더 목록에서 적절한 리더를 추천하세요.
 출력 형식:
 [ACTION:REFERRAL]
-(당신의 말투로 친근하게 해당 분야 전문 리더를 소개하는 메시지)
+(당신의 말투로 친근하게 해당 분야 전문 리더를 소개하는 메시지. 반드시 위 리더 목록에 있는 실제 이름만 사용하세요. 없는 이름을 만들어내지 마세요.)
 
 ### Action B: 정보 부족
 질문이 전문분야와 맞지만 핵심 정보가 부족하면, 추가 질문을 하세요.
@@ -243,7 +267,8 @@ Output format:
 - 리더 페르소나를 유지하면서 따뜻하고 전문적으로 대화하세요
 - 사용자가 이미 알려준 정보는 다시 묻지 마세요
 - 프롬프트 작성 시 사용자가 제공한 모든 사실을 체계적으로 정리하세요
-- 응답은 반드시 [ACTION:REFERRAL], [ACTION:ASK], [ACTION:PROMPT] 중 하나로 시작하세요"""
+- 응답은 반드시 [ACTION:REFERRAL], [ACTION:ASK], [ACTION:PROMPT] 중 하나로 시작하세요
+- 다른 리더를 추천할 때는 반드시 위 리더 목록에 있는 실제 이름만 사용하세요. 존재하지 않는 이름을 만들어내면 안 됩니다."""
 
 
 async def run_leader_triage(
@@ -253,6 +278,7 @@ async def run_leader_triage(
     leader_info: Dict[str, str],
     persona: Dict[str, str],
     lang: str = "",
+    leader_registry: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """리더 인테이크 트리아지 실행.
 
@@ -265,6 +291,7 @@ async def run_leader_triage(
 
     system_prompt = _build_triage_prompt(
         leader_name, specialty, persona, intake_fields, lang,
+        leader_registry=leader_registry,
     )
 
     # 대화 기록 구성

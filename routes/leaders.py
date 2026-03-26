@@ -379,6 +379,7 @@ async def chat_leader(request: Request, body: ChatLeaderRequest = Body(...)):
             leader_info = {"name": leader_name, "specialty": leader_specialty}
             triage = await run_leader_triage(
                 gc, query, history, leader_info, persona, lang=lang,
+                leader_registry=_LEADER_REGISTRY,
             )
             triage_action = triage.get("action", "fallback")
             triage_text = triage.get("text", "")
