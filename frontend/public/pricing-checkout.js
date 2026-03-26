@@ -174,6 +174,10 @@
                 state.authenticated = true;
                 state.user = res.data.user || null;
                 localStorage.setItem('lm_email', state.email);
+                // GA4 전환이벤트: 로그인 완료
+                if (typeof gtag === 'function') {
+                    gtag('event', 'login', { method: 'otp' });
+                }
                 step2.style.display = 'none';
                 step3.style.display = 'block';
                 updateCreditDisplay();
@@ -273,6 +277,10 @@
     // ─── Success redirect handling ───
     if (location.search.indexOf('success=1') !== -1) {
         history.replaceState(null, '', location.pathname);
+        // GA4 전환이벤트: 구매 완료
+        if (typeof gtag === 'function') {
+            gtag('event', 'purchase', { event_category: 'conversion' });
+        }
         var toast = document.createElement('div');
         toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#3D8B5E;color:white;padding:16px 32px;border-radius:12px;font-weight:700;z-index:10000;animation:fadeInDown 0.5s ease;';
         toast.textContent = pageLang === 'en' ? 'Payment complete! Credits have been added.' : '결제가 완료되었습니다! 크레딧이 충전되었습니다.';
@@ -317,6 +325,10 @@
     // Init
     initPaddle();
     checkSession();
+    // GA4 전환이벤트: 결제 페이지 방문
+    if (typeof gtag === 'function') {
+        gtag('event', 'view_pricing', { event_category: 'conversion' });
+    }
 
     // Restore email from storage
     var savedEmail = localStorage.getItem('lm_email');

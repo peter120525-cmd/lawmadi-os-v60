@@ -477,6 +477,10 @@
                         history.push({ role: 'assistant', content: accumulatedText });
                         saveHistory(history);
                         _incChatCount();
+                        // GA4 전환이벤트
+                        if (typeof gtag === 'function') {
+                            gtag('event', 'leader_chat', { event_category: 'engagement', leader: leaderBasic ? leaderBasic.name : leaderId });
+                        }
                         // 추가 블록 남은 횟수 표시
                         if (eventData.extra_remaining !== undefined) {
                             _updateExtraBanner(eventData.extra_remaining, eventData.extra_total);

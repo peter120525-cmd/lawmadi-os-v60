@@ -184,6 +184,42 @@ Disallow: /auth/
 Disallow: /health
 Disallow: /export-pdf
 
+# --- Naver (Yeti) ---
+User-agent: Yeti
+Allow: /
+Allow: /en
+Allow: /about
+Allow: /about-en
+Allow: /leaders
+Allow: /leaders-en
+Allow: /leader-profile
+Allow: /leader-profile-en
+Allow: /pricing
+Allow: /pricing-en
+Allow: /guide-wrongful-dismissal
+Allow: /guide-deposit-return
+Allow: /guide-fraud-complaint
+Allow: /guide-traffic-accident
+Allow: /guide-divorce-property
+Allow: /guide-small-claims
+Allow: /guide-inheritance
+Allow: /guide-unpaid-wages
+Allow: /guide-real-estate
+Allow: /guide-debt-recovery
+Allow: /guide-damages
+Allow: /guide-workplace-bullying
+Allow: /guide-dui
+Allow: /guide-defamation
+Allow: /guide-industrial-accident
+Allow: /sitemap.xml
+Disallow: /api/
+Disallow: /ask
+Disallow: /ask-stream
+Disallow: /ask-expert
+Disallow: /auth/
+Disallow: /health
+Disallow: /export-pdf
+
 # --- All other bots ---
 User-agent: *
 Allow: /
