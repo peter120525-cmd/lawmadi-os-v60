@@ -1043,8 +1043,22 @@ async def _handle_transaction_completed(event_data: dict):
         if isinstance(billing, dict):
             customer_email = billing.get("email", "")
 
+    # Fallback: lookup email via Paddle API using customer_id
     if not customer_email:
-        logger.error("[Paddle] No email in transaction.completed event")
+        paddle_cid = ""
+        if isinstance(customer, dict):
+            paddle_cid = customer.get("id", "")
+        if not paddle_cid:
+            paddle_cid = event_data.get("customer_id", "")
+        if paddle_cid:
+            logger.info(f"[Paddle] No email in event, fetching from API for {paddle_cid}")
+            try:
+                customer_email = await _fetch_customer_email(paddle_cid)
+            except Exception as e:
+                logger.error(f"[Paddle] Customer API lookup failed: {e}")
+
+    if not customer_email:
+        logger.error(f"[Paddle] No email in transaction.completed event (txn={transaction_id})")
         return
 
     customer_email = customer_email.strip().lower()
@@ -1096,6 +1110,17 @@ async def _handle_transaction_completed(event_data: dict):
         logger.info(f"[Paddle] Credited {total_credits} to user={user['user_id'][:8]}")
     else:
         logger.error(f"[Paddle] CRITICAL: Could not determine credits for transaction {transaction_id}, email={customer_email[:3]}***. Manual review required.")
+
+
+# ─── Paddle Customer Email Lookup ───
+
+async def _fetch_customer_email(customer_id: str) -> str:
+    """Fetch customer email from Paddle API by customer_id."""
+    result = await paddle_api_get(f"/customers/{customer_id}")
+    if result.get("ok"):
+        data = result.get("data", {})
+        return (data.get("email") or "").strip().lower()
+    return ""
 
 
 # ─── Paddle API Client ───
