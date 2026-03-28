@@ -445,21 +445,8 @@ async def blacklist_middleware(request: Request, call_next):
 
 
 def _get_client_ip_fast(request: Request) -> str:
-    """블랙리스트 미들웨어용 IP 추출 — IPv6 정규화 포함."""
-    import ipaddress as _ipa
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        for ip in reversed([s.strip() for s in forwarded.split(",")]):
-            try:
-                return str(_ipa.ip_address(ip))  # IPv6 정규화
-            except (ValueError, TypeError):
-                continue
-    if request.client and request.client.host:
-        try:
-            return str(_ipa.ip_address(request.client.host))
-        except (ValueError, TypeError):
-            return request.client.host
-    return "unknown"
+    """블랙리스트 미들웨어용 IP 추출 — _get_client_ip와 동일 로직."""
+    return _get_client_ip(request)
 
 
 @app.middleware("http")
@@ -782,34 +769,49 @@ def _sha256(text: str) -> str:
 
 def _get_client_ip(request: Request) -> str:
     """
-    클라이언트 IP 주소 추출 (Cloud Run 환경)
-    - Cloud Run LB가 X-Forwarded-For 마지막에 실제 클라이언트 IP 추가
-    - 스푸핑 방지: IP 형식 검증 + 마지막(신뢰할 수 있는) 항목 우선
+    클라이언트 IP 주소 추출 (Firebase Hosting → Cloud Run 환경)
+    XFF 구조: <실제 클라이언트>, ...<프록시들>, <Google FE/LB>
+    Google 내부 프록시 IP를 건너뛰고 첫 번째 외부 IP를 반환.
     """
     import ipaddress
 
-    def _is_valid_ip(ip_str: str) -> bool:
-        try:
-            ipaddress.ip_address(ip_str)
-            return True
-        except (ValueError, TypeError):
-            return False
+    _GOOGLE_PREFIXES = (
+        "66.249.", "66.102.", "64.233.", "72.14.", "74.125.",
+        "108.177.", "142.250.", "172.217.", "173.194.", "209.85.",
+        "216.58.", "216.239.", "35.191.", "35.199.", "35.201.",
+        "35.203.", "35.207.", "35.219.", "35.220.", "35.228.",
+        "35.233.", "35.235.", "35.243.", "130.211.", "169.254.",
+    )
 
-    # X-Forwarded-For: Cloud Run에서는 마지막 항목이 LB가 추가한 실제 IP
+    def _parse_ip(ip_str: str):
+        try:
+            return ipaddress.ip_address(ip_str)
+        except (ValueError, TypeError):
+            return None
+
+    def _is_google_proxy(ip_str: str) -> bool:
+        return ip_str.startswith(_GOOGLE_PREFIXES)
+
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
         ips = [ip.strip() for ip in forwarded.split(",")]
-        # 마지막(LB 추가) IP 사용, 형식 검증 + IPv6 정규화
+        # 1차: 앞에서부터 Google 프록시가 아닌 첫 번째 유효 IP
+        for ip in ips:
+            parsed = _parse_ip(ip)
+            if parsed and not (parsed.version == 4 and _is_google_proxy(ip)):
+                return str(parsed)
+        # 2차: Google IP라도 마지막 유효 IP 반환 (fallback)
         for ip in reversed(ips):
-            if _is_valid_ip(ip):
-                return str(ipaddress.ip_address(ip))  # 정규화
+            parsed = _parse_ip(ip)
+            if parsed:
+                return str(parsed)
 
     # 직접 연결
     if request.client and request.client.host:
-        try:
-            return str(ipaddress.ip_address(request.client.host))
-        except (ValueError, TypeError):
-            return request.client.host
+        parsed = _parse_ip(request.client.host)
+        if parsed:
+            return str(parsed)
+        return request.client.host
     return "unknown"
 
 def _now_iso() -> str:
