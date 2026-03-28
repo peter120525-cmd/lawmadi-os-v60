@@ -46,7 +46,15 @@
                 }
                 if (typeof Paddle !== 'undefined' && cfg.client_token) {
                     Paddle.Environment.set(cfg.environment || 'production');
-                    Paddle.Initialize({ token: cfg.client_token });
+                    Paddle.Initialize({
+                        token: cfg.client_token,
+                        eventCallback: function(ev) {
+                            if (ev.name === 'checkout.completed') {
+                                console.log('[Paddle] Checkout completed, polling credits...');
+                                pollCreditsAfterPurchase();
+                            }
+                        }
+                    });
                     state.paddleReady = true;
                     console.log('[Paddle] Initialized:', cfg.environment);
                 } else {
@@ -274,6 +282,40 @@
         });
     });
 
+    // ─── Credit polling after purchase (webhook may be delayed) ───
+    function pollCreditsAfterPurchase() {
+        var prevBalance = (state.user && state.user.credit_balance) || 0;
+        var attempts = 0;
+        var maxAttempts = 15; // 30 seconds max
+        var interval = setInterval(function() {
+            attempts++;
+            fetch(API_BASE + '/api/paddle/me', { credentials: 'include' })
+                .then(function(r) { return r.ok ? r.json() : null; })
+                .then(function(d) {
+                    if (!d || !d.ok || !d.user) return;
+                    state.user = d.user;
+                    updateCreditDisplay();
+                    if (d.user.credit_balance > prevBalance) {
+                        clearInterval(interval);
+                        console.log('[Paddle] Credits updated:', d.user.credit_balance);
+                        showCreditToast(d.user.credit_balance);
+                    }
+                })
+                .catch(function() {});
+            if (attempts >= maxAttempts) clearInterval(interval);
+        }, 2000);
+    }
+
+    function showCreditToast(balance) {
+        var toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#3D8B5E;color:white;padding:16px 32px;border-radius:12px;font-weight:700;z-index:10000;animation:fadeInDown 0.5s ease;';
+        toast.textContent = pageLang === 'en'
+            ? 'Payment complete! Credits: ' + balance
+            : '결제 완료! 크레딧: ' + balance;
+        document.body.appendChild(toast);
+        setTimeout(function() { toast.remove(); }, 5000);
+    }
+
     // ─── Success redirect handling ───
     if (location.search.indexOf('success=1') !== -1) {
         history.replaceState(null, '', location.pathname);
@@ -281,13 +323,8 @@
         if (typeof gtag === 'function') {
             gtag('event', 'purchase', { event_category: 'conversion' });
         }
-        var toast = document.createElement('div');
-        toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#3D8B5E;color:white;padding:16px 32px;border-radius:12px;font-weight:700;z-index:10000;animation:fadeInDown 0.5s ease;';
-        toast.textContent = pageLang === 'en' ? 'Payment complete! Credits have been added.' : '결제가 완료되었습니다! 크레딧이 충전되었습니다.';
-        document.body.appendChild(toast);
-        setTimeout(function() { toast.remove(); }, 5000);
-        // Refresh credit display
-        setTimeout(checkSession, 2000);
+        // Poll for credit update (webhook may not have arrived yet)
+        pollCreditsAfterPurchase();
     }
 
     // ─── Helper ───

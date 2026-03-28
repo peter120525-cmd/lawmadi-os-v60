@@ -963,6 +963,8 @@ async def paddle_webhook(request: Request):
         await _handle_transaction_completed(event_data)
     elif event_type == "transaction.payment_failed":
         logger.warning(f"[Paddle] Payment failed: {event_data.get('id', 'unknown')}")
+    elif event_type == "adjustment.created":
+        await _handle_adjustment_created(event_data)
     else:
         logger.info(f"[Paddle] Unhandled event: {event_type}")
 
@@ -1112,14 +1114,109 @@ async def _handle_transaction_completed(event_data: dict):
         logger.error(f"[Paddle] CRITICAL: Could not determine credits for transaction {transaction_id}, email={customer_email[:3]}***. Manual review required.")
 
 
+# ─── Adjustment (Refund) Webhook Handler ───
+
+async def _handle_adjustment_created(event_data: dict):
+    """Process adjustment.created webhook -> revoke credits for refunds."""
+    adjustment_id = event_data.get("id", "")
+    action = event_data.get("action", "")
+    transaction_id = event_data.get("transaction_id", "")
+
+    if action not in ("refund", "full_refund"):
+        logger.info(f"[Paddle] Adjustment {adjustment_id} is '{action}', not refund — skip credit revoke")
+        return
+
+    if not transaction_id:
+        logger.error(f"[Paddle] No transaction_id in adjustment {adjustment_id}")
+        return
+
+    logger.info(f"[Paddle] Processing refund adjustment: adj={adjustment_id}, txn={transaction_id}")
+    await revoke_credits_for_refund(transaction_id)
+
+
+async def revoke_credits_for_refund(transaction_id: str):
+    """환불 시 해당 거래의 크레딧을 DB에서 차감 (idempotent)."""
+    from connectors.db_client import _db_enabled, get_connection, release_connection
+    if not _db_enabled():
+        logger.warning("[Paddle] DB disabled — cannot revoke credits")
+        return
+
+    ref_id = f"paddle:{transaction_id}"
+    refund_ref = f"refund:{transaction_id}"
+    conn = get_connection()
+    if not conn:
+        logger.error("[Paddle] DB connection failed for credit revoke")
+        return
+    try:
+        cur = conn.cursor()
+        # 원래 충전 기록에서 user_id, amount 조회
+        cur.execute(
+            "SELECT user_id, amount FROM credit_ledger WHERE reference_id = %s AND type = 'purchase' LIMIT 1",
+            (ref_id,)
+        )
+        row = cur.fetchone()
+        if not row:
+            logger.warning(f"[Paddle] Refund: no purchase ledger for {ref_id}")
+            cur.close()
+            return
+
+        user_id, original_amount = str(row[0]), int(row[1])
+
+        # 멱등성: 이미 환불 처리됐는지 확인
+        cur.execute(
+            "SELECT 1 FROM credit_ledger WHERE reference_id = %s LIMIT 1",
+            (refund_ref,)
+        )
+        if cur.fetchone():
+            logger.info(f"[Paddle] Refund already processed for {transaction_id}")
+            cur.close()
+            return
+
+        # 크레딧 차감 (FOR UPDATE lock)
+        cur.execute("SELECT credit_balance FROM users WHERE user_id = %s FOR UPDATE", (user_id,))
+        balance_row = cur.fetchone()
+        if not balance_row:
+            cur.close()
+            return
+
+        current_balance = int(balance_row[0])
+        deduct = min(original_amount, current_balance)
+        new_balance = current_balance - deduct
+
+        cur.execute(
+            """INSERT INTO credit_ledger (id, user_id, amount, type, balance_after, reference_id)
+               VALUES (%s, %s, %s, 'refund', %s, %s)""",
+            (str(uuid.uuid4()), user_id, -deduct, new_balance, refund_ref)
+        )
+        cur.execute(
+            "UPDATE users SET credit_balance = %s, current_plan = CASE WHEN %s <= 0 THEN 'free' ELSE current_plan END WHERE user_id = %s",
+            (new_balance, new_balance, user_id)
+        )
+        conn.commit()
+        cur.close()
+        logger.info(f"[Paddle] Refund credit revoked: user={user_id[:8]}, deducted={deduct}, new_balance={new_balance}")
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        logger.error(f"[Paddle] Credit revoke for refund failed: {e}")
+    finally:
+        release_connection(conn)
+
+
 # ─── Paddle Customer Email Lookup ───
 
 async def _fetch_customer_email(customer_id: str) -> str:
     """Fetch customer email from Paddle API by customer_id."""
     result = await paddle_api_get(f"/customers/{customer_id}")
-    if result.get("ok"):
-        data = result.get("data", {})
-        return (data.get("email") or "").strip().lower()
+    # Paddle API returns {"data": {...}} on success, {"ok": false, "error": ...} on failure
+    data = result.get("data", {})
+    if isinstance(data, dict) and data.get("email"):
+        email = data["email"].strip().lower()
+        logger.info(f"[Paddle] Fetched email via API for {customer_id[:15]}...")
+        return email
+    logger.warning(f"[Paddle] Could not fetch email for {customer_id}: {str(result)[:200]}")
     return ""
 
 

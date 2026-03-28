@@ -295,7 +295,7 @@ async def admin_paddle_refund(
     if action not in ("refund", "credit"):
         return JSONResponse(status_code=400, content={"ok": False, "error": "action must be 'refund' or 'credit'"})
 
-    from routes.paddle import create_paddle_adjustment
+    from routes.paddle import create_paddle_adjustment, revoke_credits_for_refund
     result = await create_paddle_adjustment(
         transaction_id=txn_id, reason=reason, action=action,
     )
@@ -303,7 +303,7 @@ async def admin_paddle_refund(
     if "data" in result:
         # 환불 성공 시 DB에서 크레딧 차감
         adjustment_data = result["data"]
-        await _revoke_credits_for_refund(txn_id, adjustment_data)
+        await revoke_credits_for_refund(txn_id)
         logger.info(f"[Admin] Refund created: txn={txn_id}, action={action}")
         return {"ok": True, "data": adjustment_data}
     logger.warning(f"[Admin] Refund failed: txn={txn_id}, error={result.get('error')}")
@@ -473,68 +473,3 @@ async def admin_paddle_users(
         return JSONResponse(status_code=500, content={"ok": False, "error": "Users query failed"})
 
 
-async def _revoke_credits_for_refund(transaction_id: str, adjustment_data: dict):
-    """환불 시 해당 거래의 크레딧을 DB에서 차감."""
-    try:
-        from connectors.db_client import _db_enabled, get_connection, release_connection
-        if not _db_enabled():
-            return
-
-        ref_id = f"paddle:{transaction_id}"
-        conn = get_connection()
-        if not conn:
-            return
-        try:
-            cur = conn.cursor()
-            # 원래 충전 기록에서 user_id, amount 조회
-            cur.execute(
-                "SELECT user_id, amount FROM credit_ledger WHERE reference_id = %s AND type = 'purchase' LIMIT 1",
-                (ref_id,)
-            )
-            row = cur.fetchone()
-            if not row:
-                logger.warning(f"[Admin] Refund: no purchase ledger for {ref_id}")
-                cur.close()
-                return
-
-            user_id, original_amount = str(row[0]), int(row[1])
-
-            # 이미 환불 처리됐는지 확인
-            refund_ref = f"refund:{transaction_id}"
-            cur.execute(
-                "SELECT 1 FROM credit_ledger WHERE reference_id = %s LIMIT 1",
-                (refund_ref,)
-            )
-            if cur.fetchone():
-                logger.info(f"[Admin] Refund already processed for {transaction_id}")
-                cur.close()
-                return
-
-            # 크레딧 차감 (FOR UPDATE lock)
-            cur.execute("SELECT credit_balance FROM users WHERE user_id = %s FOR UPDATE", (user_id,))
-            balance_row = cur.fetchone()
-            if not balance_row:
-                cur.close()
-                return
-
-            current_balance = int(balance_row[0])
-            deduct = min(original_amount, current_balance)  # 잔액 이상 차감 불가
-            new_balance = current_balance - deduct
-
-            import uuid
-            cur.execute(
-                """INSERT INTO credit_ledger (id, user_id, amount, type, balance_after, reference_id)
-                   VALUES (%s, %s, %s, 'refund', %s, %s)""",
-                (str(uuid.uuid4()), user_id, -deduct, new_balance, refund_ref)
-            )
-            cur.execute(
-                "UPDATE users SET credit_balance = %s, current_plan = CASE WHEN %s <= 0 THEN 'free' ELSE current_plan END WHERE user_id = %s",
-                (new_balance, new_balance, user_id)
-            )
-            conn.commit()
-            cur.close()
-            logger.info(f"[Admin] Refund credit revoked: user={user_id[:8]}, amount={deduct}, new_balance={new_balance}")
-        finally:
-            release_connection(conn)
-    except Exception as e:
-        logger.error(f"[Admin] Credit revoke for refund failed: {e}")
