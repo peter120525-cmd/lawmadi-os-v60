@@ -1075,6 +1075,8 @@ async def _handle_transaction_completed(event_data: dict):
     paddle_cid = ""
     if isinstance(customer, dict):
         paddle_cid = customer.get("id", "")
+    if not paddle_cid:
+        paddle_cid = event_data.get("customer_id", "")
     if paddle_cid and not user.get("paddle_customer_id"):
         try:
             from connectors.db_client_v2 import execute
