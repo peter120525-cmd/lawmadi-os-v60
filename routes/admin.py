@@ -12,7 +12,7 @@ from fastapi import APIRouter, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from core.auth import verify_mcp_key as _verify_admin_auth
+from core.auth import verify_admin_key as _verify_admin_auth
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 logger = logging.getLogger("LawmadiOS.Admin")

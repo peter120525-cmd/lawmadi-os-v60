@@ -145,6 +145,33 @@ def verify_mcp_key(authorization: str = Header(default="")) -> None:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
+def verify_admin_key(authorization: str = Header(default=""), x_admin_key: str = Header(default="")) -> None:
+    """Admin 전용 인증 — 반드시 키 필요 (퍼블릭 모드 불허).
+
+    Authorization: Bearer <key> 또는 X-Admin-Key: <key> 중 하나 필요.
+    """
+    # X-Admin-Key 우선, 없으면 Authorization Bearer
+    token = ""
+    if x_admin_key and x_admin_key.strip():
+        token = x_admin_key.strip()
+    elif authorization and authorization.strip():
+        token = extract_bearer_token(authorization)
+
+    if not token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    api_key = os.getenv("MCP_API_KEY", "").strip()
+    if not api_key:
+        api_key = os.getenv("INTERNAL_API_KEY", "").strip()
+    if not api_key:
+        raise HTTPException(status_code=403, detail="API key not configured")
+
+    if not hmac.compare_digest(token, api_key):
+        token_hash = hashlib.sha256(token.encode()).hexdigest()[:8]
+        logger.warning(f"[Auth] Failed admin auth attempt (token_hash={token_hash})")
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
 def verify_api_keys(authorization: str = Header(default="")) -> None:
     """다중 API 키 검증 (외부 API 사용자용).
 
