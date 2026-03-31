@@ -488,6 +488,7 @@ def init_all_tables(max_retries=3, retry_delay=2.0):
         ("admin", init_admin_tables),
         ("verification", init_verification_table),
         ("frontend_logs", init_frontend_logs_table),
+        ("endpoint_logs", init_endpoint_logs_table),
         ("paddle", init_paddle_tables),
     ]
 
@@ -1715,4 +1716,152 @@ def get_frontend_perf_stats(limit: int = 100) -> dict:
         return {"ok": True, "averages": averages}
     except Exception as e:
         logger.error(f"[DB] frontend perf 통계 조회 실패: {e}")
+        return {"ok": False, "error": str(e)}
+
+
+# =====================================================
+# 📋 Endpoint Logs (전체 API 요청 기록)
+# =====================================================
+
+def init_endpoint_logs_table():
+    """endpoint_logs 테이블 생성."""
+    try:
+        execute(f"""
+            CREATE TABLE IF NOT EXISTS endpoint_logs (
+                id SERIAL PRIMARY KEY,
+                method VARCHAR(10),
+                path VARCHAR(500),
+                status_code INTEGER,
+                latency_ms INTEGER,
+                ip_hash VARCHAR(12),
+                user_agent VARCHAR(200),
+                visitor_id VARCHAR(64),
+                user_email VARCHAR(200),
+                query_params TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        """, fetch="none")
+        execute("CREATE INDEX IF NOT EXISTS idx_ep_logs_created ON endpoint_logs(created_at)", fetch="none")
+        execute("CREATE INDEX IF NOT EXISTS idx_ep_logs_path_created ON endpoint_logs(path, created_at)", fetch="none")
+        logger.info("✅ [DB] endpoint_logs 테이블 초기화 완료")
+    except Exception as e:
+        logger.warning(f"⚠️ [DB] endpoint_logs 테이블 생성 실패: {e}")
+        raise
+
+
+def save_endpoint_log(
+    method: str, path: str, status_code: int, latency_ms: int,
+    ip_hash: str, user_agent: str, visitor_id: str = "",
+    user_email: str = "", query_params: str = ""
+):
+    """엔드포인트 요청 로그 저장 (fail-soft)."""
+    try:
+        execute(
+            """INSERT INTO endpoint_logs
+               (method, path, status_code, latency_ms, ip_hash, user_agent, visitor_id, user_email, query_params)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+            (
+                method[:10], path[:500], status_code, latency_ms,
+                ip_hash[:12], user_agent[:200],
+                visitor_id[:64], user_email[:200], query_params[:1000]
+            ),
+            fetch="none"
+        )
+    except Exception as e:
+        logger.warning(f"⚠️ [DB] endpoint log 저장 실패: {e}")
+
+
+def get_endpoint_logs(
+    days: int = 7, path_filter: str = None,
+    status_filter: int = None, limit: int = 100
+) -> dict:
+    """엔드포인트 로그 조회 + 집계 통계."""
+    try:
+        # 집계 통계
+        summary_result = execute(
+            """SELECT
+                COUNT(*) as total,
+                COUNT(DISTINCT ip_hash) as unique_ips,
+                COALESCE(AVG(latency_ms), 0) as avg_latency,
+                COUNT(*) FILTER (WHERE status_code >= 400) as error_count
+               FROM endpoint_logs
+               WHERE created_at >= NOW() - MAKE_INTERVAL(days => %s)""",
+            (days,), fetch="one"
+        )
+
+        # 경로별 집계
+        path_result = execute(
+            """SELECT path, method, COUNT(*) as cnt,
+                      COALESCE(AVG(latency_ms), 0) as avg_lat,
+                      COUNT(*) FILTER (WHERE status_code >= 400) as errors
+               FROM endpoint_logs
+               WHERE created_at >= NOW() - MAKE_INTERVAL(days => %s)
+               GROUP BY path, method
+               ORDER BY cnt DESC
+               LIMIT 50""",
+            (days,), fetch="all"
+        )
+
+        # 개별 로그
+        where = ["created_at >= NOW() - MAKE_INTERVAL(days => %s)"]
+        params: list = [days]
+        if path_filter:
+            where.append("path LIKE %s")
+            params.append(f"%{path_filter}%")
+        if status_filter:
+            where.append("status_code = %s")
+            params.append(status_filter)
+        params.append(limit)
+
+        logs_result = execute(
+            f"""SELECT id, method, path, status_code, latency_ms,
+                       ip_hash, user_agent, visitor_id, user_email,
+                       query_params, created_at
+               FROM endpoint_logs
+               WHERE {' AND '.join(where)}
+               ORDER BY created_at DESC
+               LIMIT %s""",
+            tuple(params), fetch="all"
+        )
+
+        summary_data = summary_result.get("data") if isinstance(summary_result, dict) else summary_result
+        path_data = path_result.get("data") if isinstance(path_result, dict) else path_result
+        logs_data = logs_result.get("data") if isinstance(logs_result, dict) else logs_result
+
+        summary = {}
+        if summary_data:
+            row = summary_data
+            summary = {
+                "total_requests": row[0] or 0,
+                "unique_ips": row[1] or 0,
+                "avg_latency_ms": round(float(row[2] or 0), 1),
+                "error_count": row[3] or 0,
+            }
+
+        paths = []
+        if path_data:
+            for r in path_data:
+                paths.append({
+                    "path": r[0], "method": r[1], "count": r[2],
+                    "avg_latency_ms": round(float(r[3] or 0), 1),
+                    "errors": r[4] or 0,
+                })
+
+        logs = []
+        if logs_data:
+            for r in logs_data:
+                logs.append({
+                    "id": r[0], "method": r[1], "path": r[2],
+                    "status_code": r[3], "latency_ms": r[4],
+                    "ip_hash": r[5], "user_agent": r[6][:60] if r[6] else "",
+                    "visitor_id": r[7], "user_email": r[8],
+                    "query_params": r[9], "created_at": str(r[10]),
+                })
+
+        return {
+            "ok": True, "period_days": days,
+            "summary": summary, "by_path": paths, "logs": logs,
+        }
+    except Exception as e:
+        logger.error(f"[DB] endpoint logs 조회 실패: {e}")
         return {"ok": False, "error": str(e)}

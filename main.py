@@ -410,6 +410,57 @@ _BOT_UA_PATTERNS = _re_mod.compile(
 _BOT_PROTECTED_PATHS = frozenset({"/ask", "/ask-stream", "/ask-expert"})
 
 
+_ENDPOINT_LOG_SKIP_PREFIXES = ("/static/", "/frontend/", "/ping")
+_ENDPOINT_LOG_SKIP_EXTENSIONS = (
+    ".js", ".css", ".png", ".jpg", ".jpeg", ".svg", ".ico",
+    ".woff2", ".woff", ".ttf", ".mp4", ".webm", ".map",
+)
+
+
+@app.middleware("http")
+async def endpoint_log_middleware(request: Request, call_next):
+    """모든 API 요청을 endpoint_logs 테이블에 비동기 기록."""
+    path = request.url.path
+    # 정적 파일·헬스체크 제외
+    if path.startswith(_ENDPOINT_LOG_SKIP_PREFIXES) or path.endswith(_ENDPOINT_LOG_SKIP_EXTENSIONS):
+        return await call_next(request)
+
+    start = time.time()
+    response = await call_next(request)
+    latency_ms = int((time.time() - start) * 1000)
+
+    try:
+        ip = _get_client_ip_fast(request)
+        ip_hash = _sha256(ip)[:12] if ip else ""
+        ua = (request.headers.get("user-agent") or "")[:200]
+        visitor_id = (request.headers.get("x-device-fp") or "")[:64]
+        user_email = ""
+        qp = str(request.url.query)[:1000] if request.url.query else ""
+
+        _db = None
+        try:
+            from connectors import db_client_v2 as _db
+        except Exception:
+            pass
+        if _db and hasattr(_db, "save_endpoint_log"):
+            loop = asyncio.get_event_loop()
+            loop.run_in_executor(None, lambda: _db.save_endpoint_log(
+                method=request.method,
+                path=path[:500],
+                status_code=response.status_code,
+                latency_ms=latency_ms,
+                ip_hash=ip_hash,
+                user_agent=ua,
+                visitor_id=visitor_id,
+                user_email=user_email,
+                query_params=qp,
+            ))
+    except Exception:
+        pass  # fail-soft: 로그 실패가 요청에 영향 없음
+
+    return response
+
+
 @app.middleware("http")
 async def blacklist_middleware(request: Request, call_next):
     """블랙리스트 IP + 봇 UA 조기 차단."""

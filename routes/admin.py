@@ -473,3 +473,20 @@ async def admin_paddle_users(
         return JSONResponse(status_code=500, content={"ok": False, "error": "Users query failed"})
 
 
+@router.get("/endpoint-logs")
+@limiter.limit("10/minute")
+async def admin_endpoint_logs(
+    request: Request,
+    days: int = Query(default=7, ge=1, le=90),
+    path: str = Query(default=None),
+    status: int = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+    authorization: str = Header(default=""),
+):
+    """엔드포인트 요청 로그 조회 — 기간/경로/상태별 필터 + 집계 통계."""
+    _verify_admin_auth(authorization)
+    db = _optional_import("connectors.db_client_v2")
+    if not db or not hasattr(db, "get_endpoint_logs"):
+        return JSONResponse(status_code=503, content={"ok": False, "error": "Not available"})
+    return db.get_endpoint_logs(days=days, path_filter=path, status_filter=status, limit=limit)
+
