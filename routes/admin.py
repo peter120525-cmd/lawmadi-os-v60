@@ -12,7 +12,7 @@ from fastapi import APIRouter, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from core.auth import verify_admin_key as _verify_admin_auth
+from core.auth import verify_admin_key as _verify_admin_key_raw
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 logger = logging.getLogger("LawmadiOS.Admin")
@@ -24,6 +24,14 @@ _blacklist_fns: Dict[str, Optional[Callable]] = {
     "remove_from_blacklist": None,
     "add_to_blacklist": None,
 }
+
+def _verify_admin_auth(authorization: str, request: Request = None):
+    """Admin 인증 래퍼 — Authorization + X-Admin-Key 둘 다 체크."""
+    x_admin_key = ""
+    if request:
+        x_admin_key = request.headers.get("x-admin-key", "")
+    _verify_admin_key_raw(authorization, x_admin_key)
+
 
 def set_blacklist_fns(get_fn, remove_fn, add_fn):
     _blacklist_fns["get_blacklist"] = get_fn
@@ -44,7 +52,7 @@ def _optional_import(module_path, attr=None):
 @limiter.limit("10/minute")
 async def admin_dashboard(request: Request, days: int = Query(default=7, ge=1, le=90), authorization: str = Header(default="")):
     """대시보드 메트릭: DAU, 쿼리 수, 평균 latency, 에러율, 상위 법률 카테고리"""
-    _verify_admin_auth(authorization)
+    _verify_admin_auth(authorization, request)
     try:
         db = _optional_import("connectors.db_client_v2")
         if not db or not hasattr(db, "get_dashboard_metrics"):
@@ -59,7 +67,7 @@ async def admin_dashboard(request: Request, days: int = Query(default=7, ge=1, l
 @limiter.limit("10/minute")
 async def admin_conversion(request: Request, days: int = Query(default=30, ge=1, le=90), authorization: str = Header(default="")):
     """전환 메트릭: 총 쿼리 수, 변호사 문의 수, 피드백 수, 전환율"""
-    _verify_admin_auth(authorization)
+    _verify_admin_auth(authorization, request)
     try:
         db = _optional_import("connectors.db_client_v2")
         if not db or not hasattr(db, "get_conversion_metrics"):
@@ -74,7 +82,7 @@ async def admin_conversion(request: Request, days: int = Query(default=30, ge=1,
 @limiter.limit("10/minute")
 async def admin_retention(request: Request, authorization: str = Header(default="")):
     """리텐션 메트릭: 재방문율, 평균 방문 횟수, 사용자 분포"""
-    _verify_admin_auth(authorization)
+    _verify_admin_auth(authorization, request)
     try:
         db = _optional_import("connectors.db_client_v2")
         if not db or not hasattr(db, "get_retention_metrics"):
@@ -89,7 +97,7 @@ async def admin_retention(request: Request, authorization: str = Header(default=
 @limiter.limit("10/minute")
 async def admin_cost_estimate(request: Request, days: int = Query(default=7, ge=1, le=90), authorization: str = Header(default="")):
     """비용 추정: Gemini/Claude API 호출 수, 추정 비용"""
-    _verify_admin_auth(authorization)
+    _verify_admin_auth(authorization, request)
     try:
         db = _optional_import("connectors.db_client_v2")
         if not db or not hasattr(db, "get_cost_estimate"):
@@ -104,7 +112,7 @@ async def admin_cost_estimate(request: Request, days: int = Query(default=7, ge=
 @limiter.limit("10/minute")
 async def admin_feedback_summary(request: Request, days: int = Query(default=30, ge=1, le=90), authorization: str = Header(default="")):
     """피드백 요약: 총 피드백, 긍정/부정 비율, 리더별 분포"""
-    _verify_admin_auth(authorization)
+    _verify_admin_auth(authorization, request)
     try:
         db = _optional_import("connectors.db_client_v2")
         if not db or not hasattr(db, "get_feedback_summary"):
@@ -129,7 +137,7 @@ async def admin_chat_usage(
     authorization: str = Header(default=""),
 ):
     """채팅 이용 로그 조회: 리더별/상태별/일자별 필터 + 사용자 통계 + 시간대별 분포 + 관리자 제외"""
-    _verify_admin_auth(authorization)
+    _verify_admin_auth(authorization, request)
     try:
         db = _optional_import("connectors.db_client_v2")
         if not db or not hasattr(db, "get_chat_usage_logs"):
@@ -148,7 +156,7 @@ async def admin_chat_usage(
 @limiter.limit("10/minute")
 async def admin_blacklist(request: Request, authorization: str = Header(default="")):
     """현재 블랙리스트 목록 조회 (IP 해시, 만료 시각)."""
-    _verify_admin_auth(authorization)
+    _verify_admin_auth(authorization, request)
     get_fn = _blacklist_fns.get("get_blacklist")
     if not get_fn:
         return JSONResponse(status_code=503, content={"ok": False, "error": "Blacklist not available"})
@@ -160,7 +168,7 @@ async def admin_blacklist(request: Request, authorization: str = Header(default=
 @limiter.limit("10/minute")
 async def admin_blacklist_remove(request: Request, ip_hash: str, authorization: str = Header(default="")):
     """블랙리스트에서 IP 해제 (SHA-256 해시 12자리 prefix)."""
-    _verify_admin_auth(authorization)
+    _verify_admin_auth(authorization, request)
     remove_fn = _blacklist_fns.get("remove_from_blacklist")
     if not remove_fn:
         return JSONResponse(status_code=503, content={"ok": False, "error": "Blacklist not available"})
@@ -172,7 +180,7 @@ async def admin_blacklist_remove(request: Request, ip_hash: str, authorization: 
 @limiter.limit("10/minute")
 async def admin_blacklist_add(request: Request, authorization: str = Header(default="")):
     """수동 블랙리스트 추가. body: {"ip": "1.2.3.4", "duration": 3600, "reason": "..."}"""
-    _verify_admin_auth(authorization)
+    _verify_admin_auth(authorization, request)
     add_fn = _blacklist_fns.get("add_to_blacklist")
     if not add_fn:
         return JSONResponse(status_code=503, content={"ok": False, "error": "Blacklist not available"})
@@ -204,7 +212,7 @@ async def admin_paddle_transactions(
     authorization: str = Header(default=""),
 ):
     """Paddle 거래 목록 조회."""
-    _verify_admin_auth(authorization)
+    _verify_admin_auth(authorization, request)
     if customer_id and not _CTM_ID_RE.match(customer_id):
         return JSONResponse(status_code=400, content={"ok": False, "error": "Invalid customer_id format"})
 
@@ -224,7 +232,7 @@ async def admin_paddle_transaction_detail(
     request: Request, transaction_id: str, authorization: str = Header(default=""),
 ):
     """Paddle 거래 상세 조회."""
-    _verify_admin_auth(authorization)
+    _verify_admin_auth(authorization, request)
     if not _TXN_ID_RE.match(transaction_id):
         return JSONResponse(status_code=400, content={"ok": False, "error": "Invalid transaction_id format"})
 
@@ -245,7 +253,7 @@ async def admin_paddle_customers(
     authorization: str = Header(default=""),
 ):
     """Paddle 고객 목록 조회."""
-    _verify_admin_auth(authorization)
+    _verify_admin_auth(authorization, request)
     from routes.paddle import list_paddle_customers
     result = await list_paddle_customers(after=after, per_page=per_page, email=email)
     if "data" in result:
@@ -259,7 +267,7 @@ async def admin_paddle_customer_detail(
     request: Request, customer_id: str, authorization: str = Header(default=""),
 ):
     """Paddle 고객 상세 조회."""
-    _verify_admin_auth(authorization)
+    _verify_admin_auth(authorization, request)
     if not _CTM_ID_RE.match(customer_id):
         return JSONResponse(status_code=400, content={"ok": False, "error": "Invalid customer_id format"})
 
@@ -278,7 +286,7 @@ async def admin_paddle_refund(
     """Paddle 환불(Adjustment) 처리.
     body: {"transaction_id": "txn_...", "reason": "사유", "action": "refund"|"credit"}
     """
-    _verify_admin_auth(authorization)
+    _verify_admin_auth(authorization, request)
     try:
         body = await request.json()
     except Exception:
@@ -320,7 +328,7 @@ async def admin_paddle_adjustments(
     authorization: str = Header(default=""),
 ):
     """Paddle 환불/조정 내역 조회."""
-    _verify_admin_auth(authorization)
+    _verify_admin_auth(authorization, request)
     if transaction_id and not _TXN_ID_RE.match(transaction_id):
         return JSONResponse(status_code=400, content={"ok": False, "error": "Invalid transaction_id format"})
 
@@ -341,7 +349,7 @@ async def admin_paddle_revenue(
     authorization: str = Header(default=""),
 ):
     """매출 통계: credit_ledger 기반 구매/차감/환불 요약."""
-    _verify_admin_auth(authorization)
+    _verify_admin_auth(authorization, request)
     db = _optional_import("connectors.db_client_v2")
     if not db:
         return JSONResponse(status_code=503, content={"ok": False, "error": "DB not available"})
@@ -419,7 +427,7 @@ async def admin_paddle_users(
     authorization: str = Header(default=""),
 ):
     """내부 사용자 목록 조회 (users 테이블)."""
-    _verify_admin_auth(authorization)
+    _verify_admin_auth(authorization, request)
     try:
         from connectors.db_client import _db_enabled, get_connection, release_connection
         if not _db_enabled():
@@ -484,7 +492,7 @@ async def admin_endpoint_logs(
     authorization: str = Header(default=""),
 ):
     """엔드포인트 요청 로그 조회 — 기간/경로/상태별 필터 + 집계 통계."""
-    _verify_admin_auth(authorization)
+    _verify_admin_auth(authorization, request)
     db = _optional_import("connectors.db_client_v2")
     if not db or not hasattr(db, "get_endpoint_logs"):
         return JSONResponse(status_code=503, content={"ok": False, "error": "Not available"})

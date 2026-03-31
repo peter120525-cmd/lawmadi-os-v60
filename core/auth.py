@@ -145,16 +145,17 @@ def verify_mcp_key(authorization: str = Header(default="")) -> None:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 
-def verify_admin_key(authorization: str = Header(default=""), x_admin_key: str = Header(default="")) -> None:
+def verify_admin_key(authorization: str = "", x_admin_key: str = "") -> None:
     """Admin 전용 인증 — 반드시 키 필요 (퍼블릭 모드 불허).
 
     Authorization: Bearer <key> 또는 X-Admin-Key: <key> 중 하나 필요.
+    수동 호출: verify_admin_key(authorization, x_admin_key)
     """
     # X-Admin-Key 우선, 없으면 Authorization Bearer
     token = ""
-    if x_admin_key and x_admin_key.strip():
+    if x_admin_key and isinstance(x_admin_key, str) and x_admin_key.strip():
         token = x_admin_key.strip()
-    elif authorization and authorization.strip():
+    elif authorization and isinstance(authorization, str) and authorization.strip():
         token = extract_bearer_token(authorization)
 
     if not token:
