@@ -330,6 +330,8 @@ async def report_frontend_perf(request: Request):
     """
     try:
         body = await request.body()
+        if not body or not body.strip():
+            return JSONResponse(status_code=400, content={"ok": False, "error": "empty body"})
         if len(body) > 8 * 1024:
             return JSONResponse(status_code=413, content={"ok": False})
 
@@ -365,6 +367,9 @@ async def report_frontend_perf(request: Request):
 
         return {"ok": True}
 
+    except json.JSONDecodeError as e:
+        logger.warning(f"[API] /api/perf bad JSON: {e}")
+        return JSONResponse(status_code=400, content={"ok": False, "error": "invalid JSON"})
     except Exception as e:
         logger.error(f"[API] /api/perf failed: {e}")
         return JSONResponse(status_code=500, content={"ok": False})
