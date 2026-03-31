@@ -703,7 +703,7 @@ def get_leader_statistics(days: int = 30) -> Dict[str, Any]:
                 AVG(latency_ms) as avg_latency,
                 COUNT(CASE WHEN status = 'success' THEN 1 END) as success_count
             FROM chat_history
-            WHERE created_at >= NOW() - INTERVAL '1 day' * %s
+            WHERE created_at >= NOW() - MAKE_INTERVAL(days => %s)
             GROUP BY leader_code
             ORDER BY total_calls DESC
             LIMIT 20
@@ -751,7 +751,7 @@ def get_query_category_statistics(days: int = 30) -> Dict[str, Any]:
                 query_category,
                 COUNT(*) as count
             FROM chat_history
-            WHERE created_at >= NOW() - INTERVAL '1 day' * %s
+            WHERE created_at >= NOW() - MAKE_INTERVAL(days => %s)
                 AND query_category IS NOT NULL
             GROUP BY query_category
             ORDER BY count DESC
@@ -857,7 +857,7 @@ def get_chat_usage_logs(
         cur = conn.cursor()
 
         # ── 1) 개별 로그 조회 ──
-        where = ["created_at >= NOW() - INTERVAL '1 day' * %s"]
+        where = ["created_at >= NOW() - MAKE_INTERVAL(days => %s)"]
         params: list = [days]
 
         if leader:
@@ -1325,7 +1325,7 @@ def get_dashboard_metrics(days: int = 7) -> dict:
         dau_result = execute(
             f"""SELECT COUNT(DISTINCT visitor_id) as dau
                FROM chat_history
-               WHERE created_at >= NOW() - INTERVAL '1 day' * %s {admin_filter}""",
+               WHERE created_at >= NOW() - MAKE_INTERVAL(days => %s) {admin_filter}""",
             (days,), fetch="one"
         )
         dau = dau_result.get("data", [0])[0] if dau_result.get("ok") else 0
@@ -1340,7 +1340,7 @@ def get_dashboard_metrics(days: int = 7) -> dict:
                 COALESCE(AVG(latency_ms), 0) as avg_latency,
                 COUNT(*) FILTER (WHERE status = 'error') as error_count
                FROM chat_history
-               WHERE created_at >= NOW() - INTERVAL '1 day' * %s {admin_filter}""",
+               WHERE created_at >= NOW() - MAKE_INTERVAL(days => %s) {admin_filter}""",
             (days,), fetch="one"
         )
 
@@ -1348,7 +1348,7 @@ def get_dashboard_metrics(days: int = 7) -> dict:
         cat_result = execute(
             f"""SELECT query_category, COUNT(*) as cnt
                FROM chat_history
-               WHERE created_at >= NOW() - INTERVAL '1 day' * %s AND query_category IS NOT NULL
+               WHERE created_at >= NOW() - MAKE_INTERVAL(days => %s) AND query_category IS NOT NULL
                      {admin_filter}
                GROUP BY query_category
                ORDER BY cnt DESC
@@ -1381,15 +1381,15 @@ def get_conversion_metrics(days: int = 30) -> dict:
     """총 쿼리 수, 변호사 문의 수, 피드백 수, 전환율 (관리자 테스트 제외)"""
     try:
         q_result = execute(
-            "SELECT COUNT(*) FROM chat_history WHERE created_at >= NOW() - INTERVAL '1 day' * %s AND (is_admin IS NULL OR is_admin = FALSE)",
+            "SELECT COUNT(*) FROM chat_history WHERE created_at >= NOW() - MAKE_INTERVAL(days => %s) AND (is_admin IS NULL OR is_admin = FALSE)",
             (days,), fetch="one"
         )
         li_result = execute(
-            "SELECT COUNT(*) FROM lawyer_inquiries WHERE created_at >= NOW() - INTERVAL '1 day' * %s",
+            "SELECT COUNT(*) FROM lawyer_inquiries WHERE created_at >= NOW() - MAKE_INTERVAL(days => %s)",
             (days,), fetch="one"
         )
         fb_result = execute(
-            "SELECT COUNT(*) FROM feedback WHERE created_at >= NOW() - INTERVAL '1 day' * %s",
+            "SELECT COUNT(*) FROM feedback WHERE created_at >= NOW() - MAKE_INTERVAL(days => %s)",
             (days,), fetch="one"
         )
 
@@ -1459,14 +1459,14 @@ def get_feedback_summary(days: int = 30) -> dict:
                 COUNT(*) FILTER (WHERE rating = 'up') as positive,
                 COUNT(*) FILTER (WHERE rating = 'down') as negative
                FROM feedback
-               WHERE created_at >= NOW() - INTERVAL '1 day' * %s""",
+               WHERE created_at >= NOW() - MAKE_INTERVAL(days => %s)""",
             (days,), fetch="one"
         )
 
         leader_result = execute(
             """SELECT leader, rating, COUNT(*) as cnt
                FROM feedback
-               WHERE created_at >= NOW() - INTERVAL '1 day' * %s AND leader IS NOT NULL
+               WHERE created_at >= NOW() - MAKE_INTERVAL(days => %s) AND leader IS NOT NULL
                GROUP BY leader, rating
                ORDER BY cnt DESC""",
             (days,), fetch="all"
@@ -1504,7 +1504,7 @@ def get_cost_estimate(days: int = 7) -> dict:
         result = execute(
             """SELECT COUNT(*) as total_calls
                FROM chat_history
-               WHERE created_at >= NOW() - INTERVAL '1 day' * %s""",
+               WHERE created_at >= NOW() - MAKE_INTERVAL(days => %s)""",
             (days,), fetch="one"
         )
 

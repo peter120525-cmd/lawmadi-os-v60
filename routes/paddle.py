@@ -246,7 +246,7 @@ def _create_db_session(user_id: str) -> str:
         )
         execute(
             """INSERT INTO sessions (session_token, user_id, expires_at)
-               VALUES (%s, %s, NOW() + INTERVAL '1 day' * %s)""",
+               VALUES (%s, %s, NOW() + MAKE_INTERVAL(days => %s))""",
             (token, user_id, int(expires_days)), fetch="none"
         )
     except Exception as e:

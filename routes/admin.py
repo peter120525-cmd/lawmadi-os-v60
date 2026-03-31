@@ -362,7 +362,7 @@ async def admin_paddle_revenue(
                        COUNT(*) as cnt,
                        COALESCE(SUM(amount), 0) as total_amount
                 FROM credit_ledger
-                WHERE created_at >= NOW() - %s * INTERVAL '1 day'
+                WHERE created_at >= NOW() - MAKE_INTERVAL(days => %s)
                 GROUP BY type
                 ORDER BY type
             """, (days,))
@@ -378,7 +378,7 @@ async def admin_paddle_revenue(
                        COUNT(*) as daily_txns
                 FROM credit_ledger
                 WHERE type = 'purchase'
-                  AND created_at >= NOW() - %s * INTERVAL '1 day'
+                  AND created_at >= NOW() - MAKE_INTERVAL(days => %s)
                 GROUP BY dt
                 ORDER BY dt DESC
                 LIMIT 60
