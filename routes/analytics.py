@@ -106,12 +106,11 @@ async def record_visitor(request: Request):
 
 
 @router.get("/api/visitor-stats")
-async def get_visitor_statistics(request: Request, authorization: str = Header(default="")):
+async def get_visitor_statistics(request: Request):
     """
-    Visitor statistics API (인증 필요).
+    Visitor statistics API (공개 — 프론트엔드 방문자 카운터용).
     - today_visitors, total_visitors, today_visits, total_visits
     """
-    _verify_internal_auth(authorization)
     try:
         db_client = _optional_import("connectors.db_client_v2")
         if db_client and hasattr(db_client, "get_visitor_stats"):
