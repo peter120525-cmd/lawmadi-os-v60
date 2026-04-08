@@ -1394,6 +1394,11 @@ def init_paddle_tables():
         conn = get_connection()
         if conn is None:
             raise RuntimeError("DB connection failed")
+        # 풀에서 dirty connection 반환 시 25P02 방지
+        try:
+            conn.rollback()
+        except Exception:
+            pass
         cur = conn.cursor()
 
         # Users table (central user identity)

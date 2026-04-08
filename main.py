@@ -473,7 +473,8 @@ def _cleanup_burst_log():
 import re as _re_mod
 _BOT_UA_PATTERNS = _re_mod.compile(
     r"python-requests|python-urllib|httpx|aiohttp|Go-http-client|"
-    r"java/|curl/|wget/|scrapy|node-fetch|undici|axios/",
+    r"java/|curl/|wget/|scrapy|node-fetch|undici|axios/|"
+    r"facebookexternalhit|Twitterbot|LinkedInBot|Slackbot|Discordbot",
     _re_mod.IGNORECASE,
 )
 _BOT_PROTECTED_PATHS = frozenset({"/ask", "/ask-stream", "/ask-expert"})

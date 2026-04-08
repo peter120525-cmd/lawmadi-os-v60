@@ -205,7 +205,7 @@ _CTM_ID_RE = re.compile(r'^ctm_[a-zA-Z0-9]+$')
 @limiter.limit("10/minute")
 async def admin_paddle_transactions(
     request: Request,
-    status: str = Query(default=None, regex="^(completed|billed|past_due|canceled|draft)$"),
+    status: str = Query(default=None, pattern="^(completed|billed|past_due|canceled|draft)$"),
     customer_id: str = Query(default=None),
     per_page: int = Query(default=25, ge=1, le=100),
     after: str = Query(default=None),
@@ -422,7 +422,7 @@ async def admin_paddle_revenue(
 async def admin_paddle_users(
     request: Request,
     email: str = Query(default=None),
-    plan: str = Query(default=None, regex="^(free|premium)$"),
+    plan: str = Query(default=None, pattern="^(free|premium)$"),
     limit: int = Query(default=50, ge=1, le=200),
     authorization: str = Header(default=""),
 ):
