@@ -301,7 +301,7 @@ def _is_blacklisted(ip: str) -> bool:
         return True
 
 def _cleanup_blacklist():
-    """만료된 블랙리스트/429 기록 정리."""
+    """만료된 블랙리스트/429 기록/burst 로그 정리."""
     now = time.time()
     with _blacklist_lock:
         expired = [h for h, exp in _ip_blacklist.items() if now >= exp]
@@ -311,6 +311,7 @@ def _cleanup_blacklist():
                  if not hits or now - max(hits) > _BLACKLIST_WINDOW]
         for h in stale:
             _ip_429_hits.pop(h, None)
+    _cleanup_burst_log()
 
 def _get_blacklist_entries() -> list:
     """Admin API용: 현재 블랙리스트 목록 반환."""
@@ -400,6 +401,74 @@ def _load_blacklist_from_db():
         logger.warning(f"[BLACKLIST] DB load failed: {e}")
 
 
+# =============================================================
+# 🤖 Coordinated Burst Detector — 다수 IP 동시 쿼리 봇 탐지
+# 짧은 시간에 여러 unique IP가 /ask를 호출하면 전체 차단
+# =============================================================
+_BURST_WINDOW = 600          # 10분 슬라이딩 윈도우
+_BURST_IP_THRESHOLD = 6      # 10분 내 6개 이상 unique IP → burst 판정
+_BURST_DURATION = 86400      # burst 감지 시 24시간 차단
+_burst_ask_log: List[tuple] = []  # [(timestamp, ip_hash), ...]
+_burst_lock = threading.Lock()
+
+
+def _record_burst_and_check(ip: str) -> bool:
+    """
+    /ask 요청 기록 + burst 판정.
+    burst 감지 시 윈도우 내 모든 IP를 블랙리스트에 추가하고 True 반환.
+    """
+    now = time.time()
+    ip_hash = _sha256(ip)
+
+    with _burst_lock:
+        cutoff = now - _BURST_WINDOW
+        _burst_ask_log[:] = [(t, h) for t, h in _burst_ask_log if t > cutoff]
+        _burst_ask_log.append((now, ip_hash))
+
+        unique_ips = set(h for _, h in _burst_ask_log)
+        if len(unique_ips) < _BURST_IP_THRESHOLD:
+            return False
+
+        # burst 감지 → 모든 IP 블랙리스트
+        expires = now + _BURST_DURATION
+        with _blacklist_lock:
+            for h in unique_ips:
+                _ip_blacklist[h] = expires
+        logger.warning(
+            f"[BURST-DETECT] Coordinated burst: "
+            f"{len(unique_ips)} unique IPs in {_BURST_WINDOW}s → all blacklisted 24h"
+        )
+        # DB 영구 저장
+        try:
+            from connectors.db_client import get_connection, release_connection
+            conn = get_connection()
+            try:
+                cur = conn.cursor()
+                for h in unique_ips:
+                    cur.execute(
+                        "INSERT INTO ip_blacklist (ip_hash, ip_addr, expires_at, reason) "
+                        "VALUES (%s, NULL, TO_TIMESTAMP(%s), %s) "
+                        "ON CONFLICT (ip_hash) DO UPDATE "
+                        "SET expires_at = EXCLUDED.expires_at, reason = EXCLUDED.reason",
+                        (h[:64], expires, f"burst:{len(unique_ips)}ips"),
+                    )
+                conn.commit()
+                cur.close()
+            finally:
+                release_connection(conn)
+        except Exception:
+            pass
+        _burst_ask_log.clear()
+        return True
+
+
+def _cleanup_burst_log():
+    """만료된 burst 기록 정리."""
+    cutoff = time.time() - _BURST_WINDOW
+    with _burst_lock:
+        _burst_ask_log[:] = [(t, h) for t, h in _burst_ask_log if t > cutoff]
+
+
 # 봇 UA 차단 패턴 — /ask 등 API 엔드포인트에만 적용
 import re as _re_mod
 _BOT_UA_PATTERNS = _re_mod.compile(
@@ -463,31 +532,37 @@ async def endpoint_log_middleware(request: Request, call_next):
 
 @app.middleware("http")
 async def blacklist_middleware(request: Request, call_next):
-    """블랙리스트 IP + 봇 UA 조기 차단."""
+    """블랙리스트 IP + 봇 UA + 동시 burst 조기 차단."""
     ip = _get_client_ip_fast(request)
     if _is_blacklisted(ip):
         return JSONResponse(
             status_code=403,
             content={"error": "Access denied."}
         )
-    # 봇 UA 차단: /ask 계열 엔드포인트만 적용 (유효한 Admin 키 보유 시에만 우회)
+    # /ask 계열 엔드포인트 보호: 봇 UA 차단 + burst 감지
     if request.url.path in _BOT_PROTECTED_PATHS:
-        ua = request.headers.get("user-agent", "")
-        if _BOT_UA_PATTERNS.search(ua):
-            # Admin 키가 유효한 경우에만 봇 차단 우회 허용
-            _admin_key = os.getenv("MCP_API_KEY", "").strip() or os.getenv("INTERNAL_API_KEY", "").strip()
-            is_valid_admin = False
-            if _admin_key and len(_admin_key) >= 32:
-                req_key = (request.headers.get("x-admin-key", "").strip()
-                           or request.headers.get("authorization", "").removeprefix("Bearer ").strip())
-                if req_key and hmac.compare_digest(req_key, _admin_key):
-                    is_valid_admin = True
-            if not is_valid_admin:
-                _record_429(ip)  # 봇 시도도 429 카운터에 반영 → 자동 블랙리스트
+        _admin_key = os.getenv("MCP_API_KEY", "").strip() or os.getenv("INTERNAL_API_KEY", "").strip()
+        is_valid_admin = False
+        if _admin_key and len(_admin_key) >= 32:
+            req_key = (request.headers.get("x-admin-key", "").strip()
+                       or request.headers.get("authorization", "").removeprefix("Bearer ").strip())
+            if req_key and hmac.compare_digest(req_key, _admin_key):
+                is_valid_admin = True
+        if not is_valid_admin:
+            # 봇 UA 차단
+            ua = request.headers.get("user-agent", "")
+            if _BOT_UA_PATTERNS.search(ua):
+                _record_429(ip)
                 logger.warning(f"[BOT-BLOCK] UA blocked: {ua[:80]} | IP: {_sha256(ip)[:12]}")
                 return JSONResponse(
                     status_code=403,
                     content={"error": "Automated requests are not allowed."}
+                )
+            # Coordinated burst 감지: 10분 내 6+ unique IP → 전체 차단
+            if _record_burst_and_check(ip):
+                return JSONResponse(
+                    status_code=403,
+                    content={"error": "Access denied."}
                 )
     response = await call_next(request)
     if response.status_code == 429:
