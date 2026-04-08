@@ -82,6 +82,50 @@ _METRICS_LOCK = threading.Lock()
 _LEADER_REGISTRY: Dict[str, Any] = {}
 _limiter = None
 
+# ---------------------------------------------------------------------------
+# Runtime response dedup cache (동일 쿼리 반복 호출 방지)
+# ---------------------------------------------------------------------------
+_DEDUP_CACHE: Dict[str, Dict[str, Any]] = {}  # hash → {response_dict, ts}
+_DEDUP_CACHE_LOCK = threading.Lock()
+_DEDUP_TTL_SEC = 600  # 10분
+_DEDUP_MAX_ENTRIES = 200
+
+
+def _dedup_cache_key(query: str, mode: str = "general") -> str:
+    """query + mode 기반 캐시 키 생성"""
+    return hashlib.sha256(f"{query.strip().lower()}::{mode}".encode()).hexdigest()[:24]
+
+
+def _dedup_cache_get(query: str, mode: str = "general") -> Optional[Dict]:
+    """캐시 HIT 시 응답 반환, MISS 시 None"""
+    key = _dedup_cache_key(query, mode)
+    with _DEDUP_CACHE_LOCK:
+        entry = _DEDUP_CACHE.get(key)
+        if entry and (time.time() - entry["ts"]) < _DEDUP_TTL_SEC:
+            return entry["data"]
+        if entry:
+            del _DEDUP_CACHE[key]
+    return None
+
+
+def _dedup_cache_put(query: str, mode: str, data: Dict) -> None:
+    """응답을 캐시에 저장"""
+    key = _dedup_cache_key(query, mode)
+    with _DEDUP_CACHE_LOCK:
+        # 오래된 엔트리 정리
+        if len(_DEDUP_CACHE) >= _DEDUP_MAX_ENTRIES:
+            now = time.time()
+            expired = [k for k, v in _DEDUP_CACHE.items() if now - v["ts"] > _DEDUP_TTL_SEC]
+            for k in expired:
+                del _DEDUP_CACHE[k]
+            # 여전히 초과 시 가장 오래된 절반 제거
+            if len(_DEDUP_CACHE) >= _DEDUP_MAX_ENTRIES:
+                sorted_keys = sorted(_DEDUP_CACHE, key=lambda k: _DEDUP_CACHE[k]["ts"])
+                for k in sorted_keys[:len(sorted_keys) // 2]:
+                    del _DEDUP_CACHE[k]
+        _DEDUP_CACHE[key] = {"data": data, "ts": time.time()}
+
+
 # Function references injected from main.py
 _check_rate_limit_fn: Optional[Callable] = None
 _rate_limit_response_fn: Optional[Callable] = None
@@ -373,6 +417,18 @@ async def ask(request: Request, body: AskRequest = Body(...)):
                 "ssot_sources": cached.get("ssot_sources", []),
                 "meta": cached.get("meta", {}),
             }
+
+        # -------------------------------------------------
+        # 0.4) Runtime dedup 캐시 확인 (10분 TTL)
+        # -------------------------------------------------
+        _dedup_hit = _dedup_cache_get(query, "general")
+        if _dedup_hit:
+            latency = int((time.time() - start_time) * 1000)
+            logger.info(f"⚡ [Dedup HIT] leader={_dedup_hit.get('leader', '?')} latency={latency}ms")
+            _audit_fn("ask_dedup_hit", {"query": query, "leader": _dedup_hit.get("leader", "?"), "status": "DEDUP_HIT", "latency_ms": latency})
+            record_request("/ask", latency, leader=_dedup_hit.get("leader", "?"), is_cache_hit=True)
+            _dedup_result = {**_dedup_hit, "trace_id": trace, "latency_ms": latency}
+            return _dedup_result
 
         # -------------------------------------------------
         # 0.5) Gemini 키 점검
@@ -934,6 +990,10 @@ async def ask(request: Request, body: AskRequest = Body(...)):
                 _release_user_lock_fn(request)
             except Exception:
                 pass
+
+        # Runtime dedup 캐시 저장 (성공 응답만)
+        if _response_status == "SUCCESS":
+            _dedup_cache_put(query, "general", _ask_result)
 
         return _ask_result
 
@@ -1804,6 +1864,14 @@ async def ask_expert(request: Request, body: AskExpertRequest = Body(...)):
                 blocked_msg = "🚫 Blocked by security policy." if lang == "en" else "🚫 보안 정책에 의해 차단되었습니다."
                 return {"trace_id": trace, "response": blocked_msg, "leader": "GUARD", "status": "BLOCKED"}
 
+        # Runtime dedup 캐시 확인 (expert)
+        _dedup_hit = _dedup_cache_get(query, "expert")
+        if _dedup_hit:
+            latency = int((time.time() - start) * 1000)
+            logger.info(f"⚡ [Dedup HIT/Expert] leader={_dedup_hit.get('leader', {}).get('name', '?') if isinstance(_dedup_hit.get('leader'), dict) else _dedup_hit.get('leader', '?')} latency={latency}ms")
+            _dedup_result = {**_dedup_hit, "trace_id": trace, "latency_ms": latency}
+            return _dedup_result
+
         # 질문 분석 (Stage 1)
         analysis = await _gemini_analyze_query(query)
         if not analysis:
@@ -1884,7 +1952,7 @@ async def ask_expert(request: Request, body: AskExpertRequest = Body(...)):
         _expert_disclaimer_en = "This expert analysis is AI-generated legal information, not professional legal advice. Consult a qualified attorney for important legal decisions."
         _expert_disclaimer = _expert_disclaimer_en if lang == "en" else _expert_disclaimer_ko
 
-        return {
+        _expert_result = {
             "trace_id": trace,
             "response": final_text,
             "leader": {"name": leader_name, "specialty": leader_specialty},
@@ -1893,6 +1961,12 @@ async def ask_expert(request: Request, body: AskExpertRequest = Body(...)):
             "latency_ms": latency_ms,
             "disclaimer": _expert_disclaimer,
         }
+
+        # Runtime dedup 캐시 저장 (성공 응답만)
+        if _response_status == "SUCCESS":
+            _dedup_cache_put(query, "expert", _expert_result)
+
+        return _expert_result
 
     except Exception as e:
         ref = datetime.datetime.now().strftime("%H%M%S")

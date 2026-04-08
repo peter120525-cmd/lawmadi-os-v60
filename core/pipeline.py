@@ -2316,7 +2316,7 @@ def _build_compose_params(
         if _en:
             enhance = (
                 "\n\n[Structure] Key Issues → Relevant Statutes → Case Law Review → Practical Procedures → Issue-by-Issue Analysis → Conclusion & Recommendations → Legal Basis"
-                "\nHighlight key issues, statute names, and case numbers in **bold**. 4,000-5,000 characters."
+                "\nHighlight key issues, statute names, and case numbers in **bold**. 3,500-4,500 characters."
                 "\n\n[CRITICAL — Statute Citation Rule]"
                 "\nEvery legal claim MUST cite the specific article number. Use format: 'Law Name (한글명) Article N'."
                 "\nExample: 'Labor Standards Act (근로기준법) Article 23', 'Civil Act (민법) Article 750'."
@@ -2324,16 +2324,18 @@ def _build_compose_params(
                 f"\n\n[Required] End with a '## Legal Basis' section listing all cited statutes as '• Statute Name (한글명) Article N: Summary'. At least 5 entries."
                 f"\n\n[Required] Only cite case law confirmed via SSOT cache or DRF tools. {_case_law_note_en}"
                 f"\n{_no_case_en}"
+                "\n\n[Required — Disclaimer] You MUST end the response with:\n---\n※ This response is for informational purposes only and does not constitute legal advice. Please verify with [Korea Legislation Research Institute](https://law.go.kr)."
             )
         else:
             enhance = (
                 "\n\n[구조 지시] 사안의 쟁점 → 관련 법령 → 판례 검토 → 실무 대응 절차 → 쟁점별 검토 의견 → 결론 및 권고 → 법률 근거"
-                "\n핵심 쟁점, 법률명, 판례번호는 **굵은 글씨**로 표시. 4,000~5,000자."
+                "\n핵심 쟁점, 법률명, 판례번호는 **굵은 글씨**로 표시. 3,500~4,500자."
                 "\n\n[필수] 답변의 마지막에 반드시 '## 법률 근거' 섹션을 작성하고, 답변에서 인용한 모든 법령명과 조문번호를 '• 법령명 제N조 제N항: 내용 요약' 형식으로 최소 5개 이상 나열하세요."
                 f"\n\n[필수] SSOT 캐시 또는 DRF 도구에서 확인된 판례만 인용하세요. {_case_law_note_ko}"
                 f"\n{_no_case_ko}"
+                "\n\n[필수 — 면책 고지] 답변의 가장 마지막에 반드시 아래 문구를 포함하세요:\n---\n※ 이 답변은 참고용이며 법률 자문이 아닙니다. 정확한 내용은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
             )
-        max_tokens = 5000
+        max_tokens = 8000
     else:
         if _en:
             enhance = (
@@ -2346,6 +2348,7 @@ def _build_compose_params(
                 f"\n\n[Important] In the 'Why?' section, only cite case law confirmed via SSOT cache or DRF tools. {_case_law_note_en}"
                 f" {_no_case_en}"
                 "\n\n[Required] End with a '## Legal Basis' section listing up to 5 directly applicable statutes as '• Statute Name (한글명) Article N: Summary'. Do not exceed 5. Do not include unrelated statutes."
+                "\n\n[Required — Disclaimer] You MUST end the response with:\n---\n※ This response is for informational purposes only and does not constitute legal advice. Please verify with [Korea Legislation Research Institute](https://law.go.kr)."
             )
         else:
             enhance = (
@@ -2355,6 +2358,7 @@ def _build_compose_params(
                 f" {_case_law_note_ko}"
                 f" {_no_case_ko}"
                 "\n\n[필수] 답변의 마지막에 '## 법률 근거' 섹션을 작성하고, 이 사건에 직접 적용되는 핵심 법조문을 최대 5개까지만 '• 법령명 제N조: 내용 요약' 형식으로 나열하세요. 5개를 초과하지 마세요. 사건과 무관한 법률은 절대 포함하지 마세요."
+                "\n\n[필수 — 면책 고지] 답변의 가장 마지막에 반드시 아래 문구를 포함하세요:\n---\n※ 이 답변은 참고용이며 법률 자문이 아닙니다. 정확한 내용은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
             )
         max_tokens = 4500
 
