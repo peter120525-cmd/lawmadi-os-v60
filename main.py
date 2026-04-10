@@ -48,6 +48,7 @@ from google.genai import types as genai_types
 from fastapi import FastAPI, Request, Header, HTTPException, File, UploadFile, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
+from starlette.background import BackgroundTask
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from slowapi.errors import RateLimitExceeded
@@ -489,44 +490,74 @@ _ENDPOINT_LOG_SKIP_EXTENSIONS = (
 
 @app.middleware("http")
 async def endpoint_log_middleware(request: Request, call_next):
-    """모든 API 요청을 endpoint_logs 테이블에 비동기 기록."""
+    """모든 API 요청을 endpoint_logs 테이블에 비동기 기록.
+
+    StreamingResponse의 경우 call_next가 body 완료 전에 반환되므로,
+    BackgroundTask(response.body_iterator 소진 후 실행)로 정확한 latency 측정.
+    """
     path = request.url.path
     # 정적 파일·헬스체크 제외
     if path.startswith(_ENDPOINT_LOG_SKIP_PREFIXES) or path.endswith(_ENDPOINT_LOG_SKIP_EXTENSIONS):
         return await call_next(request)
 
-    start = time.time()
-    response = await call_next(request)
-    latency_ms = int((time.time() - start) * 1000)
-
+    # 요청 메타 미리 캡처 (response 반환 후 request가 정리될 수 있으므로)
     try:
         ip = _get_client_ip_fast(request)
         ip_hash = _sha256(ip)[:12] if ip else ""
         ua = (request.headers.get("user-agent") or "")[:200]
         visitor_id = (request.headers.get("x-device-fp") or "")[:64]
-        user_email = ""
         qp = str(request.url.query)[:1000] if request.url.query else ""
-
-        _db = None
-        try:
-            from connectors import db_client_v2 as _db
-        except Exception:
-            pass
-        if _db and hasattr(_db, "save_endpoint_log"):
-            loop = asyncio.get_event_loop()
-            loop.run_in_executor(None, lambda: _db.save_endpoint_log(
-                method=request.method,
-                path=path[:500],
-                status_code=response.status_code,
-                latency_ms=latency_ms,
-                ip_hash=ip_hash,
-                user_agent=ua,
-                visitor_id=visitor_id,
-                user_email=user_email,
-                query_params=qp,
-            ))
+        method = request.method
     except Exception:
-        pass  # fail-soft: 로그 실패가 요청에 영향 없음
+        ip_hash = ""
+        ua = ""
+        visitor_id = ""
+        qp = ""
+        method = "GET"
+
+    start = time.time()
+    response = await call_next(request)
+
+    def _log_after_response(_start=start, _method=method, _path=path,
+                            _ip_hash=ip_hash, _ua=ua, _visitor_id=visitor_id,
+                            _qp=qp, _status=response.status_code):
+        try:
+            latency_ms = int((time.time() - _start) * 1000)
+            from connectors import db_client_v2 as _db
+            if hasattr(_db, "save_endpoint_log"):
+                _db.save_endpoint_log(
+                    method=_method,
+                    path=_path[:500],
+                    status_code=_status,
+                    latency_ms=latency_ms,
+                    ip_hash=_ip_hash,
+                    user_agent=_ua,
+                    visitor_id=_visitor_id,
+                    user_email="",
+                    query_params=_qp,
+                )
+        except Exception:
+            pass  # fail-soft
+
+    # 기존 background 태스크와 체이닝 (덮어쓰지 않도록)
+    _existing_bg = getattr(response, "background", None)
+    if _existing_bg is None:
+        response.background = BackgroundTask(_log_after_response)
+    else:
+        # 이미 background task 있으면 wrapping
+        async def _combined():
+            try:
+                if callable(getattr(_existing_bg, "__call__", None)):
+                    res = _existing_bg()
+                    if asyncio.iscoroutine(res):
+                        await res
+            except Exception:
+                pass
+            try:
+                _log_after_response()
+            except Exception:
+                pass
+        response.background = BackgroundTask(_combined)
 
     return response
 

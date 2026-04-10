@@ -1602,11 +1602,13 @@ async def ask_stream(request: Request, body: AskStreamRequest = Body(...)):
                     try:
                         _db = _optional_import_fn("connectors.db_client_v2")
                         if _db and hasattr(_db, "save_chat_history"):
+                            _timeout_category = _db.classify_query_category(query)
                             _loop = asyncio.get_event_loop()
                             await _loop.run_in_executor(None, lambda: _db.save_chat_history(
                                 user_query=query, ai_response="[TIMEOUT]", leader=leader_name,
                                 status="timeout", latency_ms=_timeout_latency, visitor_id=visitor_id,
-                                swarm_mode=swarm_mode, user_email=_resolve_user_email(request),
+                                swarm_mode=swarm_mode, query_category=_timeout_category,
+                                user_email=_resolve_user_email(request),
                                 query_type="leader_chat" if req_current_leader else "general",
                                 is_admin=getattr(request.state, "is_admin", False),
                             ))
@@ -1630,11 +1632,13 @@ async def ask_stream(request: Request, body: AskStreamRequest = Body(...)):
                     try:
                         _db = _optional_import_fn("connectors.db_client_v2")
                         if _db and hasattr(_db, "save_chat_history"):
+                            _fc_category = _db.classify_query_category(query)
                             _loop = asyncio.get_event_loop()
                             await _loop.run_in_executor(None, lambda: _db.save_chat_history(
                                 user_query=query, ai_response="[FAIL_CLOSED]", leader=leader_name,
                                 status="FAIL_CLOSED", latency_ms=latency_ms, visitor_id=visitor_id,
-                                swarm_mode=swarm_mode, user_email=_resolve_user_email(request),
+                                swarm_mode=swarm_mode, query_category=_fc_category,
+                                user_email=_resolve_user_email(request),
                                 query_type="leader_chat" if req_current_leader else "general",
                                 is_admin=getattr(request.state, "is_admin", False),
                             ))
@@ -1746,6 +1750,8 @@ async def ask_stream(request: Request, body: AskStreamRequest = Body(...)):
                                 latency_ms=latency_ms,
                                 visitor_id=visitor_id,
                                 swarm_mode=swarm_mode,
+                                leaders_used=None,
+                                query_category=query_category,
                                 user_email=_resolve_user_email(request),
                                 query_type="leader_chat" if req_current_leader else "general",
                                 is_admin=getattr(request.state, "is_admin", False),

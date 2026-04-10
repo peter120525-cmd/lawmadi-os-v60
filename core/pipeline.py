@@ -2194,6 +2194,27 @@ def _apply_fail_closed(final_text: str, drf_verification: VerificationResult) ->
     return final_text
 
 
+def _merge_disclaimer(final_text: str, specific_note_ko: str, specific_note_en: str, lang: str = "") -> str:
+    """
+    프롬프트로 이미 주입된 면책 고지(※ 이 답변은 참고용이며...)와 중복되지 않도록 병합.
+    - 프롬프트 고지가 존재하면: 고지 앞에 specific_note 를 프렌드 (단일 고지로 통합)
+    - 프롬프트 고지가 없으면: final_text 끝에 '--- specific_note' 블록 부착
+    """
+    is_en = lang == "en"
+    prompt_marker = "※ This response is for informational purposes only" if is_en else "※ 이 답변은 참고용이며"
+    specific_note = specific_note_en if is_en else specific_note_ko
+
+    if prompt_marker in final_text:
+        if specific_note.strip() in final_text:
+            return final_text  # 이미 병합됨
+        return final_text.replace(prompt_marker, specific_note.rstrip() + " " + prompt_marker, 1)
+
+    fallback_tail_ko = "정확한 내용은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
+    fallback_tail_en = "Please confirm with the [Korean Law Information Center](https://law.go.kr)."
+    tail = fallback_tail_en if is_en else fallback_tail_ko
+    return final_text.rstrip() + "\n\n---\n" + specific_note.rstrip() + " " + tail
+
+
 # =============================================================
 # Gemini Compose: 프롬프트 파라미터 빌더 + Fallback + Streaming
 # =============================================================
@@ -2316,7 +2337,7 @@ def _build_compose_params(
         if _en:
             enhance = (
                 "\n\n[Structure] Key Issues → Relevant Statutes → Case Law Review → Practical Procedures → Issue-by-Issue Analysis → Conclusion & Recommendations → Legal Basis"
-                "\nHighlight key issues, statute names, and case numbers in **bold**. 3,500-4,500 characters."
+                "\nHighlight key issues, statute names, and case numbers in **bold**. MUST be 3,500-4,500 characters (minimum 3,500)."
                 "\n\n[CRITICAL — Statute Citation Rule]"
                 "\nEvery legal claim MUST cite the specific article number. Use format: 'Law Name (한글명) Article N'."
                 "\nExample: 'Labor Standards Act (근로기준법) Article 23', 'Civil Act (민법) Article 750'."
@@ -2329,7 +2350,7 @@ def _build_compose_params(
         else:
             enhance = (
                 "\n\n[구조 지시] 사안의 쟁점 → 관련 법령 → 판례 검토 → 실무 대응 절차 → 쟁점별 검토 의견 → 결론 및 권고 → 법률 근거"
-                "\n핵심 쟁점, 법률명, 판례번호는 **굵은 글씨**로 표시. 3,500~4,500자."
+                "\n핵심 쟁점, 법률명, 판례번호는 **굵은 글씨**로 표시. 반드시 3,500~4,500자 (최소 3,500자 이상 작성)."
                 "\n\n[필수] 답변의 마지막에 반드시 '## 법률 근거' 섹션을 작성하고, 답변에서 인용한 모든 법령명과 조문번호를 '• 법령명 제N조 제N항: 내용 요약' 형식으로 최소 5개 이상 나열하세요."
                 f"\n\n[필수] SSOT 캐시 또는 DRF 도구에서 확인된 판례만 인용하세요. {_case_law_note_ko}"
                 f"\n{_no_case_ko}"
@@ -2340,7 +2361,7 @@ def _build_compose_params(
         if _en:
             enhance = (
                 "\n\n[Structure] In Conclusion → Why? (with relevant case law) → Actions You Can Take Now → If Still Unresolved → Free Legal Aid → Top 3 Actions Right Now → Legal Basis"
-                "\nKeep sentences concise. 2,500-3,500 characters."
+                "\nKeep sentences concise. MUST be 2,800-3,500 characters (minimum 2,800). Responses under 2,800 characters are incomplete."
                 "\n\n[CRITICAL — Statute Citation Rule]"
                 "\nEvery legal claim MUST cite the specific article number. Use format: 'Law Name (한글명) Article N'."
                 "\nExample: 'Housing Lease Protection Act (주택임대차보호법) Article 3-2', 'Civil Act (민법) Article 750'."
@@ -2353,14 +2374,15 @@ def _build_compose_params(
         else:
             enhance = (
                 "\n\n[구조 지시] 결론부터 말씀드리면 → 왜 그런가요?(관련 판례 포함) → 지금 바로 하실 수 있는 일 → 그래도 해결이 안 되면 → 혼자 하기 어려우시면 → 지금 해야 할 행동 3가지 → 법률 근거"
-                "\n한 문장은 100~200자 이내. 2,500~3,500자."
+                "\n한 문장은 100~200자 이내. 반드시 2,800~3,500자 (최소 2,800자 이상 작성). 2,800자 미만은 불완전한 답변으로 간주됩니다."
                 f"\n\n[중요] '왜 그런가요?' 섹션에서 SSOT 캐시 또는 DRF 도구에서 확인된 판례만 인용하세요."
                 f" {_case_law_note_ko}"
                 f" {_no_case_ko}"
                 "\n\n[필수] 답변의 마지막에 '## 법률 근거' 섹션을 작성하고, 이 사건에 직접 적용되는 핵심 법조문을 최대 5개까지만 '• 법령명 제N조: 내용 요약' 형식으로 나열하세요. 5개를 초과하지 마세요. 사건과 무관한 법률은 절대 포함하지 마세요."
                 "\n\n[필수 — 면책 고지] 답변의 가장 마지막에 반드시 아래 문구를 포함하세요:\n---\n※ 이 답변은 참고용이며 법률 자문이 아닙니다. 정확한 내용은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
             )
-        max_tokens = 4500
+        # 4500 tokens ≈ 2,400 Korean chars — 2,800~3,500 목표 달성 위해 6000으로 상향 (P32)
+        max_tokens = 6000
 
     # 리더 인격
     leader_id = analysis.get("leader_id", "")
@@ -2892,19 +2914,12 @@ async def _run_legal_pipeline(
                     logger.warning(
                         f"[CheckGrounding] 낮은 근거 점수({support_score:.2f}) — DRF 통과했으나 근거 부족 가능"
                     )
-                    if lang == "en":
-                        grounding_disclaimer = (
-                            "\n\n---\n"
-                            "※ Some parts of this response may require additional verification. "
-                            "Please confirm with the [Korean Law Information Center](https://law.go.kr)."
-                        )
-                    else:
-                        grounding_disclaimer = (
-                            "\n\n---\n"
-                            "※ 이 답변의 일부 내용은 추가 확인이 필요할 수 있습니다. "
-                            "정확한 내용은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
-                        )
-                    final_text = final_text.rstrip() + grounding_disclaimer
+                    final_text = _merge_disclaimer(
+                        final_text,
+                        specific_note_ko="※ 이 답변의 일부 내용은 추가 확인이 필요할 수 있습니다.",
+                        specific_note_en="※ Some parts of this response may require additional verification.",
+                        lang=lang,
+                    )
         except asyncio.TimeoutError:
             logger.warning("[CheckGrounding] 5초 타임아웃 — task 취소")
             grounding_task.cancel()
@@ -2927,42 +2942,30 @@ async def _run_legal_pipeline(
     if fail_closed_result == FAIL_CLOSED_RESPONSE:
         # DRF API 타임아웃/실패 → 검증 자체 불가 → 면책 문구 부착 후 반환
         if drf_verification and drf_verification.drf_failed:
-            if lang == "en":
-                disclaimer = (
-                    "\n\n---\n"
-                    "※ The legal provisions in this response could not be automatically verified due to verification server delays. "
-                    "Please confirm with the [Korean Law Information Center](https://law.go.kr)."
-                )
-            else:
-                disclaimer = (
-                    "\n\n---\n"
-                    "※ 이 답변의 법률 조문은 실시간 검증 서버 응답 지연으로 자동 검증이 완료되지 않았습니다. "
-                    "정확한 조문은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
-                )
             logger.warning("[FAIL_CLOSED] DRF 실패/타임아웃 → 면책 문구 부착 후 반환")
-            return final_text + disclaimer, drf_verification
+            merged = _merge_disclaimer(
+                final_text,
+                specific_note_ko="※ 이 답변의 법률 조문은 실시간 검증 서버 응답 지연으로 자동 검증이 완료되지 않았습니다.",
+                specific_note_en="※ The legal provisions in this response could not be automatically verified due to verification server delays.",
+                lang=lang,
+            )
+            return merged, drf_verification
 
         # ── 원본에서 미검증 문장 제거 시도 (재생성보다 먼저) ──
         stripped_orig = _strip_unverified_sentences(final_text, drf_verification)
         stripped_orig = stripped_orig.strip()
         if len(stripped_orig) >= 300:
-            if lang == "en":
-                disclaimer = (
-                    "\n\n---\n"
-                    "※ Some legal provisions in this response were removed as they could not be verified. "
-                    "Please confirm with the [Korean Law Information Center](https://law.go.kr)."
-                )
-            else:
-                disclaimer = (
-                    "\n\n---\n"
-                    "※ 이 답변의 일부 법률 조문은 실시간 검증에서 확인되지 않아 제거되었습니다. "
-                    "정확한 조문은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
-                )
             logger.info(
                 f"[FAIL_CLOSED 복구] 원본에서 미검증 문장 제거 후 반환 "
                 f"({len(stripped_orig)}자, 제거 {len(drf_verification.unverified_refs)}건)"
             )
-            return stripped_orig + disclaimer, drf_verification
+            merged = _merge_disclaimer(
+                stripped_orig,
+                specific_note_ko="※ 이 답변의 일부 법률 조문은 실시간 검증에서 확인되지 않아 제거되었습니다.",
+                specific_note_en="※ Some legal provisions in this response were removed as they could not be verified.",
+                lang=lang,
+            )
+            return merged, drf_verification
 
         # ── 원본 제거 후 텍스트 부족 → 1회 재생성 + 재검증 ──
         logger.warning("[FAIL_CLOSED 재시도] 원본 제거 부족 → 1회 재생성 시도")
@@ -2999,23 +3002,17 @@ async def _run_legal_pipeline(
                     stripped = _strip_unverified_sentences(retry_text, retry_drf)
                     stripped = stripped.strip()
                     if len(stripped) >= 300:
-                        if lang == "en":
-                            disclaimer = (
-                                "\n\n---\n"
-                                "※ Some legal provisions in this response were removed as they could not be verified. "
-                                "Please confirm with the [Korean Law Information Center](https://law.go.kr)."
-                            )
-                        else:
-                            disclaimer = (
-                                "\n\n---\n"
-                                "※ 이 답변의 일부 법률 조문은 실시간 검증에서 확인되지 않아 제거되었습니다. "
-                                "정확한 조문은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
-                            )
                         logger.info(
                             f"[FAIL_CLOSED 재시도] 미검증 문장 제거 후 반환 "
                             f"({len(stripped)}자, 제거 {len(retry_drf.unverified_refs)}건)"
                         )
-                        return stripped + disclaimer, retry_drf
+                        merged = _merge_disclaimer(
+                            stripped,
+                            specific_note_ko="※ 이 답변의 일부 법률 조문은 실시간 검증에서 확인되지 않아 제거되었습니다.",
+                            specific_note_en="※ Some legal provisions in this response were removed as they could not be verified.",
+                            lang=lang,
+                        )
+                        return merged, retry_drf
             else:
                 logger.warning("[FAIL_CLOSED 재시도] 재생성 실패 (빈 응답)")
         except asyncio.TimeoutError:
@@ -3480,20 +3477,22 @@ async def run_legal_pipeline_stream(
     if fail_closed_result == FAIL_CLOSED_RESPONSE:
         if drf_verification and drf_verification.drf_failed:
             # DRF 타임아웃 → 면책 문구만 부착
-            if lang == "en":
-                disclaimer = "\n\n---\n※ The legal provisions could not be automatically verified. Please confirm with the [Korean Law Information Center](https://law.go.kr)."
-            else:
-                disclaimer = "\n\n---\n※ 이 답변의 법률 조문은 실시간 검증 서버 응답 지연으로 자동 검증이 완료되지 않았습니다. 정확한 조문은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
-            final_text = final_text + disclaimer
+            final_text = _merge_disclaimer(
+                final_text,
+                specific_note_ko="※ 이 답변의 법률 조문은 실시간 검증 서버 응답 지연으로 자동 검증이 완료되지 않았습니다.",
+                specific_note_en="※ The legal provisions could not be automatically verified.",
+                lang=lang,
+            )
         else:
             # 미검증 문장 제거 시도
             stripped = _strip_unverified_sentences(final_text, drf_verification).strip()
             if len(stripped) >= 300:
-                if lang == "en":
-                    disclaimer = "\n\n---\n※ Some legal provisions were removed as they could not be verified. Please confirm with the [Korean Law Information Center](https://law.go.kr)."
-                else:
-                    disclaimer = "\n\n---\n※ 이 답변의 일부 법률 조문은 실시간 검증에서 확인되지 않아 제거되었습니다. 정확한 조문은 [국가법령정보센터](https://law.go.kr)에서 확인해 주세요."
-                final_text = stripped + disclaimer
+                final_text = _merge_disclaimer(
+                    stripped,
+                    specific_note_ko="※ 이 답변의 일부 법률 조문은 실시간 검증에서 확인되지 않아 제거되었습니다.",
+                    specific_note_en="※ Some legal provisions were removed as they could not be verified.",
+                    lang=lang,
+                )
             else:
                 # 재생성
                 logger.warning("[StreamPipe] FAIL_CLOSED 재시도")
