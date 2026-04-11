@@ -1,12 +1,12 @@
 # Lawmadi OS — LLM System Specification
-> Version: v60.0.0 | Last Updated: 2026-03-11 | Format: llms.txt/1.0
+> Version: v60.0.1 | Last Updated: 2026-03-31 | Format: llms.txt/1.0
 
 ---
 
 ## SYSTEM IDENTITY
 
 - **Name**: Lawmadi OS (로마디 OS)
-- **Version**: v60.0.0
+- **Version**: v60.0.1
 - **Type**: Korean Legal Decision Operating System
 - **Description**: 대한민국 법령·판례·행정규칙 기반 법률 자문 멀티에이전트 AI 운영체제.
   60개 도메인 특화 라우팅(키워드 + Gemini 분류)으로 사용자 질의에 대한 법적 분석 및 경로를 제공한다.
@@ -60,7 +60,7 @@ L7 RENDERER    → Legal vs Reference Output Segregation (Section Divider, Discl
 |-----------|-----------|
 | Backend Framework | FastAPI 0.128.0 + Uvicorn 0.40.0 |
 | Runtime | Python 3.10+ |
-| Primary LLM | Google Gemini 2.5 Flash (`gemini-2.5-flash`) — single model, 429 exponential backoff |
+| Primary LLM | Google Gemini 3 Flash (`gemini-3-flash-preview`) — single model, 429 exponential backoff |
 | LawmadiLM | v4.0 (Qwen3-1.7B QLoRA) — currently **disabled** (`ENABLE_LAWMADILM=false`) |
 | RAG Engine | Vertex AI Search (lawmadi-legal-cache, ~14,601 docs) + law_cache keyword matching |
 | NLU Intent Detection | Regex-based Korean/English legal intent patterns + keyword + Gemini 3-layer routing |
@@ -70,6 +70,7 @@ L7 RENDERER    → Legal vs Reference Output Segregation (Section Divider, Discl
 | Rate Limiting | slowapi 0.1.9 per-endpoint rate limits |
 | Async HTTP | httpx (LawmadiLM API async calls) |
 | MCP Server | fastapi-mcp 0.2+ (Model Context Protocol) |
+| Endpoint Logging | HTTP middleware → `endpoint_logs` table (fire-and-forget, non-blocking) |
 | Cloud Platform | GCP Cloud Run (asia-northeast3) |
 | Cloud Resources | 1 vCPU / 2 GiB RAM / min 1 / max 5 instances / concurrency 15 / timeout 300s |
 | Frontend | Firebase Hosting (Static HTML/CSS/JS — Korean + English) |
@@ -78,16 +79,16 @@ L7 RENDERER    → Legal vs Reference Output Segregation (Section Divider, Discl
 | Mobile Header | Login + Lang toggle left, Favorites + Dark mode right (balanced layout) |
 | PWA Icons | Custom PNG icons: 192x192 + 512x512 (resized from 1024x1024 source) |
 | Database | Cloud SQL (PostgreSQL) via cloud-sql-python-connector |
-| Secret Management | GCP Secret Manager (18 secrets) |
+| Secret Management | GCP Secret Manager (20 secrets) |
 | CI/CD | GitHub Actions (5-job pipeline: Test → Staging → Backend → Frontend → Notify) |
 
 ### Runtime Constants
 
 ```
-OS_VERSION          = "v60.0.0"
+OS_VERSION          = "v60.0.1"
 SOFT_MODE           = true (default)
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
-MODEL_CHAIN         = ["gemini-2.5-flash"] (single model, 429 exponential backoff 2→4→8s)
+DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview"
+MODEL_CHAIN         = ["gemini-3-flash-preview"] (single model, 429 exponential backoff 2→4→8s)
 ENABLE_LAWMADILM    = false (disabled)
 USE_VERTEX_AI       = true
 USE_VERTEX_SEARCH   = true
@@ -237,7 +238,7 @@ Every `/ask` and `/ask-stream` request flows through this pipeline:
 
 ```
 Stage 0+1: CLASSIFICATION + RAG (PARALLEL EXECUTION)
-  ├─ [Stage 0] Question Classification (Gemini 2.5 Flash)
+  ├─ [Stage 0] Question Classification (Gemini 3 Flash)
   │     NLU intent detection (regex patterns for Korean/English legal contexts)
   │     + Keyword matching → leader candidate selection
   │     + Gemini Flash analysis → tier (1-3), leader (L01-L60), specialty
@@ -256,7 +257,7 @@ Stage 2: LAWMADILM ENHANCED ANSWER (CURRENTLY DISABLED)
   └─ Current flow: Stage 0+1 → Stage 3 (Gemini) → Stage 4 (DRF)
 
 Stage 3: GEMINI ANSWER GENERATION (PRIMARY GENERATOR)
-  ├─ Gemini 2.5 Flash with full context:
+  ├─ Gemini 3 Flash with full context:
   │     System instruction + leader persona + RAG context + 5-step framework
   │     5-step: Acknowledge → Diagnose → Action Roadmap → Safety Net → Closing
   ├─ Max output: 3,000 tokens (standard) / 5,000 tokens (expert)
@@ -389,7 +390,7 @@ Usage: Query keywords matched against reverse index → top matching articles se
 |--------|------|-------------|
 | GET | `/` | Static frontend — Korean (index.html) |
 | GET | `/en` | Static frontend — English (index-en.html) |
-| GET | `/health` | Health check: `{"status": "online", "os_version": "v60.0.0"}` |
+| GET | `/health` | Health check: `{"status": "online", "os_version": "v60.0.1"}` |
 | GET | `/leaders` | 60 리더 전체 목록 반환 |
 | GET | `/leaders-en` | 60 리더 전체 목록 (영어) |
 | GET | `/about` | 소개 페이지 — 한국어 |
@@ -448,6 +449,7 @@ Usage: Query keywords matched against reverse index → top matching articles se
 | GET | `/api/admin/paddle/adjustments` | Paddle 환불/조정 내역 |
 | GET | `/api/admin/paddle/revenue` | 매출 통계 (DB 집계) |
 | GET | `/api/admin/paddle/users` | 결제 사용자 목록 |
+| GET | `/api/admin/endpoint-logs` | 전체 API 요청 로그 (기간/경로/상태 필터) |
 | GET | `/dashboard` | 관리자 대시보드 |
 | GET | `/conversion` | 전환율 분석 |
 | GET | `/retention` | 리텐션 분석 |
@@ -538,6 +540,7 @@ Algorithm: HS256
 Roles: admin, premium, user
 Token Expiry: 24 hours (default)
 Auth Flow: API Key → POST /auth/token → JWT Bearer token
+Admin Auth: verify_admin_key (strict — Authorization Bearer or X-Admin-Key, no public mode)
 Rate Limit: 5 requests/minute on /auth/token
 Secret: JWT_SECRET env var (fallback: INTERNAL_API_KEY with warning)
 ```
@@ -693,4 +696,4 @@ engines.response_verifier  → ResponseVerifier (Gemini SSOT 검증)
 ---
 
 *This llms.txt file conforms to the llms.txt/1.0 specification for machine-readable AI system documentation.*
-*Generated: 2026-03-11 | Lawmadi OS v60.0.0*
+*Generated: 2026-03-31 | Lawmadi OS v60.0.1*

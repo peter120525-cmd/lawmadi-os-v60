@@ -9,7 +9,7 @@ main.py에서 분리됨.
 import os
 
 # [감사 #3.6] 버전 단일 소스
-OS_VERSION = "v60.0.0"
+OS_VERSION = "v60.0.1"
 
 # Gemini 모델 — 단일 소스: GEMINI_MODEL 환경변수 (기본 gemini-3-flash-preview)
 # 동적 조회는 core.model_fallback.get_model() 사용 권장
